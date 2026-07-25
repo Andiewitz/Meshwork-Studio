@@ -1098,7 +1098,15 @@ const Home = () => {
               <NavigationMenuList>
                 {/* PRODUCT DROPDOWN */}
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger>Product</NavigationMenuTrigger>
+                  <NavigationMenuTrigger
+                    onClick={() => {
+                      document
+                        .getElementById("templates")
+                        ?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                  >
+                    Product
+                  </NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <div className="grid w-full md:w-[680px] md:grid-cols-[1fr_.42fr] p-2 bg-[#0A0A0A]">
                       <ul className="grid grow gap-2 p-3 md:grid-cols-2 md:border-r md:border-white/10">
@@ -1140,7 +1148,9 @@ const Home = () => {
 
                 {/* DOCUMENTATION DROPDOWN */}
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger>Documentation</NavigationMenuTrigger>
+                  <NavigationMenuTrigger onClick={() => setShowDocsView(true)}>
+                    Documentation
+                  </NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <div className="grid w-full md:w-[720px] md:grid-cols-[1fr_.45fr] p-2 bg-[#0A0A0A]">
                       <ul className="grid grow grid-cols-2 gap-2.5 p-3 md:border-r md:border-white/10">
@@ -1538,13 +1548,13 @@ const Home = () => {
 
                 <motion.h1
                   variants={heroItemVariants}
-                  className="text-[3rem] sm:text-[4.5rem] lg:text-[5.5rem] font-medium font-sans text-white leading-[1.08] tracking-tight mb-6 drop-shadow-md max-w-4xl"
+                  className="text-fluid-hero font-medium font-sans text-white leading-[1.08] tracking-tight mb-6 drop-shadow-md max-w-4xl"
                 >
                   Build with Meshwork Studio
                 </motion.h1>
                 <motion.p
                   variants={heroItemVariants}
-                  className="text-[1.125rem] sm:text-[1.25rem] text-white/60 font-medium tracking-wide max-w-[650px] mb-8 leading-relaxed"
+                  className="text-fluid-body text-white/60 font-medium tracking-wide max-w-[650px] mb-8 leading-relaxed"
                 >
                   Go from prompt to production with automated infrastructure,
                   seamless scaling, and interactive architecture documentation.
@@ -1590,11 +1600,11 @@ const Home = () => {
             {/* TEMPLATES SECTION */}
             <section
               id="templates"
-              className="w-full relative z-10 py-24 border-t border-white/10"
+              className="w-full relative z-10 py-20 border-t border-white/10"
             >
               <div className="max-w-6xl mx-auto px-6">
                 <div className="text-center mb-14">
-                  <h2 className="font-sans text-4xl md:text-5xl font-bold text-white tracking-tight">
+                  <h2 className="font-sans text-fluid-h1 font-bold text-white tracking-tight">
                     Templates ready to Remix
                   </h2>
 
@@ -1697,7 +1707,7 @@ const Home = () => {
                   transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                   viewport={{ once: true, margin: "-15%" }}
                 >
-                  <h2 className="font-sans text-4xl md:text-[3.5rem] font-medium text-white tracking-tight leading-tight mb-12">
+                  <h2 className="font-sans text-fluid-h1 font-medium text-white tracking-tight leading-tight mb-12">
                     Bring your ideas to life
                   </h2>
 
