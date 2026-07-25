@@ -29,9 +29,9 @@
 }
 
 :root {
-  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-sans: "Geomini", "Plus Jakarta Sans", system-ui, sans-serif;
   --font-display: "DM Sans", system-ui, sans-serif;
-  --font-label: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-label: "Geomini", "Plus Jakarta Sans", system-ui, sans-serif;
   --font-mono: "DM Sans", ui-monospace, monospace;
 
   /* Restored Deep Dark Theme */
@@ -56,7 +56,7 @@
   --color-outline-variant: #222222;
 
   --font-headline: "DM Sans", system-ui, sans-serif;
-  --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body: "Geomini", "Plus Jakarta Sans", system-ui, sans-serif;
 
   --primary: 24 100% 50%;
   --primary-foreground: 0 0% 100%;
