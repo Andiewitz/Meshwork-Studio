@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { MeshworkLogo } from "@/components/MeshworkLogo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { formatUserErrorMessage } from "@/lib/error-utils";
 import { PASSWORD_POLICY, validatePasswordStrength } from "@shared/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
@@ -141,32 +142,23 @@ function LoginForm() {
         email,
         password,
       });
-      const data: ApiLoginResponse & ApiErrorResponse =
-        (await res.json()) as ApiLoginResponse & ApiErrorResponse;
+      const data = (await res.json()) as ApiLoginResponse;
 
-      if (res.ok) {
-        toast({
-          title: "Welcome back!",
-          description: `Logged in as ${data.user.email}`,
-        });
-        queryClient.setQueryData(["/api/v1/auth/me"], data.user);
-        await handlePendingPromptAndRedirect(setLocation);
-      } else {
-        const errorMsg = data.message ?? "Invalid credentials";
-        const lower = errorMsg.toLowerCase();
-        if (lower.includes("email") || lower.includes("account")) {
-          setFormErrors({ email: errorMsg });
-        } else if (lower.includes("password")) {
-          setFormErrors({ password: errorMsg });
-        } else {
-          setFormErrors({ general: errorMsg });
-        }
-      }
-    } catch (err: unknown) {
       toast({
-        title: "Login failed",
-        description:
-          err instanceof Error ? err.message : "Something went wrong",
+        title: "Welcome back!",
+        description: `Logged in as ${data.user.email}`,
+      });
+      queryClient.setQueryData(["/api/v1/auth/me"], data.user);
+      await handlePendingPromptAndRedirect(setLocation);
+    } catch (err: unknown) {
+      const userMessage = formatUserErrorMessage(
+        err,
+        "Invalid credentials. Please check your email and password.",
+      );
+      setFormErrors({ general: userMessage });
+      toast({
+        title: "Sign in failed",
+        description: userMessage,
         variant: "destructive",
       });
     } finally {
@@ -427,33 +419,23 @@ function RegisterForm() {
         lastName: formData.lastName,
         captchaToken: captchaToken || "dev_bypass_token",
       });
-      const data = (await res.json()) as ApiErrorResponse & ApiLoginResponse;
+      const data = (await res.json()) as ApiLoginResponse;
 
-      if (res.ok) {
-        toast({
-          title: "Account created!",
-          description: "Welcome to Meshwork.",
-        });
-        queryClient.setQueryData(["/api/v1/auth/me"], data.user);
-        await handlePendingPromptAndRedirect(setLocation);
-      } else {
-        const errorMsg = data.message ?? "Something went wrong";
-        const lower = errorMsg.toLowerCase();
-        if (lower.includes("email")) {
-          setFormErrors({ email: errorMsg });
-        } else if (lower.includes("password")) {
-          setFormErrors({ password: errorMsg });
-        } else {
-          setFormErrors({ general: errorMsg });
-        }
-        if (recaptchaRef.current) recaptchaRef.current.reset();
-        setCaptchaToken("");
-      }
+      toast({
+        title: "Account created!",
+        description: "Welcome to Meshwork.",
+      });
+      queryClient.setQueryData(["/api/v1/auth/me"], data.user);
+      await handlePendingPromptAndRedirect(setLocation);
     } catch (err: unknown) {
+      const userMessage = formatUserErrorMessage(
+        err,
+        "Registration failed. Please try again.",
+      );
+      setFormErrors({ general: userMessage });
       toast({
         title: "Registration failed",
-        description:
-          err instanceof Error ? err.message : "Something went wrong",
+        description: userMessage,
         variant: "destructive",
       });
       if (recaptchaRef.current) recaptchaRef.current.reset();

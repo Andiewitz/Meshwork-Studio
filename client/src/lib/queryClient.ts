@@ -1,5 +1,6 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { secureFetch } from "./secure-fetch";
+import { ApiError } from "./error-utils";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
@@ -10,8 +11,29 @@ function getApiUrl(path: string): string {
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let message = res.statusText || "Request failed";
+    let payload: unknown;
+
+    try {
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        payload = json;
+        if (json && typeof json.message === "string") {
+          message = json.message;
+        } else if (json && typeof json.error === "string") {
+          message = json.error;
+        }
+      } catch {
+        if (text && text.length < 200 && !text.startsWith("<")) {
+          message = text;
+        }
+      }
+    } catch {
+      // Ignore text extraction failure
+    }
+
+    throw new ApiError(res.status, message, payload);
   }
 }
 
