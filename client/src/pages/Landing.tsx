@@ -617,7 +617,7 @@ const productNavLinks: NavItemType[] = [
   },
   {
     title: "JSON Canvas Schema",
-    href: "#documentation",
+    href: "#",
     description: "Open JSON specification for nodes, edges & containers",
     icon: FileCode2,
   },
@@ -628,12 +628,12 @@ const productNavLinks: NavItemType[] = [
   },
   {
     title: "REST & SSE API",
-    href: "#documentation",
+    href: "#",
     icon: Terminal,
   },
   {
     title: "Security Defenses",
-    href: "#documentation",
+    href: "#",
     icon: ShieldCheck,
   },
 ];
@@ -641,40 +641,40 @@ const productNavLinks: NavItemType[] = [
 const docsNavLinks: NavItemType[] = [
   {
     title: "Canvas Pipeline & Math",
-    href: "#documentation",
+    href: "#",
     description: "Spatial containment, Dagre layouts and optimistic UI diffing",
     icon: BookOpen,
   },
   {
     title: "AI Integration Architecture",
-    href: "#documentation",
+    href: "#",
     description: "Fault-tolerant SSE event streaming and BYOK AES-256 keys",
     icon: Sparkles,
   },
   {
     title: "Security Posture & Lockouts",
-    href: "#documentation",
+    href: "#",
     description:
       "Helmet HTTP headers, CSRF tokens and Redis progressive lockouts",
     icon: ShieldCheck,
   },
   {
     title: "Design System Tokens",
-    href: "#documentation",
+    href: "#",
     description:
       "Tailwind utility architecture, Radix primitives and accessibility",
     icon: Layers,
   },
   {
     title: "Canvas JSON Schema",
-    href: "#documentation",
+    href: "#",
     description:
       "Full node registry, type aliases and parent-child nesting rules",
     icon: FileCode2,
   },
   {
     title: "Working with Canvas JSON",
-    href: "#documentation",
+    href: "#",
     description:
       "Programmatically generate diagrams with Ajv schema validation",
     icon: CodeIcon,
@@ -690,15 +690,19 @@ const Home = () => {
     useState<TemplateDefinition["category"]>("Featured");
 
   // State to toggle Documentation View vs Main Landing Page
-  const [showDocsView, setShowDocsView] = useState(() => {
+  const [showDocsView, setShowDocsViewState] = useState(() => {
     if (typeof window !== "undefined") {
-      return (
-        window.location.hash === "#documentation" ||
-        window.location.pathname === "/docs"
-      );
+      return window.location.pathname === "/docs";
     }
     return false;
   });
+
+  const setShowDocsView = (show: boolean) => {
+    setShowDocsViewState(show);
+    if (!show && typeof window !== "undefined" && window.location.hash) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  };
 
   // Docs state
   const [searchTerm, setSearchTerm] = useState("");

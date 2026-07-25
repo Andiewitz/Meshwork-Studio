@@ -26,7 +26,7 @@ function NavigationMenu({
       data-slot="navigation-menu"
       data-viewport={viewport}
       className={cn(
-        "group/navigation-menu flex max-w-max flex-1 items-center justify-center",
+        "group/navigation-menu relative flex max-w-max flex-1 items-center justify-start",
         className,
       )}
       {...props}
@@ -45,7 +45,7 @@ function NavigationMenuList({
     <NavigationMenuPrimitive.List
       data-slot="navigation-menu-list"
       className={cn(
-        "group flex flex-1 list-none items-center justify-center gap-1",
+        "group flex flex-1 list-none items-center justify-start gap-1",
         className,
       )}
       {...props}
@@ -111,11 +111,11 @@ function NavigationMenuViewport({
   ...props
 }: React.ComponentProps<typeof NavigationMenuPrimitive.Viewport>) {
   return (
-    <div className="absolute top-full left-0 isolate z-50 flex justify-center">
+    <div className="absolute top-full left-0 isolate z-50 flex justify-start">
       <NavigationMenuPrimitive.Viewport
         data-slot="navigation-menu-viewport"
         className={cn(
-          "origin-top-center bg-[#0d0e12]/95 text-white data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 relative mt-2 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-xl border border-white/10 shadow-2xl backdrop-blur-2xl md:w-[var(--radix-navigation-menu-viewport-width)]",
+          "origin-top-left bg-[#0d0e12]/95 text-white data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 relative mt-2 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-xl border border-white/10 shadow-2xl backdrop-blur-2xl md:w-[var(--radix-navigation-menu-viewport-width)]",
           className,
         )}
         {...props}
