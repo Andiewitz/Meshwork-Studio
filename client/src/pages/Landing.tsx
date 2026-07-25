@@ -1261,11 +1261,7 @@ const Home = () => {
                 ease: [0.16, 1, 0.3, 1],
                 delay: 0.05,
               }}
-              className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-                scrolled
-                  ? "bg-[#09090b]/85 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
-                  : "bg-transparent border-b border-transparent"
-              }`}
+              className="fixed top-0 left-0 right-0 z-50 bg-[#09090b]/80 backdrop-blur-xl border-b border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.5)] transition-all duration-300"
             >
               <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                 {/* Brand Logo */}
@@ -1383,13 +1379,13 @@ const Home = () => {
                       </NavigationMenuContent>
                     </NavigationMenuItem>
 
-                    {/* DIRECT DOCS LINK */}
+                    {/* DIRECT DOCS / ABOUT DEV LINK */}
                     <NavigationMenuItem>
                       <NavigationMenuLink
                         onClick={() => setShowDocsView(true)}
                         className="cursor-pointer"
                       >
-                        Architecture Guides
+                        About Dev
                       </NavigationMenuLink>
                     </NavigationMenuItem>
                   </NavigationMenuList>
