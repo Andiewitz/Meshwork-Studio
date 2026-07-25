@@ -18,7 +18,39 @@ import {
   X,
   Copy,
   BookOpen,
+  ShieldCheck,
+  Layers,
+  CodeIcon,
+  MenuIcon,
+  XIcon,
 } from "lucide-react";
+
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  NavGridCard,
+  NavSmallItem,
+  NavLargeItem,
+  NavItemMobile,
+  NavItemType,
+} from "@/components/ui/navigation-menu";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
 
 import Lenis from "lenis";
 import { Link, useLocation } from "wouter";
@@ -569,6 +601,85 @@ function extractHeadings(markdown: string) {
   });
   return headings;
 }
+
+const productNavLinks: NavItemType[] = [
+  {
+    title: "Canvas Engine",
+    href: "#features",
+    description: "DAG graph layouts, PostgreSQL diffing & infinite nesting",
+    icon: Network,
+  },
+  {
+    title: "Mosh AI Co-Pilot",
+    href: "#hero",
+    description: "Natural language prompt to cloud infrastructure generation",
+    icon: Sparkles,
+  },
+  {
+    title: "JSON Canvas Schema",
+    href: "#documentation",
+    description: "Open JSON specification for nodes, edges & containers",
+    icon: FileCode2,
+  },
+  {
+    title: "Architecture Templates",
+    href: "#templates",
+    icon: GitBranch,
+  },
+  {
+    title: "REST & SSE API",
+    href: "#documentation",
+    icon: Terminal,
+  },
+  {
+    title: "Security Defenses",
+    href: "#documentation",
+    icon: ShieldCheck,
+  },
+];
+
+const docsNavLinks: NavItemType[] = [
+  {
+    title: "Canvas Pipeline & Math",
+    href: "#documentation",
+    description: "Spatial containment, Dagre layouts and optimistic UI diffing",
+    icon: BookOpen,
+  },
+  {
+    title: "AI Integration Architecture",
+    href: "#documentation",
+    description: "Fault-tolerant SSE event streaming and BYOK AES-256 keys",
+    icon: Sparkles,
+  },
+  {
+    title: "Security Posture & Lockouts",
+    href: "#documentation",
+    description:
+      "Helmet HTTP headers, CSRF tokens and Redis progressive lockouts",
+    icon: ShieldCheck,
+  },
+  {
+    title: "Design System Tokens",
+    href: "#documentation",
+    description:
+      "Tailwind utility architecture, Radix primitives and accessibility",
+    icon: Layers,
+  },
+  {
+    title: "Canvas JSON Schema",
+    href: "#documentation",
+    description:
+      "Full node registry, type aliases and parent-child nesting rules",
+    icon: FileCode2,
+  },
+  {
+    title: "Working with Canvas JSON",
+    href: "#documentation",
+    description:
+      "Programmatically generate diagrams with Ajv schema validation",
+    icon: CodeIcon,
+  },
+];
 
 const Home = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1137,7 +1248,7 @@ const Home = () => {
               />
             </motion.div>
 
-            {/* MAIN NAVBAR */}
+            {/* MAIN NAVBAR WITH RADIX NAVIGATION MENU */}
             <motion.nav
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1148,13 +1259,16 @@ const Home = () => {
               }}
               className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
                 scrolled
-                  ? "bg-black/80 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
+                  ? "bg-[#09090b]/85 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
                   : "bg-transparent border-b border-transparent"
               }`}
             >
               <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                {/* Logo & Brand */}
-                <Link href="/" className="flex items-center gap-3 group">
+                {/* Brand Logo */}
+                <Link
+                  href="/"
+                  className="flex items-center gap-3 group shrink-0"
+                >
                   <div className="w-8 h-8 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(255,61,0,0.5)]">
                     <MeshworkLogo />
                   </div>
@@ -1163,26 +1277,125 @@ const Home = () => {
                   </span>
                 </Link>
 
-                {/* Nav Links: Features & Documentation */}
-                <div className="hidden md:flex items-center gap-8">
-                  <a
-                    href="#features"
-                    className="text-sm font-sans font-normal text-white/60 hover:text-white transition-colors"
-                  >
-                    Features
-                  </a>
-                  <button
-                    onClick={() => setShowDocsView(true)}
-                    className="text-sm font-sans font-normal text-white/60 hover:text-white transition-colors cursor-pointer"
-                  >
-                    Documentation
-                  </button>
-                </div>
+                {/* Desktop Radix Navigation Menu */}
+                <NavigationMenu className="hidden lg:flex">
+                  <NavigationMenuList>
+                    {/* PRODUCT DROPDOWN */}
+                    <NavigationMenuItem>
+                      <NavigationMenuTrigger>Product</NavigationMenuTrigger>
+                      <NavigationMenuContent>
+                        <div className="grid w-full md:w-[680px] md:grid-cols-[1fr_.42fr] p-2 bg-[#0A0A0A]">
+                          <ul className="grid grow gap-2 p-3 md:grid-cols-2 md:border-r md:border-white/10">
+                            {productNavLinks.slice(0, 2).map((link) => (
+                              <li key={link.title}>
+                                <NavGridCard link={link} />
+                              </li>
+                            ))}
+                            <li className="col-span-2">
+                              <NavGridCard
+                                link={{
+                                  ...productNavLinks[2],
+                                  onClick: () => setShowDocsView(true),
+                                }}
+                                className="min-h-[80px]"
+                              />
+                            </li>
+                          </ul>
+                          <ul className="space-y-1 p-3 flex flex-col justify-center">
+                            {productNavLinks.slice(3).map((link) => (
+                              <li key={link.title}>
+                                <NavSmallItem
+                                  item={{
+                                    ...link,
+                                    onClick:
+                                      link.href === "#documentation"
+                                        ? () => setShowDocsView(true)
+                                        : undefined,
+                                  }}
+                                  href={link.href}
+                                  className="gap-x-2"
+                                />
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
 
-                <div className="flex items-center gap-4">
+                    {/* DOCUMENTATION DROPDOWN */}
+                    <NavigationMenuItem>
+                      <NavigationMenuTrigger>
+                        Documentation
+                      </NavigationMenuTrigger>
+                      <NavigationMenuContent>
+                        <div className="grid w-full md:w-[720px] md:grid-cols-[1fr_.45fr] p-2 bg-[#0A0A0A]">
+                          <ul className="grid grow grid-cols-2 gap-2.5 p-3 md:border-r md:border-white/10">
+                            {docsNavLinks.slice(0, 2).map((link, idx) => (
+                              <li key={link.title}>
+                                <NavGridCard
+                                  link={{
+                                    ...link,
+                                    onClick: () => {
+                                      setActivePostId(idx + 1);
+                                      setShowDocsView(true);
+                                    },
+                                  }}
+                                  className="min-h-[110px]"
+                                />
+                              </li>
+                            ))}
+                            <div className="col-span-2 grid grid-cols-2 gap-2">
+                              {docsNavLinks.slice(2, 4).map((link, idx) => (
+                                <li key={link.title}>
+                                  <NavLargeItem
+                                    link={{
+                                      ...link,
+                                      onClick: () => {
+                                        setActivePostId(idx + 3);
+                                        setShowDocsView(true);
+                                      },
+                                    }}
+                                  />
+                                </li>
+                              ))}
+                            </div>
+                          </ul>
+                          <ul className="space-y-2 p-3 flex flex-col justify-center">
+                            {docsNavLinks.slice(4).map((link, idx) => (
+                              <li key={link.title}>
+                                <NavLargeItem
+                                  link={{
+                                    ...link,
+                                    onClick: () => {
+                                      setActivePostId(idx + 5);
+                                      setShowDocsView(true);
+                                    },
+                                  }}
+                                />
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
+
+                    {/* DIRECT DOCS LINK */}
+                    <NavigationMenuItem>
+                      <NavigationMenuLink
+                        onClick={() => setShowDocsView(true)}
+                        className="cursor-pointer"
+                      >
+                        Architecture Guides
+                      </NavigationMenuLink>
+                    </NavigationMenuItem>
+                  </NavigationMenuList>
+                </NavigationMenu>
+
+                {/* Right CTAs & Mobile Drawer Trigger */}
+                <div className="flex items-center gap-3">
                   <button
                     onClick={() => setLocation("/login")}
-                    className="font-sans font-medium text-sm text-white/60 hover:text-white transition-colors cursor-pointer"
+                    className="font-sans font-medium text-sm text-white/70 hover:text-white transition-colors cursor-pointer px-3 py-1.5"
                   >
                     Log in
                   </button>
@@ -1192,6 +1405,117 @@ const Home = () => {
                   >
                     Get Started
                   </button>
+
+                  {/* Mobile Sheet Trigger */}
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="rounded-lg lg:hidden text-white hover:bg-white/10 border border-white/10 h-9 w-9 flex items-center justify-center"
+                      >
+                        <MenuIcon className="size-5" />
+                        <span className="sr-only">Toggle navigation</span>
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent
+                      className="bg-[#0A0A0A]/95 backdrop-blur-2xl border-l border-white/10 w-full text-white gap-0 p-0"
+                      showClose={false}
+                    >
+                      <div className="flex h-16 items-center justify-between border-b border-white/10 px-6">
+                        <div className="flex items-center gap-3">
+                          <MeshworkLogo />
+                          <span className="font-headline font-bold text-white text-base">
+                            Meshwork Studio
+                          </span>
+                        </div>
+                        <SheetClose asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="rounded-full text-white/60 hover:text-white hover:bg-white/10"
+                          >
+                            <XIcon className="size-5" />
+                            <span className="sr-only">Close</span>
+                          </Button>
+                        </SheetClose>
+                      </div>
+
+                      <div className="overflow-y-auto px-6 pt-4 pb-12 space-y-6">
+                        <Accordion type="single" collapsible className="w-full">
+                          <AccordionItem
+                            value="product"
+                            className="border-white/10"
+                          >
+                            <AccordionTrigger className="capitalize text-white font-medium hover:no-underline text-base py-3">
+                              Product Features
+                            </AccordionTrigger>
+                            <AccordionContent className="space-y-1">
+                              <ul className="grid gap-1 pt-1">
+                                {productNavLinks.map((link) => (
+                                  <li key={link.title}>
+                                    <SheetClose asChild>
+                                      <NavItemMobile
+                                        item={link}
+                                        href={link.href}
+                                        onClick={() => {
+                                          if (link.href === "#documentation") {
+                                            setShowDocsView(true);
+                                          }
+                                        }}
+                                      />
+                                    </SheetClose>
+                                  </li>
+                                ))}
+                              </ul>
+                            </AccordionContent>
+                          </AccordionItem>
+
+                          <AccordionItem
+                            value="docs"
+                            className="border-white/10"
+                          >
+                            <AccordionTrigger className="capitalize text-white font-medium hover:no-underline text-base py-3">
+                              Technical Docs
+                            </AccordionTrigger>
+                            <AccordionContent className="space-y-1">
+                              <ul className="grid gap-1 pt-1">
+                                {docsNavLinks.map((link, idx) => (
+                                  <li key={link.title}>
+                                    <SheetClose asChild>
+                                      <NavItemMobile
+                                        item={link}
+                                        href={link.href}
+                                        onClick={() => {
+                                          setActivePostId(idx + 1);
+                                          setShowDocsView(true);
+                                        }}
+                                      />
+                                    </SheetClose>
+                                  </li>
+                                ))}
+                              </ul>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+
+                        <div className="pt-4 border-t border-white/10 flex flex-col gap-3">
+                          <button
+                            onClick={() => setShowDocsView(true)}
+                            className="w-full py-3 rounded-lg bg-white/10 text-white font-medium text-sm hover:bg-white/15 transition-colors cursor-pointer"
+                          >
+                            Explore Documentation
+                          </button>
+                          <button
+                            onClick={() => setLocation("/register")}
+                            className="w-full py-3 rounded-lg bg-primary text-black font-bold text-sm hover:brightness-110 transition-colors cursor-pointer"
+                          >
+                            Get Started Free
+                          </button>
+                        </div>
+                      </div>
+                    </SheetContent>
+                  </Sheet>
                 </div>
               </div>
             </motion.nav>

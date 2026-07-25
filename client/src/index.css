@@ -2,17 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+.animate-accordion-down {
+  animation: accordion-down 0.2s ease-out;
+}
+
+.animate-accordion-up {
+  animation: accordion-up 0.2s ease-out;
+}
+
 :root {
-  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-display: 'DM Sans', system-ui, sans-serif;
-  --font-label: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-mono: 'DM Sans', ui-monospace, monospace;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-display: "DM Sans", system-ui, sans-serif;
+  --font-label: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: "DM Sans", ui-monospace, monospace;
 
   /* Restored Deep Dark Theme */
-  --background: 0 0% 5%;       /* #0D0D0D */
-  --foreground: 0 0% 98%;      /* #FAFAFA */
+  --background: 0 0% 5%; /* #0D0D0D */
+  --foreground: 0 0% 98%; /* #FAFAFA */
 
-  --card: 0 0% 8%;             /* #141414 */
+  --card: 0 0% 8%; /* #141414 */
   --card-foreground: 0 0% 98%;
 
   --popover: 0 0% 8%;
@@ -28,9 +54,9 @@
   --color-surface-container-highest: #2a2a2a;
   --color-outline: #333333;
   --color-outline-variant: #222222;
-  
-  --font-headline: 'DM Sans', system-ui, sans-serif;
-  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  --font-headline: "DM Sans", system-ui, sans-serif;
+  --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
 
   --primary: 24 100% 50%;
   --primary-foreground: 0 0% 100%;
@@ -47,7 +73,7 @@
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 0 0% 15%;          /* #262626 */
+  --border: 0 0% 15%; /* #262626 */
   --input: 0 0% 10%;
   --ring: 24 100% 50%;
 
@@ -79,17 +105,29 @@
   --destructive: 0 72% 45%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 0 0% 18%;          /* #2E2E2E */
+  --border: 0 0% 18%; /* #2E2E2E */
   --input: 0 0% 10%;
   --ring: 24 100% 50%;
 }
 
 @layer utilities {
   .technical-gradient {
-    background: 
-      radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
-      radial-gradient(circle at 0% 100%, rgba(59, 130, 246, 0.02) 0%, transparent 50%),
-      radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.02) 0%, transparent 50%),
+    background:
+      radial-gradient(
+        circle at 50% 0%,
+        rgba(59, 130, 246, 0.05) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 0% 100%,
+        rgba(59, 130, 246, 0.02) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 100% 100%,
+        rgba(59, 130, 246, 0.02) 0%,
+        transparent 50%
+      ),
       #080808;
     position: relative;
   }
@@ -120,14 +158,25 @@
     background: rgba(14, 14, 14, 0.6);
     backdrop-filter: blur(24px);
   }
-  .hide-scrollbar::-webkit-scrollbar { display: none; }
-  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   .cursor-figma {
-    cursor: url("data:image/svg+xml,%3Csvg width='22' height='22' viewBox='0 0 22 22' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.83333 1.83333L4.83333 16.5L8.5 12.8333L12.1667 20.1667L14.9167 18.3333L11.25 11L16.75 11L4.83333 1.83333Z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E") 4 2, auto !important;
+    cursor:
+      url("data:image/svg+xml,%3Csvg width='22' height='22' viewBox='0 0 22 22' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.83333 1.83333L4.83333 16.5L8.5 12.8333L12.1667 20.1667L14.9167 18.3333L11.25 11L16.75 11L4.83333 1.83333Z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E")
+        4 2,
+      auto !important;
   }
   .cursor-figma-pointer {
-    cursor: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9.5 10.5V2.5C9.5 1.67157 10.1716 1 11 1C11.8284 1 12.5 1.67157 12.5 2.5V10.5H13V5.5C13 4.67157 13.6716 4 14.5 4C15.3284 4 16 4.67157 16 5.5V10.5H16.5V6.5C16.5 5.67157 17.1716 5 18 5C18.8284 5 19.5 5.67157 19.5 6.5V10.5H20V8.5C20 7.67157 20.6716 7 21.5 7C22.3284 7 23 7.67157 23 8.5V15.5C23 19.0899 20.0899 22 16.5 22H13.5C11.7761 22 10.123 21.3155 8.90381 20.0962L3.62132 14.8137C3.03553 14.2279 3.03553 13.2782 3.62132 12.6924C4.20711 12.1066 5.15685 12.1066 5.74264 12.6924L9.5 16.4497V10.5Z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E") 10 2, pointer !important;
+    cursor:
+      url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9.5 10.5V2.5C9.5 1.67157 10.1716 1 11 1C11.8284 1 12.5 1.67157 12.5 2.5V10.5H13V5.5C13 4.67157 13.6716 4 14.5 4C15.3284 4 16 4.67157 16 5.5V10.5H16.5V6.5C16.5 5.67157 17.1716 5 18 5C18.8284 5 19.5 5.67157 19.5 6.5V10.5H20V8.5C20 7.67157 20.6716 7 21.5 7C22.3284 7 23 7.67157 23 8.5V15.5C23 19.0899 20.0899 22 16.5 22H13.5C11.7761 22 10.123 21.3155 8.90381 20.0962L3.62132 14.8137C3.03553 14.2279 3.03553 13.2782 3.62132 12.6924C4.20711 12.1066 5.15685 12.1066 5.74264 12.6924L9.5 16.4497V10.5Z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E")
+        10 2,
+      pointer !important;
   }
 }
 
@@ -163,13 +212,20 @@ html {
   }
 
   /* ── GLOBAL FIGMA CURSOR ENFORCEMENT ── */
-  html, body {
-    cursor: url("data:image/svg+xml,%3Csvg width='22' height='22' viewBox='0 0 22 22' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.83333 1.83333L4.83333 16.5L8.5 12.8333L12.1667 20.1667L14.9167 18.3333L11.25 11L16.75 11L4.83333 1.83333Z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E") 4 2, auto;
+  html,
+  body {
+    cursor:
+      url("data:image/svg+xml,%3Csvg width='22' height='22' viewBox='0 0 22 22' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.83333 1.83333L4.83333 16.5L8.5 12.8333L12.1667 20.1667L14.9167 18.3333L11.25 11L16.75 11L4.83333 1.83333Z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E")
+        4 2,
+      auto;
   }
 
   /* Automatically map tailwind pointer to figma pointer */
   .cursor-pointer {
-    cursor: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9.5 10.5V2.5C9.5 1.67157 10.1716 1 11 1C11.8284 1 12.5 1.67157 12.5 2.5V10.5H13V5.5C13 4.67157 13.6716 4 14.5 4C15.3284 4 16 4.67157 16 5.5V10.5H16.5V6.5C16.5 5.67157 17.1716 5 18 5C18.8284 5 19.5 5.67157 19.5 6.5V10.5H20V8.5C20 7.67157 20.6716 7 21.5 7C22.3284 7 23 7.67157 23 8.5V15.5C23 19.0899 20.0899 22 16.5 22H13.5C11.7761 22 10.123 21.3155 8.90381 20.0962L3.62132 14.8137C3.03553 14.2279 3.03553 13.2782 3.62132 12.6924C4.20711 12.1066 5.15685 12.1066 5.74264 12.6924L9.5 16.4497V10.5Z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E") 10 2, pointer !important;
+    cursor:
+      url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9.5 10.5V2.5C9.5 1.67157 10.1716 1 11 1C11.8284 1 12.5 1.67157 12.5 2.5V10.5H13V5.5C13 4.67157 13.6716 4 14.5 4C15.3284 4 16 4.67157 16 5.5V10.5H16.5V6.5C16.5 5.67157 17.1716 5 18 5C18.8284 5 19.5 5.67157 19.5 6.5V10.5H20V8.5C20 7.67157 20.6716 7 21.5 7C22.3284 7 23 7.67157 23 8.5V15.5C23 19.0899 20.0899 22 16.5 22H13.5C11.7761 22 10.123 21.3155 8.90381 20.0962L3.62132 14.8137C3.03553 14.2279 3.03553 13.2782 3.62132 12.6924C4.20711 12.1066 5.15685 12.1066 5.74264 12.6924L9.5 16.4497V10.5Z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E")
+        10 2,
+      pointer !important;
   }
 
   h1,
@@ -190,7 +246,9 @@ html {
 
   .neo-shadow {
     @apply shadow-[8px_8px_0px_0px_rgba(26,26,26,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,61,0,0.7)];
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition:
+      transform 0.3s ease,
+      box-shadow 0.3s ease;
   }
 
   .neo-shadow:hover {
@@ -261,16 +319,20 @@ html {
 
 /* ── Canvas Entry Animations ── */
 @keyframes grid-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes node-enter {
-  from { 
-    opacity: 0; 
+  from {
+    opacity: 0;
   }
-  to { 
-    opacity: 1; 
+  to {
+    opacity: 1;
   }
 }
 
@@ -329,7 +391,10 @@ html {
 [data-cursor="select"] .react-flow__pane,
 [data-cursor="select"] .react-flow__node,
 [data-cursor="select"] .react-flow__edge {
-  cursor: url("data:image/svg+xml,%3Csvg width='22' height='22' viewBox='0 0 22 22' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.83333 1.83333L4.83333 16.5L8.5 12.8333L12.1667 20.1667L14.9167 18.3333L11.25 11L16.75 11L4.83333 1.83333Z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E") 4 2, auto !important;
+  cursor:
+    url("data:image/svg+xml,%3Csvg width='22' height='22' viewBox='0 0 22 22' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4.83333 1.83333L4.83333 16.5L8.5 12.8333L12.1667 20.1667L14.9167 18.3333L11.25 11L16.75 11L4.83333 1.83333Z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E")
+      4 2,
+    auto !important;
 }
 
 [data-cursor="annotation"] .react-flow__pane,
@@ -337,7 +402,10 @@ html {
 [data-cursor="annotation"] .react-flow__node *,
 [data-cursor="annotation"] .react-flow__handle,
 [data-cursor="annotation"] .react-flow__edge {
-  cursor: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z' fill='white' stroke='black' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E") 2 22, auto !important;
+  cursor:
+    url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z' fill='white' stroke='black' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E")
+      2 22,
+    auto !important;
 }
 
 [data-cursor="infrastructure"] .react-flow__pane,
@@ -368,7 +436,10 @@ html {
 }
 
 [data-cursor="annotation"] .react-flow__pane:active {
-  cursor: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z' fill='white' stroke='black' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E") 2 22, auto !important;
+  cursor:
+    url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z' fill='white' stroke='black' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E")
+      2 22,
+    auto !important;
 }
 
 .react-flow__node {
@@ -376,8 +447,12 @@ html {
 }
 
 @keyframes nodeAppear {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .react-flow__selection {
@@ -387,7 +462,7 @@ html {
 }
 
 .react-flow__connection-path {
-  stroke: #FF5500 !important;
+  stroke: #ff5500 !important;
   stroke-width: 2 !important;
   opacity: 0.6;
 }
