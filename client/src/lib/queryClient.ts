@@ -33,12 +33,15 @@ async function throwIfResNotOk(res: Response) {
       // Ignore text extraction failure
     }
 
-    // Structured developer console debug log (enables pinpointing exact errors in DevTools)
-    console.debug(`[API Error ${res.status}] ${res.url}:`, {
-      status: res.status,
-      message,
-      payload,
-    });
+    // Dev-only sanitized debug log (NO sensitive data, payload, or tokens logged)
+    if (import.meta.env.DEV) {
+      try {
+        const urlPath = new URL(res.url, window.location.origin).pathname;
+        console.debug(`[API ${res.status}] ${urlPath}: ${message}`);
+      } catch {
+        console.debug(`[API ${res.status}]: ${message}`);
+      }
+    }
 
     throw new ApiError(res.status, message, payload);
   }
