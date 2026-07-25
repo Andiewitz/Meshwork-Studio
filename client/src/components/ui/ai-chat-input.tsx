@@ -13,7 +13,7 @@ const SMOOTH_HEIGHT_TRANSITION =
   "max-width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), height 0.15s ease-out";
 
 // ----------------------------------------------------------------------
-// Types
+// Types & OpenRouter Free Tier Models
 // ----------------------------------------------------------------------
 interface Attachment {
   id: string;
@@ -23,6 +23,38 @@ interface Attachment {
   width?: number;
   height?: number;
 }
+
+export interface ModelOption {
+  id: string;
+  label: string;
+  provider: string;
+}
+
+export const OPENROUTER_FREE_MODELS: ModelOption[] = [
+  { id: "openai/gpt-oss-20b:free", label: "GPT OSS 20B", provider: "OpenAI" },
+  {
+    id: "google/gemma-4-31b-it:free",
+    label: "Gemma 4 31B",
+    provider: "Google",
+  },
+  {
+    id: "google/gemma-4-26b-a4b-it:free",
+    label: "Gemma 4 26B",
+    provider: "Google",
+  },
+  {
+    id: "nvidia/nemotron-3-nano-30b-a3b:free",
+    label: "Nemotron 30B",
+    provider: "NVIDIA",
+  },
+  {
+    id: "cohere/north-mini-code:free",
+    label: "North Mini Code",
+    provider: "Cohere",
+  },
+  { id: "poolside/laguna-m.1:free", label: "Laguna M.1", provider: "Poolside" },
+  { id: "openrouter/free", label: "OpenRouter Auto", provider: "OpenRouter" },
+];
 
 // ----------------------------------------------------------------------
 // Sub-components
@@ -63,27 +95,30 @@ function ModelIcon({
   className?: string;
 }) {
   const icons: Record<string, string> = {
-    "Composer 2.5":
-      "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695268/cursor-ai-code-icon_j4vnux.svg",
-    "Gemini 3.5 Flash":
-      "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695268/google-gemini-icon_l6kk5q.svg",
-    "GPT 5.5":
+    OpenAI:
       "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695269/openai-icon_zozuib.svg",
-    "Opus 4.8":
+    Google:
+      "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695268/google-gemini-icon_l6kk5q.svg",
+    NVIDIA:
+      "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695268/cursor-ai-code-icon_j4vnux.svg",
+    Cohere:
       "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695268/Claude_AI_symbol_yqfzlc.svg",
-    "GLM 5.2":
+    Poolside:
       "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695269/z-ai-icon_xi4xvo.svg",
+    OpenRouter:
+      "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695269/openai-icon_zozuib.svg",
   };
 
-  const filters: Record<string, string> = {
-    "GPT 5.5": "dark:invert",
-  };
+  const modelObj = OPENROUTER_FREE_MODELS.find(
+    (m) => m.id === model || m.label === model,
+  );
+  const provider = modelObj?.provider || "OpenRouter";
 
   return (
     <img
-      src={icons[model] || icons["GPT 5.5"]}
-      alt={model}
-      className={cn("object-contain", filters[model], className)}
+      src={icons[provider] || icons.OpenRouter}
+      alt={provider}
+      className={cn("object-contain dark:invert", className)}
     />
   );
 }
@@ -91,8 +126,8 @@ function ModelIcon({
 function ArrowUpIcon() {
   return (
     <svg
-      width="12"
-      height="12"
+      width="14"
+      height="14"
       viewBox="0 0 14 14"
       fill="none"
       aria-hidden="true"
@@ -100,7 +135,7 @@ function ArrowUpIcon() {
       <path
         d="M7 12V2M7 2L2.5 6.5M7 2L11.5 6.5"
         stroke="currentColor"
-        strokeWidth="1.75"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -111,8 +146,8 @@ function ArrowUpIcon() {
 function MicIcon() {
   return (
     <svg
-      width="13"
-      height="13"
+      width="14"
+      height="14"
       viewBox="0 0 14 14"
       fill="none"
       aria-hidden="true"
@@ -207,7 +242,6 @@ function DynamicBarsIcon({ level }: { level: string }) {
         height="4.5"
         rx="1"
         fill="currentColor"
-        className="transition-opacity duration-300"
         opacity={1}
       />
       <rect
@@ -217,7 +251,6 @@ function DynamicBarsIcon({ level }: { level: string }) {
         height="7.5"
         rx="1"
         fill="currentColor"
-        className="transition-opacity duration-300"
         opacity={isMediumOrHigh ? 1 : 0.3}
       />
       <rect
@@ -227,7 +260,6 @@ function DynamicBarsIcon({ level }: { level: string }) {
         height="10.5"
         rx="1"
         fill="currentColor"
-        className="transition-opacity duration-300"
         opacity={isHigh ? 1 : 0.3}
       />
     </svg>
@@ -256,7 +288,8 @@ function AttachmentThumb({
   return (
     <button
       ref={(el) => {
-        btnRef.current = el;
+        (btnRef as React.MutableRefObject<HTMLButtonElement | null>).current =
+          el;
         registerRef(attachment.id, el);
       }}
       type="button"
@@ -274,7 +307,7 @@ function AttachmentThumb({
         animationFillMode: "backwards",
       }}
       className={cn(
-        "group relative size-12 shrink-0 overflow-hidden rounded-xl border border-border bg-muted outline-none",
+        "group relative size-14 shrink-0 overflow-hidden rounded-xl border border-border bg-muted outline-none",
         "transition-transform duration-200 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:scale-[1.04] active:scale-[0.96]",
         "animate-in fade-in slide-in-from-top-3 zoom-in-90 duration-400",
       )}
@@ -338,10 +371,9 @@ function AttachmentGalleryModal({
     height: number;
     radius: number;
   } | null>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
-    const maxW = Math.min(window.innerWidth * 0.86, 560);
+    const maxW = Math.min(window.innerWidth * 0.86, 640);
     const maxH = Math.min(window.innerHeight * 0.78, 720);
 
     const naturalW = attachment.width || 800;
@@ -464,7 +496,6 @@ export interface PromptInputProps {
   ) => void;
   placeholder?: string;
   className?: string;
-  models?: string[];
   efforts?: string[];
   defaultValue?: string;
   value?: string;
@@ -477,15 +508,8 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
   (
     {
       onSubmit,
-      placeholder = "Ask anything...",
+      placeholder = "Describe your cloud architecture, e.g. A microservice app with Redis, Postgres, & API Gateway...",
       className,
-      models = [
-        "GPT 5.5",
-        "Opus 4.8",
-        "Gemini 3.5 Flash",
-        "Composer 2.5",
-        "GLM 5.2",
-      ],
       efforts = ["Low", "Medium", "Max Effort"],
       defaultValue = "",
       value: controlledValue,
@@ -498,7 +522,9 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
     const [expanded, setExpanded] = useState(initialExpanded);
     const [isSmoothResize, setIsSmoothResize] = useState(false);
     const [localValue, setLocalValue] = useState(defaultValue);
-    const [selectedModel, setSelectedModel] = useState(models[0]);
+    const [selectedModel, setSelectedModel] = useState<ModelOption>(
+      OPENROUTER_FREE_MODELS[0],
+    );
     const [effortIndex, setEffortIndex] = useState(1);
     const [isModelSelectOpen, setIsModelSelectOpen] = useState(false);
 
@@ -528,8 +554,8 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
       transform: "translateY(0px) scale(0.95)",
       transition: "none",
     });
-    const [containerHeight, setContainerHeight] = useState(116);
-    const [textareaHeight, setTextareaHeight] = useState(68);
+    const [containerHeight, setContainerHeight] = useState(160);
+    const [textareaHeight, setTextareaHeight] = useState(104);
     const [isScrolling, setIsScrolling] = useState(false);
 
     const isControlled = controlledValue !== undefined;
@@ -544,7 +570,6 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
     const fileInputRef = useRef<HTMLInputElement>(null);
     const thumbRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
 
-    // Sync value ref for audio callback closure
     useEffect(() => {
       valueRef.current = value;
     }, [value]);
@@ -631,7 +656,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
 
       function simulateText() {
         const fakeText =
-          "Can you build a high fidelity Framer Motion layout animation for a dark mode dashboard?";
+          "Design a multi-region Kubernetes cluster with Redis cache, Postgres DB, and an API Gateway";
         const words = fakeText.split(" ");
         let i = 0;
         let currentBase = valueRef.current;
@@ -722,9 +747,6 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
           recognitionRef.current = recognition;
           recognition.start();
         } else {
-          console.warn(
-            "Speech Recognition API not supported in this browser. Using simulated text.",
-          );
           simulateText();
         }
       } else {
@@ -782,17 +804,17 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
       void el.offsetHeight;
       el.style.transition = "";
 
-      const newHeight = Math.max(68, Math.min(scrollHeight, 160));
+      const newHeight = Math.max(104, Math.min(scrollHeight, 220));
       el.style.height = `${newHeight}px`;
 
       setTextareaHeight(newHeight);
-      setIsScrolling(scrollHeight > 160);
+      setIsScrolling(scrollHeight > 220);
 
       setTimeout(updateFades, 0);
     }, [value, expanded]);
 
     useEffect(() => {
-      setContainerHeight(Math.max(116, textareaHeight + 48));
+      setContainerHeight(Math.max(156, textareaHeight + 52));
       setTimeout(updateFades, 0);
     }, [textareaHeight]);
 
@@ -826,7 +848,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
       if (value.trim() === "" && !hasAttachments) return;
       setIsSmoothResize(false);
       onSubmit?.(value, {
-        model: selectedModel,
+        model: selectedModel.id,
         effort: efforts[effortIndex],
         attachments: attachments.map((a) => a.file),
       });
@@ -927,7 +949,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
           onBlur={handleBlur}
           className={cn("relative flex flex-col w-full", className)}
           style={{
-            maxWidth: expanded ? 560 : 360,
+            maxWidth: expanded ? 720 : 420,
             transition: isSmoothResize
               ? "max-width 0.15s ease-out"
               : "max-width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
@@ -947,7 +969,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
           <div
             aria-hidden={!hasAttachments}
             style={{
-              height: hasAttachments && expanded ? 68 : 0,
+              height: hasAttachments && expanded ? 74 : 0,
               transition: isSmoothResize
                 ? "height 0.15s ease-out"
                 : "height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
@@ -960,7 +982,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                 bottom: -8,
                 left: 20,
                 right: 20,
-                height: 68,
+                height: 74,
                 transform:
                   hasAttachments && expanded
                     ? "translateY(0)"
@@ -970,7 +992,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                   ? "transform 0.15s ease-out, opacity 0.15s ease-out"
                   : "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease-out",
               }}
-              className="border border-border border-b-0 bg-muted rounded-t-2xl px-2 pt-2 pb-1 flex items-start gap-2 overflow-x-auto prompt-scrollbar"
+              className="border border-white/10 border-b-0 bg-[#141416]/90 backdrop-blur-xl rounded-t-2xl px-3 pt-2.5 pb-1 flex items-start gap-2.5 overflow-x-auto prompt-scrollbar"
             >
               {attachments.map((attachment, index) => (
                 <AttachmentThumb
@@ -997,24 +1019,24 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
             }}
             style={{
               borderRadius: 24,
-              height: expanded ? containerHeight : 48,
+              height: expanded ? containerHeight : 56,
               transition: isSmoothResize
                 ? SMOOTH_HEIGHT_TRANSITION
                 : SPRING_TRANSITION,
               overflow: expanded ? "visible" : "hidden",
             }}
             className={cn(
-              "relative w-full border border-border bg-card shadow-lg focus-within:border-ring/40 focus-within:ring-1 focus-within:ring-ring/20 hover:border-border/80 z-10",
+              "relative w-full border border-white/15 bg-[#121214]/90 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20 hover:border-white/25 z-10",
               expanded ? "cursor-text" : "cursor-default",
             )}
           >
             <style
               dangerouslySetInnerHTML={{
                 __html: `
-              .prompt-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; background: transparent; }
+              .prompt-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; background: transparent; }
               .prompt-scrollbar::-webkit-scrollbar-track { background: transparent; }
-              .prompt-scrollbar::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
-              .prompt-scrollbar:hover::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground) / 0.3); }
+              .prompt-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+              .prompt-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); }
             `,
               }}
             />
@@ -1039,7 +1061,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                   : "opacity 0.3s ease-out, transform 0.3s ease-out, height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
               }}
               className={cn(
-                "prompt-scrollbar absolute top-0 inset-x-0 z-[1] w-full resize-none bg-transparent pl-4 pr-12 py-3.5 text-sm leading-[22px] text-foreground outline-none placeholder:font-medium placeholder:text-muted-foreground/80 cursor-text",
+                "prompt-scrollbar absolute top-0 inset-x-0 z-[1] w-full resize-none bg-transparent pl-5 pr-14 py-4 text-base leading-relaxed text-white outline-none placeholder:font-medium placeholder:text-white/35 cursor-text",
                 expanded
                   ? "opacity-100 scale-100 translate-y-0"
                   : "opacity-0 scale-95 -translate-y-1 pointer-events-none",
@@ -1050,11 +1072,11 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
 
             <div
               ref={topFadeRef}
-              className="absolute left-4 right-12 top-0 z-[2] h-8 bg-gradient-to-b from-card via-card/90 to-transparent pointer-events-none"
+              className="absolute left-5 right-14 top-0 z-[2] h-8 bg-gradient-to-b from-[#121214] via-[#121214]/90 to-transparent pointer-events-none"
             />
             <div
               ref={bottomFadeRef}
-              className="absolute left-4 right-12 z-[2] h-8 bg-gradient-to-t from-card via-card/90 to-transparent pointer-events-none"
+              className="absolute left-5 right-14 z-[2] h-8 bg-gradient-to-t from-[#121214] via-[#121214]/90 to-transparent pointer-events-none"
               style={{
                 opacity: 0,
                 top: `${textareaHeight - 32}px`,
@@ -1073,7 +1095,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                   : "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
               }}
               className={cn(
-                "absolute inset-x-0 top-0 z-[1] cursor-text pl-4 pr-12 py-[15px] text-left text-sm font-medium leading-[17px] text-muted-foreground/80 outline-none",
+                "absolute inset-x-0 top-0 z-[1] cursor-text pl-5 pr-14 py-4 text-left text-base font-medium leading-relaxed text-white/40 outline-none",
                 !expanded
                   ? "opacity-100 scale-100 translate-y-0"
                   : "opacity-0 scale-105 translate-y-1 pointer-events-none",
@@ -1085,12 +1107,13 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
 
             <div
               className={cn(
-                "absolute bottom-2 left-3 right-12 z-[10] flex items-center gap-0 transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)]",
+                "absolute bottom-3 left-4 right-14 z-[10] flex items-center gap-1.5 transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)]",
                 expanded && !isRecording
                   ? "opacity-100 blur-0 translate-y-0 pointer-events-auto"
                   : "opacity-0 blur-sm translate-y-2 pointer-events-none",
               )}
             >
+              {/* Model Selector dropdown */}
               <div className="relative">
                 <button
                   type="button"
@@ -1100,17 +1123,22 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                     setIsModelSelectOpen((prev) => !prev);
                   }}
                   className={cn(
-                    "group flex items-center gap-1 rounded-full px-2 py-1 text-foreground/50 transition-all duration-200 outline-none hover:bg-accent/60 hover:text-foreground cursor-pointer",
-                    isModelSelectOpen ? "bg-accent/60 text-foreground" : "",
+                    "group flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white/70 transition-all duration-200 outline-none hover:bg-white/10 hover:text-white cursor-pointer bg-white/[0.04] border border-white/10",
+                    isModelSelectOpen
+                      ? "bg-white/15 text-white border-primary/50"
+                      : "",
                   )}
-                  aria-label={`Select model. Current: ${selectedModel}`}
+                  aria-label={`Select model. Current: ${selectedModel.label}`}
                 >
                   <ModelIcon
-                    model={selectedModel}
-                    className="size-3.5 opacity-70 group-hover:opacity-100 transition-opacity"
+                    model={selectedModel.id}
+                    className="size-4 opacity-80 group-hover:opacity-100 transition-opacity"
                   />
-                  <span className="text-xs font-semibold select-none transition-colors">
-                    <MorphingText text={selectedModel} />
+                  <span className="text-xs font-semibold select-none tracking-tight">
+                    <MorphingText text={selectedModel.label} />
+                  </span>
+                  <span className="text-[9px] bg-primary/20 text-primary border border-primary/30 px-1 py-0.2 rounded font-mono font-bold uppercase ml-0.5">
+                    FREE
                   </span>
                 </button>
 
@@ -1129,26 +1157,34 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                     }));
                   }}
                   className={cn(
-                    "absolute bottom-full left-0 mb-2.5 z-50 w-44 rounded-2xl border border-border bg-card/95 p-1 shadow-xl backdrop-blur-md flex flex-col gap-0.5 transition-all duration-400 cursor-default",
+                    "absolute bottom-full left-0 mb-3 z-50 w-60 rounded-2xl border border-white/15 bg-[#141416]/95 p-1.5 shadow-2xl backdrop-blur-2xl flex flex-col gap-1 transition-all duration-400 cursor-default",
                     isModelSelectOpen
                       ? "opacity-100 scale-100 translate-y-0 pointer-events-auto ease-[cubic-bezier(0.34,1.56,0.64,1)]"
                       : "opacity-0 scale-95 translate-y-3 pointer-events-none ease-[cubic-bezier(0.175,0.885,0.32,1.275)]",
                   )}
                 >
-                  <div className="relative flex flex-col gap-0.5">
+                  <div className="px-2.5 py-1.5 border-b border-white/[0.06] flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">
+                      OpenRouter Free Models
+                    </span>
+                    <span className="text-[9px] text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-1.5 py-0.5 rounded font-mono">
+                      7 Available
+                    </span>
+                  </div>
+                  <div className="relative flex flex-col gap-0.5 max-h-60 overflow-y-auto prompt-scrollbar">
                     <div
                       style={hoverStyle}
-                      className="absolute left-0 right-0 top-0 h-8 -z-10 rounded-xl bg-accent pointer-events-none"
+                      className="absolute left-0 right-0 top-0 h-9 -z-10 rounded-xl bg-white/10 pointer-events-none"
                     />
-                    {models.map((model, idx) => (
+                    {OPENROUTER_FREE_MODELS.map((m, idx) => (
                       <button
-                        key={model}
+                        key={m.id}
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onMouseEnter={() => {
                           setHoverStyle((prev) => ({
                             opacity: 1,
-                            transform: `translateY(${idx * 34}px) scale(1)`,
+                            transform: `translateY(${idx * 38}px) scale(1)`,
                             transition:
                               prev.opacity === 0
                                 ? "opacity 0.15s ease-out"
@@ -1157,17 +1193,25 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedModel(model);
+                          setSelectedModel(m);
                           setIsModelSelectOpen(false);
                         }}
-                        className="group relative flex h-8 w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-left text-xs font-medium text-foreground/80 outline-none active:scale-[0.98] cursor-pointer"
+                        className={cn(
+                          "group relative flex h-9 w-full items-center justify-between rounded-xl px-3 py-1.5 text-left text-xs font-medium text-white/80 outline-none active:scale-[0.98] cursor-pointer hover:text-white transition-colors",
+                          selectedModel.id === m.id
+                            ? "bg-primary/20 text-white font-semibold"
+                            : "",
+                        )}
                       >
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-2.5 truncate">
                           <ModelIcon
-                            model={model}
-                            className="size-3.5 opacity-85 group-hover:opacity-100 transition-opacity"
+                            model={m.id}
+                            className="size-4 opacity-80 group-hover:opacity-100 transition-opacity"
                           />
-                          {model}
+                          <span className="truncate">{m.label}</span>
+                        </span>
+                        <span className="text-[9px] text-white/30 font-mono shrink-0 ml-1">
+                          {m.provider}
                         </span>
                       </button>
                     ))}
@@ -1179,7 +1223,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={cycleEffort}
-                className="group flex items-center gap-1 rounded-full px-2 py-1 text-foreground/50 transition-all duration-200 hover:bg-accent/60 hover:text-foreground outline-none cursor-pointer"
+                className="group flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white/60 transition-all duration-200 hover:bg-white/10 hover:text-white outline-none cursor-pointer bg-white/[0.03] border border-white/5"
               >
                 <DynamicBarsIcon level={efforts[effortIndex]} />
                 <span className="text-xs font-semibold select-none transition-colors">
@@ -1192,7 +1236,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={openFileChooser}
                 disabled={attachments.length >= maxAttachments}
-                className="ml-auto flex size-7 items-center justify-center rounded-full text-foreground/50 transition-all duration-200 hover:bg-accent/60 hover:text-foreground outline-none cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
+                className="ml-auto flex size-8 items-center justify-center rounded-full text-white/50 transition-all duration-200 hover:bg-white/10 hover:text-white outline-none cursor-pointer disabled:opacity-40 disabled:pointer-events-none bg-white/[0.03]"
               >
                 <PlusIcon />
               </button>
@@ -1200,7 +1244,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
 
             <div
               className={cn(
-                "absolute right-12 bottom-2 z-[10] flex h-8 items-center justify-end gap-[3px] transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)]",
+                "absolute right-14 bottom-3 z-[10] flex h-9 items-center justify-end gap-[3px] transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)]",
                 isRecording
                   ? "w-16 opacity-100 translate-x-0"
                   : "w-0 opacity-0 translate-x-4 pointer-events-none",
@@ -1209,8 +1253,8 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
               {audioData.map((val, i) => (
                 <div
                   key={i}
-                  className="w-1 rounded-full bg-primary transition-[height] duration-75 ease-out"
-                  style={{ height: `${Math.max(4, val * 24)}px` }}
+                  className="w-1.5 rounded-full bg-primary transition-[height] duration-75 ease-out"
+                  style={{ height: `${Math.max(4, val * 28)}px` }}
                 />
               ))}
             </div>
@@ -1230,7 +1274,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                     : "Use voice input"
               }
               style={{ borderRadius: 9999 }}
-              className="absolute right-2 bottom-2 z-[10] flex h-8 w-8 items-center justify-center bg-primary text-primary-foreground transition-all duration-300 hover:opacity-90 outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+              className="absolute right-3 bottom-3 z-[10] flex h-10 w-10 items-center justify-center bg-primary text-black font-bold shadow-[0_0_20px_rgba(255,102,0,0.4)] transition-all duration-300 hover:scale-105 hover:brightness-110 active:scale-95 outline-none cursor-pointer"
             >
               <span className="relative flex h-full w-full items-center justify-center">
                 <span

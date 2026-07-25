@@ -187,6 +187,8 @@ export function AiChatDrawer({
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
+  const [selectedModel, setSelectedModel] = useState("openai/gpt-oss-20b:free");
+
   const nodesKey = nodes.map((n) => `${n.id}:${n.type}`).join(",");
   const edgesKey = edges.map((e) => `${e.source}->${e.target}`).join(",");
 
@@ -244,197 +246,223 @@ export function AiChatDrawer({
     return { display, jsonBlock: jsonMatch ? jsonMatch[1].trim() : null };
   }, []);
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!input.trim() || isLoading) return;
+  const executePrompt = useCallback(
+    async (userPrompt: string, modelOverride?: string) => {
+      if (!userPrompt.trim()) return;
 
-    const userInput = input;
-    const isArchitectureTask =
-      /design|create|build|add|connect|attach|draw|architecture|system|app|generate|make|put/i.test(
-        userInput,
-      );
+      const modelToUse = modelOverride || selectedModel;
+      const isArchitectureTask =
+        /design|create|build|add|connect|attach|draw|architecture|system|app|generate|make|put/i.test(
+          userPrompt,
+        );
 
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: userInput,
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
-    const viewport = getViewport();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const centerX = Math.round((-viewport.x + vw / 2) / viewport.zoom);
-    const centerY = Math.round((-viewport.y + vh / 2) / viewport.zoom);
+      const userMsg: Message = {
+        id: Date.now().toString(),
+        role: "user",
+        content: userPrompt,
+      };
+      setMessages((prev) => [...prev, userMsg]);
+      setInput("");
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      const viewport = getViewport();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const centerX = Math.round((-viewport.x + vw / 2) / viewport.zoom);
+      const centerY = Math.round((-viewport.y + vh / 2) / viewport.zoom);
 
-    setIsLoading(true);
-    setIsDesigning(isArchitectureTask);
-    if (isArchitectureTask) {
-      window.dispatchEvent(
-        new CustomEvent("mosh:designing", {
-          detail: { active: true, x: centerX, y: centerY },
-        }),
-      );
-    }
+      setIsLoading(true);
+      setIsDesigning(isArchitectureTask);
+      if (isArchitectureTask) {
+        window.dispatchEvent(
+          new CustomEvent("mosh:designing", {
+            detail: { active: true, x: centerX, y: centerY },
+          }),
+        );
+      }
 
-    try {
-      const { secureFetch } = await import("@/lib/secure-fetch");
+      try {
+        const { secureFetch } = await import("@/lib/secure-fetch");
 
-      // Inject canvas state + viewport position
-      const currentNodes = getNodes();
-      const currentEdges = getEdges();
+        const currentNodes = getNodes();
+        const currentEdges = getEdges();
 
-      const canvasContext =
-        currentNodes.length > 0
-          ? `\n\nCURRENT CANVAS (${currentNodes.length} nodes, ${currentEdges.length} edges):\n\`\`\`json\n${JSON.stringify({ nodes: currentNodes, edges: currentEdges })}\n\`\`\`\nVIEWPORT CENTER: approximately x=${centerX}, y=${centerY}. Place new nodes near this center.\nWhen modifying, emit the COMPLETE updated nodes+edges.`
-          : `\n\nThe canvas is empty. VIEWPORT CENTER: x=${centerX}, y=${centerY}. Start your diagram near this point.`;
+        const canvasContext =
+          currentNodes.length > 0
+            ? `\n\nCURRENT CANVAS (${currentNodes.length} nodes, ${currentEdges.length} edges):\n\`\`\`json\n${JSON.stringify({ nodes: currentNodes, edges: currentEdges })}\n\`\`\`\nVIEWPORT CENTER: approximately x=${centerX}, y=${centerY}. Place new nodes near this center.\nWhen modifying, emit the COMPLETE updated nodes+edges.`
+            : `\n\nThe canvas is empty. VIEWPORT CENTER: x=${centerX}, y=${centerY}. Start your diagram near this point.`;
 
-      const fullSystemPrompt = SYSTEM_PROMPT + canvasContext;
+        const fullSystemPrompt = SYSTEM_PROMPT + canvasContext;
 
-      const payloadMessages = [
-        { role: "system", content: fullSystemPrompt },
-        ...messages
-          .filter((m) => m.id !== "init")
-          .map((m) => ({ role: m.role, content: m.content })),
-        { role: "user", content: userMsg.content },
-      ];
+        const payloadMessages = [
+          { role: "system", content: fullSystemPrompt },
+          ...messages
+            .filter((m) => m.id !== "init")
+            .map((m) => ({ role: m.role, content: m.content })),
+          { role: "user", content: userMsg.content },
+        ];
 
-      let response: Response | null = null;
-      let attempt = 0;
-      const maxAttempts = 6;
-      const baseDelay = 1500; // 1.5s base delay
+        let response: Response | null = null;
+        let attempt = 0;
+        const maxAttempts = 6;
+        const baseDelay = 1500;
 
-      while (attempt < maxAttempts) {
-        try {
-          response = await secureFetch("/api/v1/ai/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({
-              // provider and model are intentionally omitted here.
-              // The backend resolver uses the free-tier fallback (OpenRouter /
-              // GPT OSS 120B) by default, or a user's BYOK key if configured.
-              messages: payloadMessages,
-              stream: false,
-            }),
-          });
+        while (attempt < maxAttempts) {
+          try {
+            response = await secureFetch("/api/v1/ai/chat", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                provider: "openrouter",
+                model: modelToUse,
+                messages: payloadMessages,
+                stream: false,
+              }),
+            });
 
-          if (response.ok) {
-            break; // Success
-          }
+            if (response.ok) break;
 
-          if (response.status === 429 || response.status >= 500) {
+            if (response.status === 429 || response.status >= 500) {
+              attempt++;
+              if (attempt >= maxAttempts) break;
+              await new Promise((res) =>
+                setTimeout(res, baseDelay * Math.pow(1.5, attempt - 1)),
+              );
+            } else {
+              break;
+            }
+          } catch (err) {
             attempt++;
-            if (attempt >= maxAttempts) break;
-
-            console.warn(
-              `[Mosh] Request failed with status ${response.status}. Retrying attempt ${attempt}/${maxAttempts}...`,
-            );
+            if (attempt >= maxAttempts) throw err;
             await new Promise((res) =>
               setTimeout(res, baseDelay * Math.pow(1.5, attempt - 1)),
             );
-          } else {
-            // Client error (400, 401, 403, etc) -> don't retry
-            break;
           }
-        } catch (err) {
-          // Network errors (e.g., DNS, disconnect)
-          attempt++;
-          if (attempt >= maxAttempts) throw err;
+        }
 
-          console.warn(
-            `[Mosh] Network error: ${String(err)}. Retrying attempt ${attempt}/${maxAttempts}...`,
-          );
-          await new Promise((res) =>
-            setTimeout(res, baseDelay * Math.pow(1.5, attempt - 1)),
+        if (!response?.ok) {
+          const errBody = (await response?.json().catch(() => ({}))) as {
+            error?: string;
+            message?: string;
+          };
+          throw new Error(
+            errBody?.error ??
+              errBody?.message ??
+              `Error ${response?.status ?? "Unknown after retries"}`,
           );
         }
-      }
 
-      if (!response?.ok) {
-        const errBody = (await response?.json().catch(() => ({}))) as {
-          error?: string;
-          message?: string;
+        const aiResponse = (await response.json()) as {
+          choices?: { message?: { content?: string } }[];
         };
-        throw new Error(
-          errBody?.error ??
-            errBody?.message ??
-            `Error ${response?.status ?? "Unknown after retries"}`,
-        );
-      }
 
-      const aiResponse = (await response.json()) as {
-        choices?: { message?: { content?: string } }[];
-      };
-
-      if (!aiResponse.choices?.[0]) {
-        throw new Error(
-          `Invalid response format from AI provider: ${JSON.stringify(aiResponse)}`,
-        );
-      }
-
-      const rawContent =
-        aiResponse.choices[0]?.message?.content ?? "No response generated.";
-      const { display, jsonBlock } = parseAIResponse(rawContent);
-
-      let appliedToCanvas = false;
-
-      if (jsonBlock) {
-        try {
-          const parsed = JSON.parse(jsonBlock);
-          const repaired = validateAndRepairCanvas(parsed);
-          if (repaired) {
-            setNodes(repaired.nodes);
-            setEdges(repaired.edges);
-            setTimeout(() => fitView({ duration: 700, padding: 0.2 }), 100);
-            appliedToCanvas = true;
-          }
-        } catch (err) {
-          console.warn("[MeshworkAI] JSON parse failed:", err);
+        if (!aiResponse.choices?.[0]) {
+          throw new Error(
+            `Invalid response format: ${JSON.stringify(aiResponse)}`,
+          );
         }
+
+        const rawContent =
+          aiResponse.choices[0]?.message?.content ?? "No response generated.";
+        const { display, jsonBlock } = parseAIResponse(rawContent);
+
+        let appliedToCanvas = false;
+
+        if (jsonBlock) {
+          try {
+            const parsed = JSON.parse(jsonBlock);
+            const repaired = validateAndRepairCanvas(parsed);
+            if (repaired) {
+              setNodes(repaired.nodes);
+              setEdges(repaired.edges);
+              setTimeout(() => fitView({ duration: 700, padding: 0.2 }), 100);
+              appliedToCanvas = true;
+            }
+          } catch (err) {
+            console.warn("[MeshworkAI] JSON parse failed:", err);
+          }
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: display || rawContent,
+            appliedToCanvas,
+          },
+        ]);
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : "";
+        let errorMessage = "An unexpected error occurred.";
+        if (errMsg.includes("key") || errMsg.includes("API")) {
+          errorMessage =
+            "No API key configured. Please ensure your provider API key is set correctly.";
+        } else if (
+          errMsg.includes("429") ||
+          errMsg.toLowerCase().includes("rate limit")
+        ) {
+          errorMessage =
+            "Rate limit exceeded. Please try again in a few moments.";
+        } else if (errMsg) {
+          errorMessage = errMsg;
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: `⚠️ **System Error**\n\n${errorMessage}`,
+          },
+        ]);
+      } finally {
+        setIsLoading(false);
+        setIsDesigning(false);
+        window.dispatchEvent(
+          new CustomEvent("mosh:designing", { detail: { active: false } }),
+        );
+      }
+    },
+    [
+      getNodes,
+      getEdges,
+      getViewport,
+      messages,
+      parseAIResponse,
+      selectedModel,
+      setEdges,
+      setNodes,
+      fitView,
+    ],
+  );
+
+  // Auto-trigger from landing page prompt
+  useEffect(() => {
+    const autoPrompt = localStorage.getItem("meshwork_auto_trigger_mosh");
+    const autoModel = localStorage.getItem("meshwork_auto_trigger_model");
+
+    if (autoPrompt) {
+      localStorage.removeItem("meshwork_auto_trigger_mosh");
+      localStorage.removeItem("meshwork_auto_trigger_model");
+
+      setIsOpen(true);
+      if (autoModel) {
+        setSelectedModel(autoModel);
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: display || rawContent,
-          appliedToCanvas,
-        },
-      ]);
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message : "";
-      let errorMessage = "An unexpected error occurred.";
-      if (errMsg.includes("key") || errMsg.includes("API")) {
-        errorMessage =
-          "No API key configured. Please ensure your provider API key is set correctly.";
-      } else if (
-        errMsg.includes("429") ||
-        errMsg.toLowerCase().includes("rate limit")
-      ) {
-        errorMessage =
-          "Rate limit exceeded. Please try again in a few moments.";
-      } else if (errMsg) {
-        errorMessage = errMsg;
-      }
+      const timer = setTimeout(() => {
+        void executePrompt(autoPrompt, autoModel || undefined);
+      }, 700);
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: `⚠️ **System Error**\n\n${errorMessage}`,
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
-      setIsDesigning(false);
-      window.dispatchEvent(
-        new CustomEvent("mosh:designing", { detail: { active: false } }),
-      );
+      return () => clearTimeout(timer);
     }
+  }, [executePrompt]);
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!input.trim() || isLoading) return;
+    await executePrompt(input);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

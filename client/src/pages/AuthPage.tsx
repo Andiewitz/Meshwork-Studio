@@ -52,6 +52,50 @@ const features = [
   },
 ];
 
+async function handlePendingPromptAndRedirect(
+  setLocation: (path: string) => void,
+) {
+  const pendingPrompt = localStorage.getItem("meshwork_pending_prompt");
+  const pendingModel = localStorage.getItem("meshwork_pending_model");
+
+  if (pendingPrompt) {
+    try {
+      const { secureFetch } = await import("@/lib/secure-fetch");
+      const cleanTitle =
+        pendingPrompt
+          .replace(/[^a-zA-Z0-9\s-_]/g, "")
+          .trim()
+          .slice(0, 16) || "AI Architecture";
+
+      const res = await secureFetch("/api/v1/workspaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: cleanTitle,
+          description: pendingPrompt,
+        }),
+      });
+
+      if (res.ok) {
+        const ws = await res.json();
+        localStorage.setItem("meshwork_auto_trigger_mosh", pendingPrompt);
+        if (pendingModel) {
+          localStorage.setItem("meshwork_auto_trigger_model", pendingModel);
+        }
+        localStorage.removeItem("meshwork_pending_prompt");
+        localStorage.removeItem("meshwork_pending_model");
+        localStorage.setItem("meshwork_onboarding_complete", "true");
+
+        window.location.href = `/workspace/${ws.id}`;
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to auto-create workspace on auth:", err);
+    }
+  }
+  setLocation("/home");
+}
+
 function LoginForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -106,7 +150,7 @@ function LoginForm() {
           description: `Logged in as ${data.user.email}`,
         });
         queryClient.setQueryData(["/api/v1/auth/me"], data.user);
-        setLocation("/home");
+        await handlePendingPromptAndRedirect(setLocation);
       } else {
         const errorMsg = data.message ?? "Invalid credentials";
         const lower = errorMsg.toLowerCase();
@@ -391,7 +435,7 @@ function RegisterForm() {
           description: "Welcome to Meshwork.",
         });
         queryClient.setQueryData(["/api/v1/auth/me"], data.user);
-        setLocation("/home");
+        await handlePendingPromptAndRedirect(setLocation);
       } else {
         const errorMsg = data.message ?? "Something went wrong";
         const lower = errorMsg.toLowerCase();

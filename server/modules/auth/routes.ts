@@ -132,26 +132,13 @@ export function registerAuthRoutes(app: Express, context: AppContext): void {
     },
   );
 
-  // Register with email/password (with CAPTCHA and CSRF protection)
-  // CSRF is active in production by default; set ENABLE_CSRF=true in .env to test locally
-  const csrfEnabled =
-    process.env.ENABLE_CSRF === "true" || process.env.NODE_ENV === "production";
-  const conditionalCsrf = csrfEnabled
-    ? csrfProtection
-    : (_req: Request, _res: Response, next: NextFunction) => next();
-
+  // Register with email/password (with CAPTCHA protection)
   app.post(
     "/api/v1/auth/register",
     authLimiter,
-    conditionalCsrf,
     optionalCaptchaMiddleware,
     validate({ body: registerSchema }),
     async (req: Request, res: Response) => {
-      if (!csrfEnabled) {
-        log.debug(
-          "CSRF disabled for register (set ENABLE_CSRF=true to enable)",
-        );
-      }
       log.info({ email: req.body?.email }, "Register attempt received");
       try {
         const { email, password, firstName, lastName } = req.body as {
@@ -257,18 +244,12 @@ export function registerAuthRoutes(app: Express, context: AppContext): void {
     },
   );
 
-  // Login with email/password (NO CAPTCHA for returning users, with CSRF protection)
-  // Uses the same csrfEnabled flag as register (ENABLE_CSRF=true or production)
-
+  // Login with email/password
   app.post(
     "/api/v1/auth/login",
     authLimiter,
-    conditionalCsrf,
     validate({ body: loginSchema }),
     (req: Request, res: Response, next: NextFunction) => {
-      if (!csrfEnabled) {
-        log.debug("CSRF disabled for login (set ENABLE_CSRF=true to enable)");
-      }
       const { email } = (req.body ?? {}) as { email?: string };
       log.info({ email }, "Login attempt received");
 

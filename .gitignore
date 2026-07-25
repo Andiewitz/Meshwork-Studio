@@ -57,3 +57,7 @@ test-results/
 # .gemini/
 # plans/
 # investigations/
+
+# SSH keys (CRITICAL - NEVER COMMIT)
+ssh-keys/
+*.pem

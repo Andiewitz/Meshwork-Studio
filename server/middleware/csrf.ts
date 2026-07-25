@@ -79,7 +79,12 @@ export const validateCsrfToken = (
   }
 
   // Skip CSRF check for public auth endpoints (handled specially)
-  if (req.path === "/api/auth/register" || req.path === "/api/auth/login") {
+  if (
+    req.path === "/api/auth/register" ||
+    req.path === "/api/auth/login" ||
+    req.path === "/api/v1/auth/register" ||
+    req.path === "/api/v1/auth/login"
+  ) {
     return next();
   }
 

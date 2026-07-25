@@ -75,6 +75,48 @@ export function OnboardingFlow() {
         }),
       );
       localStorage.setItem(ONBOARDING_KEY, "true");
+
+      // Auto-create workspace if prompt was submitted from landing page
+      const pendingPrompt = localStorage.getItem("meshwork_pending_prompt");
+      const pendingModel = localStorage.getItem("meshwork_pending_model");
+
+      if (pendingPrompt) {
+        try {
+          const title =
+            pendingPrompt
+              .replace(/[^a-zA-Z0-9\s-_]/g, "")
+              .trim()
+              .slice(0, 16) || "AI Architecture";
+
+          const res = await secureFetch(`${API_BASE_URL}/api/v1/workspaces`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title,
+              description: pendingPrompt,
+            }),
+          });
+
+          if (res.ok) {
+            const ws = await res.json();
+            localStorage.setItem("meshwork_auto_trigger_mosh", pendingPrompt);
+            if (pendingModel) {
+              localStorage.setItem("meshwork_auto_trigger_model", pendingModel);
+            }
+            localStorage.removeItem("meshwork_pending_prompt");
+            localStorage.removeItem("meshwork_pending_model");
+
+            window.dispatchEvent(new Event("onboarding-complete"));
+            window.location.href = `/workspace/${ws.id}`;
+            return;
+          }
+        } catch (err) {
+          console.error(
+            "Failed to create auto workspace after onboarding:",
+            err,
+          );
+        }
+      }
     } catch (err) {
       console.error("Failed to save onboarding data:", err);
       // Still mark as complete so user isn't stuck
@@ -302,6 +344,12 @@ export function OnboardingFlow() {
 export function useOnboardingComplete(
   user?: { createdAt?: Date | string | null } | null,
 ) {
+  // If user has a pending prompt from landing page, onboarding must run first
+  if (localStorage.getItem("meshwork_pending_prompt")) {
+    localStorage.removeItem(ONBOARDING_KEY);
+    return false;
+  }
+
   // Already completed
   if (localStorage.getItem(ONBOARDING_KEY) === "true") return true;
 
@@ -316,7 +364,7 @@ export function useOnboardingComplete(
     }
   }
 
-  // Dev mock user — skip onboarding so the dashboard is usable in dev
+  // Dev mock user — skip onboarding so the dashboard is usable in dev (unless pending prompt exists)
   if (import.meta.env.DEV && user) {
     localStorage.setItem(ONBOARDING_KEY, "true");
     return true;
