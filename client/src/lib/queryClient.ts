@@ -33,6 +33,13 @@ async function throwIfResNotOk(res: Response) {
       // Ignore text extraction failure
     }
 
+    // Structured developer console debug log (enables pinpointing exact errors in DevTools)
+    console.debug(`[API Error ${res.status}] ${res.url}:`, {
+      status: res.status,
+      message,
+      payload,
+    });
+
     throw new ApiError(res.status, message, payload);
   }
 }
