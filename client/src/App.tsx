@@ -230,12 +230,14 @@ function Router() {
   // Dashboard routes with layout
   return (
     <DashboardLayout>
-      <div className="flex-1">
+      <AnimatePresence mode="wait">
         <motion.div
           key={location}
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="h-full"
         >
           <Switch location={location}>
             <Route path="/home">
@@ -261,7 +263,7 @@ function Router() {
             </Route>
           </Switch>
         </motion.div>
-      </div>
+      </AnimatePresence>
     </DashboardLayout>
   );
 }

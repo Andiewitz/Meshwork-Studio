@@ -10,29 +10,38 @@ import { useAuth } from "@/hooks/use-auth";
 import { secureFetch } from "@/lib/secure-fetch";
 import { WorkspaceCard } from "@/features/workspace/components/WorkspaceCard";
 import { CreateWorkspaceDialog } from "@/features/workspace/components/CreateWorkspaceDialog";
-import { Search, LayoutGrid, List, Package } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  Search,
+  LayoutGrid,
+  List,
+  Package,
+  ChevronDown,
+  Plus,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LineSyncLoader } from "@/components/ui/loading-screen";
-import { SearchBar } from "@/components/ui/search-bar";
-import { AnimatedButton } from "@/components/ui/animated-button";
+
+const TABS = ["Recently viewed", "Shared files", "Shared projects"] as const;
+type Tab = (typeof TABS)[number];
+
+const FILE_TYPE_FILTERS = ["Design", "Canvas", "Template", "All"] as const;
 
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.1 },
+    transition: { staggerChildren: 0.05, delayChildren: 0.05 },
   },
   exit: {
     opacity: 0,
-    transition: { staggerChildren: 0.05, staggerDirection: -1 },
+    transition: { staggerChildren: 0.03, staggerDirection: -1 },
   },
 };
 
 const fadeUpVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
-  exit: { opacity: 0, y: -20, transition: { duration: 0.2, ease: "easeIn" } },
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+  exit: { opacity: 0, y: -6, transition: { duration: 0.15, ease: "easeIn" } },
 };
 
 export default function Home() {
@@ -54,7 +63,6 @@ export default function Home() {
       const executeTemplateCreation = async () => {
         try {
           const template = JSON.parse(pendingTemplateStr);
-          // 1. Create Workspace
           const ws = await createWorkspace.mutateAsync({
             title: template.title,
             description: template.description,
@@ -70,7 +78,6 @@ export default function Home() {
             }),
           );
 
-          // 2. Sync nodes and edges
           await secureFetch(`/api/v1/workspaces/${ws.id}/canvas`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -80,7 +87,6 @@ export default function Home() {
             }),
           });
 
-          // 3. Clean up and redirect
           localStorage.removeItem("meshwork_pending_template");
           setLocation(`/workspace/${ws.id}`);
         } catch (e) {
@@ -96,25 +102,15 @@ export default function Home() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-
-  // Settings specific to Workspaces Archive page
+  const [activeTab, setActiveTab] = useState<Tab>("Recently viewed");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-
-  // ⌘K shortcut is now handled inside SearchBar component
+  const [fileTypeFilter, setFileTypeFilter] = useState<string>("All");
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const isWorkspacesPage = location === "/workspaces";
 
   const handleDelete = (id: number) => {
     deleteWorkspace.mutate(id);
-    if (selectedIds.has(id)) {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }
   };
 
   const filteredWorkspaces = useMemo(() => {
@@ -125,13 +121,9 @@ export default function Home() {
         ws.type.toLowerCase().includes(searchTerm.toLowerCase()),
     );
 
-    // Sort logic: Favorites first, then by descending creation date/ID
     result = [...result].sort((a, b) => {
-      // Primary sort: isFavorite
       if (a.isFavorite && !b.isFavorite) return -1;
       if (!a.isFavorite && b.isFavorite) return 1;
-
-      // Secondary sort: updated date / creation date (descending)
       const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
       const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
       return dateB - dateA;
@@ -139,19 +131,9 @@ export default function Home() {
     return result;
   }, [workspaces, searchTerm]);
 
-  // Derived arrays based on page config
   const displayWorkspaces = isWorkspacesPage
     ? filteredWorkspaces
-    : filteredWorkspaces.slice(0, 3);
-
-  // Time-based greeting logic
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good Morning";
-    if (hour < 17) return "Good Afternoon";
-    return "Good Evening";
-  };
-  const userName = user?.firstName || user?.email?.split("@")[0] || "Architect";
+    : filteredWorkspaces.slice(0, 20);
 
   if (isAuthLoading || isWorkspacesLoading || isGeneratingBlueprint) {
     return (
@@ -174,185 +156,231 @@ export default function Home() {
             : "Home — Meshwork Studio"}
         </title>
       </Helmet>
-      <div className="w-full max-w-[1400px] mx-auto">
-        <AnimatePresence mode="wait">
-          {!isWorkspacesPage ? (
-            // ==========================================
-            // OVERVIEW PAGE (HERO + RECENT)
-            // ==========================================
-            <motion.div
-              key="overview"
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={containerVariants}
-              className="w-full min-h-[calc(100vh-10rem)] flex flex-col justify-center pb-12"
-            >
-              {/* Hero Section */}
-              <motion.section
-                variants={fadeUpVariants}
-                className="flex flex-col items-center text-center mb-16 shrink-0"
+
+      {/* Full-height flex column to fill the space under the top bar */}
+      <div className="flex flex-col h-[calc(100vh-48px)]">
+        {/* ── Tab bar ── */}
+        <div className="flex items-center justify-between border-b border-[#3a3a3a] bg-[#1e1e1e] px-6 py-0 shrink-0">
+          {/* Left: tabs */}
+          <div className="flex items-center gap-0">
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`relative px-4 py-3 text-xs font-medium transition-colors ${
+                  activeTab === tab
+                    ? "text-[#e0e0e0]"
+                    : "text-[#888] hover:text-[#e0e0e0]"
+                }`}
               >
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold font-sans tracking-tighter text-white mb-10">
-                  {getGreeting()}, {userName}.
-                </h2>
-
-                {/* Command Bar — SearchBar component */}
-                <SearchBar
-                  data={filteredWorkspaces}
-                  onCreateNew={() => setIsCreateOpen(true)}
-                  commandMode
-                />
-
-                {/* Primary Action */}
-                <div className="mt-10">
-                  <AnimatedButton
-                    label="New Workspace"
-                    onClick={() => setIsCreateOpen(true)}
-                  />
-                </div>
-              </motion.section>
-
-              {/* Dashboard Content */}
-              <div className="w-full max-w-5xl mx-auto shrink-0">
-                <motion.section variants={containerVariants} className="w-full">
+                {tab}
+                {activeTab === tab && (
                   <motion.div
-                    variants={fadeUpVariants}
-                    className="flex items-center justify-between mb-10"
+                    layoutId="tab-indicator"
+                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Right: filter + search + view toggle */}
+          <div className="flex items-center gap-2 py-1.5">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute inset-y-0 left-2 my-auto w-3.5 h-3.5 text-[#888]" />
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                type="text"
+                placeholder="Search..."
+                className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-md pl-7 pr-3 py-1 text-xs outline-none focus:border-primary/50 text-[#e0e0e0] placeholder:text-[#888] transition-colors w-36"
+              />
+            </div>
+
+            {/* File type filter */}
+            <div className="relative">
+              <button
+                onClick={() => setFilterOpen((v) => !v)}
+                className="flex items-center gap-1 rounded-md border border-[#3a3a3a] px-2.5 py-1 text-xs text-[#888] hover:text-[#e0e0e0] hover:border-[#555] transition-colors"
+              >
+                {fileTypeFilter === "All" ? "All files" : fileTypeFilter}
+                <ChevronDown className="h-3 w-3" />
+              </button>
+              <AnimatePresence>
+                {filterOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute right-0 top-full mt-1 z-30 bg-[#252525] border border-[#3a3a3a] rounded-lg shadow-2xl overflow-hidden min-w-[120px]"
                   >
-                    <h3 className="text-xs font-bold font-sans tracking-[0.2em] uppercase text-outline">
-                      Recent Projects
-                    </h3>
+                    {FILE_TYPE_FILTERS.map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => {
+                          setFileTypeFilter(f);
+                          setFilterOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                          fileTypeFilter === f
+                            ? "bg-[#3a3a3a] text-[#e0e0e0]"
+                            : "text-[#888] hover:bg-[#2c2c2c] hover:text-[#e0e0e0]"
+                        }`}
+                      >
+                        {f === "All" ? "All files" : f}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* View mode toggle */}
+            <div className="flex items-center rounded-md border border-[#3a3a3a] overflow-hidden">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`flex h-7 w-7 items-center justify-center transition-colors ${
+                  viewMode === "grid"
+                    ? "bg-[#3a3a3a] text-[#e0e0e0]"
+                    : "text-[#888] hover:text-[#e0e0e0]"
+                }`}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`flex h-7 w-7 items-center justify-center transition-colors ${
+                  viewMode === "list"
+                    ? "bg-[#3a3a3a] text-[#e0e0e0]"
+                    : "text-[#888] hover:text-[#e0e0e0]"
+                }`}
+              >
+                <List className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* New workspace button */}
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary/90 transition-all active:scale-95"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New
+            </button>
+          </div>
+        </div>
+
+        {/* ── Scrollable content ── */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6">
+            {/* Empty state — no workspaces */}
+            {filteredWorkspaces.length === 0 && !searchTerm ? (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center py-20 text-center"
+              >
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2c2c2c]">
+                  <Package className="h-8 w-8 text-[#888]" />
+                </div>
+                <p className="mb-1 text-sm font-medium text-[#e0e0e0]">
+                  No workspaces yet
+                </p>
+                <p className="mb-4 text-xs text-[#888]">
+                  Create your first workspace to start designing.
+                </p>
+                <button
+                  onClick={() => setIsCreateOpen(true)}
+                  className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-white hover:bg-primary/90 transition-all duration-150 active:scale-95"
+                >
+                  New workspace
+                </button>
+              </motion.div>
+            ) : filteredWorkspaces.length === 0 && searchTerm ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center py-20 text-center"
+              >
+                <Search className="h-10 w-10 text-[#888] mb-3" />
+                <p className="text-sm font-medium text-[#e0e0e0]">
+                  No results for "{searchTerm}"
+                </p>
+                <p className="text-xs text-[#888] mt-1">
+                  Try a different search term.
+                </p>
+              </motion.div>
+            ) : (
+              <>
+                {/* Section header */}
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-xs font-medium text-[#888]">
+                    {displayWorkspaces.length} workspace
+                    {displayWorkspaces.length !== 1 ? "s" : ""}
+                  </h3>
+                  {!isWorkspacesPage && filteredWorkspaces.length > 20 && (
                     <Link href="/workspaces">
-                      <span className="text-[10px] font-sans tracking-widest text-primary hover:underline underline-offset-4 uppercase cursor-figma-pointer">
-                        View Archive
+                      <span className="text-[10px] text-primary hover:underline underline-offset-4 uppercase tracking-wider cursor-pointer">
+                        View all
                       </span>
                     </Link>
-                  </motion.div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                    {displayWorkspaces.slice(0, 3).map((workspace) => (
-                      <WorkspaceCard
-                        key={workspace.id}
-                        workspace={workspace}
-                        onDelete={handleDelete}
-                        viewMode="grid"
-                      />
-                    ))}
-                  </div>
-                  {displayWorkspaces.length === 0 && !searchTerm && (
-                    <motion.div
-                      variants={fadeUpVariants}
-                      className="bg-white/[0.02] backdrop-blur-xl border border-dashed border-white/10 rounded-xl p-16 flex flex-col items-center justify-center text-center shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
-                    >
-                      <Package className="w-12 h-12 text-outline/30 mb-4" />
-                      <p className="text-outline font-sans">
-                        No recent projects found.
-                      </p>
-                      <button
-                        onClick={() => setIsCreateOpen(true)}
-                        className="text-primary hover:text-white mt-2 font-sans font-bold text-sm transition-colors cursor-figma-pointer"
-                      >
-                        Create your first
-                      </button>
-                    </motion.div>
                   )}
-                </motion.section>
-              </div>
-            </motion.div>
-          ) : (
-            // ==========================================
-            // WORKSPACES PAGE (ARCHIVE)
-            // ==========================================
-            <motion.div
-              key="projects"
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={containerVariants}
-              className="w-full max-w-5xl mx-auto"
-            >
-              <motion.div
-                variants={fadeUpVariants}
-                className="flex items-center justify-between mb-10"
-              >
-                <h2 className="text-2xl font-extrabold tracking-tighter text-white font-sans uppercase">
-                  All Projects
-                </h2>
-                <div className="flex items-center gap-4">
-                  {/* Local mini search for workspace tab */}
-                  <div className="relative group">
-                    <Search className="absolute inset-y-0 left-2 my-auto w-4 h-4 text-outline group-focus-within:text-primary transition-colors" />
-                    <input
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      type="text"
-                      placeholder="Filter..."
-                      className="bg-white/[0.02] backdrop-blur-md border border-white/10 rounded pl-8 pr-3 py-1.5 text-sm outline-none focus:border-primary/50 text-white transition-colors cursor-figma"
-                    />
-                  </div>
-                  <div className="flex items-center gap-1 bg-surface-container-low p-1 rounded-lg border border-outline-variant/10">
-                    <button
-                      onClick={() => setViewMode("grid")}
-                      className={`p-1.5 rounded cursor-figma-pointer transition-colors ${viewMode === "grid" ? "bg-surface-container-high text-white shadow-sm" : "text-[#777575] hover:text-white"}`}
-                    >
-                      <LayoutGrid className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setViewMode("list")}
-                      className={`p-1.5 rounded cursor-figma-pointer transition-colors ${viewMode === "list" ? "bg-surface-container-high text-white shadow-sm" : "text-[#777575] hover:text-white"}`}
-                    >
-                      <List className="w-4 h-4" />
-                    </button>
-                  </div>
                 </div>
-              </motion.div>
 
-              <AnimatePresence mode="popLayout">
-                {viewMode === "grid" ? (
-                  <motion.div
-                    key="grid"
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    variants={containerVariants}
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"
-                  >
-                    {isWorkspacesLoading
-                      ? null
-                      : displayWorkspaces.map((workspace) => (
+                <AnimatePresence mode="popLayout">
+                  {viewMode === "grid" ? (
+                    <motion.div
+                      key="grid"
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      variants={containerVariants}
+                      className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+                    >
+                      {displayWorkspaces.map((workspace) => (
+                        <motion.div
+                          key={workspace.id}
+                          variants={fadeUpVariants}
+                        >
                           <WorkspaceCard
-                            key={workspace.id}
                             workspace={workspace}
                             onDelete={handleDelete}
                             viewMode="grid"
                           />
-                        ))}
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="list"
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    variants={containerVariants}
-                    className="flex flex-col gap-4"
-                  >
-                    {isWorkspacesLoading
-                      ? null
-                      : displayWorkspaces.map((workspace) => (
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="list"
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      variants={containerVariants}
+                      className="flex flex-col gap-2"
+                    >
+                      {displayWorkspaces.map((workspace) => (
+                        <motion.div
+                          key={workspace.id}
+                          variants={fadeUpVariants}
+                        >
                           <WorkspaceCard
-                            key={workspace.id}
                             workspace={workspace}
                             onDelete={handleDelete}
                             viewMode="list"
                           />
-                        ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       <CreateWorkspaceDialog
