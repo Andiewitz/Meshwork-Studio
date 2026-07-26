@@ -23,6 +23,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { MeshworkLogo } from "@/components/MeshworkLogo";
+import { AnimatedSpinner } from "@/components/ui/animated-spinner";
 import Lenis from "lenis";
 import "lenis/dist/lenis.css";
 import {
@@ -570,20 +571,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           <Suspense
             fallback={
               <div className="flex flex-col items-center justify-center h-[60vh] gap-6">
-                <div className="w-8 h-8">
-                  <MeshworkLogo />
-                </div>
-                <div className="w-24 h-[2px] bg-white/[0.06] rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-primary rounded-full"
-                    initial={{ x: "-100%" }}
-                    animate={{ x: "100%" }}
-                    transition={{
-                      duration: 1,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                  />
+                <div className="relative flex items-center justify-center">
+                  <AnimatedSpinner size="4.5rem" />
+                  <div className="absolute w-6 h-6 flex items-center justify-center pointer-events-none">
+                    <MeshworkLogo />
+                  </div>
                 </div>
               </div>
             }
