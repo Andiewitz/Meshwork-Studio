@@ -30,6 +30,7 @@ import {
   OnboardingFlow,
   useOnboardingComplete,
 } from "@/components/ui/onboarding-modal";
+import { MobileGate } from "@/components/ui/mobile-gate";
 
 const sidebarVariants = {
   hidden: { opacity: 0, x: -20 },
@@ -53,6 +54,14 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const rawIds = user?.readNotificationIds;
   const readIds: number[] = Array.isArray(rawIds) ? (rawIds as number[]) : [];
   const isUnread = !readIds.includes(1);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const [panelOpen, setPanelOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -132,6 +141,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
   const userName = user?.firstName || user?.email?.split("@")[0] || "User";
   const userInitial = userName.charAt(0).toUpperCase();
+
+  if (isMobile) {
+    return <MobileGate />;
+  }
 
   return (
     <div className="bg-surface text-on-surface font-body selection:bg-primary/30 selection:text-primary min-h-screen antialiased flex cursor-figma">
