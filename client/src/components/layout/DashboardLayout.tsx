@@ -16,10 +16,9 @@ import {
   Crown,
   ChevronRight,
   Star,
-  FileText,
+  Clock,
   FolderKanban,
   Trash2,
-  Plus,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaces } from "@/hooks/use-workspaces";
@@ -30,6 +29,15 @@ import {
   OnboardingFlow,
   useOnboardingComplete,
 } from "@/components/ui/onboarding-modal";
+
+const sidebarVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: { opacity: 1, x: 0, transition: { staggerChildren: 0.08 } },
+};
+const itemVariants = {
+  hidden: { opacity: 0, x: -12 },
+  visible: { opacity: 1, x: 0 },
+};
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, logout, updatePreferences } = useAuth();
@@ -125,101 +133,108 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const userInitial = userName.charAt(0).toUpperCase();
 
   return (
-    <div className="bg-[#1e1e1e] text-[#e0e0e0] font-body selection:bg-primary/30 selection:text-primary min-h-screen antialiased flex cursor-figma">
+    <div className="bg-surface text-on-surface font-body selection:bg-primary/30 selection:text-primary min-h-screen antialiased flex cursor-figma">
       {/* ── Left sidebar (240px) ── */}
       <motion.aside
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.3 }}
-        className="fixed left-0 top-0 h-full w-60 z-50 flex flex-col border-r border-[#3a3a3a] bg-[#252525]"
+        initial="hidden"
+        animate="visible"
+        variants={sidebarVariants}
+        className="fixed left-0 top-0 h-full w-60 z-50 flex flex-col border-r border-white/[0.05] bg-black/40 backdrop-blur-xl"
       >
         {/* Logo row */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-[#3a3a3a]">
-          <MeshworkLogo className="text-white w-5 h-5 shrink-0" />
-          <span className="text-sm font-semibold text-[#e0e0e0] truncate flex-1">
+        <motion.div
+          variants={itemVariants}
+          className="flex items-center gap-2.5 px-4 py-3.5 border-b border-white/[0.05]"
+        >
+          <MeshworkLogo className="text-white w-6 h-6 shrink-0" />
+          <span
+            className="text-[13px] font-semibold text-white truncate flex-1"
+            style={{ fontFamily: "var(--font-headline)" }}
+          >
             Meshwork Studio
           </span>
-          <span className="text-[9px] font-bold tracking-[0.15em] uppercase text-[#888] border border-[#3a3a3a] px-1.5 py-0.5 rounded-full shrink-0">
+          <span className="text-[9px] font-bold tracking-[0.15em] uppercase text-white/30 border border-white/10 px-1.5 py-0.5 rounded-full shrink-0">
             Beta
           </span>
-        </div>
+        </motion.div>
 
         {/* Search */}
-        <div className="px-3 pt-2 pb-1">
-          <div className="flex items-center gap-2 rounded-md border border-[#3a3a3a] bg-[#1e1e1e] px-2.5 py-1.5">
-            <Search className="h-3.5 w-3.5 text-[#888] shrink-0" />
+        <div className="px-3 pt-2.5 pb-1">
+          <div className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-white/[0.03] px-2.5 py-1.5 group focus-within:border-primary/40 transition-colors">
+            <Search className="h-3.5 w-3.5 text-white/30 shrink-0 group-focus-within:text-primary transition-colors" />
             <input
               type="text"
               value={sidebarSearch}
               onChange={(e) => setSidebarSearch(e.target.value)}
               placeholder="Search"
-              className="bg-transparent text-xs text-[#e0e0e0] outline-none placeholder:text-[#888] w-full"
+              className="bg-transparent text-xs text-white outline-none placeholder:text-white/30 w-full"
             />
           </div>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-2 py-1">
+        <nav className="flex-1 overflow-y-auto px-2 py-1 hide-scrollbar">
           {/* Top nav items */}
           <div className="space-y-0.5">
             {(
               [
                 ["/home", isOverview, LayoutDashboard, "Overview"],
-                ["/workspaces", isProjects, Package, "Projects"],
+                ["/workspaces", isProjects, Package, "Workspaces"],
                 ["/dev", isDev, Newspaper, "Blog"],
                 ["/team", isTeam, Users, "Team"],
               ] as const
             ).map(([href, active, Icon, label]) => (
               <Link href={href} key={href}>
-                <button
+                <motion.button
+                  variants={itemVariants}
                   title={label}
-                  className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                  className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all duration-300 cursor-figma-pointer ${
                     active
-                      ? "bg-[#3a3a3a] text-[#e0e0e0]"
-                      : "text-[#888] hover:bg-[#2c2c2c] hover:text-[#e0e0e0]"
+                      ? "bg-white/[0.06] text-white"
+                      : "text-white/30 hover:bg-white/[0.04] hover:text-white/70"
                   }`}
                 >
                   <Icon
-                    className={`h-4 w-4 shrink-0 ${active ? "text-primary" : ""}`}
+                    className={`h-4 w-4 shrink-0 ${active ? "text-primary drop-shadow-[0_0_6px_rgba(255,102,0,0.4)]" : ""}`}
                   />
                   <span>{label}</span>
                   {active && (
-                    <span className="ml-auto w-1 h-1 rounded-full bg-primary" />
+                    <span className="ml-auto w-1 h-1 rounded-full bg-primary shadow-[0_0_6px_rgba(255,102,0,0.6)]" />
                   )}
-                </button>
+                </motion.button>
               </Link>
             ))}
           </div>
 
-          {/* Team / workspace section */}
-          <div className="mt-4">
+          {/* Workspace section */}
+          <div className="mt-5">
             <button
               onClick={() => setTeamOpen(!teamOpen)}
-              className="flex w-full items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-[#888] hover:text-[#e0e0e0] transition-colors"
+              className="flex w-full items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-white/30 hover:text-white/60 transition-colors"
             >
               <ChevronRight
-                className={`h-3 w-3 shrink-0 transition-transform ${teamOpen ? "rotate-90" : ""}`}
+                className={`h-3 w-3 shrink-0 transition-transform duration-200 ${teamOpen ? "rotate-90" : ""}`}
               />
               <span className="truncate">
                 {user?.firstName
                   ? `${user.firstName}'s workspace`
                   : "My Workspace"}
               </span>
-              <span className="ml-auto shrink-0 rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+              <span className="ml-auto shrink-0 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
                 Free
               </span>
             </button>
             {teamOpen && (
-              <div className="ml-3 space-y-0.5 border-l border-[#3a3a3a] pl-3">
+              <div className="ml-3 space-y-0.5 border-l border-white/[0.05] pl-3 mt-0.5">
                 {(
                   [
-                    [FileText, "Drafts", "/home"],
-                    [FolderKanban, "All projects", "/workspaces"],
+                    [Clock, "Recents", "/home"],
+                    [FolderKanban, "All workspaces", "/workspaces"],
                     [Trash2, "Trash", "/home"],
                   ] as const
                 ).map(([Icon, label, href]) => (
                   <Link href={href} key={label}>
-                    <button className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs text-[#888] transition-colors hover:bg-[#2c2c2c] hover:text-[#e0e0e0]">
+                    <button className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs text-white/30 transition-colors hover:bg-white/[0.04] hover:text-white/60 cursor-figma-pointer">
                       <Icon className="h-4 w-4 shrink-0" />
                       <span>{label}</span>
                     </button>
@@ -229,11 +244,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             )}
           </div>
 
-          {/* Workspaces list */}
+          {/* Recent workspaces */}
           {workspaces && workspaces.length > 0 && (
-            <div className="mt-4">
-              <p className="mb-1 px-2.5 text-[10px] font-medium uppercase tracking-wider text-[#888]">
-                Workspaces
+            <div className="mt-5">
+              <p className="mb-1 px-2.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white/20">
+                Recent
               </p>
               <div className="space-y-0.5">
                 {workspaces
@@ -244,11 +259,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                         .toLowerCase()
                         .includes(sidebarSearch.toLowerCase()),
                   )
-                  .slice(0, 6)
+                  .slice(0, 5)
                   .map((ws) => (
                     <Link href={`/workspace/${ws.id}`} key={ws.id}>
-                      <button className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs text-[#888] transition-colors hover:bg-[#2c2c2c] hover:text-[#e0e0e0]">
-                        <FolderKanban className="h-4 w-4 shrink-0" />
+                      <button className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs text-white/30 transition-colors hover:bg-white/[0.04] hover:text-white/60 cursor-figma-pointer">
+                        <FolderKanban className="h-3.5 w-3.5 shrink-0" />
                         <span className="truncate">{ws.title}</span>
                       </button>
                     </Link>
@@ -258,8 +273,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           )}
 
           {/* Starred */}
-          <div className="mt-4">
-            <button className="flex w-full items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-[#888] hover:text-[#e0e0e0] transition-colors">
+          <div className="mt-5">
+            <button className="flex w-full items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-white/30 hover:text-white/60 transition-colors">
               <ChevronRight className="h-3 w-3 shrink-0" />
               <Star className="h-3 w-3 shrink-0" />
               <span>Starred</span>
@@ -268,16 +283,16 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         </nav>
 
         {/* Bottom section */}
-        <div className="flex flex-col gap-2 p-3 border-t border-[#3a3a3a]">
+        <div className="flex flex-col gap-2 p-3 border-t border-white/[0.05]">
           {/* Upgrade banner */}
-          <div className="rounded-lg border border-[#3a3a3a] bg-[#1e1e1e] p-3">
+          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
             <div className="mb-2 flex items-center gap-2">
-              <Crown className="h-4 w-4 text-[#888]" />
-              <span className="text-[11px] font-medium text-[#e0e0e0]">
+              <Crown className="h-4 w-4 text-white/30" />
+              <span className="text-[11px] font-medium text-white/70">
                 Upgrade for premium
               </span>
             </div>
-            <button className="w-full rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors">
+            <button className="w-full rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors cursor-figma-pointer active:scale-95">
               View plans
             </button>
           </div>
@@ -286,9 +301,9 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="relative" ref={profileRef}>
             <button
               onClick={() => setProfileOpen((v) => !v)}
-              className="w-full flex items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-[#2c2c2c] transition-colors"
+              className="w-full flex items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-white/[0.04] transition-colors cursor-figma-pointer"
             >
-              <div className="w-6 h-6 rounded-full overflow-hidden bg-[#3a3a3a] border border-[#3a3a3a] flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+              <div className="w-6 h-6 rounded-full overflow-hidden bg-white/[0.06] border border-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
                 {user?.profileImageUrl ? (
                   <img
                     alt=""
@@ -300,10 +315,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 )}
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <p className="text-xs font-medium text-[#e0e0e0] truncate">
+                <p className="text-xs font-medium text-white truncate">
                   {userName}
                 </p>
-                <p className="text-[10px] text-[#888] truncate">
+                <p className="text-[10px] text-white/30 truncate">
                   {user?.email}
                 </p>
               </div>
@@ -314,7 +329,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
                   title="Help"
-                  className="text-[#888] hover:text-[#e0e0e0] transition-colors p-0.5"
+                  className="text-white/20 hover:text-white/60 transition-colors p-0.5"
                 >
                   <HelpCircle className="w-3.5 h-3.5" />
                 </a>
@@ -328,13 +343,13 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 4 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute bottom-full left-0 right-0 mb-1 bg-[#252525] border border-[#3a3a3a] rounded-xl overflow-hidden shadow-2xl z-50"
+                  className="absolute bottom-full left-0 right-0 mb-1 bg-[#141414] border border-white/[0.06] rounded-xl overflow-hidden shadow-2xl z-50"
                 >
-                  <div className="px-3 py-2.5 border-b border-[#3a3a3a]">
-                    <p className="text-[13px] font-semibold text-[#e0e0e0] truncate">
+                  <div className="px-3 py-2.5 border-b border-white/[0.05]">
+                    <p className="text-[13px] font-semibold text-white truncate">
                       {userName}
                     </p>
-                    <p className="text-[10px] text-[#888] truncate">
+                    <p className="text-[10px] text-white/40 truncate">
                       {user?.email}
                     </p>
                   </div>
@@ -343,7 +358,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                       href="/settings"
                       onClick={() => setProfileOpen(false)}
                     >
-                      <button className="w-full text-left px-3 py-2 text-xs text-[#888] hover:text-[#e0e0e0] hover:bg-[#2c2c2c] flex items-center gap-2.5 transition-colors">
+                      <button className="w-full text-left px-3 py-2 text-xs text-white/60 hover:text-white hover:bg-white/[0.05] flex items-center gap-2.5 transition-colors cursor-figma-pointer">
                         <Settings className="w-3.5 h-3.5" /> Settings
                       </button>
                     </Link>
@@ -352,7 +367,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                         setProfileOpen(false);
                         logout();
                       }}
-                      className="w-full text-left px-3 py-2 text-xs text-red-400/70 hover:text-red-400 hover:bg-[#2c2c2c] flex items-center gap-2.5 transition-colors"
+                      className="w-full text-left px-3 py-2 text-xs text-red-400/70 hover:text-red-400 hover:bg-white/[0.05] flex items-center gap-2.5 transition-colors cursor-figma-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5" /> Logout
                     </button>
@@ -364,39 +379,31 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
       </motion.aside>
 
-      {/* ── Top bar (offset by 240px sidebar) ── */}
+      {/* ── Top bar ── */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
-        className="fixed top-0 left-60 right-0 z-40 bg-[#1e1e1e]/90 backdrop-blur-xl flex justify-between items-center px-6 py-3 border-b border-[#3a3a3a] h-12"
+        className="fixed top-0 left-60 right-0 z-40 bg-black/40 backdrop-blur-xl flex justify-between items-center px-6 py-3 border-b border-white/[0.05] h-12"
       >
-        <div className="flex items-center gap-1.5">
-          {(
-            [
-              ["Design", ""],
-              ["Canvas", ""],
-              ["Templates", "/templates"],
-            ] as const
-          ).map(([label, href]) =>
-            href ? (
-              <Link href={href} key={label}>
-                <button className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-[#888] hover:bg-[#2c2c2c] hover:text-[#e0e0e0] transition-colors">
-                  {label}
-                </button>
-              </Link>
-            ) : (
-              <button
-                key={label}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-[#888] hover:bg-[#2c2c2c] hover:text-[#e0e0e0] transition-colors"
-              >
-                {label}
-              </button>
-            ),
-          )}
+        <div className="flex items-center gap-3">
+          <h1
+            className="text-[15px] font-bold tracking-tight text-white"
+            style={{ fontFamily: "var(--font-headline)" }}
+          >
+            {isOverview
+              ? "Overview"
+              : isProjects
+                ? "Workspaces"
+                : isDev
+                  ? "Blog"
+                  : isTeam
+                    ? "Team"
+                    : "Meshwork Studio"}
+          </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {/* Bell */}
           <motion.button
             ref={bellRef}
@@ -405,7 +412,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               isRinging ? { rotate: [0, -18, 18, -18, 18, 0] } : { rotate: 0 }
             }
             transition={{ duration: 0.4 }}
-            className={`relative w-7 h-7 flex items-center justify-center rounded-md transition-all ${panelOpen || isRinging ? "text-primary bg-[#2c2c2c]" : "text-[#888] hover:text-[#e0e0e0] hover:bg-[#2c2c2c]"}`}
+            className={`relative w-8 h-8 flex items-center justify-center transition-all ${panelOpen || isRinging ? "text-primary scale-110" : "text-white/30 hover:text-white/80"}`}
           >
             <Bell className="w-4 h-4" />
             {isUnread && (
@@ -419,7 +426,6 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       <AnimatePresence>
         {panelOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               key="bd"
               initial={{ opacity: 0 }}
@@ -429,20 +435,20 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               onClick={() => setPanelOpen(false)}
               className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-[2px]"
             />
-
-            {/* Panel */}
             <motion.aside
               key="panel"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed top-0 right-0 h-full w-[380px] z-[70] bg-[#252525]/95 backdrop-blur-2xl border-l border-[#3a3a3a] flex flex-col shadow-[-20px_0_40px_rgba(0,0,0,0.6)]"
+              className="fixed top-0 right-0 h-full w-[380px] z-[70] bg-[#0e0e0e]/95 backdrop-blur-2xl border-l border-white/[0.06] flex flex-col shadow-[-20px_0_40px_rgba(0,0,0,0.6)]"
             >
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-[#3a3a3a]">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.05]">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-sm font-semibold text-[#e0e0e0]">
+                  <span
+                    className="text-sm font-semibold text-white"
+                    style={{ fontFamily: "var(--font-sans)" }}
+                  >
                     Notifications
                   </span>
                   {isUnread && (
@@ -455,43 +461,44 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   {isUnread && (
                     <button
                       onClick={dismiss}
-                      className="text-[11px] text-[#888] hover:text-[#e0e0e0] transition-colors px-2 py-1 rounded hover:bg-[#2c2c2c]"
+                      className="text-[11px] text-white/30 hover:text-white/60 transition-colors px-2 py-1 rounded hover:bg-white/[0.04]"
                     >
                       Mark all read
                     </button>
                   )}
                   <button
                     onClick={() => setPanelOpen(false)}
-                    className="w-7 h-7 flex items-center justify-center rounded-md text-[#888] hover:text-[#e0e0e0] hover:bg-[#2c2c2c] transition-all"
+                    className="w-7 h-7 flex items-center justify-center rounded-md text-white/20 hover:text-white/60 hover:bg-white/[0.05] transition-all"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
-
-              {/* Notification list */}
               <div className="flex-1 overflow-y-auto">
                 <div
-                  className={`px-5 py-4 border-b border-[#3a3a3a]/40 transition-colors ${isUnread ? "bg-white/[0.015]" : ""}`}
+                  className={`px-5 py-4 border-b border-white/[0.04] transition-colors ${isUnread ? "bg-white/[0.015]" : ""}`}
                 >
                   <div className="flex gap-3">
                     <div className="pt-0.5 shrink-0">
                       {isUnread ? (
                         <div className="w-2 h-2 rounded-full bg-primary mt-1" />
                       ) : (
-                        <div className="w-2 h-2 rounded-full bg-[#3a3a3a] mt-1" />
+                        <div className="w-2 h-2 rounded-full bg-white/10 mt-1" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-semibold text-[#e0e0e0]/70">
+                        <span
+                          className="text-xs font-semibold text-white/70"
+                          style={{ fontFamily: "var(--font-sans)" }}
+                        >
                           Welcome to Meshwork Studio
                         </span>
-                        <span className="text-[10px] text-[#888] shrink-0 ml-3">
+                        <span className="text-[10px] text-white/20 shrink-0 ml-3">
                           Today
                         </span>
                       </div>
-                      <p className="text-[12px] leading-relaxed text-[#888] mb-3">
+                      <p className="text-[12px] leading-relaxed text-white/35 mb-3">
                         This is an early beta. The core canvas is functional —
                         design architectures, nest services inside containers,
                         and keep everything organized across workspaces.
@@ -516,10 +523,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   </div>
                 </div>
               </div>
-
-              {/* Footer */}
-              <div className="px-5 py-3 border-t border-[#3a3a3a]/40">
-                <p className="text-[10px] text-[#888] text-center">
+              <div className="px-5 py-3 border-t border-white/[0.04]">
+                <p
+                  className="text-[10px] text-white/15 text-center"
+                  style={{ fontFamily: "var(--font-sans)" }}
+                >
                   Meshwork Studio · Open Source
                 </p>
               </div>
@@ -556,8 +564,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         )}
       </AnimatePresence>
 
-      {/* Main content (offset by 240px sidebar + 48px top bar) */}
-      <main className="pl-60 pt-12 min-h-screen bg-[#1e1e1e] w-full">
+      {/* Main content */}
+      <main className="pl-60 pt-12 min-h-screen technical-gradient w-full">
         <div className={`w-full h-full ${isDev ? "" : ""}`}>
           <Suspense
             fallback={
@@ -565,7 +573,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 <div className="w-8 h-8">
                   <MeshworkLogo />
                 </div>
-                <div className="w-24 h-[2px] bg-[#3a3a3a] rounded-full overflow-hidden">
+                <div className="w-24 h-[2px] bg-white/[0.06] rounded-full overflow-hidden">
                   <motion.div
                     className="h-full bg-primary rounded-full"
                     initial={{ x: "-100%" }}

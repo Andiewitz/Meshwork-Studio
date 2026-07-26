@@ -21,10 +21,15 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { LineSyncLoader } from "@/components/ui/loading-screen";
 
-const TABS = ["Recently viewed", "Shared files", "Shared projects"] as const;
+const TABS = ["Recently viewed", "Shared with me", "Favorites"] as const;
 type Tab = (typeof TABS)[number];
 
-const FILE_TYPE_FILTERS = ["Design", "Canvas", "Template", "All"] as const;
+const TYPE_FILTERS = [
+  "All types",
+  "Architecture",
+  "Network",
+  "Database",
+] as const;
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -104,7 +109,7 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("Recently viewed");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [fileTypeFilter, setFileTypeFilter] = useState<string>("All");
+  const [typeFilter, setTypeFilter] = useState<string>("All types");
   const [filterOpen, setFilterOpen] = useState(false);
 
   const isWorkspacesPage = location === "/workspaces";
@@ -121,6 +126,19 @@ export default function Home() {
         ws.type.toLowerCase().includes(searchTerm.toLowerCase()),
     );
 
+    // Tab filtering
+    if (activeTab === "Favorites") {
+      result = result.filter((ws) => ws.isFavorite);
+    }
+    // "Shared with me" would filter for shared — keeping all for now since share data may vary
+
+    // Type filtering
+    if (typeFilter !== "All types") {
+      result = result.filter((ws) =>
+        ws.type.toLowerCase().includes(typeFilter.toLowerCase()),
+      );
+    }
+
     result = [...result].sort((a, b) => {
       if (a.isFavorite && !b.isFavorite) return -1;
       if (!a.isFavorite && b.isFavorite) return 1;
@@ -129,7 +147,7 @@ export default function Home() {
       return dateB - dateA;
     });
     return result;
-  }, [workspaces, searchTerm]);
+  }, [workspaces, searchTerm, activeTab, typeFilter]);
 
   const displayWorkspaces = isWorkspacesPage
     ? filteredWorkspaces
@@ -157,20 +175,20 @@ export default function Home() {
         </title>
       </Helmet>
 
-      {/* Full-height flex column to fill the space under the top bar */}
+      {/* Full-height flex column */}
       <div className="flex flex-col h-[calc(100vh-48px)]">
         {/* ── Tab bar ── */}
-        <div className="flex items-center justify-between border-b border-[#3a3a3a] bg-[#1e1e1e] px-6 py-0 shrink-0">
+        <div className="flex items-center justify-between border-b border-white/[0.05] px-6 py-0 shrink-0">
           {/* Left: tabs */}
           <div className="flex items-center gap-0">
             {TABS.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`relative px-4 py-3 text-xs font-medium transition-colors ${
+                className={`relative px-4 py-3 text-xs font-medium transition-colors cursor-figma-pointer ${
                   activeTab === tab
-                    ? "text-[#e0e0e0]"
-                    : "text-[#888] hover:text-[#e0e0e0]"
+                    ? "text-white"
+                    : "text-white/30 hover:text-white/60"
                 }`}
               >
                 {tab}
@@ -188,24 +206,24 @@ export default function Home() {
           {/* Right: filter + search + view toggle */}
           <div className="flex items-center gap-2 py-1.5">
             {/* Search */}
-            <div className="relative">
-              <Search className="absolute inset-y-0 left-2 my-auto w-3.5 h-3.5 text-[#888]" />
+            <div className="relative group">
+              <Search className="absolute inset-y-0 left-2 my-auto w-3.5 h-3.5 text-white/20 group-focus-within:text-primary transition-colors" />
               <input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 type="text"
-                placeholder="Search..."
-                className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-md pl-7 pr-3 py-1 text-xs outline-none focus:border-primary/50 text-[#e0e0e0] placeholder:text-[#888] transition-colors w-36"
+                placeholder="Filter..."
+                className="bg-white/[0.02] border border-white/[0.06] rounded-md pl-7 pr-3 py-1 text-xs outline-none focus:border-primary/50 text-white placeholder:text-white/20 transition-colors w-32 cursor-figma"
               />
             </div>
 
-            {/* File type filter */}
+            {/* Type filter */}
             <div className="relative">
               <button
                 onClick={() => setFilterOpen((v) => !v)}
-                className="flex items-center gap-1 rounded-md border border-[#3a3a3a] px-2.5 py-1 text-xs text-[#888] hover:text-[#e0e0e0] hover:border-[#555] transition-colors"
+                className="flex items-center gap-1 rounded-md border border-white/[0.06] px-2.5 py-1 text-xs text-white/30 hover:text-white/60 hover:border-white/[0.1] transition-colors cursor-figma-pointer"
               >
-                {fileTypeFilter === "All" ? "All files" : fileTypeFilter}
+                {typeFilter}
                 <ChevronDown className="h-3 w-3" />
               </button>
               <AnimatePresence>
@@ -215,22 +233,22 @@ export default function Home() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -4, scale: 0.97 }}
                     transition={{ duration: 0.12 }}
-                    className="absolute right-0 top-full mt-1 z-30 bg-[#252525] border border-[#3a3a3a] rounded-lg shadow-2xl overflow-hidden min-w-[120px]"
+                    className="absolute right-0 top-full mt-1 z-30 bg-surface-container-highest border border-white/[0.06] rounded-lg shadow-2xl overflow-hidden min-w-[120px]"
                   >
-                    {FILE_TYPE_FILTERS.map((f) => (
+                    {TYPE_FILTERS.map((f) => (
                       <button
                         key={f}
                         onClick={() => {
-                          setFileTypeFilter(f);
+                          setTypeFilter(f);
                           setFilterOpen(false);
                         }}
-                        className={`w-full text-left px-3 py-2 text-xs transition-colors ${
-                          fileTypeFilter === f
-                            ? "bg-[#3a3a3a] text-[#e0e0e0]"
-                            : "text-[#888] hover:bg-[#2c2c2c] hover:text-[#e0e0e0]"
+                        className={`w-full text-left px-3 py-2 text-xs transition-colors cursor-figma-pointer ${
+                          typeFilter === f
+                            ? "bg-white/[0.06] text-white"
+                            : "text-white/40 hover:bg-white/[0.04] hover:text-white/70"
                         }`}
                       >
-                        {f === "All" ? "All files" : f}
+                        {f}
                       </button>
                     ))}
                   </motion.div>
@@ -239,23 +257,23 @@ export default function Home() {
             </div>
 
             {/* View mode toggle */}
-            <div className="flex items-center rounded-md border border-[#3a3a3a] overflow-hidden">
+            <div className="flex items-center rounded-md border border-white/[0.06] overflow-hidden">
               <button
                 onClick={() => setViewMode("grid")}
-                className={`flex h-7 w-7 items-center justify-center transition-colors ${
+                className={`flex h-7 w-7 items-center justify-center transition-colors cursor-figma-pointer ${
                   viewMode === "grid"
-                    ? "bg-[#3a3a3a] text-[#e0e0e0]"
-                    : "text-[#888] hover:text-[#e0e0e0]"
+                    ? "bg-white/[0.06] text-white"
+                    : "text-white/20 hover:text-white/50"
                 }`}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`flex h-7 w-7 items-center justify-center transition-colors ${
+                className={`flex h-7 w-7 items-center justify-center transition-colors cursor-figma-pointer ${
                   viewMode === "list"
-                    ? "bg-[#3a3a3a] text-[#e0e0e0]"
-                    : "text-[#888] hover:text-[#e0e0e0]"
+                    ? "bg-white/[0.06] text-white"
+                    : "text-white/20 hover:text-white/50"
                 }`}
               >
                 <List className="h-3.5 w-3.5" />
@@ -265,7 +283,7 @@ export default function Home() {
             {/* New workspace button */}
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary/90 transition-all active:scale-95"
+              className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary/90 transition-all active:scale-95 cursor-figma-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
               New
@@ -276,25 +294,25 @@ export default function Home() {
         {/* ── Scrollable content ── */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-6">
-            {/* Empty state — no workspaces */}
+            {/* Empty state */}
             {filteredWorkspaces.length === 0 && !searchTerm ? (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col items-center justify-center py-20 text-center"
               >
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2c2c2c]">
-                  <Package className="h-8 w-8 text-[#888]" />
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+                  <Package className="h-8 w-8 text-white/20" />
                 </div>
-                <p className="mb-1 text-sm font-medium text-[#e0e0e0]">
+                <p className="mb-1 text-sm font-medium text-white">
                   No workspaces yet
                 </p>
-                <p className="mb-4 text-xs text-[#888]">
-                  Create your first workspace to start designing.
+                <p className="mb-4 text-xs text-white/30">
+                  Create your first workspace to start designing architectures.
                 </p>
                 <button
                   onClick={() => setIsCreateOpen(true)}
-                  className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-white hover:bg-primary/90 transition-all duration-150 active:scale-95"
+                  className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-white hover:bg-primary/90 transition-all duration-150 active:scale-95 cursor-figma-pointer"
                 >
                   New workspace
                 </button>
@@ -305,11 +323,11 @@ export default function Home() {
                 animate={{ opacity: 1 }}
                 className="flex flex-col items-center justify-center py-20 text-center"
               >
-                <Search className="h-10 w-10 text-[#888] mb-3" />
-                <p className="text-sm font-medium text-[#e0e0e0]">
+                <Search className="h-10 w-10 text-white/15 mb-3" />
+                <p className="text-sm font-medium text-white">
                   No results for "{searchTerm}"
                 </p>
-                <p className="text-xs text-[#888] mt-1">
+                <p className="text-xs text-white/30 mt-1">
                   Try a different search term.
                 </p>
               </motion.div>
@@ -317,13 +335,13 @@ export default function Home() {
               <>
                 {/* Section header */}
                 <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-xs font-medium text-[#888]">
+                  <h3 className="text-xs font-bold tracking-[0.15em] uppercase text-white/20">
                     {displayWorkspaces.length} workspace
                     {displayWorkspaces.length !== 1 ? "s" : ""}
                   </h3>
                   {!isWorkspacesPage && filteredWorkspaces.length > 20 && (
                     <Link href="/workspaces">
-                      <span className="text-[10px] text-primary hover:underline underline-offset-4 uppercase tracking-wider cursor-pointer">
+                      <span className="text-[10px] text-primary hover:underline underline-offset-4 uppercase tracking-widest cursor-figma-pointer">
                         View all
                       </span>
                     </Link>
@@ -338,7 +356,7 @@ export default function Home() {
                       animate="visible"
                       exit="exit"
                       variants={containerVariants}
-                      className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+                      className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
                     >
                       {displayWorkspaces.map((workspace) => (
                         <motion.div
@@ -360,7 +378,7 @@ export default function Home() {
                       animate="visible"
                       exit="exit"
                       variants={containerVariants}
-                      className="flex flex-col gap-2"
+                      className="flex flex-col gap-3"
                     >
                       {displayWorkspaces.map((workspace) => (
                         <motion.div
