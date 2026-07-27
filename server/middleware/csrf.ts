@@ -23,11 +23,13 @@ declare global {
  */
 
 // Initialize CSRF protection with cookie-based storage
+// sameSite: 'lax' (not 'strict') so the cookie is sent after HTTPS redirects
+// via NGINX reverse proxy. 'strict' breaks OAuth flows and first-navigation.
 const _csrfMiddleware = csrf({
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
   },
 });
 
