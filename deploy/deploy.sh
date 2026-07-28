@@ -10,10 +10,18 @@ ENV_FILE="$APP_DIR/.env"
 
 echo "=== Deploy started at $(date) ==="
 
-# Verify .env exists
+# Locate or initialize .env file
 if [ ! -f "$ENV_FILE" ]; then
-  echo "ERROR: $ENV_FILE not found. Copy .env.example to $ENV_FILE and fill in values."
-  exit 1
+  if [ -f "$REPO_DIR/.env" ]; then
+    ENV_FILE="$REPO_DIR/.env"
+  elif [ -f "$REPO_DIR/.env.example" ]; then
+    echo "Initializing $ENV_FILE from .env.example template..."
+    mkdir -p "$(dirname "$ENV_FILE")"
+    cp "$REPO_DIR/.env.example" "$ENV_FILE"
+  else
+    echo "ERROR: $ENV_FILE not found and no .env.example template available."
+    exit 1
+  fi
 fi
 
 # Load env vars
