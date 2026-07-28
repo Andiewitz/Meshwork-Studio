@@ -8,7 +8,7 @@ import type { AppContext } from "../../lib/registry";
 import type { IWorkspaceStorage } from "../workspace/storage";
 import type { ITeamStorage } from "../team/storage";
 
-import { canEditWorkspace } from "../team/permissions";
+import { canEditWorkspace } from "../../lib/permissions";
 
 const log = createChildLogger("canvas");
 
@@ -54,11 +54,9 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
       const userId = req.user!.id;
       const role = await teamStorage.getWorkspaceRole(workspace.id, userId);
       if (!canEditWorkspace(role)) {
-        return res
-          .status(403)
-          .json({
-            message: "Forbidden: Insufficient permissions to modify canvas",
-          });
+        return res.status(403).json({
+          message: "Forbidden: Insufficient permissions to modify canvas",
+        });
       }
 
       const { nodes, edges } = api.workspaces.syncCanvas.input.parse(req.body);
@@ -83,11 +81,9 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
       const userId = req.user!.id;
       const role = await teamStorage.getWorkspaceRole(workspace.id, userId);
       if (!canEditWorkspace(role)) {
-        return res
-          .status(403)
-          .json({
-            message: "Forbidden: Insufficient permissions to duplicate canvas",
-          });
+        return res.status(403).json({
+          message: "Forbidden: Insufficient permissions to duplicate canvas",
+        });
       }
 
       // Validate destination workspace — must be owned by the user

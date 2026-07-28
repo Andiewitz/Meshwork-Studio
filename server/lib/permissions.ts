@@ -1,26 +1,29 @@
 /**
- * Shared workspace permission helpers.
+ * Server-side permission helpers.
  *
- * Lives in server/lib so both the workspace module and team module (and any
- * future module) can import it without creating cross-module dependencies.
+ * Wraps shared/permissions with null-safe variants used by the server routes,
+ * where getWorkspaceRole() can return null (no membership) in addition to
+ * the WorkspaceRole union values.
  *
- * When individual modules are extracted to microservices, this file becomes
+ * When individual modules are extracted to microservices, this becomes
  * a shared library package (e.g., @meshwork/permissions).
  */
+import {
+  ROLE_RANK,
+  rank as sharedRank,
+  type WorkspaceRole,
+} from "@shared/permissions";
 
-export type EffectiveRole =
-  "workspace-owner" | "owner" | "admin" | "editor" | "viewer" | null;
+export type { WorkspaceRole };
+export type EffectiveRole = WorkspaceRole | null;
+export { ROLE_RANK };
 
-const ROLE_RANK: Record<string, number> = {
-  "workspace-owner": 5,
-  owner: 5,
-  admin: 4,
-  editor: 3,
-  viewer: 2,
-};
+function toRole(role: EffectiveRole): WorkspaceRole {
+  return role ?? "none";
+}
 
-function rank(role: EffectiveRole): number {
-  return role ? (ROLE_RANK[role] ?? 0) : 0;
+export function rank(role: EffectiveRole): number {
+  return sharedRank(toRole(role));
 }
 
 export function canDeleteWorkspace(role: EffectiveRole): boolean {
@@ -37,4 +40,8 @@ export function canEditWorkspace(role: EffectiveRole): boolean {
 
 export function canViewWorkspace(role: EffectiveRole): boolean {
   return rank(role) >= ROLE_RANK.viewer;
+}
+
+export function isOwner(role: EffectiveRole): boolean {
+  return role === "workspace-owner" || role === "owner";
 }

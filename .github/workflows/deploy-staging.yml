@@ -1,11 +1,17 @@
-name: Deploy to Staging
+name: Deploy to Staging (AWS EC2)
 
 on:
   push:
     branches: [develop]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for manual deploy"
+        required: false
+        default: "Manual trigger"
 
 concurrency:
-  group: deploy-staging-${{ github.ref }}
+  group: deploy-staging
   cancel-in-progress: true
 
 env:
@@ -13,51 +19,59 @@ env:
 
 jobs:
   deploy:
-    name: Deploy Staging
+    name: Deploy to Staging EC2
     runs-on: ubuntu-latest
     environment: staging
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-      - run: npm ci
-      - run: npm run build
-        env:
-          NODE_ENV: production
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
-      - name: Link Railway Project
-        run: npx railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
-      - name: Deploy to Railway (Staging)
-        run: npx railway up --ci --service meshwork-studio-staging
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_STAGING_HOST }}
+          username: ${{ secrets.EC2_STAGING_USER }}
+          key: ${{ secrets.EC2_STAGING_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            cd /home/ec2-user/app/meshwork-studio
+            ./deploy/deploy.sh
 
-      - name: Health Check
+      - name: Staging Health Check
         run: |
+          HOST="${{ secrets.EC2_STAGING_HOST }}"
+          echo "Verifying health endpoint at http://$HOST/health..."
           for i in $(seq 1 12); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://staging.meshwork.studio/health || echo "000")
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$HOST/health" || echo "000")
             if [ "$STATUS" = "200" ]; then
-              echo "Staging deployment healthy!"
+              echo "Staging server is healthy!"
               exit 0
             fi
             echo "Attempt $i/12 — status $STATUS, retrying in 10s..."
             sleep 10
           done
-          echo "FAIL: Staging health check did not pass"
+          echo "FAIL: Staging server health check failed"
           exit 1
 
+  notify:
+    name: Send Slack Notification
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: always()
+    steps:
       - name: Notify Slack
-        if: always()
         uses: slackapi/slack-github-action@v1.25
         with:
           payload: |
             {
-              "text": "Staging deploy ${{ job.status }} for ${{ github.repository }}@${{ github.sha }}"
+              "text": "AWS EC2 Staging deploy result: ${{ needs.deploy.result }} for ${{ github.repository }}@${{ github.sha }}"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

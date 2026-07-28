@@ -43,7 +43,7 @@ export async function createMetricsTable() {
     `);
     log.info("Metrics snapshots table created/verified");
 
-    // Migrations for existing tables
+    // Migrations for existing tables (idempotent)
     const alters = [
       `ALTER TABLE metrics_snapshots ADD COLUMN IF NOT EXISTS total_users INTEGER NOT NULL DEFAULT 0`,
       `ALTER TABLE metrics_snapshots ADD COLUMN IF NOT EXISTS new_users_today INTEGER NOT NULL DEFAULT 0`,
