@@ -88,7 +88,7 @@ jobs:
           cache: "npm"
       - run: npm ci
       - run: npm run test:run -- --coverage
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: coverage/
@@ -134,7 +134,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
@@ -157,7 +157,7 @@ jobs:
         env:
           NODE_ENV: production
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: build-output
           path: dist/
