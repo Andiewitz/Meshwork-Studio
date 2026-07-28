@@ -14,18 +14,14 @@ echo "=== Deploy started at $(date) ==="
 # Locate existing .env file across common locations
 if [ -f "$REPO_DIR/.env" ]; then
   ENV_FILE="$REPO_DIR/.env"
-elif [ -f "$HOME/meshwork-studio/.env" ]; then
-  ENV_FILE="$HOME/meshwork-studio/.env"
+elif [ -f "$HOME/meshwork-studiov2/.env" ]; then
+  ENV_FILE="$HOME/meshwork-studiov2/.env"
 elif [ -f "$HOME/.env" ]; then
   ENV_FILE="$HOME/.env"
 elif [ -f "$APP_DIR/.env" ]; then
   ENV_FILE="$APP_DIR/.env"
-elif [ -f "$REPO_DIR/.env.example" ]; then
-  echo "Initializing $ENV_FILE from .env.example template..."
-  mkdir -p "$(dirname "$ENV_FILE")"
-  cp "$REPO_DIR/.env.example" "$ENV_FILE"
 else
-  echo "ERROR: No .env file found in $REPO_DIR, $HOME, or $APP_DIR."
+  echo "ERROR: No .env file found in $REPO_DIR or $HOME. Please create $REPO_DIR/.env with your production secrets."
   exit 1
 fi
 
