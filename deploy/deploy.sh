@@ -1,5 +1,5 @@
 #!/bin/bash
-# deploy.sh — run on EC2 after git pull
+# deploy.sh — run on EC2 after pre-built artifacts are synced from GitHub Actions
 # Usage: cd /home/ec2-user/app/meshwork-studio && ./deploy/deploy.sh
 
 set -euo pipefail
@@ -12,11 +12,11 @@ echo "=== Deploy started at $(date) ==="
 
 # Verify .env exists
 if [ ! -f "$ENV_FILE" ]; then
-  echo "ERROR: $ENV_FILE not found. Copy deploy/.env.example to $ENV_FILE and fill in values."
+  echo "ERROR: $ENV_FILE not found. Copy .env.example to $ENV_FILE and fill in values."
   exit 1
 fi
 
-# Load env for build-time vars
+# Load env vars
 set -a
 source "$ENV_FILE"
 set +a
@@ -31,17 +31,11 @@ if [ -z "${ENCRYPTION_KEY:-}" ]; then
   export ENCRYPTION_KEY="$GENERATED_KEY"
 fi
 
-# Pull latest code
 cd "$REPO_DIR"
-git pull origin main
 
-# Install dependencies
-echo "Installing dependencies..."
-npm install --legacy-peer-deps
-
-# Build (pass build-time env vars for Vite)
-echo "Building..."
-VITE_RECAPTCHA_SITE_KEY="${VITE_RECAPTCHA_SITE_KEY:-}" npm run build
+# Install production dependencies
+echo "Installing production dependencies..."
+npm install --omit=dev --legacy-peer-deps
 
 # Push schema to database (idempotent — safe to run every deploy)
 echo "Pushing database schema..."
@@ -49,9 +43,11 @@ npx drizzle-kit push
 
 # Copy NGINX config
 echo "Updating NGINX config..."
-sudo cp "$REPO_DIR/deploy/nginx.conf" /etc/nginx/conf.d/meshwork.conf
-sudo rm -f /etc/nginx/conf.d/default.conf 2>/dev/null || true
-sudo nginx -t && sudo systemctl reload nginx
+if [ -f "$REPO_DIR/deploy/nginx.conf" ]; then
+  sudo cp "$REPO_DIR/deploy/nginx.conf" /etc/nginx/conf.d/meshwork.conf
+  sudo rm -f /etc/nginx/conf.d/default.conf 2>/dev/null || true
+  sudo nginx -t && sudo systemctl reload nginx
+fi
 
 # Restart app via PM2
 echo "Restarting app..."
