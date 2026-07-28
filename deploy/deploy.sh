@@ -10,18 +10,22 @@ ENV_FILE="$APP_DIR/.env"
 
 echo "=== Deploy started at $(date) ==="
 
-# Locate or initialize .env file
-if [ ! -f "$ENV_FILE" ]; then
-  if [ -f "$REPO_DIR/.env" ]; then
-    ENV_FILE="$REPO_DIR/.env"
-  elif [ -f "$REPO_DIR/.env.example" ]; then
-    echo "Initializing $ENV_FILE from .env.example template..."
-    mkdir -p "$(dirname "$ENV_FILE")"
-    cp "$REPO_DIR/.env.example" "$ENV_FILE"
-  else
-    echo "ERROR: $ENV_FILE not found and no .env.example template available."
-    exit 1
-  fi
+# Locate existing .env file across common locations
+if [ -f "$REPO_DIR/.env" ]; then
+  ENV_FILE="$REPO_DIR/.env"
+elif [ -f "$HOME/meshwork-studio/.env" ]; then
+  ENV_FILE="$HOME/meshwork-studio/.env"
+elif [ -f "$HOME/.env" ]; then
+  ENV_FILE="$HOME/.env"
+elif [ -f "$APP_DIR/.env" ]; then
+  ENV_FILE="$APP_DIR/.env"
+elif [ -f "$REPO_DIR/.env.example" ]; then
+  echo "Initializing $ENV_FILE from .env.example template..."
+  mkdir -p "$(dirname "$ENV_FILE")"
+  cp "$REPO_DIR/.env.example" "$ENV_FILE"
+else
+  echo "ERROR: No .env file found in $REPO_DIR, $HOME, or $APP_DIR."
+  exit 1
 fi
 
 # Load env vars
