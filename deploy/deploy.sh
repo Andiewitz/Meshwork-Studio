@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-APP_DIR="/home/ec2-user/app"
+APP_DIR="${APP_DIR:-$HOME/app}"
 REPO_DIR="$APP_DIR/meshwork-studio"
 ENV_FILE="$APP_DIR/.env"
 

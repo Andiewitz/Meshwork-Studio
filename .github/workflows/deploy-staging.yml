@@ -49,7 +49,7 @@ jobs:
           key: ${{ secrets.EC2_STAGING_SSH_KEY }}
           port: 22
           source: "dist,package.json,package-lock.json,drizzle.config.ts,deploy,migrations,shared"
-          target: "/home/ec2-user/app/meshwork-studio"
+          target: "/home/${{ secrets.EC2_STAGING_USER }}/app/meshwork-studio"
           rm: false
 
       - name: Run Deploy Script via SSH
@@ -61,8 +61,8 @@ jobs:
           port: 22
           script_stop: true
           script: |
-            chmod +x /home/ec2-user/app/meshwork-studio/deploy/deploy.sh
-            cd /home/ec2-user/app/meshwork-studio
+            chmod +x /home/${{ secrets.EC2_STAGING_USER }}/app/meshwork-studio/deploy/deploy.sh
+            cd /home/${{ secrets.EC2_STAGING_USER }}/app/meshwork-studio
             ./deploy/deploy.sh
 
       - name: Staging Health Check
