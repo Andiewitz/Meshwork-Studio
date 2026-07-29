@@ -1069,7 +1069,12 @@ const Home = () => {
             ease: [0.16, 1, 0.3, 1],
             delay: 0.05,
           }}
-          className="fixed top-0 left-0 right-0 z-50 bg-[#09090b]/80 backdrop-blur-xl border-b border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.5)] transition-all duration-300"
+          className={cn(
+            "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+            scrolled
+              ? "bg-[#09090b]/80 backdrop-blur-xl border-b border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
+              : "bg-transparent border-b border-transparent shadow-none",
+          )}
         >
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
             {/* Brand Logo */}
@@ -1494,14 +1499,22 @@ const Home = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
           >
-            {/* HERO SECTION — gradient applied directly so it always renders */}
-            <main
-              className="w-full relative z-10 min-h-screen flex flex-col items-center justify-center overflow-x-hidden pt-16"
-              style={{
-                background:
-                  "radial-gradient(ellipse 90% 60% at 50% -10%, rgba(59,130,246,0.60) 0%, rgba(99,102,241,0.25) 38%, transparent 65%), #080A0F",
-              }}
-            >
+            {/* HERO SECTION — Lovable-style vibrant blue/indigo/violet/magenta atmospheric gradient */}
+            <main className="w-full relative z-10 min-h-screen flex flex-col items-center justify-center overflow-x-hidden pt-16 bg-[#080911]">
+              <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
+                {/* Top Left Blue Glow */}
+                <div className="absolute -top-[15%] -left-[10%] w-[65vw] h-[65vh] rounded-full bg-[radial-gradient(circle,_rgba(37,99,235,0.75)_0%,_rgba(79,70,229,0.35)_50%,_transparent_70%)] blur-[80px]" />
+                {/* Top Right Royal Blue/Indigo Glow */}
+                <div className="absolute -top-[15%] -right-[10%] w-[65vw] h-[65vh] rounded-full bg-[radial-gradient(circle,_rgba(59,130,246,0.75)_0%,_rgba(99,102,241,0.35)_50%,_transparent_70%)] blur-[80px]" />
+                {/* Middle Left Purple/Violet Glow */}
+                <div className="absolute top-[30%] -left-[15%] w-[60vw] h-[60vh] rounded-full bg-[radial-gradient(circle,_rgba(139,92,246,0.65)_0%,_rgba(168,85,247,0.3)_50%,_transparent_70%)] blur-[90px]" />
+                {/* Middle Right Violet Glow */}
+                <div className="absolute top-[30%] -right-[15%] w-[60vw] h-[60vh] rounded-full bg-[radial-gradient(circle,_rgba(99,102,241,0.65)_0%,_rgba(139,92,246,0.3)_50%,_transparent_70%)] blur-[90px]" />
+                {/* Bottom Magenta/Fuchsia/Pink Sweep */}
+                <div className="absolute -bottom-[20%] left-[-10%] right-[-10%] h-[60vh] rounded-full bg-[radial-gradient(ellipse_at_bottom,_rgba(236,72,153,0.85)_0%,_rgba(217,70,239,0.65)_35%,_rgba(139,92,246,0.35)_65%,_transparent_85%)] blur-[100px]" />
+                {/* Center subtle dark vignette for ultra-crisp text legibility */}
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(8,9,17,0.45)_0%,_transparent_75%)]" />
+              </div>
               <motion.div
                 variants={containerVariants}
                 initial="hidden"
