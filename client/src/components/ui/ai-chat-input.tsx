@@ -1010,9 +1010,9 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
               className="absolute -inset-[1px] rounded-[25px] pointer-events-none p-[1px] z-[2] transition-opacity duration-300"
               style={{
                 background:
-                  "linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.7) 25%, rgba(59,130,246,0.5) 40%, transparent 60%, rgba(255,255,255,0.6) 80%, transparent 100%)",
+                  "linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.4) 20%, rgba(59,130,246,0.3) 40%, transparent 60%, rgba(255,255,255,0.35) 80%, transparent 100%)",
                 backgroundSize: "250% 250%",
-                animation: "glisten-sweep 5s ease-in-out infinite",
+                animation: "glisten-sweep 14s ease-in-out infinite",
                 WebkitMask:
                   "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
                 WebkitMaskComposite: "xor",
