@@ -187,7 +187,7 @@ export function AiChatDrawer({
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
-  const [selectedModel, setSelectedModel] = useState("openai/gpt-oss-20b:free");
+  const [selectedModel, setSelectedModel] = useState("gemini-2.0-flash");
 
   const nodesKey = nodes.map((n) => `${n.id}:${n.type}`).join(",");
   const edgesKey = edges.map((e) => `${e.source}->${e.target}`).join(",");
@@ -313,7 +313,7 @@ export function AiChatDrawer({
               headers: { "Content-Type": "application/json" },
               credentials: "include",
               body: JSON.stringify({
-                provider: "openrouter",
+                provider: "gemini",
                 model: modelToUse,
                 messages: payloadMessages,
                 stream: false,

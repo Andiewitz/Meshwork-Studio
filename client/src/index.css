@@ -32,16 +32,16 @@
   /* Typography */
   --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", monospace;
-  --font-headline: "DM Sans", system-ui, sans-serif;
+  --font-headline: "Geomini", "DM Sans", system-ui, sans-serif;
   --font-body: "DM Sans", system-ui, sans-serif;
-  --font-display: "DM Sans", system-ui, sans-serif;
+  --font-display: "Geomini", system-ui, sans-serif;
   --font-label: "Geist Mono", monospace;
 
   /* Brand Primary Orange System */
-  --primary: 15 87% 53%; /* #F0521E — warm red-orange */
-  --primary-hover: 17 88% 61%; /* #F26E41 lighter on hover */
-  --primary-subtle: rgba(240, 82, 30, 0.12);
-  --primary-border: rgba(240, 82, 30, 0.25);
+  --primary: 10 88% 50%; /* #E8391A — deep red-orange */
+  --primary-hover: 12 88% 58%; /* #EC5535 lighter on hover */
+  --primary-subtle: rgba(232, 57, 26, 0.12);
+  --primary-border: rgba(232, 57, 26, 0.25);
   --primary-foreground: 240 7% 5%; /* #0C0C0E */
 
   /* Dark Canvas & 5-Step Surface Hierarchy */
@@ -107,7 +107,7 @@
   --card-foreground: 0 0% 98%;
   --popover: 240 10% 12%;
   --popover-foreground: 0 0% 98%;
-  --primary: 15 87% 53%;
+  --primary: 10 88% 50%;
   --primary-foreground: 240 7% 5%;
   --secondary: 240 14% 17%;
   --secondary-foreground: 0 0% 98%;

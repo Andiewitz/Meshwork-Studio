@@ -7,18 +7,18 @@ const log = createChildLogger("ai-resolver");
 // Constants
 // ---------------------------------------------------------------------------
 
-/** The provider used for the free tier (app-owned OpenRouter key). */
-export const DEFAULT_PROVIDER = "openrouter";
+/** The provider used for the free tier (app-owned Gemini key). */
+export const DEFAULT_PROVIDER = "gemini";
 
 /** The model served on the free tier. */
-export const DEFAULT_FREE_MODEL = "openai/gpt-oss-120b:free";
+export const DEFAULT_FREE_MODEL = "gemini-2.0-flash";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface ResolvedProvider {
-  provider: string; // "openrouter" | "anthropic" | "openai"
+  provider: string; // "gemini" | "anthropic" | "openai" | "openrouter"
   model: string;
   apiKey: string;
   source: "byok" | "fallback";
@@ -50,7 +50,7 @@ export class ProviderResolutionError extends Error {
  *
  * Rules:
  * 1. If no provider is requested (or the default is requested), use the
- *    free-tier fallback key from `OPENROUTER_API_KEY`. No DB lookup.
+ *    free-tier fallback key from `GEMINI_API_KEY`. No DB lookup.
  * 2. If a non-default provider is requested, look up the user's BYOK key.
  *    - If found and decryptable → use it.
  *    - If found but decrypt fails → throw BYOK_DECRYPT_FAILED (do NOT
@@ -66,7 +66,9 @@ export async function resolveProviderForRequest(
   // Explicit request for the free/default provider always uses fallback,
   // even if the user happens to have a BYOK key for something else stored.
   const wantsDefault =
-    !requestedProvider || requestedProvider === DEFAULT_PROVIDER;
+    !requestedProvider ||
+    requestedProvider === DEFAULT_PROVIDER ||
+    requestedProvider === "openrouter";
 
   if (!wantsDefault) {
     // ------------------------------------------------------------------
@@ -104,8 +106,7 @@ export async function resolveProviderForRequest(
     }
 
     // User explicitly asked for a non-default provider they have no key for.
-    // Do NOT silently fall back — that would mean an Anthropic request quietly
-    // becomes an OpenRouter request, which is confusing.
+    // Do NOT silently fall back.
     throw new ProviderResolutionError(
       "NO_ACTIVE_KEY",
       `No API key found for ${requestedProvider}. Add one in settings, or use the default provider.`,
@@ -115,21 +116,34 @@ export async function resolveProviderForRequest(
   // ------------------------------------------------------------------
   // Free-tier fallback path — no DB lookup at all
   // ------------------------------------------------------------------
-  const fallbackKey = process.env.OPENROUTER_API_KEY?.trim();
+  const fallbackKey =
+    process.env.GEMINI_API_KEY?.trim() ||
+    process.env.GOOGLE_GENAI_API_KEY?.trim() ||
+    process.env.OPENROUTER_API_KEY?.trim();
 
   if (!fallbackKey) {
-    log.error("OPENROUTER_API_KEY not set — free tier unavailable");
+    log.error("GEMINI_API_KEY not set — free tier unavailable");
     throw new ProviderResolutionError(
       "FALLBACK_NOT_CONFIGURED",
-      "The default AI provider is not configured. Set OPENROUTER_API_KEY.",
+      "The default AI provider is not configured. Set GEMINI_API_KEY.",
     );
   }
 
-  log.debug({ userId, source: "fallback" }, "Resolved to free-tier fallback");
+  log.debug(
+    { userId, source: "fallback" },
+    "Resolved to Gemini free-tier fallback",
+  );
+
+  const resolvedModel =
+    requestedModel &&
+    !requestedModel.includes("gpt-oss") &&
+    !requestedModel.includes("/")
+      ? requestedModel
+      : DEFAULT_FREE_MODEL;
 
   return {
-    provider: "openrouter",
-    model: requestedModel ?? DEFAULT_FREE_MODEL,
+    provider: "gemini",
+    model: resolvedModel,
     apiKey: fallbackKey,
     source: "fallback",
   };

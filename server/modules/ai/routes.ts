@@ -172,7 +172,10 @@ export default function createAIRoutes(context: AppContext) {
         let validationError = "";
 
         try {
-          if (provider === "openai") {
+          if (provider === "gemini") {
+            const { validateGeminiKey } = await import("./providers/gemini");
+            valid = await validateGeminiKey(apiKey);
+          } else if (provider === "openai") {
             const { validateOpenAIKey } = await import("./providers/openai");
             valid = await validateOpenAIKey(apiKey);
           } else if (provider === "anthropic") {
@@ -339,7 +342,40 @@ export default function createAIRoutes(context: AppContext) {
         );
 
         // Route to appropriate provider
-        if (resolvedProvider === "openai") {
+        if (resolvedProvider === "gemini") {
+          const { createGeminiChatCompletion, streamGeminiChatCompletion } =
+            await import("./providers/gemini");
+
+          if (stream) {
+            res.setHeader("Content-Type", "text/event-stream");
+            res.setHeader("Cache-Control", "no-cache");
+            res.setHeader("Connection", "keep-alive");
+
+            const sseStream = streamGeminiChatCompletion(apiKey, {
+              model: resolvedModel,
+              messages,
+              temperature,
+              maxTokens,
+              stream: true,
+            });
+
+            for await (const chunk of sseStream) {
+              res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+            }
+
+            res.write("data: [DONE]\n\n");
+            res.end();
+          } else {
+            const response = await createGeminiChatCompletion(apiKey, {
+              model: resolvedModel,
+              messages,
+              temperature,
+              maxTokens,
+              stream: false,
+            });
+            res.json(response);
+          }
+        } else if (resolvedProvider === "openai") {
           const { createOpenAIChatCompletion } =
             await import("./providers/openai");
 
@@ -521,7 +557,9 @@ export default function createAIRoutes(context: AppContext) {
 
         // Select a lightweight model for suggestions (cheaper than full chat)
         let suggestionsModel: string;
-        if (provider === "openai") {
+        if (provider === "gemini") {
+          suggestionsModel = "gemini-2.0-flash";
+        } else if (provider === "openai") {
           suggestionsModel = "gpt-4o-mini";
         } else if (provider === "anthropic") {
           suggestionsModel = "claude-3-5-haiku-20241022";
@@ -554,7 +592,18 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
 
         let responseText = "";
 
-        if (provider === "openrouter") {
+        if (provider === "gemini") {
+          const { createGeminiChatCompletion } =
+            await import("./providers/gemini");
+          const response = (await createGeminiChatCompletion(apiKey, {
+            model: suggestionsModel,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.5,
+            maxTokens: 200,
+            stream: false,
+          })) as ChatCompletionResponse;
+          responseText = response.choices?.[0]?.message?.content ?? "";
+        } else if (provider === "openrouter") {
           const { createOpenRouterChatCompletion } =
             await import("./providers/openrouter");
           const response = (await createOpenRouterChatCompletion(apiKey, {
@@ -635,6 +684,13 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
     async (_req: Request, res: Response) => {
       res.json([
         {
+          id: "gemini",
+          name: "Google Gemini",
+          models: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+          requiresByok: false,
+          isDefault: true,
+        },
+        {
           id: "openai",
           name: "OpenAI",
           models: ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"],
@@ -645,17 +701,6 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
           name: "Anthropic",
           models: ["claude-3-5-sonnet", "claude-3-opus"],
           requiresByok: true,
-        },
-        {
-          id: "openrouter",
-          name: "OpenRouter",
-          models: [
-            "openai/gpt-oss-120b:free",
-            "meta-llama/llama-3-8b-instruct:free",
-            "google/gemini-2.5-flash:free",
-          ],
-          requiresByok: false,
-          isDefault: true,
         },
       ]);
     },

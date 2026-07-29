@@ -31,29 +31,9 @@ export interface ModelOption {
 }
 
 export const OPENROUTER_FREE_MODELS: ModelOption[] = [
-  { id: "openai/gpt-oss-20b:free", label: "GPT OSS 20B", provider: "OpenAI" },
-  {
-    id: "google/gemma-4-31b-it:free",
-    label: "Gemma 4 31B",
-    provider: "Google",
-  },
-  {
-    id: "google/gemma-4-26b-a4b-it:free",
-    label: "Gemma 4 26B",
-    provider: "Google",
-  },
-  {
-    id: "nvidia/nemotron-3-nano-30b-a3b:free",
-    label: "Nemotron 30B",
-    provider: "NVIDIA",
-  },
-  {
-    id: "cohere/north-mini-code:free",
-    label: "North Mini Code",
-    provider: "Cohere",
-  },
-  { id: "poolside/laguna-m.1:free", label: "Laguna M.1", provider: "Poolside" },
-  { id: "openrouter/free", label: "OpenRouter Auto", provider: "OpenRouter" },
+  { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash", provider: "Google" },
+  { id: "gemini-1.5-flash", label: "Gemini 1.5 Flash", provider: "Google" },
+  { id: "gemini-1.5-pro", label: "Gemini 1.5 Pro", provider: "Google" },
 ];
 
 // ----------------------------------------------------------------------
@@ -95,16 +75,10 @@ function ModelIcon({
   className?: string;
 }) {
   const icons: Record<string, string> = {
-    OpenAI:
-      "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695269/openai-icon_zozuib.svg",
     Google:
       "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695268/google-gemini-icon_l6kk5q.svg",
-    NVIDIA:
-      "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695268/cursor-ai-code-icon_j4vnux.svg",
-    Cohere:
-      "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695268/Claude_AI_symbol_yqfzlc.svg",
-    Poolside:
-      "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695269/z-ai-icon_xi4xvo.svg",
+    OpenAI:
+      "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695269/openai-icon_zozuib.svg",
     OpenRouter:
       "https://res.cloudinary.com/drhx7imeb/image/upload/v1781695269/openai-icon_zozuib.svg",
   };
@@ -112,11 +86,11 @@ function ModelIcon({
   const modelObj = OPENROUTER_FREE_MODELS.find(
     (m) => m.id === model || m.label === model,
   );
-  const provider = modelObj?.provider || "OpenRouter";
+  const provider = modelObj?.provider || "Google";
 
   return (
     <img
-      src={icons[provider] || icons.OpenRouter}
+      src={icons[provider] || icons.Google}
       alt={provider}
       className={cn("object-contain dark:invert", className)}
     />
@@ -1137,84 +1111,58 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                   <span className="text-xs font-semibold select-none tracking-tight">
                     <MorphingText text={selectedModel.label} />
                   </span>
-                  <span className="text-[9px] bg-white/10 text-white/60 border border-white/15 px-1 py-0.2 rounded font-mono font-bold uppercase ml-0.5">
-                    FREE
-                  </span>
                 </button>
 
                 <div
                   style={{ transformOrigin: "bottom left" }}
-                  onMouseLeave={() => {
-                    setHoverStyle((prev) => ({
-                      ...prev,
-                      opacity: 0,
-                      transform: prev.transform.replace(
-                        "scale(1)",
-                        "scale(0.95)",
-                      ),
-                      transition:
-                        "opacity 0.2s ease-in, transform 0.2s ease-out",
-                    }));
-                  }}
                   className={cn(
-                    "absolute bottom-full left-0 mb-3 z-50 w-60 rounded-2xl border border-white/15 bg-[#141416]/95 p-1.5 shadow-2xl backdrop-blur-2xl flex flex-col gap-1 transition-all duration-400 cursor-default",
+                    "absolute bottom-full left-0 mb-2.5 z-50 w-64 rounded-xl border border-white/10 bg-[#121214]/95 p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl flex flex-col gap-1 transition-all duration-200 cursor-default",
                     isModelSelectOpen
-                      ? "opacity-100 scale-100 translate-y-0 pointer-events-auto ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                      : "opacity-0 scale-95 translate-y-3 pointer-events-none ease-[cubic-bezier(0.175,0.885,0.32,1.275)]",
+                      ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
+                      : "opacity-0 scale-95 translate-y-2 pointer-events-none",
                   )}
                 >
                   <div className="px-2.5 py-1.5 border-b border-white/[0.06] flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">
-                      OpenRouter Free Models
+                    <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider font-mono">
+                      AI Model
                     </span>
-                    <span className="text-[9px] text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-1.5 py-0.5 rounded font-mono">
-                      7 Available
+                    <span className="text-[10px] text-white/30 font-mono">
+                      Google Gemini
                     </span>
                   </div>
-                  <div className="relative flex flex-col gap-0.5 max-h-60 overflow-y-auto prompt-scrollbar">
-                    <div
-                      style={hoverStyle}
-                      className="absolute left-0 right-0 top-0 h-9 -z-10 rounded-xl bg-white/10 pointer-events-none"
-                    />
-                    {OPENROUTER_FREE_MODELS.map((m, idx) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onMouseEnter={() => {
-                          setHoverStyle((prev) => ({
-                            opacity: 1,
-                            transform: `translateY(${idx * 38}px) scale(1)`,
-                            transition:
-                              prev.opacity === 0
-                                ? "opacity 0.15s ease-out"
-                                : "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.15s ease",
-                          }));
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedModel(m);
-                          setIsModelSelectOpen(false);
-                        }}
-                        className={cn(
-                          "group relative flex h-9 w-full items-center justify-between rounded-xl px-3 py-1.5 text-left text-xs font-medium text-white/80 outline-none active:scale-[0.98] cursor-pointer hover:text-white transition-colors",
-                          selectedModel.id === m.id
-                            ? "bg-white/10 text-white font-semibold"
-                            : "",
-                        )}
-                      >
-                        <span className="flex items-center gap-2.5 truncate">
-                          <ModelIcon
-                            model={m.id}
-                            className="size-4 opacity-80 group-hover:opacity-100 transition-opacity"
-                          />
-                          <span className="truncate">{m.label}</span>
-                        </span>
-                        <span className="text-[9px] text-white/30 font-mono shrink-0 ml-1">
-                          {m.provider}
-                        </span>
-                      </button>
-                    ))}
+                  <div className="flex flex-col gap-0.5 py-1">
+                    {OPENROUTER_FREE_MODELS.map((m) => {
+                      const isSelected = selectedModel.id === m.id;
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedModel(m);
+                            setIsModelSelectOpen(false);
+                          }}
+                          className={cn(
+                            "group flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-medium transition-all cursor-pointer outline-none",
+                            isSelected
+                              ? "bg-white/10 text-white font-semibold shadow-inner"
+                              : "text-white/70 hover:bg-white/[0.06] hover:text-white",
+                          )}
+                        >
+                          <span className="flex items-center gap-2.5 min-w-0">
+                            <ModelIcon
+                              model={m.id}
+                              className="size-4 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity"
+                            />
+                            <span className="truncate">{m.label}</span>
+                          </span>
+                          {isSelected && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-white/80 shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

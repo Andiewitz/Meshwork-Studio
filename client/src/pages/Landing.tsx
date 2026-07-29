@@ -798,17 +798,6 @@ const Home = () => {
     },
   };
 
-  const heroBadgeVariants: Variants = {
-    hidden: { opacity: 0, y: -18, scale: 0.94, filter: "blur(10px)" },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      filter: "blur(0px)",
-      transition: { duration: 0.75, ease: [0.16, 1, 0.3, 1] },
-    },
-  };
-
   const heroItemVariants: Variants = {
     hidden: { opacity: 0, y: 35, scale: 0.97, filter: "blur(12px)" },
     visible: {
@@ -1505,63 +1494,37 @@ const Home = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
           >
-            {/* Background Atmosphere */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute inset-0 overflow-hidden pointer-events-none -z-10 technical-gradient"
+            {/* HERO SECTION — gradient applied directly so it always renders */}
+            <main
+              className="w-full relative z-10 min-h-screen flex flex-col items-center justify-center overflow-x-hidden pt-16"
+              style={{
+                background:
+                  "radial-gradient(ellipse 90% 60% at 50% -10%, rgba(59,130,246,0.60) 0%, rgba(99,102,241,0.25) 38%, transparent 65%), #080A0F",
+              }}
             >
-              <div className="absolute top-[10%] left-[10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[150px]" />
-              <div className="absolute top-[20%] right-[10%] w-[30%] h-[50%] rounded-full bg-purple-500/10 blur-[150px]" />
-              <div
-                className="absolute inset-0 opacity-[0.03]"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(rgba(26,115,232,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(26,115,232,0.06) 1px, transparent 1px)",
-                  backgroundSize: "100px 100px",
-                }}
-              />
-            </motion.div>
-
-            {/* HERO SECTION */}
-            <main className="w-full relative z-10 min-h-screen flex flex-col items-center justify-center overflow-x-hidden pt-16">
-              <div className="absolute inset-0 z-[-1] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/10 via-[#09090b] to-[#09090b]">
-                {/* eslint-disable-next-line no-secrets/no-secrets */}
-                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] bg-[length:24px_24px] bg-repeat [mask-image:radial-gradient(ellipse_at_top,black_40%,transparent_70%)] opacity-70" />
-              </div>
-
               <motion.div
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="flex flex-col items-center text-center px-4"
+                className="flex flex-col items-center text-center px-4 w-full max-w-2xl mx-auto"
               >
-                {/* Smooth Badge Reveal */}
-                <motion.div
-                  variants={heroBadgeVariants}
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.06] border border-white/10 text-xs font-medium text-white/80 backdrop-blur-md mb-6 shadow-lg shadow-black/20"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
-                  <span>Mosh AI 2.0 Infrastructure Co-Pilot — Now Live</span>
-                </motion.div>
-
                 <motion.h1
                   variants={heroItemVariants}
-                  className="text-fluid-hero font-medium font-sans text-white leading-[1.08] tracking-tight mb-6 drop-shadow-md max-w-4xl"
+                  className="text-[clamp(2rem,5vw,3.5rem)] font-bold text-white leading-[1.1] tracking-tight mb-4"
+                  style={{ fontFamily: "var(--font-headline)" }}
                 >
                   Build with Meshwork Studio
                 </motion.h1>
                 <motion.p
                   variants={heroItemVariants}
-                  className="text-fluid-body text-white/60 font-medium tracking-wide max-w-[650px] mb-8 leading-relaxed"
+                  className="text-[15px] text-white/50 font-medium max-w-[440px] mb-10 leading-relaxed"
                 >
-                  Go from prompt to production with automated infrastructure,
-                  seamless scaling, and interactive architecture documentation.
+                  Describe your infrastructure and Mosh AI generates a complete,
+                  interactive cloud diagram — instantly.
                 </motion.p>
                 <motion.div
                   variants={heroItemVariants}
-                  className="w-full max-w-xl flex justify-center mb-8"
+                  className="w-full max-w-xl flex justify-center"
                 >
                   <PromptInput
                     initialExpanded={true}
@@ -1579,20 +1542,6 @@ const Home = () => {
                     }}
                     placeholder="Describe your infrastructure, e.g. A multi-region Kubernetes cluster..."
                   />
-                </motion.div>
-                <motion.div variants={heroItemVariants} className="flex gap-4">
-                  <button
-                    onClick={() => setLocation("/register")}
-                    className="bg-primary text-white rounded-lg py-3 px-8 text-base font-bold hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    Get Started
-                  </button>
-                  <button
-                    onClick={() => setShowDocsView(true)}
-                    className="bg-white/10 text-white hover:bg-white/20 rounded-lg py-3 px-8 text-base font-bold transition-all cursor-pointer flex items-center gap-2 backdrop-blur-sm hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <BookOpen className="w-5 h-5" /> Explore Documentation
-                  </button>
                 </motion.div>
               </motion.div>
             </main>

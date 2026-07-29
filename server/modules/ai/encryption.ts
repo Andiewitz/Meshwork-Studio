@@ -132,6 +132,9 @@ export function validateKeyFormat(provider: string, apiKey: string): boolean {
     case "openrouter":
       // OpenRouter keys start with "sk-or-"
       return apiKey.startsWith("sk-or-") && apiKey.length >= 10;
+    case "gemini":
+      // Gemini API keys
+      return apiKey.length >= 10;
     default:
       // Unknown provider — reject rather than silently accept
       return false;
