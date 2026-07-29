@@ -1026,7 +1026,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
               overflow: expanded ? "visible" : "hidden",
             }}
             className={cn(
-              "relative w-full border border-white/15 bg-[#121214]/90 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20 hover:border-white/25 z-10",
+              "relative w-full border border-white/15 bg-[#121214]/90 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] focus-within:border-white/25 hover:border-white/25 z-10",
               expanded ? "cursor-text" : "cursor-default",
             )}
           >
@@ -1125,7 +1125,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                   className={cn(
                     "group flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white/70 transition-all duration-200 outline-none hover:bg-white/10 hover:text-white cursor-pointer bg-white/[0.04] border border-white/10",
                     isModelSelectOpen
-                      ? "bg-white/15 text-white border-primary/50"
+                      ? "bg-white/15 text-white border-white/25"
                       : "",
                   )}
                   aria-label={`Select model. Current: ${selectedModel.label}`}
@@ -1137,7 +1137,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                   <span className="text-xs font-semibold select-none tracking-tight">
                     <MorphingText text={selectedModel.label} />
                   </span>
-                  <span className="text-[9px] bg-primary/20 text-primary border border-primary/30 px-1 py-0.2 rounded font-mono font-bold uppercase ml-0.5">
+                  <span className="text-[9px] bg-white/10 text-white/60 border border-white/15 px-1 py-0.2 rounded font-mono font-bold uppercase ml-0.5">
                     FREE
                   </span>
                 </button>
@@ -1199,7 +1199,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                         className={cn(
                           "group relative flex h-9 w-full items-center justify-between rounded-xl px-3 py-1.5 text-left text-xs font-medium text-white/80 outline-none active:scale-[0.98] cursor-pointer hover:text-white transition-colors",
                           selectedModel.id === m.id
-                            ? "bg-primary/20 text-white font-semibold"
+                            ? "bg-white/10 text-white font-semibold"
                             : "",
                         )}
                       >
@@ -1253,7 +1253,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
               {audioData.map((val, i) => (
                 <div
                   key={i}
-                  className="w-1.5 rounded-full bg-primary transition-[height] duration-75 ease-out"
+                  className="w-1.5 rounded-full bg-white/50 transition-[height] duration-75 ease-out"
                   style={{ height: `${Math.max(4, val * 28)}px` }}
                 />
               ))}

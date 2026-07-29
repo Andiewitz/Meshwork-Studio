@@ -6,9 +6,9 @@ export default {
   theme: {
     extend: {
       borderRadius: {
-        lg: ".5625rem", /* 9px */
-        md: ".375rem", /* 6px */
-        sm: ".1875rem", /* 3px */
+        lg: ".5625rem" /* 9px */,
+        md: ".375rem" /* 6px */,
+        sm: ".1875rem" /* 3px */,
       },
       colors: {
         // Flat / base colors (regular buttons)
@@ -59,9 +59,23 @@ export default {
           "4": "hsl(var(--chart-4) / <alpha-value>)",
           "5": "hsl(var(--chart-5) / <alpha-value>)",
         },
-        // Redesign Theme Tokens
-        surface: "var(--color-surface)",
+        // Design System v1.0 Surface Hierarchy
+        "surface-lowest": "hsl(var(--surface-lowest) / <alpha-value>)",
+        "surface-low": "hsl(var(--surface-low) / <alpha-value>)",
+        surface: "hsl(var(--surface) / <alpha-value>)",
+        "surface-high": "hsl(var(--surface-high) / <alpha-value>)",
+        "surface-highest": "hsl(var(--surface-highest) / <alpha-value>)",
         "on-surface": "var(--color-on-surface)",
+        "subtle-foreground": "hsl(var(--subtle-foreground) / <alpha-value>)",
+
+        // Mosh AI System (Teal)
+        mosh: {
+          primary: "var(--mosh-primary)",
+          subtle: "var(--mosh-subtle)",
+          border: "var(--mosh-border)",
+        },
+
+        // High Contrast Redesign Mappings
         "surface-container-lowest": "var(--color-surface-container-lowest)",
         "surface-container-low": "var(--color-surface-container-low)",
         "surface-container": "var(--color-surface-container)",
@@ -83,7 +97,7 @@ export default {
         "sidebar-accent": {
           DEFAULT: "hsl(var(--sidebar-accent) / <alpha-value>)",
           foreground: "hsl(var(--sidebar-accent-foreground) / <alpha-value>)",
-          border: "var(--sidebar-accent-border)"
+          border: "var(--sidebar-accent-border)",
         },
         status: {
           online: "rgb(34 197 94)",

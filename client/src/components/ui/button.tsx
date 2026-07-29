@@ -5,19 +5,20 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-none text-sm font-medium focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 transition-all",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[8px] text-xs font-semibold font-sans focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 transition-all duration-150 active:scale-[0.98]",
   {
     variants: {
       variant: {
         default:
-          "bg-primary/90 text-primary-foreground border border-primary/50 hover:bg-primary hover:shadow-[0_0_15px_rgba(26,115,232,0.3)] backdrop-blur-md",
-        destructive:
-          "bg-destructive/90 text-destructive-foreground border border-destructive/50 hover:bg-destructive hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] backdrop-blur-md",
-        outline:
-          "border border-border/50 bg-background/30 backdrop-blur-md hover:bg-muted/50 text-foreground",
+          "bg-[#F0521E] text-[#0C0C0E] font-bold hover:bg-[#F26E41] shadow-sm",
         secondary:
-          "bg-secondary/60 text-secondary-foreground border border-secondary/50 backdrop-blur-md hover:bg-secondary/80",
-        ghost: "border border-transparent hover:bg-muted/50 backdrop-blur-sm",
+          "bg-[#242430] text-[#FAFAFA] border border-[#2A2A36] hover:bg-[#2E2E3C]",
+        ghost:
+          "bg-transparent text-[#A0A0B0] hover:bg-[#242430] hover:text-[#FAFAFA]",
+        destructive: "bg-[#EF4444] text-[#FAFAFA] hover:bg-[#DC2626]",
+        mosh: "bg-[rgba(0,229,160,0.10)] text-[#00E5A0] border border-[rgba(0,229,160,0.22)] hover:bg-[rgba(0,229,160,0.18)]",
+        outline:
+          "border border-[#1E1E24] bg-transparent text-[#FAFAFA] hover:bg-[#242430]",
       },
       // Heights are set as "min" heights, because sometimes Ai will place large amount of content
       // inside buttons. With a min-height they will look appropriate with small amounts of content,

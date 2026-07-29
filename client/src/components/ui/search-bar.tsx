@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowUpAZ, ArrowDownAZ, Search, Package, ArrowRight } from "lucide-react";
+import {
+  ArrowUpAZ,
+  ArrowDownAZ,
+  Search,
+  Package,
+  ArrowRight,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +38,12 @@ interface SearchBarProps {
   className?: string;
 }
 
-const SearchBar = ({ data, onCreateNew, commandMode = true, className }: SearchBarProps) => {
+const SearchBar = ({
+  data,
+  onCreateNew,
+  commandMode = true,
+  className,
+}: SearchBarProps) => {
   const [query, setQuery] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | "">("");
   const [isFocused, setIsFocused] = useState(false);
@@ -55,7 +66,7 @@ const SearchBar = ({ data, onCreateNew, commandMode = true, className }: SearchB
     let results = data.filter(
       (item) =>
         item.title.toLowerCase().includes(lowerQuery) ||
-        item.type.toLowerCase().includes(lowerQuery)
+        item.type.toLowerCase().includes(lowerQuery),
     );
     if (sortOrder === "asc") {
       results = [...results].sort((a, b) => a.title.localeCompare(b.title));
@@ -65,24 +76,30 @@ const SearchBar = ({ data, onCreateNew, commandMode = true, className }: SearchB
     return results;
   })();
 
-  const showDropdown = commandMode && isFocused && (query.length > 0 || filteredData.length > 0);
+  const showDropdown =
+    commandMode && isFocused && (query.length > 0 || filteredData.length > 0);
 
   return (
-    <div className={cn("w-full flex flex-col items-center justify-center gap-4", className)}>
+    <div
+      className={cn(
+        "w-full flex flex-col items-center justify-center gap-4",
+        className,
+      )}
+    >
       {/* Input row */}
       <div className="w-full max-w-2xl flex flex-col sm:flex-row gap-3 relative z-30">
         {/* Search input */}
         <div className="relative flex-1 group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30 pointer-events-none transition-colors group-focus-within:text-primary" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30 pointer-events-none transition-colors group-focus-within:text-white/50" />
           <Input
             ref={inputRef}
             type="text"
             placeholder="Search blueprints, assets, or run a command..."
             className={cn(
-              "w-full pl-12 pr-16 py-4 h-auto text-base bg-white/[0.03] border-white/10 text-white placeholder:text-white/30 focus-visible:ring-primary/40 focus-visible:border-primary/50 transition-all duration-300 backdrop-blur-3xl",
+              "w-full pl-12 pr-16 py-4 h-auto text-base bg-white/[0.03] border-white/10 text-white placeholder:text-white/30 focus-visible:ring-white/10 focus-visible:border-white/20 transition-all duration-300 backdrop-blur-3xl",
               isFocused
-                ? "rounded-t-2xl rounded-b-none border-primary/50 bg-black/60 shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
-                : "rounded-2xl hover:bg-white/[0.05]"
+                ? "rounded-t-2xl rounded-b-none border-white/20 bg-black/60 shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
+                : "rounded-2xl hover:bg-white/[0.05]",
             )}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -101,7 +118,7 @@ const SearchBar = ({ data, onCreateNew, commandMode = true, className }: SearchB
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.18, ease: "easeOut" }}
-                className="absolute top-full left-0 right-0 bg-black/70 backdrop-blur-2xl border border-primary/40 border-t-0 rounded-b-2xl overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.9)] text-left"
+                className="absolute top-full left-0 right-0 bg-black/70 backdrop-blur-2xl border border-white/15 border-t-0 rounded-b-2xl overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.9)] text-left"
               >
                 {filteredData.length > 0 ? (
                   <ScrollArea className="max-h-64 w-full">
@@ -117,7 +134,7 @@ const SearchBar = ({ data, onCreateNew, commandMode = true, className }: SearchB
                               <span className="text-sm text-white/80 group-hover/item:text-white transition-colors leading-tight truncate">
                                 {item.title}
                               </span>
-                              <span className="text-[10px] text-primary/60 tracking-wider uppercase mt-0.5">
+                              <span className="text-[10px] text-white/35 tracking-wider uppercase mt-0.5">
                                 {item.type} · #{item.id}
                               </span>
                             </div>
@@ -146,7 +163,9 @@ const SearchBar = ({ data, onCreateNew, commandMode = true, className }: SearchB
                     )}
                   </ScrollArea>
                 ) : (
-                  <p className="text-white/30 text-sm text-center py-6">No results found.</p>
+                  <p className="text-white/30 text-sm text-center py-6">
+                    No results found.
+                  </p>
                 )}
               </motion.div>
             )}
@@ -171,7 +190,7 @@ const SearchBar = ({ data, onCreateNew, commandMode = true, className }: SearchB
               onClick={() => setSortOrder("asc")}
               className={cn(
                 "flex justify-between items-center cursor-pointer focus:bg-white/[0.08] focus:text-white",
-                sortOrder === "asc" && "text-primary"
+                sortOrder === "asc" && "text-white/90 font-semibold",
               )}
             >
               <span>Title Ascending</span>
@@ -181,7 +200,7 @@ const SearchBar = ({ data, onCreateNew, commandMode = true, className }: SearchB
               onClick={() => setSortOrder("desc")}
               className={cn(
                 "flex justify-between items-center cursor-pointer focus:bg-white/[0.08] focus:text-white",
-                sortOrder === "desc" && "text-primary"
+                sortOrder === "desc" && "text-white/90 font-semibold",
               )}
             >
               <span>Title Descending</span>

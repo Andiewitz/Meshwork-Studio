@@ -147,7 +147,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="bg-surface text-on-surface font-body selection:bg-primary/30 selection:text-primary min-h-screen antialiased flex cursor-figma">
+    <div className="bg-surface text-on-surface font-body selection:bg-white/20 selection:text-white min-h-screen antialiased flex cursor-figma">
       {/* ── Left sidebar (240px) ── */}
       <motion.aside
         initial="hidden"
@@ -174,8 +174,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
         {/* Search */}
         <div className="px-3 pt-2.5 pb-1">
-          <div className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-white/[0.03] px-2.5 py-1.5 group focus-within:border-primary/40 transition-colors">
-            <Search className="h-3.5 w-3.5 text-white/30 shrink-0 group-focus-within:text-primary transition-colors" />
+          <div className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-white/[0.03] px-2.5 py-1.5 group focus-within:border-white/20 transition-colors">
+            <Search className="h-3.5 w-3.5 text-white/30 shrink-0 group-focus-within:text-white/50 transition-colors" />
             <input
               type="text"
               value={sidebarSearch}
@@ -234,7 +234,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   ? `${user.firstName}'s workspace`
                   : "My Workspace"}
               </span>
-              <span className="ml-auto shrink-0 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+              <span className="ml-auto shrink-0 rounded bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/35">
                 Free
               </span>
             </button>
@@ -426,11 +426,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               isRinging ? { rotate: [0, -18, 18, -18, 18, 0] } : { rotate: 0 }
             }
             transition={{ duration: 0.4 }}
-            className={`relative w-8 h-8 flex items-center justify-center transition-all ${panelOpen || isRinging ? "text-primary scale-110" : "text-white/30 hover:text-white/80"}`}
+            className={`relative w-8 h-8 flex items-center justify-center transition-all ${panelOpen || isRinging ? "text-white/80 scale-110" : "text-white/30 hover:text-white/80"}`}
           >
             <Bell className="w-4 h-4" />
             {isUnread && (
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-white/60" />
             )}
           </motion.button>
         </div>
@@ -466,7 +466,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                     Notifications
                   </span>
                   {isUnread && (
-                    <span className="w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center">
+                    <span className="w-5 h-5 rounded-full bg-white/10 text-white/60 text-[10px] font-bold flex items-center justify-center">
                       1
                     </span>
                   )}
@@ -495,7 +495,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   <div className="flex gap-3">
                     <div className="pt-0.5 shrink-0">
                       {isUnread ? (
-                        <div className="w-2 h-2 rounded-full bg-primary mt-1" />
+                        <div className="w-2 h-2 rounded-full bg-white/30 mt-1" />
                       ) : (
                         <div className="w-2 h-2 rounded-full bg-white/10 mt-1" />
                       )}
@@ -521,7 +521,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                         href="https://github.com/Andiewitz/Meshwork-Studio_"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-[11px] text-primary/70 hover:text-primary transition-colors"
+                        className="inline-flex items-center gap-1.5 text-[11px] text-white/35 hover:text-white/70 transition-colors"
                       >
                         <svg
                           className="w-3 h-3"

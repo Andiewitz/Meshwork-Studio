@@ -65,7 +65,7 @@ export function WorkspaceToolbar({
           <motion.button
             key={tool.mode}
             onClick={() => setDrawingMode(tool.mode)}
-            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === tool.mode ? "bg-white/10 text-white border border-white/15 shadow-sm" : "text-white/40 hover:text-white hover:bg-white/[0.06]"}`}
+            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === tool.mode ? "bg-[#F0521E]/12 text-[#F0521E] border border-[#F0521E]/25 shadow-sm" : "text-[#A0A0B0] hover:text-[#FAFAFA] hover:bg-[#242430]"}`}
             title={tool.title}
             whileTap={{ scale: 0.92 }}
           >
@@ -73,7 +73,7 @@ export function WorkspaceToolbar({
           </motion.button>
         ))}
 
-        <div className="w-px h-5 bg-white/[0.08] mx-1" />
+        <div className="w-px h-5 bg-[#1E1E24] mx-1" />
 
         <motion.button
           onClick={() =>
@@ -81,7 +81,7 @@ export function WorkspaceToolbar({
               drawingMode === "infrastructure" ? "select" : "infrastructure",
             )
           }
-          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === "infrastructure" ? "bg-white/10 text-white border border-white/15 shadow-sm" : "text-white/40 hover:text-white hover:bg-white/[0.06]"}`}
+          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === "infrastructure" ? "bg-[#F0521E]/12 text-[#F0521E] border border-[#F0521E]/25 shadow-sm" : "text-[#A0A0B0] hover:text-[#FAFAFA] hover:bg-[#242430]"}`}
           title="Infrastructure Zone"
           whileTap={{ scale: 0.92 }}
         >
@@ -214,7 +214,7 @@ export function WorkspaceToolbar({
               drawingMode === "annotation" ? "select" : "annotation",
             )
           }
-          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === "annotation" ? "bg-white/10 text-white border border-white/15 shadow-sm" : "text-white/40 hover:text-white hover:bg-white/[0.06]"}`}
+          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === "annotation" ? "bg-[#F0521E]/12 text-[#F0521E] border border-[#F0521E]/25 shadow-sm" : "text-[#A0A0B0] hover:text-[#FAFAFA] hover:bg-[#242430]"}`}
           title="Annotation"
           whileTap={{ scale: 0.92 }}
         >

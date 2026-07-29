@@ -498,7 +498,7 @@ export function AiChatDrawer({
           animate={{ scale: [1, 1.2, 1], opacity: [0.7, 1, 0.7] }}
           transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
         >
-          <Bot className="w-3.5 h-3.5 text-[#10B981]" />
+          <Bot className="w-3.5 h-3.5 text-[#00E5A0]" />
         </motion.div>
         <span className="text-[11px] font-semibold tracking-widest uppercase text-white/60">
           Mosh
@@ -535,13 +535,13 @@ export function AiChatDrawer({
                     <span className="text-[12px] font-semibold text-white/90 tracking-wide">
                       MOSH
                     </span>
-                    <span className="text-[9px] text-[#10B981]/70 border border-[#10B981]/20 bg-[#10B981]/5 px-1.5 py-0.5 rounded font-mono tracking-wider">
+                    <span className="text-[9px] text-[#00E5A0] border border-[rgba(0,229,160,0.22)] bg-[rgba(0,229,160,0.10)] px-1.5 py-0.5 rounded font-mono tracking-wider">
                       BETA
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <motion.div
-                      className="w-1.5 h-1.5 rounded-full bg-emerald-400"
+                      className="w-1.5 h-1.5 rounded-full bg-[#00E5A0]"
                       animate={{ opacity: [1, 0.4, 1] }}
                       transition={{ repeat: Infinity, duration: 2 }}
                     />
@@ -570,7 +570,7 @@ export function AiChatDrawer({
                   className="flex flex-col items-center justify-center text-center mt-8 mb-6 space-y-6"
                 >
                   <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white/[0.02] border border-white/[0.05] shadow-lg">
-                    <Bot className="w-8 h-8 text-[#10B981]" />
+                    <Bot className="w-8 h-8 text-[#00E5A0]" />
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-white font-medium text-sm">
@@ -602,9 +602,9 @@ export function AiChatDrawer({
                               setInput(s);
                               textareaRef.current?.focus();
                             }}
-                            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] text-white/60 border border-white/[0.06] hover:border-[#10B981]/40 hover:text-white/90 hover:bg-[#10B981]/10 transition-all cursor-pointer text-left w-full group"
+                            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] text-white/60 border border-white/[0.06] hover:border-[rgba(0,229,160,0.3)] hover:text-white/90 hover:bg-[rgba(0,229,160,0.08)] transition-all cursor-pointer text-left w-full group"
                           >
-                            <Bot className="w-3.5 h-3.5 text-[#10B981]/60 group-hover:text-[#10B981] transition-colors shrink-0" />
+                            <Bot className="w-3.5 h-3.5 text-[#00E5A0] group-hover:text-[#00E5A0] transition-colors shrink-0" />
                             <span className="truncate">{s}</span>
                           </motion.button>
                         ))}
@@ -628,7 +628,7 @@ export function AiChatDrawer({
                         background: "linear-gradient(145deg, #1E1E1E, #141414)",
                       }}
                     >
-                      <Bot className="w-3.5 h-3.5 text-[#10B981]" />
+                      <Bot className="w-3.5 h-3.5 text-[#00E5A0]" />
                     </div>
                   )}
                   <div
@@ -648,7 +648,7 @@ export function AiChatDrawer({
                   >
                     {msg.role === "assistant" ? (
                       <>
-                        <div className="prose prose-invert prose-sm max-w-none prose-p:my-1.5 prose-p:leading-relaxed prose-headings:text-white/90 prose-headings:font-semibold prose-headings:my-2 prose-ul:my-1.5 prose-li:my-0.5 prose-li:text-white/70 prose-strong:text-white/90 prose-code:text-[#34D399] prose-code:bg-white/[0.06] prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[12px] prose-code:font-mono">
+                        <div className="prose prose-invert prose-sm max-w-none prose-p:my-1.5 prose-p:leading-relaxed prose-headings:text-white/90 prose-headings:font-semibold prose-headings:my-2 prose-ul:my-1.5 prose-li:my-0.5 prose-li:text-white/70 prose-strong:text-white/90 prose-code:text-[#00E5A0] prose-code:bg-white/[0.06] prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[12px] prose-code:font-mono">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {msg.content}
                           </ReactMarkdown>
@@ -733,11 +733,11 @@ export function AiChatDrawer({
                   style={{
                     background:
                       input.trim() && !isLoading
-                        ? "linear-gradient(135deg, #10B981, #059669)"
+                        ? "linear-gradient(135deg, #00E5A0, #059669)"
                         : "rgba(255,255,255,0.04)",
                     boxShadow:
                       input.trim() && !isLoading
-                        ? "0 4px 16px rgba(16,185,129,0.35)"
+                        ? "0 4px 16px rgba(0,229,160,0.3)"
                         : "none",
                   }}
                   whileHover={input.trim() && !isLoading ? { scale: 1.05 } : {}}
