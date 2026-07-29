@@ -1274,7 +1274,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                     : "Use voice input"
               }
               style={{ borderRadius: 9999 }}
-              className="absolute right-3 bottom-3 z-[10] flex h-10 w-10 items-center justify-center bg-primary text-black font-bold shadow-[0_0_20px_rgba(255,102,0,0.4)] transition-all duration-300 hover:scale-105 hover:brightness-110 active:scale-95 outline-none cursor-pointer"
+              className="absolute right-3 bottom-3 z-[10] flex h-10 w-10 items-center justify-center bg-primary text-white font-bold shadow-md transition-all duration-300 hover:scale-105 hover:brightness-110 active:scale-95 outline-none cursor-pointer"
             >
               <span className="relative flex h-full w-full items-center justify-center">
                 <span

@@ -23,8 +23,7 @@ const buttonVariants = cva(
       variant: {
         default:
           "border-primary bg-primary text-black shadow-sm hover:bg-primary/90",
-        ghost:
-          "border-transparent text-foreground hover:bg-white/5",
+        ghost: "border-transparent text-foreground hover:bg-white/5",
       },
     },
   },
@@ -35,7 +34,13 @@ interface BaseButtonProps extends useRender.ComponentProps<"button"> {
   size?: VariantProps<typeof buttonVariants>["size"];
 }
 
-function BaseButton({ className, variant, size, render, ...props }: BaseButtonProps) {
+function BaseButton({
+  className,
+  variant,
+  size,
+  render,
+  ...props
+}: BaseButtonProps) {
   const typeValue: React.ButtonHTMLAttributes<HTMLButtonElement>["type"] =
     render ? undefined : "button";
 
@@ -54,7 +59,7 @@ function BaseButton({ className, variant, size, render, ...props }: BaseButtonPr
 
 // ─── Animated Pill Button ────────────────────────────────────────────────────
 // The pill-style CTA from the component demo, adapted for the Meshwork Studio
-// dark/orange theme. Primary background uses the app's orange (#FF6600).
+// dark/blue theme. Primary background uses the app's Google blue (#1a73e8).
 
 interface AnimatedButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   label?: string;
@@ -74,12 +79,12 @@ export function AnimatedButton({
       {...props}
     >
       {/* Label pill */}
-      <span className="rounded-full bg-primary px-6 py-3 text-black font-sans font-bold tracking-wide duration-500 ease-in-out group-hover:bg-white/10 group-hover:text-primary group-hover:transition-colors">
+      <span className="rounded-full bg-primary px-6 py-3 text-white font-sans font-bold tracking-wide duration-500 ease-in-out group-hover:bg-white/10 group-hover:text-primary group-hover:transition-colors">
         {label}
       </span>
 
       {/* Arrow icon pill */}
-      <div className="relative flex h-fit cursor-pointer items-center overflow-hidden rounded-full bg-primary p-5 text-black duration-500 ease-in-out group-hover:bg-white/10 group-hover:text-primary group-hover:transition-colors">
+      <div className="relative flex h-fit cursor-pointer items-center overflow-hidden rounded-full bg-primary p-5 text-white duration-500 ease-in-out group-hover:bg-white/10 group-hover:text-primary group-hover:transition-colors">
         <ArrowUpRight className="absolute h-5 w-5 -translate-x-1/2 transition-all duration-500 ease-in-out group-hover:translate-x-10" />
         <ArrowUpRight className="absolute h-5 w-5 -translate-x-10 transition-all duration-500 ease-in-out group-hover:-translate-x-1/2" />
       </div>

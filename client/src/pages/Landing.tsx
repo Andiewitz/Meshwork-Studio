@@ -1085,7 +1085,7 @@ const Home = () => {
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
             {/* Brand Logo */}
             <Link href="/" className="flex items-center gap-3 group shrink-0">
-              <div className="w-8 h-8 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(255,61,0,0.5)]">
+              <div className="w-8 h-8 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(26,115,232,0.5)]">
                 <MeshworkLogo />
               </div>
               <span className="text-lg font-headline font-bold tracking-tight hidden sm:block text-white">
@@ -1225,7 +1225,7 @@ const Home = () => {
               </button>
               <button
                 onClick={() => setLocation("/register")}
-                className="bg-primary text-black rounded-lg py-2 px-5 text-sm font-bold hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
+                className="bg-primary text-white rounded-lg py-2 px-5 text-sm font-bold hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
               >
                 Get Started
               </button>
@@ -1329,7 +1329,7 @@ const Home = () => {
                       </button>
                       <button
                         onClick={() => setLocation("/register")}
-                        className="w-full py-3 rounded-lg bg-primary text-black font-bold text-sm hover:brightness-110 transition-colors cursor-pointer"
+                        className="w-full py-3 rounded-lg bg-primary text-white font-bold text-sm hover:brightness-110 transition-colors cursor-pointer"
                       >
                         Get Started Free
                       </button>
@@ -1372,7 +1372,7 @@ const Home = () => {
                   onClick={() => setShowDocsView(false)}
                   className="flex items-center gap-3 cursor-pointer group"
                 >
-                  <div className="w-8 h-8 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(255,61,0,0.5)]">
+                  <div className="w-8 h-8 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(26,115,232,0.5)]">
                     <MeshworkLogo />
                   </div>
                   <span className="text-lg font-headline font-bold tracking-tight text-white hidden sm:block">
@@ -1395,7 +1395,7 @@ const Home = () => {
 
                 <button
                   onClick={() => setLocation("/register")}
-                  className="bg-primary text-black rounded-lg py-1.5 px-4 text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
+                  className="bg-primary text-white rounded-lg py-1.5 px-4 text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
                 >
                   Get Started
                 </button>
@@ -1518,7 +1518,7 @@ const Home = () => {
                 className="absolute inset-0 opacity-[0.03]"
                 style={{
                   backgroundImage:
-                    "linear-gradient(rgba(255,85,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,85,0,0.1) 1px, transparent 1px)",
+                    "linear-gradient(rgba(26,115,232,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(26,115,232,0.06) 1px, transparent 1px)",
                   backgroundSize: "100px 100px",
                 }}
               />
@@ -1583,7 +1583,7 @@ const Home = () => {
                 <motion.div variants={heroItemVariants} className="flex gap-4">
                   <button
                     onClick={() => setLocation("/register")}
-                    className="bg-primary text-black rounded-lg py-3 px-8 text-base font-bold hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
+                    className="bg-primary text-white rounded-lg py-3 px-8 text-base font-bold hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
                   >
                     Get Started
                   </button>
@@ -1653,7 +1653,7 @@ const Home = () => {
                     const colors = [
                       "from-indigo-500/[0.07] via-transparent to-purple-600/[0.05]",
                       "from-emerald-500/[0.07] via-transparent to-teal-600/[0.05]",
-                      "from-amber-500/[0.07] via-transparent to-orange-600/[0.05]",
+                      "from-blue-500/[0.07] via-transparent to-indigo-600/[0.05]",
                     ];
                     const bgClass = colors[idx % colors.length];
 

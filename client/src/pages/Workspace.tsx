@@ -2721,7 +2721,7 @@ function WorkspaceView() {
             {/* AI Context */}
             <div className="space-y-1.5">
               <Label className="text-[10px] uppercase tracking-widest font-bold text-white/40 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-[#FF5500]" />
+                <Sparkles className="w-3 h-3 text-[#8ab4f8]" />
                 AI Architectural Context
               </Label>
               <Textarea
@@ -2864,7 +2864,7 @@ function WorkspaceView() {
             <button
               type="button"
               onClick={handleSaveWorkspaceSettings}
-              className="bg-[#FF5500] hover:brightness-110 text-white text-[12px] font-semibold px-5 py-2 rounded-lg transition-all"
+              className="bg-[#1a73e8] hover:brightness-110 text-white text-[12px] font-semibold px-5 py-2 rounded-lg transition-all"
             >
               Save Settings
             </button>

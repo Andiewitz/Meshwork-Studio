@@ -169,14 +169,14 @@ function NavGridCard({
     <NavigationMenuPrimitive.Link asChild>
       <GridCard
         className={cn(
-          "border-white/10 bg-[#12141a] hover:border-primary/50 transition-colors cursor-pointer",
+          "border-white/10 bg-[#12141a] hover:border-white/20 transition-colors cursor-pointer",
           className,
         )}
         onClick={link.onClick}
         {...props}
       >
         {link.icon && (
-          <link.icon className="text-primary relative size-5 mb-2" />
+          <link.icon className="text-white/50 relative size-5 mb-2" />
         )}
         <div className="relative">
           <span className="text-white text-sm font-semibold">{link.title}</span>
@@ -207,7 +207,7 @@ function NavSmallItem({
       onClick={item.onClick}
       {...props}
     >
-      {item.icon && <item.icon className="text-primary size-4" />}
+      {item.icon && <item.icon className="text-white/50 size-4" />}
       <p className="text-sm font-medium">{item.title}</p>
       <div className="relative ml-auto flex h-full w-4 items-center">
         <ArrowRightIcon className="size-3.5 -translate-x-2 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100 text-white/50" />
@@ -244,7 +244,7 @@ function NavLargeItem({
           )}
         </div>
         {link.icon && (
-          <link.icon className="text-white/40 size-5 group-hover:text-primary transition-colors" />
+          <link.icon className="text-white/40 size-5 group-hover:text-white/70 transition-colors" />
         )}
       </div>
     </NavigationMenuLink>
@@ -272,7 +272,7 @@ function NavItemMobile({
           "bg-white/5 flex size-10 items-center justify-center rounded-lg border border-white/10 shrink-0",
         )}
       >
-        {item.icon && <item.icon className="size-5 text-primary" />}
+        {item.icon && <item.icon className="size-5 text-white/50" />}
       </div>
       <div className={cn("flex h-10 flex-col justify-center")}>
         <p className="text-sm font-medium text-white">{item.title}</p>

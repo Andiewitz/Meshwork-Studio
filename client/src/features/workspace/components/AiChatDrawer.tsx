@@ -516,7 +516,7 @@ export function AiChatDrawer({
             animate={{ height: 520, opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 350, damping: 35 }}
-            className="pointer-events-auto w-[640px] max-w-[92vw] flex flex-col overflow-hidden bg-[#121214]/80 backdrop-blur-xl border border-b-0 border-white/[0.08] rounded-t-3xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_-20px_60px_-10px_rgba(0,0,0,0.8),0_-4px_30px_-5px_rgba(255,85,0,0.1)]"
+            className="pointer-events-auto w-[640px] max-w-[92vw] flex flex-col overflow-hidden bg-[#121214]/80 backdrop-blur-xl border border-b-0 border-white/[0.08] rounded-t-3xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_-20px_60px_-10px_rgba(0,0,0,0.8)]"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.04]">

@@ -13,7 +13,11 @@ const sectionVariants = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: 0.15 + i * 0.06, duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+    transition: {
+      delay: 0.15 + i * 0.06,
+      duration: 0.5,
+      ease: [0.16, 1, 0.3, 1],
+    },
   }),
 };
 
@@ -96,10 +100,16 @@ export default function PrivacyPolicy() {
   ];
 
   return (
-    <div ref={containerRef} className="relative font-sans text-white min-h-screen flex flex-col bg-background">
+    <div
+      ref={containerRef}
+      className="relative font-sans text-white min-h-screen flex flex-col bg-background"
+    >
       <Helmet>
         <title>Privacy Policy — Meshwork Studio</title>
-        <meta name="description" content="Privacy Policy for Meshwork Studio. Learn how we collect, use, and protect your data." />
+        <meta
+          name="description"
+          content="Privacy Policy for Meshwork Studio. Learn how we collect, use, and protect your data."
+        />
       </Helmet>
 
       {/* Background Atmosphere */}
@@ -112,10 +122,12 @@ export default function PrivacyPolicy() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-black/40 backdrop-blur-2xl border-b border-white/[0.05] shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(255,61,0,0.5)]">
+            <div className="w-9 h-9 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(26,115,232,0.5)]">
               <MeshworkLogo />
             </div>
-            <span className="text-lg font-headline font-bold tracking-tight hidden sm:block text-white">Meshwork Studio</span>
+            <span className="text-lg font-headline font-bold tracking-tight hidden sm:block text-white">
+              Meshwork Studio
+            </span>
           </Link>
           <Link href="/">
             <button className="flex items-center gap-2 text-sm font-medium text-white/60 hover:text-white transition-colors cursor-pointer">
@@ -154,7 +166,10 @@ export default function PrivacyPolicy() {
             transition={{ delay: 0.1, duration: 0.5 }}
             className="text-white/50 text-[15px] leading-[1.8] font-medium mb-14"
           >
-            At Meshwork Studio, we take your privacy seriously. This Privacy Policy explains what information we collect, how we use it, how we share it, and what choices you have. By using our Service, you agree to the practices described in this policy.
+            At Meshwork Studio, we take your privacy seriously. This Privacy
+            Policy explains what information we collect, how we use it, how we
+            share it, and what choices you have. By using our Service, you agree
+            to the practices described in this policy.
           </motion.p>
 
           {/* Sections */}
@@ -206,10 +221,16 @@ export default function PrivacyPolicy() {
             transition={{ delay: 1.2, duration: 0.5 }}
             className="mt-20 pt-10 border-t border-white/[0.06] flex items-center justify-between"
           >
-            <Link href="/terms" className="text-sm text-white/40 hover:text-white transition-colors font-medium">
+            <Link
+              href="/terms"
+              className="text-sm text-white/40 hover:text-white transition-colors font-medium"
+            >
               ← Terms of Service
             </Link>
-            <Link href="/" className="text-sm text-white/40 hover:text-white transition-colors font-medium">
+            <Link
+              href="/"
+              className="text-sm text-white/40 hover:text-white transition-colors font-medium"
+            >
               Back to Home
             </Link>
           </motion.div>

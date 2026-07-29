@@ -228,8 +228,7 @@ export function WorkspaceCard({
             viewMode === "grid"
               ? "p-1 rounded-xl flex flex-col"
               : "p-3 rounded-xl flex flex-row items-center gap-6",
-            isSelected &&
-              "border-primary/50 shadow-[0_0_15px_rgba(255,102,0,0.2)]",
+            isSelected && "border-primary/50 shadow-md",
             isDeleting && "opacity-50 pointer-events-none grayscale",
           )}
           onClick={() =>

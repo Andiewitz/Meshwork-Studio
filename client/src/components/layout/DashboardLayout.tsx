@@ -209,11 +209,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   }`}
                 >
                   <Icon
-                    className={`h-4 w-4 shrink-0 ${active ? "text-primary drop-shadow-[0_0_6px_rgba(255,102,0,0.4)]" : ""}`}
+                    className={`h-4 w-4 shrink-0 ${active ? "text-white" : ""}`}
                   />
                   <span>{label}</span>
                   {active && (
-                    <span className="ml-auto w-1 h-1 rounded-full bg-primary shadow-[0_0_6px_rgba(255,102,0,0.6)]" />
+                    <span className="ml-auto w-1 h-1 rounded-full bg-white/80" />
                   )}
                 </motion.button>
               </Link>
@@ -430,7 +430,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           >
             <Bell className="w-4 h-4" />
             {isUnread && (
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_10px_rgba(255,102,0,0.8)]" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary" />
             )}
           </motion.button>
         </div>

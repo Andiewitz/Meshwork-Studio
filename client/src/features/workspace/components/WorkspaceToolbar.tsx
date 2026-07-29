@@ -65,7 +65,7 @@ export function WorkspaceToolbar({
           <motion.button
             key={tool.mode}
             onClick={() => setDrawingMode(tool.mode)}
-            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === tool.mode ? "bg-[#FF5500] text-white shadow-[0_0_20px_rgba(255,85,0,0.3)]" : "text-white/40 hover:text-white hover:bg-white/[0.06]"}`}
+            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === tool.mode ? "bg-white/10 text-white border border-white/15 shadow-sm" : "text-white/40 hover:text-white hover:bg-white/[0.06]"}`}
             title={tool.title}
             whileTap={{ scale: 0.92 }}
           >
@@ -81,7 +81,7 @@ export function WorkspaceToolbar({
               drawingMode === "infrastructure" ? "select" : "infrastructure",
             )
           }
-          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === "infrastructure" ? "bg-[#FF5500] text-white shadow-[0_0_20px_rgba(255,85,0,0.3)]" : "text-white/40 hover:text-white hover:bg-white/[0.06]"}`}
+          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === "infrastructure" ? "bg-white/10 text-white border border-white/15 shadow-sm" : "text-white/40 hover:text-white hover:bg-white/[0.06]"}`}
           title="Infrastructure Zone"
           whileTap={{ scale: 0.92 }}
         >
@@ -214,7 +214,7 @@ export function WorkspaceToolbar({
               drawingMode === "annotation" ? "select" : "annotation",
             )
           }
-          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === "annotation" ? "bg-[#FF5500] text-white shadow-[0_0_20px_rgba(255,85,0,0.3)]" : "text-white/40 hover:text-white hover:bg-white/[0.06]"}`}
+          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === "annotation" ? "bg-white/10 text-white border border-white/15 shadow-sm" : "text-white/40 hover:text-white hover:bg-white/[0.06]"}`}
           title="Annotation"
           whileTap={{ scale: 0.92 }}
         >

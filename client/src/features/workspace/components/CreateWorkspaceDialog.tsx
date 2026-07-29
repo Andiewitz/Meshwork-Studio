@@ -9,8 +9,16 @@ import { useAuth } from "@/hooks/use-auth";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Loader2,
-  Server, Globe, Box, Database, Shield, GitBranch,
-  Cpu, Cloud, Code2, ChevronRight,
+  Server,
+  Globe,
+  Box,
+  Database,
+  Shield,
+  GitBranch,
+  Cpu,
+  Cloud,
+  Code2,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -44,7 +52,10 @@ const PROJECT_ICONS = [
   { id: "git", Icon: GitBranch, label: "Version" },
 ];
 
-export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDialogProps) {
+export function CreateWorkspaceDialog({
+  open,
+  onOpenChange,
+}: CreateWorkspaceDialogProps) {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -70,9 +81,9 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
     if (!user) return;
 
     createWorkspace.mutate(
-      { 
-        ...values, 
-        type: "system", 
+      {
+        ...values,
+        type: "system",
         userId: user.id,
         icon: selectedIcon,
         groups: [],
@@ -94,11 +105,12 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
             variant: "destructive",
           });
         },
-      }
+      },
     );
   };
 
-  const SelectedIconComp = PROJECT_ICONS.find(i => i.id === selectedIcon)?.Icon ?? Box;
+  const SelectedIconComp =
+    PROJECT_ICONS.find((i) => i.id === selectedIcon)?.Icon ?? Box;
   const titleValue = form.watch("title");
 
   return (
@@ -115,11 +127,16 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
               <MeshworkLogo />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-white mb-1.5" style={{ fontFamily: 'var(--font-sans)' }}>
+              <h3
+                className="text-base font-semibold text-white mb-1.5"
+                style={{ fontFamily: "var(--font-sans)" }}
+              >
                 Workspace limit reached
               </h3>
               <p className="text-sm text-white/35 leading-relaxed max-w-xs mx-auto">
-                Free accounts are limited to {FREE_TIER_LIMIT} workspaces. Delete an existing workspace to create a new one, or upgrade for unlimited access.
+                Free accounts are limited to {FREE_TIER_LIMIT} workspaces.
+                Delete an existing workspace to create a new one, or upgrade for
+                unlimited access.
               </p>
             </div>
             <div className="flex items-center gap-3 mt-2">
@@ -143,10 +160,12 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
             <div className="px-6 pt-6 pb-5">
               <div className="flex items-start gap-4">
                 {/* Live icon preview */}
-                <div className={cn(
-                  "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300",
-                  "bg-[#1A1A1A] border border-[#2A2A2A]",
-                )}>
+                <div
+                  className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300",
+                    "bg-[#1A1A1A] border border-[#2A2A2A]",
+                  )}
+                >
                   <SelectedIconComp className="w-5 h-5 text-white/70" />
                 </div>
                 <div className="flex-1 min-w-0 pt-0.5">
@@ -161,13 +180,17 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
                     )}
                   />
                   <p className="text-[11px] text-[#555] mt-1 font-body">
-                    {titleValue ? `${titleValue.length}/16 characters` : "Give your workspace a name"}
+                    {titleValue
+                      ? `${titleValue.length}/16 characters`
+                      : "Give your workspace a name"}
                   </p>
                 </div>
               </div>
 
               {form.formState.errors.title && (
-                <p className="text-primary text-[11px] mt-2 ml-16">{form.formState.errors.title.message}</p>
+                <p className="text-primary text-[11px] mt-2 ml-16">
+                  {form.formState.errors.title.message}
+                </p>
               )}
             </div>
 
@@ -187,7 +210,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
                       "w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-200 cursor-figma-pointer",
                       selectedIcon === id
                         ? "bg-white/10 text-white ring-1 ring-white/20"
-                        : "text-[#555] hover:text-white/70 hover:bg-white/5"
+                        : "text-[#555] hover:text-white/70 hover:bg-white/5",
                     )}
                   >
                     <Icon className="w-4 h-4" />
@@ -229,8 +252,8 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
                   disabled={createWorkspace.isPending}
                   className={cn(
                     "bg-primary text-white text-[12px] font-semibold px-5 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 cursor-figma-pointer",
-                    "hover:brightness-110 hover:shadow-[0_0_16px_rgba(255,85,0,0.25)]",
-                    "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:brightness-100"
+                    "hover:brightness-110 hover:shadow-md",
+                    "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:brightness-100",
                   )}
                 >
                   {createWorkspace.isPending ? (

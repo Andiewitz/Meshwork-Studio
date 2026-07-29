@@ -58,7 +58,7 @@
   --font-headline: "DM Sans", system-ui, sans-serif;
   --font-body: "Geomini", "Plus Jakarta Sans", system-ui, sans-serif;
 
-  --primary: 24 100% 50%;
+  --primary: 217 89% 51%;
   --primary-foreground: 0 0% 100%;
 
   --secondary: 0 0% 12%;
@@ -67,7 +67,7 @@
   --muted: 0 0% 12%;
   --muted-foreground: 0 0% 60%;
 
-  --accent: 24 100% 50%;
+  --accent: 217 89% 51%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
@@ -75,7 +75,7 @@
 
   --border: 0 0% 15%; /* #262626 */
   --input: 0 0% 10%;
-  --ring: 24 100% 50%;
+  --ring: 217 89% 51%;
 
   --radius: 0rem;
 }
@@ -90,7 +90,7 @@
   --popover: 0 0% 8%;
   --popover-foreground: 0 0% 98%;
 
-  --primary: 24 100% 50%;
+  --primary: 217 89% 51%;
   --primary-foreground: 0 0% 100%;
 
   --secondary: 0 0% 12%;
@@ -99,7 +99,7 @@
   --muted: 0 0% 12%;
   --muted-foreground: 0 0% 60%;
 
-  --accent: 24 100% 50%;
+  --accent: 217 89% 51%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 72% 45%;
@@ -107,7 +107,7 @@
 
   --border: 0 0% 18%; /* #2E2E2E */
   --input: 0 0% 10%;
-  --ring: 24 100% 50%;
+  --ring: 217 89% 51%;
 }
 
 @layer utilities {
@@ -271,7 +271,7 @@ html {
   }
 
   .neo-shadow {
-    @apply shadow-[8px_8px_0px_0px_rgba(26,26,26,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,61,0,0.7)];
+    @apply shadow-[8px_8px_0px_0px_rgba(26,26,26,1)] dark:shadow-[6px_6px_0px_0px_rgba(26,115,232,0.4)];
     transition:
       transform 0.3s ease,
       box-shadow 0.3s ease;
@@ -279,11 +279,11 @@ html {
 
   .neo-shadow:hover {
     transform: translate(-4px, -4px);
-    @apply shadow-[12px_12px_0px_0px_rgba(26,26,26,1)] dark:shadow-[10px_10px_0px_0px_rgba(255,61,0,0.7)];
+    @apply shadow-[12px_12px_0px_0px_rgba(26,26,26,1)] dark:shadow-[10px_10px_0px_0px_rgba(26,115,232,0.4)];
   }
 
   .neo-shadow-lg {
-    @apply shadow-[12px_12px_0px_0px_rgba(26,26,26,1)] dark:shadow-[10px_10px_0px_0px_rgba(255,61,0,0.7)];
+    @apply shadow-[12px_12px_0px_0px_rgba(26,26,26,1)] dark:shadow-[10px_10px_0px_0px_rgba(26,115,232,0.4)];
   }
 
   .neo-card {
@@ -319,7 +319,7 @@ html {
   }
 
   .dark .meshwork-bg-text {
-    color: rgba(255, 61, 0, 0.04); /* subtle brand-red tint in dark mode */
+    color: rgba(26, 115, 232, 0.04); /* subtle brand-blue tint in dark mode */
   }
 
   .scrollbar-hide::-webkit-scrollbar {
@@ -482,13 +482,13 @@ html {
 }
 
 .react-flow__selection {
-  background: rgba(255, 85, 0, 0.06) !important;
-  border: 1px solid rgba(255, 85, 0, 0.3) !important;
+  background: rgba(26, 115, 232, 0.06) !important;
+  border: 1px solid rgba(26, 115, 232, 0.3) !important;
   border-radius: 8px;
 }
 
 .react-flow__connection-path {
-  stroke: #ff5500 !important;
+  stroke: #1a73e8 !important;
   stroke-width: 2 !important;
   opacity: 0.6;
 }

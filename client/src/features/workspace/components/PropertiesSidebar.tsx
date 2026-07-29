@@ -669,7 +669,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
             className="w-full flex items-center justify-between py-1 text-white/40 hover:text-white/80 transition-colors"
           >
             <div className="flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#FF5500]" />
+              <Sparkles className="w-3.5 h-3.5 text-[#8ab4f8]" />
               <span className="text-[10px] uppercase tracking-widest font-bold">
                 AI Metadata
               </span>
@@ -822,7 +822,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
         {/* ── AI Notes Section ── */}
         <section className="space-y-3">
           <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#FF5500]" />
+            <Sparkles className="w-3.5 h-3.5 text-[#8ab4f8]" />
             <Label className="text-[10px] uppercase tracking-widest font-bold text-white/30">
               AI Collaboration Notes
             </Label>

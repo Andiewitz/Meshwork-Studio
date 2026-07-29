@@ -743,7 +743,7 @@ export default function AuthPage() {
               className="absolute inset-0 opacity-[0.03]"
               style={{
                 backgroundImage:
-                  "linear-gradient(rgba(255,85,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,85,0,0.1) 1px, transparent 1px)",
+                  "linear-gradient(rgba(26,115,232,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(26,115,232,0.06) 1px, transparent 1px)",
                 backgroundSize: "80px 80px",
               }}
             />
@@ -751,7 +751,7 @@ export default function AuthPage() {
 
           <div className="relative z-10">
             <a href="/" className="flex items-center gap-3 mb-10 group">
-              <div className="w-11 h-11 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(255,61,0,0.5)]">
+              <div className="w-11 h-11 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(26,115,232,0.5)]">
                 <MeshworkLogo />
               </div>
               <span className="text-2xl font-bold tracking-tight text-white">

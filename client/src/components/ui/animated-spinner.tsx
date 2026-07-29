@@ -52,7 +52,7 @@ export function AnimatedSpinner({
             transparent calc(var(--size, ${size}) / 2 - var(--line-width, calc(var(--size, ${size}) * 0.15))),
             black calc(var(--size, ${size}) / 2 - var(--line-width, calc(var(--size, ${size}) * 0.15)))
           );
-          filter: drop-shadow(0 0 1rem rgba(255, 102, 0, 0.55));
+          filter: drop-shadow(0 0 1rem rgba(26, 115, 232, 0.4));
           border-radius: 50%;
           aspect-ratio: 1;
           animation: rotate 1.1s ease infinite, line-width 3.3s ease infinite;

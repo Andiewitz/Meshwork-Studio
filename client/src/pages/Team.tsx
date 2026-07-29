@@ -253,7 +253,7 @@ export default function Team() {
             <motion.button
               whileHover={{
                 scale: 1.03,
-                boxShadow: "0 8px 32px rgba(255,102,0,0.25)",
+                boxShadow: "0 8px 32px rgba(26,115,232,0.25)",
               }}
               whileTap={{ scale: 0.97 }}
               onClick={() => setShowCreateForm(!showCreateForm)}
@@ -592,7 +592,7 @@ export default function Team() {
                               <motion.div
                                 whileHover={{
                                   scale: 1.02,
-                                  borderColor: "rgba(255,102,0,0.25)",
+                                  borderColor: "rgba(26,115,232,0.25)",
                                 }}
                                 whileTap={{ scale: 0.985 }}
                                 className="flex items-center gap-3 px-4 py-3 rounded-lg border border-white/[0.04] transition-all cursor-pointer group"
@@ -635,7 +635,7 @@ export default function Team() {
                             key={ws.id}
                             whileHover={{
                               scale: 1.02,
-                              borderColor: "rgba(255,102,0,0.2)",
+                              borderColor: "rgba(26,115,232,0.2)",
                             }}
                             whileTap={{ scale: 0.97 }}
                             onClick={() => handleShareWorkspace(ws.id)}
