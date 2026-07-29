@@ -1000,13 +1000,34 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
               overflow: expanded ? "visible" : "hidden",
             }}
             className={cn(
-              "relative w-full border border-white/15 bg-[#121214]/90 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] focus-within:border-white/25 hover:border-white/25 z-10",
+              "relative w-full border border-white/10 bg-[#121214]/90 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] focus-within:border-white/30 hover:border-white/20 z-10 group",
               expanded ? "cursor-text" : "cursor-default",
             )}
           >
+            {/* Glistening Border Specular Sheen */}
+            <div
+              aria-hidden="true"
+              className="absolute -inset-[1px] rounded-[25px] pointer-events-none p-[1px] z-[2] transition-opacity duration-300"
+              style={{
+                background:
+                  "linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.7) 25%, rgba(59,130,246,0.5) 40%, transparent 60%, rgba(255,255,255,0.6) 80%, transparent 100%)",
+                backgroundSize: "250% 250%",
+                animation: "glisten-sweep 5s ease-in-out infinite",
+                WebkitMask:
+                  "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                WebkitMaskComposite: "xor",
+                maskComposite: "exclude",
+              }}
+            />
+
             <style
               dangerouslySetInnerHTML={{
                 __html: `
+              @keyframes glisten-sweep {
+                0% { background-position: 0% 0%; }
+                50% { background-position: 100% 100%; }
+                100% { background-position: 0% 0%; }
+              }
               .prompt-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; background: transparent; }
               .prompt-scrollbar::-webkit-scrollbar-track { background: transparent; }
               .prompt-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
