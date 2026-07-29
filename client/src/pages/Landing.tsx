@@ -1604,44 +1604,148 @@ const Home = () => {
 
                 <div className="border-t border-white/[0.06] mb-10" />
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {activeTemplates.map((template, idx) => {
-                    const colors = [
-                      "from-indigo-500/[0.07] via-transparent to-purple-600/[0.05]",
-                      "from-emerald-500/[0.07] via-transparent to-teal-600/[0.05]",
-                      "from-blue-500/[0.07] via-transparent to-indigo-600/[0.05]",
-                    ];
-                    const bgClass = colors[idx % colors.length];
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {activeTemplates.map((template) => {
+                    const BRAND_LOGOS: Record<string, React.ReactNode> = {
+                      "meshwork-studio": (
+                        <div className="w-6 h-6 flex items-center justify-center">
+                          <MeshworkLogo />
+                        </div>
+                      ),
+                      airbnb: (
+                        <svg
+                          viewBox="0 0 32 32"
+                          fill="currentColor"
+                          className="w-6 h-6 text-[#FF5A5F]"
+                        >
+                          <path d="M16 1c-2.4 0-4.5 1.5-5.6 3.6-1.8 3.5-3.5 7.1-5.1 10.7-1.4 3-2.3 6.3-2.3 9.7C3 28.6 6.4 32 10.5 32c2.7 0 5.1-1.4 6.5-3.5 1.4 2.1 3.8 3.5 6.5 3.5 4.1 0 7.5-3.4 7.5-7 0-3.4-.9-6.7-2.3-9.7-1.6-3.6-3.3-7.2-5.1-10.7C22.5 2.5 20.4 1 18 1h-2zm0 4c1.1 0 2.2.8 2.8 2 1.6 3.3 3.3 6.7 4.9 10.1 1.2 2.7 1.9 5.5 1.9 8.4 0 2.5-2.1 4.5-4.6 4.5-2.2 0-4.1-1.6-4.5-3.8l-.1-.7-.1.7c-.4 2.2-2.3 3.8-4.5 3.8-2.5 0-4.6-2-4.6-4.5 0-2.9.7-5.7 1.9-8.4C11 13.7 12.7 10.3 14.3 7c.6-1.2 1.7-2 2.7-2z" />
+                        </svg>
+                      ),
+                      uber: (
+                        <div className="w-6 h-6 rounded bg-white text-black flex items-center justify-center font-extrabold text-[10px] font-sans tracking-tighter">
+                          UBER
+                        </div>
+                      ),
+                      shopify: (
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          className="w-6 h-6"
+                        >
+                          <path
+                            d="M15.34 3.5c-.32 0-.6.2-.71.5L13.8 6.5H10.2L9.37 4c-.11-.3-.39-.5-.71-.5H6.2c-.32 0-.6.2-.71.5L1 18.5c-.1.35.15.7.5.7h13c.35 0 .6-.35.5-.7L10.5 4c-.11-.3-.39-.5-.71-.5h-4.45z"
+                            fill="#95BF47"
+                          />
+                          <path
+                            d="M19.5 7.5L16.2 3.5c-.32 0-.6.2-.71.5L14.6 7.5h4.9z"
+                            fill="#5E8E3E"
+                          />
+                        </svg>
+                      ),
+                      "claude.ai": (
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="w-6 h-6 text-[#D97706]"
+                        >
+                          <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2z" />
+                        </svg>
+                      ),
+                      "claude-ai": (
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="w-6 h-6 text-[#D97706]"
+                        >
+                          <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2z" />
+                        </svg>
+                      ),
+                      figma: (
+                        <svg
+                          viewBox="0 0 38 57"
+                          fill="none"
+                          className="w-4 h-6"
+                        >
+                          <path
+                            d="M19 28.5C19 23.2533 23.2533 19 28.5 19C33.7467 19 38 23.2533 38 28.5C38 33.7467 33.7467 38 28.5 38H19V28.5Z"
+                            fill="#1ABCFE"
+                          />
+                          <path
+                            d="M0 47.5C0 42.2533 4.25329 38 9.5 38H19V47.5C19 52.7467 14.7467 57 9.5 57C4.25329 57 0 52.7467 0 47.5Z"
+                            fill="#0ACF83"
+                          />
+                          <path
+                            d="M19 0V19H28.5C33.7467 19 38 14.7467 38 9.5C38 4.25329 33.7467 0 28.5 0H19Z"
+                            fill="#FF7262"
+                          />
+                          <path
+                            d="M0 9.5C0 14.7467 4.25329 19 9.5 19H19V0H9.5C4.25329 0 0 4.25329 0 9.5Z"
+                            fill="#F24E1E"
+                          />
+                          <path
+                            d="M0 28.5C0 33.7467 4.25329 38 9.5 38H19V19H9.5C4.25329 19 0 23.2533 0 28.5Z"
+                            fill="#A259FF"
+                          />
+                        </svg>
+                      ),
+                    };
+
+                    const logo = BRAND_LOGOS[template.slug || template.id] || (
+                      <Sparkles className="w-5 h-5 text-white/60" />
+                    );
 
                     return (
                       <div
                         key={template.id}
-                        className="group cursor-pointer"
                         onClick={() => handleTemplateClick(template)}
+                        className="group relative cursor-pointer rounded-2xl bg-[#090b10]/90 border border-white/[0.08] hover:border-blue-500/50 p-6 flex flex-col justify-between h-[210px] transition-all duration-300 hover:shadow-[0_10px_35px_rgba(37,99,235,0.18)] hover:-translate-y-1 overflow-hidden"
                       >
-                        <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-[#0f1114] border border-white/[0.06] mb-5 transition-all duration-300 group-hover:border-white/15 group-hover:-translate-y-1 group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
-                          <div
-                            className={`absolute inset-0 bg-gradient-to-br ${bgClass}`}
-                          />
-                          <div className="absolute inset-0 p-5 flex flex-col justify-between opacity-40 group-hover:opacity-60 transition-opacity">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-red-400/60" />
-                              <div className="w-2 h-2 rounded-full bg-yellow-400/60" />
-                              <div className="w-2 h-2 rounded-full bg-green-400/60" />
-                            </div>
-                            <div className="space-y-2">
-                              <div className="h-1.5 w-3/4 bg-white/10 rounded-full" />
-                              <div className="h-1.5 w-1/2 bg-white/10 rounded-full" />
-                              <div className="h-1.5 w-2/3 bg-white/10 rounded-full" />
+                        {/* Glistening border sheen on hover / active */}
+                        <div
+                          aria-hidden="true"
+                          className="absolute -inset-[1px] rounded-[17px] pointer-events-none p-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
+                          style={{
+                            background:
+                              "linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.5) 20%, rgba(59,130,246,0.5) 50%, transparent 80%)",
+                            backgroundSize: "250% 250%",
+                            animation: "glisten-sweep 8s linear infinite",
+                            WebkitMask:
+                              "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                            WebkitMaskComposite: "xor",
+                            maskComposite: "exclude",
+                          }}
+                        />
+
+                        {/* Top Header: Title Left, Brand Logo Right */}
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-white text-xl font-bold font-sans tracking-tight group-hover:text-blue-400 transition-colors">
+                              {template.title}
+                            </h3>
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.08] group-hover:border-white/20 transition-all">
+                              {logo}
                             </div>
                           </div>
+
+                          {/* Description */}
+                          <p className="text-white/50 text-sm leading-relaxed font-sans line-clamp-3">
+                            {template.description}
+                          </p>
                         </div>
-                        <h3 className="text-white font-semibold text-base mb-1.5 group-hover:text-primary transition-colors">
-                          {template.title}
-                        </h3>
-                        <p className="text-white/40 text-sm leading-relaxed">
-                          {template.description}
-                        </p>
+
+                        {/* Footer Stats & Remix indicator */}
+                        <div className="flex items-center justify-between pt-4 border-t border-white/[0.05] mt-auto text-xs text-white/40 font-mono">
+                          <div className="flex items-center gap-1.5 text-white/50 group-hover:text-white/80 transition-colors">
+                            <span className="text-xs">☆</span>
+                            <span>
+                              {template.stars ||
+                                `${template.nodes.length} nodes`}
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-sans font-semibold text-blue-400/80 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all flex items-center gap-1">
+                            Remix <span className="text-xs">→</span>
+                          </span>
+                        </div>
                       </div>
                     );
                   })}

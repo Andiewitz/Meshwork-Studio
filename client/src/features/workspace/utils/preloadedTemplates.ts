@@ -1,28 +1,29 @@
 export interface TemplateDefinition {
   id: string;
+  slug?: string;
   title: string;
   description: string;
   category:
     "Featured" | "Cloud Architectures" | "Full-Stack" | "Data Pipelines";
+  stars?: string;
   nodes: any[];
   edges: any[];
 }
 
 export const PRELOADED_TEMPLATES: TemplateDefinition[] = [
   {
-    id: "meshwork-target-architecture",
-    title: "Meshwork Target Stack",
+    id: "meshwork-studio",
+    slug: "meshwork-studio",
+    title: "meshwork-studio",
     description:
-      "Target decoupled microservices architecture with gRPC service communication and isolated databases.",
+      "Target decoupled microservices architecture with gRPC IPC, Redis queue, and isolated PostgreSQL database clusters.",
     category: "Featured",
+    stars: "132.1k",
     nodes: [
       {
         id: "n_title",
         type: "annotation",
-        position: {
-          x: 100,
-          y: -150,
-        },
+        position: { x: 100, y: -150 },
         width: 700,
         height: 120,
         data: {
@@ -33,159 +34,80 @@ export const PRELOADED_TEMPLATES: TemplateDefinition[] = [
       {
         id: "n_internet",
         type: "user",
-        position: {
-          x: 450,
-          y: 30,
-        },
-        data: {
-          label: "Internet Clients",
-        },
+        position: { x: 450, y: 30 },
+        data: { label: "Internet Clients" },
       },
       {
         id: "n_cloudflare",
         type: "cdn",
-        position: {
-          x: 450,
-          y: 150,
-        },
-        data: {
-          label: "Cloudflare (DNS/WAF/CDN)",
-        },
+        position: { x: 450, y: 150 },
+        data: { label: "Cloudflare (DNS/WAF)" },
       },
       {
         id: "n_nginx",
         type: "loadBalancer",
-        position: {
-          x: 450,
-          y: 270,
-        },
-        data: {
-          label: "Nginx Proxy",
-        },
+        position: { x: 450, y: 270 },
+        data: { label: "Nginx Proxy" },
       },
       {
         id: "n_gateway",
         type: "gateway",
-        position: {
-          x: 450,
-          y: 390,
-        },
-        data: {
-          label: "API Gateway (JWT & Validation)",
-        },
+        position: { x: 450, y: 390 },
+        data: { label: "API Gateway (JWT)" },
       },
       {
         id: "n_service_auth",
         type: "microservice",
-        position: {
-          x: 50,
-          y: 530,
-        },
-        data: {
-          label: "Auth Service",
-        },
+        position: { x: 50, y: 530 },
+        data: { label: "Auth Service" },
       },
       {
         id: "n_service_workspace",
         type: "microservice",
-        position: {
-          x: 250,
-          y: 530,
-        },
-        data: {
-          label: "Workspace Service",
-        },
+        position: { x: 250, y: 530 },
+        data: { label: "Workspace Service" },
       },
       {
         id: "n_service_mosh",
         type: "microservice",
-        position: {
-          x: 450,
-          y: 530,
-        },
-        data: {
-          label: "Mosh Service",
-        },
+        position: { x: 450, y: 530 },
+        data: { label: "Mosh AI Service" },
       },
       {
         id: "n_service_mcp",
         type: "microservice",
-        position: {
-          x: 650,
-          y: 530,
-        },
-        data: {
-          label: "MCP Service",
-        },
+        position: { x: 650, y: 530 },
+        data: { label: "MCP Service" },
       },
       {
         id: "n_service_worker",
         type: "worker",
-        position: {
-          x: 850,
-          y: 530,
-        },
-        data: {
-          label: "Background Worker",
-        },
+        position: { x: 850, y: 530 },
+        data: { label: "Background Worker" },
       },
       {
         id: "n_db_postgres",
         type: "database",
-        position: {
-          x: 50,
-          y: 690,
-        },
-        data: {
-          label: "PostgreSQL\n(auth_db)",
-        },
+        position: { x: 50, y: 690 },
+        data: { label: "PostgreSQL (auth_db)" },
       },
       {
         id: "n_db_dynamo_nodes",
         type: "database",
-        position: {
-          x: 250,
-          y: 690,
-        },
-        data: {
-          label: "DynamoDB\n(nodes)",
-        },
+        position: { x: 250, y: 690 },
+        data: { label: "DynamoDB (nodes)" },
       },
       {
         id: "n_db_dynamo_chat",
         type: "database",
-        position: {
-          x: 450,
-          y: 690,
-        },
-        data: {
-          label: "DynamoDB\n(chat_history)",
-        },
+        position: { x: 450, y: 690 },
+        data: { label: "DynamoDB (chat_history)" },
       },
       {
         id: "n_cache_redis",
         type: "cache",
-        position: {
-          x: 850,
-          y: 690,
-        },
-        data: {
-          label: "Redis\n(cache/queue)",
-        },
-      },
-      {
-        id: "n_note_rule",
-        type: "note",
-        position: {
-          x: 630,
-          y: 680,
-        },
-        width: 200,
-        height: 130,
-        data: {
-          label:
-            "### Service Rules\n- Comm. via gRPC\n- NEVER access other DBs\n- DBs are strictly owned by respective service",
-        },
+        position: { x: 850, y: 690 },
+        data: { label: "Redis (cache/queue)" },
       },
     ],
     edges: [
@@ -195,18 +117,8 @@ export const PRELOADED_TEMPLATES: TemplateDefinition[] = [
         target: "n_cloudflare",
         animated: true,
       },
-      {
-        id: "e2",
-        source: "n_cloudflare",
-        target: "n_nginx",
-        animated: true,
-      },
-      {
-        id: "e3",
-        source: "n_nginx",
-        target: "n_gateway",
-        animated: true,
-      },
+      { id: "e2", source: "n_cloudflare", target: "n_nginx", animated: true },
+      { id: "e3", source: "n_nginx", target: "n_gateway", animated: true },
       {
         id: "e_gtw_auth",
         source: "n_gateway",
@@ -237,70 +149,405 @@ export const PRELOADED_TEMPLATES: TemplateDefinition[] = [
         target: "n_service_worker",
         animated: true,
       },
-      {
-        id: "e_auth_db",
-        source: "n_service_auth",
-        target: "n_db_postgres",
-      },
+      { id: "e_auth_db", source: "n_service_auth", target: "n_db_postgres" },
       {
         id: "e_ws_db",
         source: "n_service_workspace",
         target: "n_db_dynamo_nodes",
       },
+      { id: "e_mosh_db", source: "n_service_mosh", target: "n_db_dynamo_chat" },
+      { id: "e_wrk_db", source: "n_service_worker", target: "n_cache_redis" },
+    ],
+  },
+  {
+    id: "airbnb",
+    slug: "airbnb",
+    title: "airbnb",
+    description:
+      "Global distributed cloud stack with real-time booking engine, ElasticSearch spatial indexing, and AWS DynamoDB clusters.",
+    category: "Featured",
+    stars: "174.8k",
+    nodes: [
       {
-        id: "e_mosh_db",
-        source: "n_service_mosh",
-        target: "n_db_dynamo_chat",
-      },
-      {
-        id: "e_wrk_db",
-        source: "n_service_worker",
-        target: "n_cache_redis",
-      },
-      {
-        id: "e_grpc_ws_auth",
-        source: "n_service_workspace",
-        target: "n_service_auth",
-        label: "gRPC",
-        style: {
-          strokeDasharray: "5,5",
+        id: "n_title",
+        type: "annotation",
+        position: { x: 100, y: -150 },
+        width: 600,
+        height: 100,
+        data: {
+          label:
+            "## Airbnb Global Cloud Architecture\nReal-time booking engine, search indexing & geo-spatial routing.",
         },
       },
       {
-        id: "e_grpc_mosh_auth",
-        source: "n_service_mosh",
-        target: "n_service_auth",
-        label: "gRPC",
-        style: {
-          strokeDasharray: "5,5",
+        id: "n_client",
+        type: "user",
+        position: { x: 400, y: 0 },
+        data: { label: "Airbnb Web & iOS App" },
+      },
+      {
+        id: "n_cdn",
+        type: "cdn",
+        position: { x: 400, y: 120 },
+        data: { label: "AWS CloudFront" },
+      },
+      {
+        id: "n_alb",
+        type: "loadBalancer",
+        position: { x: 400, y: 240 },
+        data: { label: "AWS ALB Cluster" },
+      },
+      {
+        id: "n_booking",
+        type: "microservice",
+        position: { x: 150, y: 380 },
+        data: { label: "Booking Service" },
+      },
+      {
+        id: "n_search",
+        type: "microservice",
+        position: { x: 400, y: 380 },
+        data: { label: "Search & Spatial Svc" },
+      },
+      {
+        id: "n_payments",
+        type: "microservice",
+        position: { x: 650, y: 380 },
+        data: { label: "Payments Engine" },
+      },
+      {
+        id: "n_es",
+        type: "database",
+        position: { x: 400, y: 520 },
+        data: { label: "ElasticSearch Cluster" },
+      },
+      {
+        id: "n_dynamo",
+        type: "database",
+        position: { x: 150, y: 520 },
+        data: { label: "DynamoDB (Reservations)" },
+      },
+      {
+        id: "n_rds",
+        type: "database",
+        position: { x: 650, y: 520 },
+        data: { label: "RDS Aurora PostgreSQL" },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "n_client", target: "n_cdn", animated: true },
+      { id: "e2", source: "n_cdn", target: "n_alb", animated: true },
+      { id: "e3", source: "n_alb", target: "n_booking", animated: true },
+      { id: "e4", source: "n_alb", target: "n_search", animated: true },
+      { id: "e5", source: "n_alb", target: "n_payments", animated: true },
+      { id: "e6", source: "n_search", target: "n_es" },
+      { id: "e7", source: "n_booking", target: "n_dynamo" },
+      { id: "e8", source: "n_payments", target: "n_rds" },
+    ],
+  },
+  {
+    id: "uber",
+    slug: "uber",
+    title: "uber",
+    description:
+      "Real-time driver dispatch platform with Uber H3 spatial indexing, Kafka event streams, and low-latency gRPC services.",
+    category: "Featured",
+    stars: "120.1k",
+    nodes: [
+      {
+        id: "n_title",
+        type: "annotation",
+        position: { x: 100, y: -150 },
+        width: 600,
+        height: 100,
+        data: {
+          label:
+            "## Uber Real-Time Dispatch System\nH3 Spatial indexing, Ringpop cluster & Kafka event streams.",
         },
       },
       {
-        id: "e_grpc_mcp_auth",
-        source: "n_service_mcp",
-        target: "n_service_auth",
-        label: "gRPC",
-        style: {
-          strokeDasharray: "5,5",
+        id: "n_rider",
+        type: "user",
+        position: { x: 250, y: 0 },
+        data: { label: "Rider App" },
+      },
+      {
+        id: "n_driver",
+        type: "user",
+        position: { x: 550, y: 0 },
+        data: { label: "Driver App" },
+      },
+      {
+        id: "n_envoy",
+        type: "gateway",
+        position: { x: 400, y: 140 },
+        data: { label: "Envoy Proxy Mesh" },
+      },
+      {
+        id: "n_dispatch",
+        type: "microservice",
+        position: { x: 250, y: 280 },
+        data: { label: "DISPATCH (H3 Index)" },
+      },
+      {
+        id: "n_location",
+        type: "microservice",
+        position: { x: 550, y: 280 },
+        data: { label: "Location Ingestion" },
+      },
+      {
+        id: "n_kafka",
+        type: "bus",
+        position: { x: 400, y: 420 },
+        data: { label: "Apache Kafka Event Bus" },
+      },
+      {
+        id: "n_redis",
+        type: "cache",
+        position: { x: 150, y: 420 },
+        data: { label: "Redis Geospatial Cache" },
+      },
+      {
+        id: "n_cassandra",
+        type: "database",
+        position: { x: 650, y: 420 },
+        data: { label: "Cassandra Trip Store" },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "n_rider", target: "n_envoy", animated: true },
+      { id: "e2", source: "n_driver", target: "n_envoy", animated: true },
+      { id: "e3", source: "n_envoy", target: "n_dispatch" },
+      { id: "e4", source: "n_envoy", target: "n_location" },
+      { id: "e5", source: "n_location", target: "n_kafka", animated: true },
+      { id: "e6", source: "n_dispatch", target: "n_redis" },
+      { id: "e7", source: "n_kafka", target: "n_cassandra" },
+    ],
+  },
+  {
+    id: "shopify",
+    slug: "shopify",
+    title: "shopify",
+    description:
+      "High-scale merchant store engine with multi-tenant MySQL sharding, Redis inventory locks, and webhook pipelines.",
+    category: "Featured",
+    stars: "242.5k",
+    nodes: [
+      {
+        id: "n_title",
+        type: "annotation",
+        position: { x: 100, y: -150 },
+        width: 600,
+        height: 100,
+        data: {
+          label:
+            "## Shopify Merchant Store Architecture\nMulti-tenant MySQL pods, Redis flash sales locks & webhook queues.",
         },
       },
       {
-        id: "e_grpc_mcp_ws",
-        source: "n_service_mcp",
-        target: "n_service_workspace",
-        label: "gRPC",
-        style: {
-          strokeDasharray: "5,5",
+        id: "n_shopper",
+        type: "user",
+        position: { x: 400, y: 0 },
+        data: { label: "Storefront Shoppers" },
+      },
+      {
+        id: "n_cloudflare",
+        type: "cdn",
+        position: { x: 400, y: 120 },
+        data: { label: "Cloudflare Edge" },
+      },
+      {
+        id: "n_storefront",
+        type: "app",
+        position: { x: 400, y: 240 },
+        data: { label: "Ruby/Storefront Core" },
+      },
+      {
+        id: "n_inventory",
+        type: "microservice",
+        position: { x: 200, y: 380 },
+        data: { label: "Inventory Lock Svc" },
+      },
+      {
+        id: "n_checkout",
+        type: "microservice",
+        position: { x: 600, y: 380 },
+        data: { label: "Checkout & Tax Svc" },
+      },
+      {
+        id: "n_redis",
+        type: "cache",
+        position: { x: 200, y: 520 },
+        data: { label: "Redis Flash Sale Lock" },
+      },
+      {
+        id: "n_mysql",
+        type: "database",
+        position: { x: 600, y: 520 },
+        data: { label: "MySQL Pod Shards" },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "n_shopper", target: "n_cloudflare", animated: true },
+      {
+        id: "e2",
+        source: "n_cloudflare",
+        target: "n_storefront",
+        animated: true,
+      },
+      { id: "e3", source: "n_storefront", target: "n_inventory" },
+      { id: "e4", source: "n_storefront", target: "n_checkout" },
+      { id: "e5", source: "n_inventory", target: "n_redis" },
+      { id: "e6", source: "n_checkout", target: "n_mysql" },
+    ],
+  },
+  {
+    id: "claude-ai",
+    slug: "claude.ai",
+    title: "claude.ai",
+    description:
+      "LLM inference pipeline with streaming SSE context, Anthropic prompt caching, Redis rate-limiters, and Qdrant vector retrieval.",
+    category: "Featured",
+    stars: "92.7k",
+    nodes: [
+      {
+        id: "n_title",
+        type: "annotation",
+        position: { x: 100, y: -150 },
+        width: 600,
+        height: 100,
+        data: {
+          label:
+            "## Claude.ai Inference Infrastructure\nStreaming SSE workers, Anthropic Prompt Caching & Qdrant RAG.",
         },
       },
       {
-        id: "e_grpc_wrk_ws",
-        source: "n_service_worker",
-        target: "n_service_workspace",
-        label: "gRPC",
-        style: {
-          strokeDasharray: "5,5",
+        id: "n_user",
+        type: "user",
+        position: { x: 400, y: 0 },
+        data: { label: "Claude Web / Desktop" },
+      },
+      {
+        id: "n_gateway",
+        type: "gateway",
+        position: { x: 400, y: 120 },
+        data: { label: "API Gateway (SSE Stream)" },
+      },
+      {
+        id: "n_context",
+        type: "microservice",
+        position: { x: 200, y: 260 },
+        data: { label: "Context Assembly" },
+      },
+      {
+        id: "n_inference",
+        type: "microservice",
+        position: { x: 600, y: 260 },
+        data: { label: "Claude Model Inference" },
+      },
+      {
+        id: "n_vector",
+        type: "database",
+        position: { x: 200, y: 400 },
+        data: { label: "Qdrant Vector DB" },
+      },
+      {
+        id: "n_kv_cache",
+        type: "cache",
+        position: { x: 600, y: 400 },
+        data: { label: "Prompt KV Cache" },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "n_user", target: "n_gateway", animated: true },
+      { id: "e2", source: "n_gateway", target: "n_context", animated: true },
+      { id: "e3", source: "n_context", target: "n_inference", animated: true },
+      { id: "e4", source: "n_context", target: "n_vector" },
+      { id: "e5", source: "n_inference", target: "n_kv_cache" },
+    ],
+  },
+  {
+    id: "figma",
+    slug: "figma",
+    title: "figma",
+    description:
+      "Real-time multiplayer WebAssembly canvas sync engine with Operational Transformation (OT) and Rust WebSocket cluster.",
+    category: "Featured",
+    stars: "215.3k",
+    nodes: [
+      {
+        id: "n_title",
+        type: "annotation",
+        position: { x: 100, y: -150 },
+        width: 600,
+        height: 100,
+        data: {
+          label:
+            "## Figma Multiplayer Canvas Architecture\nRust WebSockets, Operational Transformation & WebAssembly engine.",
         },
+      },
+      {
+        id: "n_designer_1",
+        type: "user",
+        position: { x: 250, y: 0 },
+        data: { label: "Designer 1 (Wasm)" },
+      },
+      {
+        id: "n_designer_2",
+        type: "user",
+        position: { x: 550, y: 0 },
+        data: { label: "Designer 2 (Wasm)" },
+      },
+      {
+        id: "n_ws_cluster",
+        type: "gateway",
+        position: { x: 400, y: 140 },
+        data: { label: "Rust WebSocket Cluster" },
+      },
+      {
+        id: "n_ot_engine",
+        type: "microservice",
+        position: { x: 400, y: 280 },
+        data: { label: "OT Sync Engine" },
+      },
+      {
+        id: "n_document_db",
+        type: "database",
+        position: { x: 250, y: 420 },
+        data: { label: "Doc State Store (S3)" },
+      },
+      {
+        id: "n_redis_pubsub",
+        type: "cache",
+        position: { x: 550, y: 420 },
+        data: { label: "Redis Pub/Sub Mesh" },
+      },
+    ],
+    edges: [
+      {
+        id: "e1",
+        source: "n_designer_1",
+        target: "n_ws_cluster",
+        animated: true,
+      },
+      {
+        id: "e2",
+        source: "n_designer_2",
+        target: "n_ws_cluster",
+        animated: true,
+      },
+      {
+        id: "e3",
+        source: "n_ws_cluster",
+        target: "n_ot_engine",
+        animated: true,
+      },
+      { id: "e4", source: "n_ot_engine", target: "n_document_db" },
+      {
+        id: "e5",
+        source: "n_ot_engine",
+        target: "n_redis_pubsub",
+        animated: true,
       },
     ],
   },
