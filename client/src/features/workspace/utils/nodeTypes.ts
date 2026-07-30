@@ -263,12 +263,6 @@ export const nodeTypesList = [
     category: "Templates",
   },
   {
-    type: "template:kubernetes",
-    label: "Kubernetes",
-    icon: Layers,
-    category: "Templates",
-  },
-  {
     type: "template:react",
     label: "React",
     icon: Code2,
@@ -284,6 +278,12 @@ export const nodeTypesList = [
     type: "template:opencalw",
     label: "OpenClaw",
     icon: MessageSquare,
+    category: "Templates",
+  },
+  {
+    type: "template:meshwork-studio",
+    label: "Meshwork Target Stack",
+    icon: Network,
     category: "Templates",
   },
 ];

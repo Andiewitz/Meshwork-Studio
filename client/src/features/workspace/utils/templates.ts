@@ -100,56 +100,101 @@ export const generateTemplate = (
       { id: `e-${now}-3`, source: hosting.id, target: api.id, type: "step" },
       { id: `e-${now}-4`, source: api.id, target: db.id, type: "step" },
     ];
-  } else if (templateType === "template:kubernetes") {
-    const user = {
-      id: `user-${now}`,
+  } else if (templateType === "template:meshwork-studio") {
+    const internet = {
+      id: `internet-${now}`,
       type: "user",
       position: { x: base.x, y: base.y },
-      data: { label: "Users", category: "Core" },
+      data: { label: "Internet Clients", category: "Core" },
     };
-    const lb = {
-      id: `lb-${now}`,
-      type: "loadBalancer",
+    const cloudflare = {
+      id: `cf-${now}`,
+      type: "cdn",
       position: { x: base.x + 240, y: base.y },
-      data: { label: "External LB", category: "Core" },
+      data: { label: "Cloudflare (DNS/WAF/CDN)", category: "Core" },
       style: { width: 168, height: 72 },
     };
-    const ingress = {
-      id: `ingress-${now}`,
-      type: "k8s-ingress",
-      position: { x: base.x + 480, y: base.y },
-      data: { label: "Ingress", category: "Kubernetes" },
+    const nginx = {
+      id: `ng-${now}`,
+      type: "loadBalancer",
+      position: { x: base.x + 240, y: base.y + 140 },
+      data: { label: "Nginx Proxy", category: "Core" },
+      style: { width: 192, height: 72 },
+    };
+    const gateway = {
+      id: `gtw-${now}`,
+      type: "gateway",
+      position: { x: base.x + 240, y: base.y + 260 },
+      data: { label: "API Gateway (JWT)", category: "Core" },
+      style: { width: 192, height: 72 },
+    };
+    const auth = {
+      id: `auth-${now}`,
+      type: "microservice",
+      position: { x: base.x - 100, y: base.y + 400 },
+      data: { label: "Auth Service", category: "Core" },
       style: { width: 168, height: 72 },
     };
-    const svc = {
-      id: `svc-${now}`,
-      type: "k8s-service",
-      position: { x: base.x + 720, y: base.y },
-      data: { label: "API Service", category: "Kubernetes" },
+    const app = {
+      id: `app-${now}`,
+      type: "microservice",
+      position: { x: base.x + 100, y: base.y + 400 },
+      data: { label: "App Service", category: "Core" },
       style: { width: 168, height: 72 },
     };
-    const pod = {
-      id: `pod-${now}`,
-      type: "k8s-pod",
-      position: { x: base.x + 960, y: base.y },
-      data: { label: "App Pod", category: "Kubernetes" },
-      style: { width: 144, height: 96 },
+    const worker = {
+      id: `worker-${now}`,
+      type: "worker",
+      position: { x: base.x + 300, y: base.y + 400 },
+      data: { label: "Background Worker", category: "Core" },
+      style: { width: 168, height: 72 },
     };
-    const db = {
-      id: `db-${now}`,
+    const pg = {
+      id: `pg-${now}`,
       type: "database",
-      position: { x: base.x + 960, y: base.y + 160 },
+      position: { x: base.x - 100, y: base.y + 560 },
       data: { label: "PostgreSQL", provider: "postgresql", category: "Core" },
       style: { width: 144, height: 120 },
     };
+    const redis = {
+      id: `redis-${now}`,
+      type: "cache",
+      position: { x: base.x + 300, y: base.y + 560 },
+      data: { label: "Redis", category: "Core" },
+      style: { width: 144, height: 120 },
+    };
 
-    newNodes = [user, lb, ingress, svc, pod, db];
+    newNodes = [
+      internet,
+      cloudflare,
+      nginx,
+      gateway,
+      auth,
+      app,
+      worker,
+      pg,
+      redis,
+    ];
     newEdges = [
-      { id: `e-${now}-1`, source: user.id, target: lb.id, type: "step" },
-      { id: `e-${now}-2`, source: lb.id, target: ingress.id, type: "step" },
-      { id: `e-${now}-3`, source: ingress.id, target: svc.id, type: "step" },
-      { id: `e-${now}-4`, source: svc.id, target: pod.id, type: "step" },
-      { id: `e-${now}-5`, source: pod.id, target: db.id, type: "step" },
+      {
+        id: `e-${now}-1`,
+        source: internet.id,
+        target: cloudflare.id,
+        type: "step",
+      },
+      {
+        id: `e-${now}-2`,
+        source: cloudflare.id,
+        target: nginx.id,
+        type: "step",
+      },
+      { id: `e-${now}-3`, source: nginx.id, target: gateway.id, type: "step" },
+      { id: `e-${now}-4`, source: gateway.id, target: auth.id, type: "step" },
+      { id: `e-${now}-5`, source: gateway.id, target: app.id, type: "step" },
+      { id: `e-${now}-6`, source: gateway.id, target: worker.id, type: "step" },
+      { id: `e-${now}-7`, source: auth.id, target: pg.id, type: "step" },
+      { id: `e-${now}-8`, source: app.id, target: pg.id, type: "step" },
+      { id: `e-${now}-9`, source: worker.id, target: redis.id, type: "step" },
     ];
   } else if (templateType === "template:react") {
     const user = {
