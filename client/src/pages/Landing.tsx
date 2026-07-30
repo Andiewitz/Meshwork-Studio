@@ -686,8 +686,6 @@ const Home = () => {
   const { scrollYProgress } = useScroll();
   const [scrolled, setScrolled] = useState(false);
   const [, setLocation] = useLocation();
-  const [activeCategory, setActiveCategory] =
-    useState<TemplateDefinition["category"]>("Featured");
 
   // State to toggle Documentation View vs Main Landing Page
   const [showDocsView, setShowDocsViewState] = useState(() => {
@@ -733,9 +731,7 @@ const Home = () => {
     setLocation("/register");
   };
 
-  const activeTemplates = PRELOADED_TEMPLATES.filter(
-    (t) => t.category === activeCategory,
-  );
+  const activeTemplates = PRELOADED_TEMPLATES;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -1563,43 +1559,6 @@ const Home = () => {
                   <h2 className="font-sans text-fluid-h1 font-bold text-white tracking-tight">
                     Templates ready to Remix
                   </h2>
-
-                  <div className="flex flex-wrap justify-center gap-2 mt-10">
-                    {[
-                      "Featured",
-                      "Cloud Architectures",
-                      "Full-Stack",
-                      "Data Pipelines",
-                    ].map((category) => (
-                      <button
-                        key={category}
-                        onClick={() =>
-                          setActiveCategory(
-                            category as TemplateDefinition["category"],
-                          )
-                        }
-                        className={`rounded-full px-5 py-2 text-[13px] font-medium flex items-center gap-2 transition-all ${
-                          activeCategory === category
-                            ? "bg-white/[0.08] text-white border border-white/10 backdrop-blur-sm"
-                            : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
-                        }`}
-                      >
-                        {category === "Featured" && (
-                          <Sparkles className="w-3.5 h-3.5" />
-                        )}
-                        {category === "Cloud Architectures" && (
-                          <Network className="w-3.5 h-3.5" />
-                        )}
-                        {category === "Full-Stack" && (
-                          <FileCode2 className="w-3.5 h-3.5" />
-                        )}
-                        {category === "Data Pipelines" && (
-                          <GitBranch className="w-3.5 h-3.5" />
-                        )}
-                        {category}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 <div className="border-t border-white/[0.06] mb-10" />
