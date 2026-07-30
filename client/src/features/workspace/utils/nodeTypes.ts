@@ -23,6 +23,7 @@ import {
   Cpu,
   Globe,
   MessageSquare,
+  Smartphone,
   HardDrive,
   Zap,
   Box,
@@ -46,6 +47,8 @@ import {
   User as UserIcon,
   Layers,
   Network,
+  Code2,
+  FileCode,
 } from "lucide-react";
 
 // ── Node types registry for ReactFlow ──
@@ -252,21 +255,39 @@ export const nodeTypesList = [
 
   // ── Templates ──
   {
-    type: "template:ecommerce",
-    label: "E-commerce",
-    icon: ShoppingCart,
+    type: "template:go",
+    label: "Go",
+    icon: Server,
     category: "Templates",
   },
   {
-    type: "template:ai-platform",
-    label: "AI/ML Platform",
-    icon: Activity,
+    type: "template:flutter",
+    label: "Flutter",
+    icon: Smartphone,
     category: "Templates",
   },
   {
-    type: "template:meshwork-target-architecture",
-    label: "Meshwork Target Stack",
-    icon: Network,
+    type: "template:kubernetes",
+    label: "Kubernetes",
+    icon: Layers,
+    category: "Templates",
+  },
+  {
+    type: "template:react",
+    label: "React",
+    icon: Code2,
+    category: "Templates",
+  },
+  {
+    type: "template:python-sdk",
+    label: "Python SDK",
+    icon: FileCode,
+    category: "Templates",
+  },
+  {
+    type: "template:opencalw",
+    label: "OpenClaw",
+    icon: MessageSquare,
     category: "Templates",
   },
 ];
