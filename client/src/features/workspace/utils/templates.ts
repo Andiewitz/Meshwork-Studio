@@ -15,758 +15,144 @@ export const generateTemplate = (
   const now = Date.now();
 
   if (templateType === "template:ecommerce") {
-    const r53 = {
-      id: `r53-${now}`,
-      type: "route53",
+    const internet = {
+      id: `internet-${now}`,
+      type: "user",
       position: { x: base.x, y: base.y },
-      data: { label: "Global DNS", category: "Networking" },
-      style: { width: 192, height: 72 },
-    };
-    const waf = {
-      id: `waf-${now}`,
-      type: "waf",
-      position: { x: base.x + 240, y: base.y },
-      data: { label: "Cloudflare WAF", category: "Security" },
-      style: { width: 168, height: 72 },
+      data: { label: "Users", category: "Core" },
     };
     const cdn = {
       id: `cdn-${now}`,
       type: "cdn",
-      position: { x: base.x + 240, y: base.y + 120 },
-      data: { label: "Static Assets", category: "Networking" },
-      style: { width: 192, height: 72 },
-    };
-    const alb = {
-      id: `alb-${now}`,
-      type: "loadBalancer",
-      position: { x: base.x + 480, y: base.y },
-      data: { label: "Core ALB", category: "Networking" },
-      style: { width: 192, height: 72 },
-    };
-
-    const auth = {
-      id: `auth-${now}`,
-      type: "auth0",
-      position: { x: base.x + 720, y: base.y - 120 },
-      data: { label: "Auth Service", category: "Security" },
-      style: { width: 168, height: 72 },
-    };
-    const product = {
-      id: `prod-${now}`,
-      type: "microservice",
-      position: { x: base.x + 720, y: base.y },
-      data: { label: "Product API", category: "Compute" },
-      style: { width: 168, height: 72 },
-    };
-    const order = {
-      id: `order-${now}`,
-      type: "microservice",
-      position: { x: base.x + 720, y: base.y + 120 },
-      data: { label: "Order Service", category: "Compute" },
-      style: { width: 168, height: 72 },
-    };
-
-    const redis = {
-      id: `redis-${now}`,
-      type: "cache",
-      position: { x: base.x + 960, y: base.y - 60 },
-      data: { label: "Catalog Cache", category: "Data" },
-      style: { width: 144, height: 120 },
-    };
-    const pg = {
-      id: `pg-${now}`,
-      type: "database",
-      position: { x: base.x + 960, y: base.y + 60 },
-      data: { label: "Master DB", provider: "postgresql", category: "Data" },
-      style: { width: 144, height: 120 },
-    };
-    const stripe = {
-      id: `stripe-${now}`,
-      type: "stripe",
-      position: { x: base.x + 960, y: base.y + 240 },
-      data: { label: "Payments", category: "External" },
-      style: { width: 168, height: 72 },
-    };
-    const kafka = {
-      id: `kafka-${now}`,
-      type: "bus",
-      position: { x: base.x + 720, y: base.y + 240 },
-      data: { label: "Event Stream", category: "Networking" },
-      style: { width: 192, height: 72 },
-    };
-
-    newNodes = [
-      r53,
-      waf,
-      cdn,
-      alb,
-      auth,
-      product,
-      order,
-      redis,
-      pg,
-      stripe,
-      kafka,
-    ];
-    newEdges = [
-      {
-        id: `e-${now}-1`,
-        source: r53.id,
-        target: waf.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-2`,
-        source: waf.id,
-        target: alb.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-3`,
-        source: waf.id,
-        target: cdn.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-4`,
-        source: alb.id,
-        target: auth.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-5`,
-        source: alb.id,
-        target: product.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-6`,
-        source: alb.id,
-        target: order.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-7`,
-        source: product.id,
-        target: redis.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-8`,
-        source: order.id,
-        target: pg.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-9`,
-        source: order.id,
-        target: kafka.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-10`,
-        source: order.id,
-        target: stripe.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-    ];
-  } else if (templateType === "template:ai-platform") {
-    const app = {
-      id: `app-${now}`,
-      type: "app",
-      position: { x: base.x, y: base.y },
-      data: { label: "AI Client App", category: "External" },
-      style: { width: 168, height: 72 },
-    };
-    const nats = {
-      id: `nats-${now}`,
-      type: "nats",
       position: { x: base.x + 240, y: base.y },
-      data: { label: "Real-time Ingress", category: "Networking" },
-      style: { width: 192, height: 72 },
-    };
-    const influx = {
-      id: `inf-${now}`,
-      type: "influxdb",
-      position: { x: base.x + 480, y: base.y - 120 },
-      data: { label: "Telemetry Store", category: "Data" },
-      style: { width: 144, height: 120 },
-    };
-    const worker = {
-      id: `worker-${now}`,
-      type: "worker",
-      position: { x: base.x + 480, y: base.y },
-      data: { label: "Inference Engine", category: "Compute" },
+      data: { label: "CDN", category: "Core" },
       style: { width: 168, height: 72 },
     };
-    const vault = {
-      id: `vault-${now}`,
-      type: "vault",
-      position: { x: base.x + 480, y: base.y + 120 },
-      data: { label: "Secrets Mgmt", category: "Security" },
-      style: { width: 168, height: 72 },
-    };
-
-    const snowflake = {
-      id: `snow-${now}`,
-      type: "snowflake",
-      position: { x: base.x + 720, y: base.y },
-      data: { label: "Model Warehouse", category: "Data" },
-      style: { width: 144, height: 120 },
-    };
-    const clickhouse = {
-      id: `ch-${now}`,
-      type: "clickhouse",
-      position: { x: base.x + 720, y: base.y + 180 },
-      data: { label: "Vector Search", category: "Data" },
-      style: { width: 144, height: 120 },
-    };
-
-    const prom = {
-      id: `prom-${now}`,
-      type: "prometheus",
-      position: { x: base.x + 960, y: base.y - 60 },
-      data: { label: "Metrics", category: "Monitoring" },
-      style: { width: 168, height: 72 },
-    };
-    const grafana = {
-      id: `graf-${now}`,
-      type: "grafana",
-      position: { x: base.x + 960, y: base.y + 60 },
-      data: { label: "AI Dashboard", category: "Monitoring" },
-      style: { width: 168, height: 72 },
-    };
-
-    newNodes = [
-      app,
-      nats,
-      influx,
-      worker,
-      vault,
-      snowflake,
-      clickhouse,
-      prom,
-      grafana,
-    ];
-    newEdges = [
-      {
-        id: `e-${now}-1`,
-        source: app.id,
-        target: nats.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-2`,
-        source: nats.id,
-        target: influx.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-3`,
-        source: nats.id,
-        target: worker.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-4`,
-        source: worker.id,
-        target: vault.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2, strokeDasharray: "5,5" },
-      },
-      {
-        id: `e-${now}-5`,
-        source: worker.id,
-        target: snowflake.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-6`,
-        source: worker.id,
-        target: clickhouse.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-7`,
-        source: snowflake.id,
-        target: prom.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-8`,
-        source: prom.id,
-        target: grafana.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-    ];
-  } else if (templateType === "template:enterprise-k8s") {
-    const region = {
-      id: `reg-${now}`,
-      type: "region",
-      position: { x: base.x, y: base.y },
-      data: { label: "AWS us-east-1", category: "Infrastructure" },
-      style: { width: 1200, height: 600 },
-    };
-    const vpc = {
-      id: `vpc-${now}`,
-      type: "vpc",
-      position: { x: base.x + 50, y: base.y + 50 },
-      data: { label: "Prod VPC", category: "Infrastructure" },
-      parentId: region.id,
-      style: { width: 1100, height: 500 },
-    };
-
-    const ingress = {
-      id: `ing-${now}`,
-      type: "k8s-ingress",
-      position: { x: base.x + 100, y: base.y + 150 },
-      data: { label: "Public Ingress", category: "Kubernetes" },
-      parentId: vpc.id,
-      style: { width: 168, height: 72 },
-    };
-    const svc = {
-      id: `svc-${now}`,
-      type: "k8s-service",
-      position: { x: base.x + 300, y: base.y + 150 },
-      data: { label: "Cluster Svc", category: "Kubernetes" },
-      parentId: vpc.id,
-      style: { width: 168, height: 72 },
-    };
-
-    const deploy = {
-      id: `dep-${now}`,
-      type: "k8s-deployment",
-      position: { x: base.x + 500, y: base.y + 150 },
-      data: { label: "Web Deploy", category: "Kubernetes" },
-      parentId: vpc.id,
-      style: { width: 192, height: 96 },
-    };
-    const pod1 = {
-      id: `p1-${now}`,
-      type: "k8s-pod",
-      position: { x: base.x + 750, y: base.y + 100 },
-      data: { label: "Replica A", category: "Kubernetes" },
-      parentId: vpc.id,
-      style: { width: 144, height: 96 },
-    };
-    const pod2 = {
-      id: `p2-${now}`,
-      type: "k8s-pod",
-      position: { x: base.x + 750, y: base.y + 220 },
-      data: { label: "Replica B", category: "Kubernetes" },
-      parentId: vpc.id,
-      style: { width: 144, height: 96 },
-    };
-
-    const argo = {
-      id: `argo-${now}`,
-      type: "argocd",
-      position: { x: base.x + 1200, y: base.y + 100 },
-      data: { label: "GitOps (ArgoCD)", category: "CI/CD" },
-      style: { width: 168, height: 72 },
-    };
-    const actions = {
-      id: `act-${now}`,
-      type: "github_actions",
-      position: { x: base.x + 1200, y: base.y + 200 },
-      data: { label: "CI Pipeline", category: "CI/CD" },
-      style: { width: 168, height: 72 },
-    };
-
-    newNodes = [region, vpc, ingress, svc, deploy, pod1, pod2, argo, actions];
-    newEdges = [
-      {
-        id: `e-${now}-1`,
-        source: ingress.id,
-        target: svc.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-2`,
-        source: svc.id,
-        target: deploy.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-3`,
-        source: deploy.id,
-        target: pod1.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-4`,
-        source: deploy.id,
-        target: pod2.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-5`,
-        source: actions.id,
-        target: argo.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-6`,
-        source: argo.id,
-        target: deploy.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2, strokeDasharray: "5,5" },
-      },
-    ];
-  } else if (templateType === "template:fintech-saas") {
     const lb = {
       id: `lb-${now}`,
       type: "loadBalancer",
-      position: { x: base.x, y: base.y },
-      data: { label: "Edge Gateway", category: "Networking" },
-      style: { width: 192, height: 72 },
-    };
-    const auth = {
-      id: `okta-${now}`,
-      type: "okta",
-      position: { x: base.x + 240, y: base.y - 100 },
-      data: { label: "Identity (Okta)", category: "Security" },
+      position: { x: base.x + 480, y: base.y },
+      data: { label: "Load Balancer", category: "Core" },
       style: { width: 168, height: 72 },
     };
     const api = {
       id: `api-${now}`,
       type: "microservice",
-      position: { x: base.x + 240, y: base.y + 50 },
-      data: { label: "Transaction API", category: "Compute" },
+      position: { x: base.x + 720, y: base.y },
+      data: { label: "API Server", category: "Core" },
       style: { width: 168, height: 72 },
     };
-
-    const psql = {
-      id: `psql-${now}`,
+    const db = {
+      id: `db-${now}`,
       type: "database",
-      position: { x: base.x + 480, y: base.y - 50 },
-      data: { label: "Ledger DB", provider: "postgresql", category: "Data" },
+      position: { x: base.x + 960, y: base.y },
+      data: { label: "Database", provider: "postgresql", category: "Core" },
       style: { width: 144, height: 120 },
     };
-    const stripe = {
-      id: `stripe-${now}`,
-      type: "stripe",
-      position: { x: base.x + 480, y: base.y + 150 },
-      data: { label: "Processor", category: "External" },
-      style: { width: 168, height: 72 },
-    };
 
-    const dd = {
-      id: `dd-${now}`,
-      type: "datadog",
-      position: { x: base.x + 720, y: base.y },
-      data: { label: "Observability", category: "Monitoring" },
-      style: { width: 168, height: 72 },
-    };
-    const twilio = {
-      id: `tw-${now}`,
-      type: "twilio",
-      position: { x: base.x + 720, y: base.y + 120 },
-      data: { label: "2FA (Twilio)", category: "External" },
-      style: { width: 168, height: 72 },
-    };
-
-    newNodes = [lb, auth, api, psql, stripe, dd, twilio];
+    newNodes = [internet, cdn, lb, api, db];
     newEdges = [
-      {
-        id: `e-${now}-1`,
-        source: lb.id,
-        target: auth.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-2`,
-        source: lb.id,
-        target: api.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-3`,
-        source: api.id,
-        target: psql.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-4`,
-        source: api.id,
-        target: stripe.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-5`,
-        source: api.id,
-        target: dd.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
-      {
-        id: `e-${now}-6`,
-        source: api.id,
-        target: twilio.id,
-        type: "step",
-        style: { stroke: "#444", strokeWidth: 2 },
-      },
+      { id: `e-${now}-1`, source: internet.id, target: cdn.id, type: "step" },
+      { id: `e-${now}-2`, source: cdn.id, target: lb.id, type: "step" },
+      { id: `e-${now}-3`, source: lb.id, target: api.id, type: "step" },
+      { id: `e-${now}-4`, source: api.id, target: db.id, type: "step" },
+    ];
+  } else if (templateType === "template:ai-platform") {
+    const client = {
+      id: `client-${now}`,
+      type: "app",
+      position: { x: base.x, y: base.y },
+      data: { label: "Client App", category: "Core" },
+      style: { width: 168, height: 72 },
+    };
+    const api = {
+      id: `api-${now}`,
+      type: "gateway",
+      position: { x: base.x + 240, y: base.y },
+      data: { label: "API Gateway", category: "Core" },
+      style: { width: 168, height: 72 },
+    };
+    const worker = {
+      id: `worker-${now}`,
+      type: "worker",
+      position: { x: base.x + 480, y: base.y },
+      data: { label: "Inference Worker", category: "Core" },
+      style: { width: 168, height: 72 },
+    };
+    const db = {
+      id: `db-${now}`,
+      type: "database",
+      position: { x: base.x + 720, y: base.y },
+      data: { label: "Model Store", provider: "postgresql", category: "Core" },
+      style: { width: 144, height: 120 },
+    };
+
+    newNodes = [client, api, worker, db];
+    newEdges = [
+      { id: `e-${now}-1`, source: client.id, target: api.id, type: "step" },
+      { id: `e-${now}-2`, source: api.id, target: worker.id, type: "step" },
+      { id: `e-${now}-3`, source: worker.id, target: db.id, type: "step" },
     ];
   } else if (templateType === "template:meshwork-target-architecture") {
-    const title = {
-      id: `title-${now}`,
-      type: "annotation",
-      position: { x: base.x + 100, y: base.y - 150 },
-      data: {
-        label:
-          "## Meshwork Target Microservices Architecture\nProduction goal featuring isolated databases, API Gateway routing, Redis caching/queue, and gRPC communication.",
-      },
-      style: { width: 700, height: 120 },
-    };
     const internet = {
       id: `internet-${now}`,
       type: "user",
-      position: { x: base.x + 450, y: base.y + 30 },
+      position: { x: base.x, y: base.y },
       data: { label: "Internet Clients", category: "Core" },
-    };
-    const cloudflare = {
-      id: `cf-${now}`,
-      type: "cdn",
-      position: { x: base.x + 450, y: base.y + 150 },
-      data: { label: "Cloudflare (DNS/WAF/CDN)", category: "Core" },
-      style: { width: 168, height: 72 },
-    };
-    const nginx = {
-      id: `ng-${now}`,
-      type: "loadBalancer",
-      position: { x: base.x + 450, y: base.y + 270 },
-      data: { label: "Nginx Proxy", category: "Core" },
-      style: { width: 192, height: 72 },
     };
     const gateway = {
       id: `gtw-${now}`,
       type: "gateway",
-      position: { x: base.x + 450, y: base.y + 390 },
-      data: { label: "API Gateway (JWT & Validation)", category: "Core" },
+      position: { x: base.x + 240, y: base.y },
+      data: { label: "API Gateway (JWT)", category: "Core" },
       style: { width: 192, height: 72 },
     };
-
     const auth = {
       id: `auth-${now}`,
       type: "microservice",
-      position: { x: base.x + 50, y: base.y + 530 },
+      position: { x: base.x + 500, y: base.y },
       data: { label: "Auth Service", category: "Core" },
       style: { width: 168, height: 72 },
     };
-    const workspace = {
-      id: `ws-${now}`,
+    const app = {
+      id: `app-${now}`,
       type: "microservice",
-      position: { x: base.x + 250, y: base.y + 530 },
-      data: { label: "Workspace Service", category: "Core" },
+      position: { x: base.x + 500, y: base.y + 140 },
+      data: { label: "App Service", category: "Core" },
       style: { width: 168, height: 72 },
     };
-    const mosh = {
-      id: `mosh-${now}`,
-      type: "microservice",
-      position: { x: base.x + 450, y: base.y + 530 },
-      data: { label: "Mosh Service", category: "Core" },
-      style: { width: 168, height: 72 },
-    };
-    const mcp = {
-      id: `mcp-${now}`,
-      type: "microservice",
-      position: { x: base.x + 650, y: base.y + 530 },
-      data: { label: "MCP Service", category: "Core" },
-      style: { width: 168, height: 72 },
-    };
-    const worker = {
-      id: `wrk-${now}`,
-      type: "worker",
-      position: { x: base.x + 850, y: base.y + 530 },
-      data: { label: "Background Worker", category: "Core" },
-      style: { width: 168, height: 72 },
-    };
-
     const pg = {
       id: `pg-${now}`,
       type: "database",
-      position: { x: base.x + 50, y: base.y + 690 },
+      position: { x: base.x + 740, y: base.y - 60 },
       data: { label: "PostgreSQL\n(auth_db)", category: "Core" },
-      style: { width: 144, height: 120 },
-    };
-    const dynNodes = {
-      id: `dyn-nodes-${now}`,
-      type: "database",
-      position: { x: base.x + 250, y: base.y + 690 },
-      data: { label: "DynamoDB\n(nodes)", category: "Core" },
-      style: { width: 144, height: 120 },
-    };
-    const dynChat = {
-      id: `dyn-chat-${now}`,
-      type: "database",
-      position: { x: base.x + 450, y: base.y + 690 },
-      data: { label: "DynamoDB\n(chat_history)", category: "Core" },
       style: { width: 144, height: 120 },
     };
     const redis = {
       id: `red-${now}`,
       type: "cache",
-      position: { x: base.x + 850, y: base.y + 690 },
-      data: { label: "Redis\n(cache/queue)", category: "Core" },
+      position: { x: base.x + 740, y: base.y + 120 },
+      data: { label: "Redis\n(queue)", category: "Core" },
       style: { width: 144, height: 120 },
     };
 
-    const note = {
-      id: `note-${now}`,
-      type: "note",
-      position: { x: base.x + 630, y: base.y + 680 },
-      data: {
-        label:
-          "### Service Rules\n- Comm. via gRPC\n- NEVER access other DBs\n- DBs are strictly owned by respective service",
-      },
-      style: { width: 200, height: 130 },
-    };
-
-    newNodes = [
-      title,
-      internet,
-      cloudflare,
-      nginx,
-      gateway,
-      auth,
-      workspace,
-      mosh,
-      mcp,
-      worker,
-      pg,
-      dynNodes,
-      dynChat,
-      redis,
-      note,
-    ];
+    newNodes = [internet, gateway, auth, app, pg, redis];
     newEdges = [
       {
         id: `e-${now}-1`,
         source: internet.id,
-        target: cloudflare.id,
-        type: "step",
-        animated: true,
-      },
-      {
-        id: `e-${now}-2`,
-        source: cloudflare.id,
-        target: nginx.id,
-        type: "step",
-        animated: true,
-      },
-      {
-        id: `e-${now}-3`,
-        source: nginx.id,
         target: gateway.id,
         type: "step",
-        animated: true,
       },
-      {
-        id: `e-${now}-4`,
-        source: gateway.id,
-        target: auth.id,
-        type: "step",
-        animated: true,
-      },
-      {
-        id: `e-${now}-5`,
-        source: gateway.id,
-        target: workspace.id,
-        type: "step",
-        animated: true,
-      },
-      {
-        id: `e-${now}-6`,
-        source: gateway.id,
-        target: mosh.id,
-        type: "step",
-        animated: true,
-      },
+      { id: `e-${now}-2`, source: gateway.id, target: auth.id, type: "step" },
+      { id: `e-${now}-3`, source: gateway.id, target: app.id, type: "step" },
+      { id: `e-${now}-4`, source: auth.id, target: pg.id, type: "step" },
+      { id: `e-${now}-5`, source: app.id, target: pg.id, type: "step" },
+      { id: `e-${now}-6`, source: app.id, target: redis.id, type: "step" },
       {
         id: `e-${now}-7`,
-        source: gateway.id,
-        target: mcp.id,
-        type: "step",
-        animated: true,
-      },
-      {
-        id: `e-${now}-8`,
-        source: gateway.id,
-        target: worker.id,
-        type: "step",
-        animated: true,
-      },
-      { id: `e-${now}-9`, source: auth.id, target: pg.id, type: "step" },
-      {
-        id: `e-${now}-10`,
-        source: workspace.id,
-        target: dynNodes.id,
-        type: "step",
-      },
-      { id: `e-${now}-11`, source: mosh.id, target: dynChat.id, type: "step" },
-      { id: `e-${now}-12`, source: worker.id, target: redis.id, type: "step" },
-      {
-        id: `e-${now}-13`,
-        source: workspace.id,
+        source: app.id,
         target: auth.id,
-        type: "step",
-        label: "gRPC",
-        style: { strokeDasharray: "5,5" },
-      },
-      {
-        id: `e-${now}-14`,
-        source: mosh.id,
-        target: auth.id,
-        type: "step",
-        label: "gRPC",
-        style: { strokeDasharray: "5,5" },
-      },
-      {
-        id: `e-${now}-15`,
-        source: mcp.id,
-        target: auth.id,
-        type: "step",
-        label: "gRPC",
-        style: { strokeDasharray: "5,5" },
-      },
-      {
-        id: `e-${now}-16`,
-        source: mcp.id,
-        target: workspace.id,
-        type: "step",
-        label: "gRPC",
-        style: { strokeDasharray: "5,5" },
-      },
-      {
-        id: `e-${now}-17`,
-        source: worker.id,
-        target: workspace.id,
         type: "step",
         label: "gRPC",
         style: { strokeDasharray: "5,5" },

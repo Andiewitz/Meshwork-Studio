@@ -263,18 +263,6 @@ export const nodeTypesList = [
     category: "Templates",
   },
   {
-    type: "template:enterprise-k8s",
-    label: "K8s Cluster",
-    icon: Layers,
-    category: "Templates",
-  },
-  {
-    type: "template:fintech-saas",
-    label: "FinTech SaaS",
-    icon: CreditCard,
-    category: "Templates",
-  },
-  {
     type: "template:meshwork-target-architecture",
     label: "Meshwork Target Stack",
     icon: Network,
