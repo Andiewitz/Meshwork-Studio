@@ -11,7 +11,7 @@ const log = createChildLogger("ai-resolver");
 export const DEFAULT_PROVIDER = "gemini";
 
 /** The model served on the free tier. */
-export const DEFAULT_FREE_MODEL = "gemini-2.0-flash";
+export const DEFAULT_FREE_MODEL = "gemini-2.5-flash";
 
 // ---------------------------------------------------------------------------
 // Types

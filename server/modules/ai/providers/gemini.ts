@@ -27,7 +27,7 @@ export async function createGeminiChatCompletion(
   });
 
   const response = await openai.chat.completions.create({
-    model: request.model || "gemini-2.0-flash",
+    model: request.model || "gemini-2.5-flash",
     messages: request.messages,
     temperature: request.temperature ?? 0.7,
     max_tokens: request.maxTokens,
@@ -50,7 +50,7 @@ export async function* streamGeminiChatCompletion(
   });
 
   const stream = await openai.chat.completions.create({
-    model: request.model || "gemini-2.0-flash",
+    model: request.model || "gemini-2.5-flash",
     messages: request.messages,
     temperature: request.temperature ?? 0.7,
     max_tokens: request.maxTokens,

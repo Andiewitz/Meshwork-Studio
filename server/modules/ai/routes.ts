@@ -558,7 +558,7 @@ export default function createAIRoutes(context: AppContext) {
         // Select a lightweight model for suggestions (cheaper than full chat)
         let suggestionsModel: string;
         if (provider === "gemini") {
-          suggestionsModel = "gemini-2.0-flash";
+          suggestionsModel = "gemini-2.5-flash";
         } else if (provider === "openai") {
           suggestionsModel = "gpt-4o-mini";
         } else if (provider === "anthropic") {
@@ -686,7 +686,7 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         {
           id: "gemini",
           name: "Google Gemini",
-          models: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+          models: ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
           requiresByok: false,
           isDefault: true,
         },
