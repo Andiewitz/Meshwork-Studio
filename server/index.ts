@@ -243,7 +243,7 @@ app.get("/admin/:secret", (req, res) => {
   const port = parseInt(process.env.PORT || "5000", 10);
 
   // Start listening BEFORE expensive initialization to pass healthchecks early.
-  // Port 0.0.0.0 is required for Railway/Docker.
+  // Port 0.0.0.0 is required for EC2/Docker.
   httpServer.listen(port, "0.0.0.0", () => {
     log.info(
       `Server started listening on port ${port} (initializing modules...)`,

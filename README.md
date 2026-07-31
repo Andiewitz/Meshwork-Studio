@@ -93,37 +93,37 @@ npm run dev
 
 ### Frontend
 
-| Technology | Purpose |
-|------------|---------|
-| **React 18** | UI framework |
-| **TypeScript** | Type safety across the full stack |
-| **React Flow** | Node-based visual diagram editor |
-| **TanStack Query** | Server state management with caching |
-| **Tailwind CSS** | Utility-first styling |
-| **Radix UI** | Accessible component primitives |
-| **Framer Motion** | Page transitions |
-| **Wouter** | Lightweight client-side routing (2KB) |
+| Technology         | Purpose                               |
+| ------------------ | ------------------------------------- |
+| **React 18**       | UI framework                          |
+| **TypeScript**     | Type safety across the full stack     |
+| **React Flow**     | Node-based visual diagram editor      |
+| **TanStack Query** | Server state management with caching  |
+| **Tailwind CSS**   | Utility-first styling                 |
+| **Radix UI**       | Accessible component primitives       |
+| **Framer Motion**  | Page transitions                      |
+| **Wouter**         | Lightweight client-side routing (2KB) |
 
 ### Backend
 
-| Technology | Purpose |
-|------------|---------|
-| **Express 5** | API server |
-| **Passport.js** | Multi-strategy authentication |
-| **Drizzle ORM** | Type-safe PostgreSQL queries |
-| **Zod** | Runtime schema validation |
-| **bcrypt** | Password hashing (12 salt rounds) |
-| **AES-256-GCM** | API key encryption for BYOK AI |
+| Technology      | Purpose                           |
+| --------------- | --------------------------------- |
+| **Express 5**   | API server                        |
+| **Passport.js** | Multi-strategy authentication     |
+| **Drizzle ORM** | Type-safe PostgreSQL queries      |
+| **Zod**         | Runtime schema validation         |
+| **bcrypt**      | Password hashing (12 salt rounds) |
+| **AES-256-GCM** | API key encryption for BYOK AI    |
 
 ### Infrastructure
 
-| Technology | Purpose |
-|------------|---------|
-| **Docker Compose** | Multi-container orchestration |
-| **NGINX** | Reverse proxy, static serving, gzip |
-| **Vitest** | Unit and integration testing |
-| **Playwright** | End-to-end browser testing |
-| **Drizzle Kit** | Database schema migrations |
+| Technology         | Purpose                             |
+| ------------------ | ----------------------------------- |
+| **Docker Compose** | Multi-container orchestration       |
+| **NGINX**          | Reverse proxy, static serving, gzip |
+| **Vitest**         | Unit and integration testing        |
+| **Playwright**     | End-to-end browser testing          |
+| **Drizzle Kit**    | Database schema migrations          |
 
 ---
 
@@ -160,21 +160,21 @@ docker-compose down -v   # Stop and remove volumes
 
 Every major system has its own deep-dive guide:
 
-| Document | What You'll Learn |
-|----------|-------------------|
-| **[Security Architecture](./docs/SECURITY.md)** | Auth flows, IDOR protection, brute-force lockouts, AES-256 encryption, CSRF, rate limiting, PII redaction |
-| **[Canvas Engine](./docs/ENGINE.md)** | How drag-and-drop works, spatial containment logic, the Postgres upsert sync strategy |
-| **[Canvas Persistence](./docs/PERSISTENCE.md)** | The offline-first localStorage cache layer, debounced auto-save, and edge normalization fix |
-| **[Workspace & Collections API](./docs/WORKSPACES.md)** | Full REST API reference for workspaces and collections, IDOR pattern, client hooks |
-| **[AI Engine Guide](./docs/AI_ENGINE.md)** | Bring-your-own-key AI integration, encryption flow, and API endpoints |
-| **[Theming & Design System](./docs/THEMING.md)** | Dark/light/system modes, neo-brutalist CSS utilities, brand identity |
-| **[Testing Strategy](./docs/TESTING.md)** | The testing pyramid, how to run tests, how to write new ones |
-| **[Vercel + Railway Deployment](./docs/DEPLOYMENT.md)** | How to connect your frontend and backend across domains with SSL, CORS, and secure cookies |
-| **[NGINX Architecture](./docs/NGINX_ARCHITECTURE.md)** | Why NGINX sits in front of Express, SPA routing, caching |
-| **[Settings & Privacy](./docs/SETTINGS.md)** | User profile management, account deletion, data export |
-| **[Database Backup & Restore](./docs/BACKUP.md)** | How to back up both Postgres databases and restore from a dump |
-| **[Security Audit Report](./docs/AUDIT_REPORT.md)** | The original security audit and critical fixes implemented during hardening |
-| **[Post-Mortem Log](./docs/post-mortem.md)** | Every production bug we've found and fixed, with root cause analysis |
+| Document                                                | What You'll Learn                                                                                         |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **[Security Architecture](./docs/SECURITY.md)**         | Auth flows, IDOR protection, brute-force lockouts, AES-256 encryption, CSRF, rate limiting, PII redaction |
+| **[Canvas Engine](./docs/ENGINE.md)**                   | How drag-and-drop works, spatial containment logic, the Postgres upsert sync strategy                     |
+| **[Canvas Persistence](./docs/PERSISTENCE.md)**         | The offline-first localStorage cache layer, debounced auto-save, and edge normalization fix               |
+| **[Workspace & Collections API](./docs/WORKSPACES.md)** | Full REST API reference for workspaces and collections, IDOR pattern, client hooks                        |
+| **[AI Engine Guide](./docs/AI_ENGINE.md)**              | Bring-your-own-key AI integration, encryption flow, and API endpoints                                     |
+| **[Theming & Design System](./docs/THEMING.md)**        | Dark/light/system modes, neo-brutalist CSS utilities, brand identity                                      |
+| **[Testing Strategy](./docs/TESTING.md)**               | The testing pyramid, how to run tests, how to write new ones                                              |
+| **[AWS EC2 Deployment](./docs/INFRASTRUCTURE.md)**      | How to deploy full stack with SSL, NGINX reverse proxy, and systemd/PM2                                   |
+| **[NGINX Architecture](./docs/NGINX_ARCHITECTURE.md)**  | Why NGINX sits in front of Express, SPA routing, caching                                                  |
+| **[Settings & Privacy](./docs/SETTINGS.md)**            | User profile management, account deletion, data export                                                    |
+| **[Database Backup & Restore](./docs/BACKUP.md)**       | How to back up both Postgres databases and restore from a dump                                            |
+| **[Security Audit Report](./docs/AUDIT_REPORT.md)**     | The original security audit and critical fixes implemented during hardening                               |
+| **[Post-Mortem Log](./docs/post-mortem.md)**            | Every production bug we've found and fixed, with root cause analysis                                      |
 
 ---
 
@@ -182,16 +182,16 @@ Every major system has its own deep-dive guide:
 
 This isn't a toy project with `if (loggedIn)` checks. Every security feature is battle-tested:
 
-| Feature | Implementation |
-|---------|---------------|
-| **IDOR Protection** | Every data endpoint verifies resource ownership — tested with cross-user attack simulations |
-| **Brute-Force Lockout** | Progressive delays (1min → 5min → 15min → 30min → 60min) after failed login attempts |
-| **CSRF Protection** | Double-submit cookie pattern on all 15 state-changing endpoints |
-| **Rate Limiting** | 100 req/min globally, 10 req/15min on auth routes |
-| **API Key Encryption** | AES-256-GCM with unique IVs — keys never stored in plaintext |
-| **PII-Safe Logging** | Production logs automatically redact emails, passwords, tokens, and API keys |
-| **Input Validation** | 4-layer defense: Client → Zod → Drizzle ORM → React output encoding |
-| **Type Safety** | Zero `any` casts in route handlers — backed by global Express.User type declaration |
+| Feature                 | Implementation                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------- |
+| **IDOR Protection**     | Every data endpoint verifies resource ownership — tested with cross-user attack simulations |
+| **Brute-Force Lockout** | Progressive delays (1min → 5min → 15min → 30min → 60min) after failed login attempts        |
+| **CSRF Protection**     | Double-submit cookie pattern on all 15 state-changing endpoints                             |
+| **Rate Limiting**       | 100 req/min globally, 10 req/15min on auth routes                                           |
+| **API Key Encryption**  | AES-256-GCM with unique IVs — keys never stored in plaintext                                |
+| **PII-Safe Logging**    | Production logs automatically redact emails, passwords, tokens, and API keys                |
+| **Input Validation**    | 4-layer defense: Client → Zod → Drizzle ORM → React output encoding                         |
+| **Type Safety**         | Zero `any` casts in route handlers — backed by global Express.User type declaration         |
 
 Read the full [Security Architecture](./docs/SECURITY.md) for details.
 

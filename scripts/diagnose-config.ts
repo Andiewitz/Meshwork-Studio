@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Configuration Diagnostic Script
- * Run locally or in Railway to verify all required config
+ * Run locally or in production to verify all required config
  * Usage: npx tsx scripts/diagnose-config.ts
  */
 
@@ -17,7 +17,12 @@ interface CheckResult {
 
 const checks: CheckResult[] = [];
 
-function check(name: string, condition: boolean, message: string, details?: any) {
+function check(
+  name: string,
+  condition: boolean,
+  message: string,
+  details?: any,
+) {
   checks.push({ name, passed: condition, message, details });
   const icon = condition ? "✅" : "❌";
   console.log(`${icon} ${name}: ${message}`);
@@ -46,7 +51,9 @@ async function runDiagnostics() {
       varName,
       !!value,
       value ? `Set (${value.length} chars)` : "MISSING",
-      value ? { length: value.length, preview: value.slice(0, 20) + "..." } : undefined
+      value
+        ? { length: value.length, preview: value.slice(0, 20) + "..." }
+        : undefined,
     );
   }
 
@@ -56,8 +63,12 @@ async function runDiagnostics() {
   check(
     "REDIS_URL",
     redisUrl !== undefined,
-    redisUrl ? (redisUrl ? "Set" : "Explicitly disabled (empty)") : "Not set (will auto-connect)",
-    redisUrl ? { value: redisUrl.slice(0, 30) } : undefined
+    redisUrl
+      ? redisUrl
+        ? "Set"
+        : "Explicitly disabled (empty)"
+      : "Not set (will auto-connect)",
+    redisUrl ? { value: redisUrl.slice(0, 30) } : undefined,
   );
 
   // 3. Test Database Connection
@@ -67,20 +78,28 @@ async function runDiagnostics() {
       const { Pool } = await import("pg");
       const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
-        ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+        ssl:
+          process.env.NODE_ENV === "production"
+            ? { rejectUnauthorized: false }
+            : false,
       });
       const client = await pool.connect();
-      const result = await client.query("SELECT NOW() as time, current_database() as db");
+      const result = await client.query(
+        "SELECT NOW() as time, current_database() as db",
+      );
       client.release();
       await pool.end();
       check(
         "Database Connection",
         true,
         `Connected to ${result.rows[0].db} at ${result.rows[0].time}`,
-        { database: result.rows[0].db }
+        { database: result.rows[0].db },
       );
     } catch (error: any) {
-      check("Database Connection", false, "FAILED", { error: error.message, code: error.code });
+      check("Database Connection", false, "FAILED", {
+        error: error.message,
+        code: error.code,
+      });
     }
   } else {
     check("Database Connection", false, "DATABASE_URL not set");
@@ -92,7 +111,9 @@ async function runDiagnostics() {
     try {
       const redis = await import("redis").catch(() => null);
       if (!redis) {
-        check("Redis Connection", false, "SKIPPED", { reason: "redis package not installed locally (installed in Railway)" });
+        check("Redis Connection", false, "SKIPPED", {
+          reason: "redis package not installed locally",
+        });
       } else {
         const client = redis.createClient({ url: process.env.REDIS_URL });
         await client.connect();
@@ -117,7 +138,7 @@ async function runDiagnostics() {
       "JWT_SECRET Strength",
       decodedLen >= 32,
       `Length: ${decodedLen} bytes (base64 decoded), ${secret.length} chars`,
-      { isBase64, decodedLength: decodedLen }
+      { isBase64, decodedLength: decodedLen },
     );
   }
 
@@ -128,7 +149,7 @@ async function runDiagnostics() {
       "SESSION_SECRET Strength",
       decodedLen >= 32,
       `Length: ${decodedLen} bytes (base64 decoded), ${secret.length} chars`,
-      { decodedLength: decodedLen }
+      { decodedLength: decodedLen },
     );
   }
 
@@ -137,28 +158,32 @@ async function runDiagnostics() {
   check(
     "GOOGLE_CLIENT_ID",
     !!process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_ID ? "Set" : "Not configured"
+    process.env.GOOGLE_CLIENT_ID ? "Set" : "Not configured",
   );
   check(
     "GOOGLE_CLIENT_SECRET",
     !!process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_CLIENT_SECRET ? "Set" : "Not configured"
+    process.env.GOOGLE_CLIENT_SECRET ? "Set" : "Not configured",
   );
 
   // Summary
   console.log("\n" + "=".repeat(50));
   console.log("SUMMARY");
   console.log("=".repeat(50));
-  const passed = checks.filter(c => c.passed).length;
-  const failed = checks.filter(c => !c.passed).length;
-  console.log(`Total: ${checks.length} | Passed: ${passed} | Failed: ${failed}`);
+  const passed = checks.filter((c) => c.passed).length;
+  const failed = checks.filter((c) => !c.passed).length;
+  console.log(
+    `Total: ${checks.length} | Passed: ${passed} | Failed: ${failed}`,
+  );
 
   if (failed > 0) {
     console.log("\n❌ FAILED CHECKS:");
-    checks.filter(c => !c.passed).forEach(c => {
-      console.log(`  - ${c.name}: ${c.message}`);
-      if (c.details) console.log(`    ${JSON.stringify(c.details)}`);
-    });
+    checks
+      .filter((c) => !c.passed)
+      .forEach((c) => {
+        console.log(`  - ${c.name}: ${c.message}`);
+        if (c.details) console.log(`    ${JSON.stringify(c.details)}`);
+      });
     console.log("\n🔧 Fix the failed checks above, then redeploy.");
     process.exit(1);
   } else {

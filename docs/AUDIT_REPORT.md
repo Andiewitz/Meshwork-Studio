@@ -9,6 +9,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
 ## 🔴 CRITICAL ISSUES FIXED
 
 ### 1. ✅ Credentials in .env File (RESOLVED)
+
 - **Issue**: `.env` file was committed to git with production database credentials
 - **Fix Applied**:
   - Removed `.env` from git tracking using `git rm --cached .env`
@@ -16,12 +17,14 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
   - Credentials must be rotated immediately (see "Immediate Actions" below)
 
 ### 2. ✅ Backup Folder with Credentials (RESOLVED)
+
 - **Issue**: `backup/` folder contained backup copies of `.env` with credentials
 - **Fix Applied**:
   - Deleted all backup files
   - Added `backup/` to `.gitignore`
 
 ### 3. ✅ Weak Session Secret Fallback (RESOLVED)
+
 - **Issue**: Sessions could be forged if `SESSION_SECRET` was not set
 - **Fix Applied**:
   - Added validation in `authCore.ts` to throw error in production if `SESSION_SECRET` not set
@@ -29,6 +32,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
   - Added warning message when using development fallback
 
 ### 4. ✅ Insecure Session Cookie Settings (RESOLVED)
+
 - **Issue**: `sameSite="none"` increased CSRF vulnerability
 - **Fix Applied**:
   - Changed to `sameSite="lax"` for CSRF protection while maintaining OAuth compatibility
@@ -41,6 +45,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
 ## 🟠 HIGH SEVERITY ISSUES FIXED
 
 ### 1. ✅ .gitignore Missing Sensitive Files (RESOLVED)
+
 - **Issue**: No protection for `.env`, `.env.local`, backup files, etc.
 - **Fix Applied**:
   ```
@@ -57,6 +62,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
   ```
 
 ### 2. ✅ Weak Password Requirements (RESOLVED)
+
 - **Issue**: Minimum 8 characters with no complexity requirements
 - **Fix Applied**:
   - Implemented `validatePasswordStrength()` function in `password.ts`
@@ -69,6 +75,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
   - Applied validation on registration endpoint
 
 ### 3. ✅ Debug Logs Exposing Auth Info (RESOLVED)
+
 - **Issue**: Console logs revealed email addresses and authentication attempts
 - **Fix Applied**:
   - Removed all sensitive debug logs from `strategies/local.ts`
@@ -76,6 +83,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
   - Kept only non-sensitive error logging
 
 ### 4. ✅ Missing CORS Configuration in Development (RESOLVED)
+
 - **Issue**: No CORS protection in development environment
 - **Fix Applied**:
   - Applied CORS policy in all environments
@@ -83,6 +91,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
   - Production requires `FRONTEND_URL` env variable
 
 ### 5. ✅ Missing Security Headers (RESOLVED)
+
 - **Issue**: No helmet middleware for security headers
 - **Fix Applied**:
   - Installed `helmet` package
@@ -94,6 +103,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
     - And 15+ other security headers
 
 ### 6. ✅ Missing Request Size Limits (RESOLVED)
+
 - **Issue**: No protection against DoS via large payloads
 - **Fix Applied**:
   - Added `limit: "5mb"` to JSON middleware
@@ -104,6 +114,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
 ## 🟡 MEDIUM SEVERITY ISSUES (Recommendations)
 
 ### 1. ✅ No CSRF Protection Tokens (IMPLEMENTED)
+
 - **Status**: IMPLEMENTED
 - **Solution Applied**:
   - Installed `csurf` middleware for CSRF token protection
@@ -151,6 +162,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
 - **Priority**: HIGH (now complete)
 
 ### 2. ✅ Account Lockout on Failed Attempts
+
 - **Status**: IMPLEMENTED
 - **Solution Applied**:
   - Created `server/modules/auth/lockout.ts` service with exponential backoff
@@ -165,7 +177,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
   - Counter resets on successful login
   - Integration in local.ts strategy checks lockout before password verification
   - Client receives `locked_until` timestamp in error response for UI feedback
-  
+
 - **Files Modified/Created**:
   - `shared/schema.ts` - Added loginAttempts table
   - `server/modules/auth/db.ts` - Added table creation
@@ -176,6 +188,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
 - **Priority**: HIGH (now complete)
 
 ### 3. ✅ Rate Limiting (IMPLEMENTED)
+
 - **Status**: Implemented
 - **Solution Applied**:
   - Installed `express-rate-limit`
@@ -187,6 +200,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
   - Global API limiter: 100 requests per minute per IP
 
 ### 4. ⚠️ No MFA/2FA Implementation
+
 - **Status**: Not implemented
 - **Recommendation**:
   - Implement TOTP (Time-based One-Time Password)
@@ -194,8 +208,9 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
   - Make optional for users initially
 
 ### 5. ⚠️ Verbose Error Messages
+
 - **Status**: Partially fixed
-- **Recommendation**: 
+- **Recommendation**:
   - Audit error messages to ensure they don't reveal auth methods
   - Use consistent generic messages like "Invalid credentials"
 
@@ -219,6 +234,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
 ### ⚠️ CRITICAL - Before Deployment:
 
 1. **Rotate ALL Database Credentials**
+
    ```bash
    # The following credentials were exposed and MUST be changed:
    # - PostgreSQL databases (emnesh_workspace, emnesh_auth)
@@ -230,6 +246,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
    - Check git log for `.env` history: `git log --all --full-history -- .env`
 
 3. **Environment Variables Setup**
+
    ```bash
    # Create proper .env file on deployment server with:
    DATABASE_URL=postgresql://new_user:new_password@host:port/db
@@ -243,7 +260,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
    ```bash
    # Check if credentials were ever committed
    git log -p --all | grep -i "password\|secret\|key\|credential"
-   
+
    # If found, rewrite history (destructive, coordination needed):
    git filter-branch --tree-filter 'rm -f .env' -- --all
    ```
@@ -267,6 +284,7 @@ This document outlines the security audit performed on the Meshwork-Studio codeb
 ## 🔍 Testing Security Changes
 
 ### 1. Test Password Validation
+
 ```bash
 curl -X POST http://localhost:5000/api/auth/register \
   -H "Content-Type: application/json" \
@@ -275,24 +293,28 @@ curl -X POST http://localhost:5000/api/auth/register \
 ```
 
 ### 2. Test Security Headers
+
 ```bash
 curl -I http://localhost:5000
 # Should include headers like Strict-Transport-Security, X-Frame-Options
 ```
 
 ### 3. Test CORS
+
 ```bash
 # From different origin - should respect CORS policy
 curl -H "Origin: https://evil.com" http://localhost:5000/api/auth/me
 ```
 
 ### 4. Test Session Cookie
+
 ```bash
 curl -I http://localhost:5000 -X POST /api/auth/login
 # Cookie should have: HttpOnly, Secure (in prod), SameSite=Strict
 ```
 
 ### 5. Test Account Lockout
+
 ```bash
 # First, register a test account if needed
 curl -X POST http://localhost:5000/api/auth/register \
@@ -345,4 +367,4 @@ GitHub Copilot - March 25, 2026
 
 All fixes have been applied to the codebase. The most critical issue (exposed credentials in git) has been handled by unstaging the `.env` file. However, **credentials must still be rotated** in all systems since they were in the git history.
 
-Future deployments should use environment-based configuration management (e.g., Railway, Vercel, or Docker secrets) rather than .env files.
+Future deployments should use environment-based configuration management (e.g., EC2 environment variables or secrets managers) rather than .env files.

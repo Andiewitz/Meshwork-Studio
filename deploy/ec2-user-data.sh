@@ -9,7 +9,7 @@ echo "=== EC2 setup started at $(date) ==="
 
 dnf update -y
 
-# ─── Node.js 22 (matches CI and railway.json) ───────────────────────
+# ─── Node.js 22 (matches CI) ───────────────────────────────────────
 curl -fsSL https://rpm.nodesource.com/setup_22.x | bash -
 dnf install -y nodejs
 

@@ -2,7 +2,7 @@
 
 ## Context
 
-Meshwork Studio is a full-stack TypeScript app (React + Express) currently run via `docker-compose.yml` with local Postgres (workspace + auth), Redis, a Node backend, and an Nginx front-end. It is also pre-wired for Railway (`railway.json`) and Vercel (`vercel.json`). The goal is to migrate off local Docker / PaaS to **AWS**, with a reproducible, secure, and observable deployment.
+Meshwork Studio is a full-stack TypeScript app (React + Express) run via AWS EC2 or `docker-compose.yml` with local/RDS Postgres (workspace + auth), Redis, a Node backend, and an Nginx front-end. The goal is to deploy to **AWS**, with a reproducible, secure, and observable deployment.
 
 ## Key Findings (from code review)
 
