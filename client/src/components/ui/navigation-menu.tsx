@@ -1,6 +1,6 @@
 import * as React from "react";
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu";
-import { ArrowRightIcon, ChevronDownIcon } from "lucide-react";
+import { ArrowRightIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 
 import { cn } from "@/lib/utils";
 import { GridCard } from "@/components/ui/grid-card";

@@ -2,24 +2,24 @@ import { ReactNode, useState, useRef, useEffect, Suspense } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard,
-  Package,
-  Users,
-  Settings,
-  HelpCircle,
-  Bell,
-  LogOut,
-  X,
-  ArrowUpRight,
-  Newspaper,
-  Search,
-  Crown,
-  ChevronRight,
-  Star,
-  Clock,
-  FolderKanban,
-  Trash2,
-} from "lucide-react";
+  Squares2X2Icon as LayoutDashboard,
+  CubeIcon as Package,
+  UserGroupIcon as Users,
+  Cog6ToothIcon as Settings,
+  QuestionMarkCircleIcon as HelpCircle,
+  BellIcon as Bell,
+  ArrowRightStartOnRectangleIcon as LogOut,
+  XMarkIcon as X,
+  ArrowUpRightIcon as ArrowUpRight,
+  NewspaperIcon as Newspaper,
+  MagnifyingGlassIcon as Search,
+  SparklesIcon as Crown,
+  ChevronRightIcon as ChevronRight,
+  StarIcon as Star,
+  ClockIcon as Clock,
+  FolderIcon as FolderKanban,
+  TrashIcon as Trash2,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { MeshworkLogo } from "@/components/MeshworkLogo";

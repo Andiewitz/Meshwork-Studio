@@ -4,16 +4,16 @@ import { Handle, Position, NodeProps, NodeResizer, Node } from "@xyflow/react";
 import { EXPANDABLE_TYPES } from "@/features/workspace/utils/nodeTypes";
 import { fireEnterNode } from "@/features/workspace/utils/canvasEvents";
 import type { NodeData } from "@/types/canvas";
-import * as Lucide from "lucide-react";
+import * as HeroIcons from "@heroicons/react/24/outline";
 import {
-  User as UserIcon,
-  Server as LucideServer,
-  Globe as LucideGlobe,
-  Box as LucideBox,
-  Zap as LucideZap,
-  Lock as LucideLock,
-  Activity as LucideActivity,
-} from "lucide-react";
+  UserIcon,
+  ServerIcon as LucideServer,
+  GlobeAltIcon as LucideGlobe,
+  CubeIcon as LucideBox,
+  BoltIcon as LucideZap,
+  LockClosedIcon as LucideLock,
+  ChartBarIcon as LucideActivity,
+} from "@heroicons/react/24/outline";
 import {
   SiLinux,
   SiDocker,
@@ -824,10 +824,10 @@ export function SystemNode({
               {(() => {
                 if (
                   customIconName &&
-                  Lucide[customIconName as keyof typeof Lucide]
+                  HeroIcons[customIconName as keyof typeof HeroIcons]
                 ) {
-                  const IconComponent = Lucide[
-                    customIconName as keyof typeof Lucide
+                  const IconComponent = HeroIcons[
+                    customIconName as keyof typeof HeroIcons
                   ] as React.ComponentType<{
                     size?: number;
                     className?: string;
@@ -937,10 +937,10 @@ export function SystemNode({
               {(() => {
                 if (
                   customIconName &&
-                  Lucide[customIconName as keyof typeof Lucide]
+                  HeroIcons[customIconName as keyof typeof HeroIcons]
                 ) {
-                  const IconComponent = Lucide[
-                    customIconName as keyof typeof Lucide
+                  const IconComponent = HeroIcons[
+                    customIconName as keyof typeof HeroIcons
                   ] as React.ComponentType<{
                     size?: number;
                     className?: string;

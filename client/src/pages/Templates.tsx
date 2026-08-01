@@ -1,6 +1,9 @@
 import { motion } from "framer-motion";
 import { Helmet } from "react-helmet-async";
-import { LayoutGrid, ArrowLeft } from "lucide-react";
+import {
+  Squares2X2Icon as LayoutGrid,
+  ArrowLeftIcon as ArrowLeft,
+} from "@heroicons/react/24/outline";
 import { Link } from "wouter";
 
 export default function Templates() {
@@ -27,7 +30,8 @@ export default function Templates() {
           Template Marketplace
         </h1>
         <p className="text-outline text-lg max-w-md mx-auto mb-10 font-body">
-          We're hand-crafting a library of production-ready architectures to help you skip the boilerplate.
+          We're hand-crafting a library of production-ready architectures to
+          help you skip the boilerplate.
         </p>
 
         <div className="flex items-center justify-center gap-6">

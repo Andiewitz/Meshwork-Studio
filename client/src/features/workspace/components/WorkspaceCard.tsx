@@ -2,29 +2,29 @@ import { Workspace } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
 import { motion } from "framer-motion";
 import {
-  MoreVertical,
-  Pencil,
-  Trash,
-  ExternalLink,
-  Copy,
-  Star,
-  Box,
-  LayoutGrid,
-  Server,
-  Globe,
-  Database,
-  Shield,
-  GitBranch,
-  Zap,
-  Cpu,
-  Network,
-  Cloud,
-  Lock,
-  BarChart3,
-  Code2,
-  Wifi,
-  Users,
-} from "lucide-react";
+  EllipsisVerticalIcon,
+  PencilIcon,
+  TrashIcon,
+  ArrowTopRightOnSquareIcon,
+  DocumentDuplicateIcon,
+  StarIcon,
+  CubeIcon,
+  Squares2X2Icon,
+  ServerIcon,
+  GlobeAltIcon,
+  CircleStackIcon,
+  ShieldCheckIcon,
+  ShareIcon,
+  BoltIcon,
+  CpuChipIcon,
+  CloudIcon,
+  LockClosedIcon,
+  ChartBarIcon,
+  CodeBracketIcon,
+  WifiIcon,
+  UserGroupIcon,
+} from "@heroicons/react/24/outline";
+import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,29 +45,28 @@ import {
 } from "@/hooks/use-workspaces";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ICON_MAP: Record<string, LucideIcon> = {
-  server: Server,
-  globe: Globe,
-  box: Box,
-  database: Database,
-  shield: Shield,
-  git: GitBranch,
-  zap: Zap,
-  cpu: Cpu,
-  network: Network,
-  cloud: Cloud,
-  lock: Lock,
-  chart: BarChart3,
-  code: Code2,
-  wifi: Wifi,
-  grid: LayoutGrid,
+const ICON_MAP: Record<string, React.ComponentType<any>> = {
+  server: ServerIcon,
+  globe: GlobeAltIcon,
+  box: CubeIcon,
+  database: CircleStackIcon,
+  shield: ShieldCheckIcon,
+  git: ShareIcon,
+  zap: BoltIcon,
+  cpu: CpuChipIcon,
+  network: ShareIcon,
+  cloud: CloudIcon,
+  lock: LockClosedIcon,
+  chart: ChartBarIcon,
+  code: CodeBracketIcon,
+  wifi: WifiIcon,
+  grid: Squares2X2Icon,
 };
 
-function getWorkspaceIcon(iconId?: string): LucideIcon {
-  return ICON_MAP[iconId || "box"] || Box;
+function getWorkspaceIcon(iconId?: string): React.ComponentType<any> {
+  return ICON_MAP[iconId || "box"] || CubeIcon;
 }
 
 interface WorkspaceCardProps {
@@ -178,7 +177,7 @@ export function WorkspaceCard({
         onClick={() => setLocation(`/workspace/${workspace.id}`)}
         className="cursor-figma-pointer focus:bg-surface-container-high focus:text-primary"
       >
-        <ExternalLink className="w-4 h-4 mr-2" /> Open
+        <ArrowTopRightOnSquareIcon className="w-4 h-4 mr-2" /> Open
       </DropdownMenuItem>
       {!isShared && (
         <DropdownMenuItem
@@ -188,7 +187,7 @@ export function WorkspaceCard({
           }}
           className="cursor-figma-pointer focus:bg-surface-container-high focus:text-white"
         >
-          <Pencil className="w-4 h-4 mr-2" /> Rename
+          <PencilIcon className="w-4 h-4 mr-2" /> Rename
         </DropdownMenuItem>
       )}
       <DropdownMenuItem
@@ -198,7 +197,7 @@ export function WorkspaceCard({
         }}
         className="cursor-figma-pointer focus:bg-surface-container-high focus:text-white"
       >
-        <Copy className="w-4 h-4 mr-2" /> Duplicate
+        <DocumentDuplicateIcon className="w-4 h-4 mr-2" /> Duplicate
       </DropdownMenuItem>
       {!isShared && (
         <>
@@ -210,7 +209,7 @@ export function WorkspaceCard({
             }}
             className="text-error focus:bg-error/10 focus:text-error cursor-figma-pointer"
           >
-            <Trash className="w-4 h-4 mr-2" /> Delete
+            <TrashIcon className="w-4 h-4 mr-2" /> Delete
           </DropdownMenuItem>
         </>
       )}
@@ -258,7 +257,7 @@ export function WorkspaceCard({
             {/* Shared badge */}
             {isShared && (
               <div className="absolute top-3 left-3 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 backdrop-blur-sm">
-                <Users className="w-3 h-3 text-blue-400" />
+                <UserGroupIcon className="w-3 h-3 text-blue-400" />
                 <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">
                   Shared
                 </span>
@@ -276,12 +275,11 @@ export function WorkspaceCard({
                     : "text-white/20 opacity-0 group-hover:opacity-100 hover:text-white/60",
                 )}
               >
-                <Star
-                  className={cn(
-                    "w-4 h-4",
-                    workspace.isFavorite && "fill-current",
-                  )}
-                />
+                {workspace.isFavorite ? (
+                  <StarSolid className="w-4 h-4 fill-current" />
+                ) : (
+                  <StarIcon className="w-4 h-4" />
+                )}
               </button>
             )}
           </div>
@@ -345,7 +343,7 @@ export function WorkspaceCard({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="w-7 h-7 rounded-md flex items-center justify-center text-[#555] hover:text-white hover:bg-white/5 transition-all opacity-0 group-hover:opacity-100 cursor-figma-pointer">
-                      <MoreVertical className="w-4 h-4" />
+                      <EllipsisVerticalIcon className="w-4 h-4" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent

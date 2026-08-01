@@ -3,37 +3,36 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { Helmet } from "react-helmet-async";
 import {
-  Users,
-  Plus,
-  Copy,
-  Check,
-  LogOut,
-  Trash2,
-  RefreshCw,
-  ArrowRight,
-  Crown,
-  Share2,
-  ExternalLink,
-  Calendar,
-  UserMinus,
-  Loader2,
-  Box,
-  Server,
-  Globe,
-  Database,
-  Shield,
-  GitBranch,
-  Zap,
-  Cpu,
-  Network,
-  Cloud,
-  Lock,
-  BarChart3,
-  Code2,
-  Wifi,
-  LayoutGrid,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+  UserGroupIcon as Users,
+  PlusIcon as Plus,
+  DocumentDuplicateIcon as Copy,
+  CheckIcon as Check,
+  ArrowRightStartOnRectangleIcon as LogOut,
+  TrashIcon as Trash2,
+  ArrowPathIcon as RefreshCw,
+  ArrowRightIcon as ArrowRight,
+  SparklesIcon as Crown,
+  ShareIcon as Share2,
+  ArrowTopRightOnSquareIcon as ExternalLink,
+  CalendarIcon as Calendar,
+  UserMinusIcon as UserMinus,
+  ArrowPathIcon as Loader2,
+  CubeIcon as Box,
+  ServerIcon as Server,
+  GlobeAltIcon as Globe,
+  CircleStackIcon as Database,
+  ShieldCheckIcon as Shield,
+  CodeBracketIcon as GitBranch,
+  BoltIcon as Zap,
+  CpuChipIcon as Cpu,
+  GlobeAltIcon as Network,
+  CloudIcon as Cloud,
+  LockClosedIcon as Lock,
+  ChartBarIcon as BarChart3,
+  CodeBracketIcon as Code2,
+  SignalIcon as Wifi,
+  Squares2X2Icon as LayoutGrid,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/use-auth";
 import {
   useTeams,
@@ -60,7 +59,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 // ─── Icon Map ────────────────────────────────────────────────────────
-const ICON_MAP: Record<string, LucideIcon> = {
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   server: Server,
   globe: Globe,
   box: Box,
@@ -77,7 +76,9 @@ const ICON_MAP: Record<string, LucideIcon> = {
   wifi: Wifi,
   grid: LayoutGrid,
 };
-function getWsIcon(iconId?: string | null): LucideIcon {
+function getWsIcon(
+  iconId?: string | null,
+): React.ComponentType<{ className?: string }> {
   return ICON_MAP[iconId || "box"] || Box;
 }
 

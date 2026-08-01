@@ -1,6 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sparkles, Bot, Loader2, ChevronDown } from "lucide-react";
+import {
+  PaperAirplaneIcon,
+  SparklesIcon,
+  CpuChipIcon,
+  ArrowPathIcon,
+  ChevronDownIcon,
+} from "@heroicons/react/24/outline";
 import { useReactFlow, useNodes, useEdges } from "@xyflow/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -492,13 +498,13 @@ export function AiChatDrawer({
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
         >
-          <ChevronDown className="w-3.5 h-3.5 text-white/50" />
+          <ChevronDownIcon className="w-3.5 h-3.5 text-white/50" />
         </motion.div>
         <motion.div
           animate={{ scale: [1, 1.2, 1], opacity: [0.7, 1, 0.7] }}
           transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
         >
-          <Bot className="w-3.5 h-3.5 text-[#00E5A0]" />
+          <CpuChipIcon className="w-3.5 h-3.5 text-[#00E5A0]" />
         </motion.div>
         <span className="text-[11px] font-semibold tracking-widest uppercase text-white/60">
           Mosh
@@ -528,11 +534,11 @@ export function AiChatDrawer({
                     boxShadow: "0 2px 12px rgba(16, 185, 129, 0.4)",
                   }}
                 >
-                  <Bot className="w-4 h-4 text-white" />
+                  <CpuChipIcon className="w-4 h-4 text-white" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[12px] font-semibold text-white/90 tracking-wide">
+                    <span className="text-[12px] font-[#00E5A0] font-semibold text-white/90 tracking-wide">
                       MOSH
                     </span>
                     <span className="text-[9px] text-[#00E5A0] border border-[rgba(0,229,160,0.22)] bg-[rgba(0,229,160,0.10)] px-1.5 py-0.5 rounded font-mono tracking-wider">
@@ -555,7 +561,7 @@ export function AiChatDrawer({
                 onClick={() => setIsOpen(false)}
                 className="w-8 h-8 flex items-center justify-center rounded-xl text-white/20 hover:text-white/60 hover:bg-white/5 transition-all"
               >
-                <ChevronDown className="w-4 h-4" />
+                <ChevronDownIcon className="w-4 h-4" />
               </button>
             </div>
 
@@ -570,7 +576,7 @@ export function AiChatDrawer({
                   className="flex flex-col items-center justify-center text-center mt-8 mb-6 space-y-6"
                 >
                   <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white/[0.02] border border-white/[0.05] shadow-lg">
-                    <Bot className="w-8 h-8 text-[#00E5A0]" />
+                    <CpuChipIcon className="w-8 h-8 text-[#00E5A0]" />
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-white font-medium text-sm">
@@ -588,7 +594,7 @@ export function AiChatDrawer({
                             key={i}
                             className="h-[38px] w-full rounded-xl bg-white/[0.02] border border-white/[0.04] animate-pulse flex items-center px-3"
                           >
-                            <Bot className="w-3.5 h-3.5 text-[#10B981]/30 mr-2 shrink-0" />
+                            <CpuChipIcon className="w-3.5 h-3.5 text-[#10B981]/30 mr-2 shrink-0" />
                             <div className="h-3 bg-white/[0.06] rounded w-2/3" />
                           </div>
                         ))
@@ -604,7 +610,7 @@ export function AiChatDrawer({
                             }}
                             className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] text-white/60 border border-white/[0.06] hover:border-[rgba(0,229,160,0.3)] hover:text-white/90 hover:bg-[rgba(0,229,160,0.08)] transition-all cursor-pointer text-left w-full group"
                           >
-                            <Bot className="w-3.5 h-3.5 text-[#00E5A0] group-hover:text-[#00E5A0] transition-colors shrink-0" />
+                            <CpuChipIcon className="w-3.5 h-3.5 text-[#00E5A0] group-hover:text-[#00E5A0] transition-colors shrink-0" />
                             <span className="truncate">{s}</span>
                           </motion.button>
                         ))}
@@ -628,7 +634,7 @@ export function AiChatDrawer({
                         background: "linear-gradient(145deg, #1E1E1E, #141414)",
                       }}
                     >
-                      <Bot className="w-3.5 h-3.5 text-[#00E5A0]" />
+                      <CpuChipIcon className="w-3.5 h-3.5 text-[#00E5A0]" />
                     </div>
                   )}
                   <div
@@ -689,7 +695,7 @@ export function AiChatDrawer({
                         background: "linear-gradient(145deg, #1E1E1E, #141414)",
                       }}
                     >
-                      <Loader2 className="w-3.5 h-3.5 text-[#10B981] animate-spin" />
+                      <ArrowPathIcon className="w-3.5 h-3.5 text-[#10B981] animate-spin" />
                     </div>
                     <div
                       className="px-4 py-3 rounded-2xl rounded-tl-sm flex w-full max-w-[82%]"
@@ -743,14 +749,14 @@ export function AiChatDrawer({
                   whileHover={input.trim() && !isLoading ? { scale: 1.05 } : {}}
                   whileTap={input.trim() && !isLoading ? { scale: 0.95 } : {}}
                 >
-                  <Send
+                  <PaperAirplaneIcon
                     className="w-4 h-4"
                     style={{ opacity: input.trim() && !isLoading ? 1 : 0.25 }}
                   />
                 </motion.button>
               </form>
               <div className="flex items-center justify-center gap-1.5 mt-2.5">
-                <Sparkles className="w-2.5 h-2.5 text-white/15" />
+                <SparklesIcon className="w-2.5 h-2.5 text-white/15" />
                 <span className="text-[10px] text-white/20 tracking-wide">
                   Enter to send · Shift+Enter for new line
                 </span>

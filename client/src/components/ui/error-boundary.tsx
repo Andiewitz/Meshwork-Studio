@@ -1,5 +1,8 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import {
+  ExclamationCircleIcon,
+  ArrowPathIcon,
+} from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 
 interface Props {
@@ -23,7 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
-    
+
     // Auto-reload for ChunkLoadError (user is on an old deployment version)
     if (
       error.name === "ChunkLoadError" ||
@@ -45,11 +48,13 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
           <div className="flex max-w-md flex-col items-center space-y-6 text-center">
             <div className="rounded-full bg-destructive/10 p-4">
-              <AlertCircle className="h-10 w-10 text-destructive" />
+              <ExclamationCircleIcon className="h-10 w-10 text-destructive" />
             </div>
-            
+
             <div className="space-y-2">
-              <h2 className="text-2xl font-semibold tracking-tight">Something went wrong</h2>
+              <h2 className="text-2xl font-semibold tracking-tight">
+                Something went wrong
+              </h2>
               <p className="text-sm text-muted-foreground">
                 We encountered an unexpected error while rendering this page.
               </p>
@@ -64,7 +69,7 @@ export class ErrorBoundary extends Component<Props, State> {
             )}
 
             <Button onClick={this.handleReset} className="mt-4 gap-2">
-              <RefreshCw className="h-4 w-4" />
+              <ArrowPathIcon className="h-4 w-4" />
               Return to Home
             </Button>
           </div>

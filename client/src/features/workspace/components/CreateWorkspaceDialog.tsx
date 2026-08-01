@@ -8,18 +8,18 @@ import { useCreateWorkspace, useWorkspaces } from "@/hooks/use-workspaces";
 import { useAuth } from "@/hooks/use-auth";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
-  Loader2,
-  Server,
-  Globe,
-  Box,
-  Database,
-  Shield,
-  GitBranch,
-  Cpu,
-  Cloud,
-  Code2,
-  ChevronRight,
-} from "lucide-react";
+  ArrowPathIcon,
+  ServerIcon,
+  GlobeAltIcon,
+  CubeIcon,
+  CircleStackIcon,
+  ShieldCheckIcon,
+  ShareIcon,
+  CpuChipIcon,
+  CloudIcon,
+  CodeBracketIcon,
+  ChevronRightIcon,
+} from "@heroicons/react/24/outline";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { MeshworkLogo } from "@/components/MeshworkLogo";
@@ -41,15 +41,15 @@ interface CreateWorkspaceDialogProps {
 
 // Curated set of 8 icons — clean, not overwhelming
 const PROJECT_ICONS = [
-  { id: "box", Icon: Box, label: "Default" },
-  { id: "server", Icon: Server, label: "Server" },
-  { id: "globe", Icon: Globe, label: "Web" },
-  { id: "database", Icon: Database, label: "Data" },
-  { id: "code", Icon: Code2, label: "Code" },
-  { id: "cpu", Icon: Cpu, label: "System" },
-  { id: "cloud", Icon: Cloud, label: "Cloud" },
-  { id: "shield", Icon: Shield, label: "Security" },
-  { id: "git", Icon: GitBranch, label: "Version" },
+  { id: "box", Icon: CubeIcon, label: "Default" },
+  { id: "server", Icon: ServerIcon, label: "Server" },
+  { id: "globe", Icon: GlobeAltIcon, label: "Web" },
+  { id: "database", Icon: CircleStackIcon, label: "Data" },
+  { id: "code", Icon: CodeBracketIcon, label: "Code" },
+  { id: "cpu", Icon: CpuChipIcon, label: "System" },
+  { id: "cloud", Icon: CloudIcon, label: "Cloud" },
+  { id: "shield", Icon: ShieldCheckIcon, label: "Security" },
+  { id: "git", Icon: ShareIcon, label: "Version" },
 ];
 
 export function CreateWorkspaceDialog({
@@ -110,7 +110,7 @@ export function CreateWorkspaceDialog({
   };
 
   const SelectedIconComp =
-    PROJECT_ICONS.find((i) => i.id === selectedIcon)?.Icon ?? Box;
+    PROJECT_ICONS.find((i) => i.id === selectedIcon)?.Icon ?? CubeIcon;
   const titleValue = form.watch("title");
 
   return (
@@ -228,7 +228,7 @@ export function CreateWorkspaceDialog({
                 <span className="text-[12px] text-[#666] group-hover:text-[#888] transition-colors">
                   Or start from a template
                 </span>
-                <ChevronRight className="w-3.5 h-3.5 text-[#444] group-hover:text-[#666] transition-colors" />
+                <ChevronRightIcon className="w-3.5 h-3.5 text-[#444] group-hover:text-[#666] transition-colors" />
               </div>
             </Link>
 
@@ -258,7 +258,7 @@ export function CreateWorkspaceDialog({
                 >
                   {createWorkspace.isPending ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
                       Creating...
                     </>
                   ) : (

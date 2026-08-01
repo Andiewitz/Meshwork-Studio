@@ -6,16 +6,16 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import {
-  MousePointer2,
-  Hand,
-  Square,
-  Spline,
-  Minus,
-  ArrowRight,
-  Milestone,
-  Pencil,
-  Maximize,
-} from "lucide-react";
+  CursorArrowRaysIcon,
+  HandRaisedIcon,
+  RectangleGroupIcon,
+  ShareIcon,
+  MinusIcon,
+  ArrowRightIcon,
+  FlagIcon,
+  PencilIcon,
+  ArrowsPointingOutIcon,
+} from "@heroicons/react/24/outline";
 import { Panel } from "@xyflow/react";
 import type { Edge } from "@xyflow/react";
 import type {
@@ -59,8 +59,12 @@ export function WorkspaceToolbar({
         className="flex items-center rounded-2xl p-1.5 gap-0.5 bg-[#121214]/80 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)]"
       >
         {[
-          { mode: "select" as const, icon: MousePointer2, title: "Select" },
-          { mode: "pan" as const, icon: Hand, title: "Pan" },
+          {
+            mode: "select" as const,
+            icon: CursorArrowRaysIcon,
+            title: "Select",
+          },
+          { mode: "pan" as const, icon: HandRaisedIcon, title: "Pan" },
         ].map((tool) => (
           <motion.button
             key={tool.mode}
@@ -85,7 +89,7 @@ export function WorkspaceToolbar({
           title="Infrastructure Zone"
           whileTap={{ scale: 0.92 }}
         >
-          <Square className="w-4 h-4" />
+          <RectangleGroupIcon className="w-4 h-4" />
         </motion.button>
 
         <Popover>
@@ -95,7 +99,7 @@ export function WorkspaceToolbar({
               title="Connection Settings"
               whileTap={{ scale: 0.92 }}
             >
-              <Spline className="w-4 h-4" />
+              <ShareIcon className="w-4 h-4" />
             </motion.button>
           </PopoverTrigger>
           <PopoverContent
@@ -113,19 +117,19 @@ export function WorkspaceToolbar({
                   {
                     id: "solid",
                     label: "Normal",
-                    icon: Minus,
+                    icon: MinusIcon,
                     hasArrow: false,
                   },
                   {
                     id: "dashed",
                     label: "Broken",
-                    icon: Minus,
+                    icon: MinusIcon,
                     hasArrow: false,
                   },
                   {
                     id: "arrow",
                     label: "Arrow",
-                    icon: ArrowRight,
+                    icon: ArrowRightIcon,
                     hasArrow: true,
                   },
                 ].map((style) => {
@@ -179,11 +183,11 @@ export function WorkspaceToolbar({
                   {
                     id: "straight",
                     label: "Diagonal",
-                    icon: Minus,
+                    icon: MinusIcon,
                     rotate: true,
                   },
-                  { id: "default", label: "Curved", icon: Spline },
-                  { id: "step", label: "Orthogonal", icon: Milestone },
+                  { id: "default", label: "Curved", icon: ShareIcon },
+                  { id: "step", label: "Orthogonal", icon: FlagIcon },
                 ].map((tool) => (
                   <button
                     key={tool.id}
@@ -218,7 +222,7 @@ export function WorkspaceToolbar({
           title="Annotation"
           whileTap={{ scale: 0.92 }}
         >
-          <Pencil className="w-4 h-4" />
+          <PencilIcon className="w-4 h-4" />
         </motion.button>
 
         <motion.button
@@ -227,7 +231,7 @@ export function WorkspaceToolbar({
           title="Fit View"
           whileTap={{ scale: 0.92 }}
         >
-          <Maximize className="w-4 h-4" />
+          <ArrowsPointingOutIcon className="w-4 h-4" />
         </motion.button>
       </motion.div>
     </Panel>

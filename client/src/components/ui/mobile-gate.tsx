@@ -3,7 +3,10 @@ import ReactDOM from "react-dom";
 import { motion } from "framer-motion";
 import { MeshworkLogo } from "@/components/MeshworkLogo";
 import { AnimatedSpinner } from "@/components/ui/animated-spinner";
-import { Monitor, ArrowLeft } from "lucide-react";
+import {
+  ComputerDesktopIcon,
+  ArrowLeftIcon,
+} from "@heroicons/react/24/outline";
 
 export function MobileGate() {
   const [mounted, setMounted] = useState(false);
@@ -42,7 +45,7 @@ export function MobileGate() {
 
         {/* Badge */}
         <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[10px] font-medium text-white/50 uppercase tracking-wider">
-          <Monitor className="h-3 w-3" />
+          <ComputerDesktopIcon className="h-3 w-3" />
           <span>Desktop Only</span>
         </div>
 
@@ -68,7 +71,7 @@ export function MobileGate() {
           href="/"
           className="w-full flex items-center justify-center gap-2 rounded-lg bg-white/[0.06] border border-white/10 px-4 py-2 text-xs font-medium text-white hover:bg-white/10 transition-colors cursor-figma-pointer"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeftIcon className="h-3.5 w-3.5" />
           Back to home
         </a>
       </motion.div>

@@ -1,6 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
-import { Search, ChevronRight, Menu, X, Copy, BookOpen } from "lucide-react";
+import {
+  MagnifyingGlassIcon as Search,
+  ChevronRightIcon as ChevronRight,
+  Bars3Icon as Menu,
+  XMarkIcon as X,
+  DocumentDuplicateIcon as Copy,
+  BookOpenIcon as BookOpen,
+} from "@heroicons/react/24/outline";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";

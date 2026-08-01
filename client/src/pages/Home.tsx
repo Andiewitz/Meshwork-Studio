@@ -11,13 +11,13 @@ import { secureFetch } from "@/lib/secure-fetch";
 import { WorkspaceCard } from "@/features/workspace/components/WorkspaceCard";
 import { CreateWorkspaceDialog } from "@/features/workspace/components/CreateWorkspaceDialog";
 import {
-  Search,
-  LayoutGrid,
-  List,
-  Package,
-  ChevronDown,
-  Plus,
-} from "lucide-react";
+  MagnifyingGlassIcon as Search,
+  Squares2X2Icon as LayoutGrid,
+  Bars3Icon as List,
+  CubeIcon as Package,
+  ChevronDownIcon as ChevronDown,
+  PlusIcon as Plus,
+} from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
 import { LineSyncLoader } from "@/components/ui/loading-screen";
 

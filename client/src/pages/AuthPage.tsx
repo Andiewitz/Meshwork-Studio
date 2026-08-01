@@ -5,15 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Loader2,
-  Eye,
-  EyeOff,
-  AlertCircle,
-  Network,
-  FileCode2,
-  GitBranch,
-  Shield,
-} from "lucide-react";
+  ArrowPathIcon as Loader2,
+  EyeIcon as Eye,
+  EyeSlashIcon as EyeOff,
+  ExclamationTriangleIcon as AlertCircle,
+  GlobeAltIcon as Network,
+  CodeBracketIcon as FileCode2,
+  CodeBracketIcon as GitBranch,
+  ShieldCheckIcon as Shield,
+} from "@heroicons/react/24/outline";
 import { MeshworkLogo } from "@/components/MeshworkLogo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatUserErrorMessage } from "@/lib/error-utils";

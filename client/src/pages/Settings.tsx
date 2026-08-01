@@ -17,22 +17,22 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { aiService, type ApiKey, type Provider } from "@/lib/ai";
 import {
-  Loader2,
-  User,
-  Lock,
-  Trash2,
-  Download,
-  AlertTriangle,
-  Eye,
-  EyeOff,
-  Sun,
-  Moon,
-  Monitor,
-  Plus,
-  Key,
-  Check,
-  X,
-} from "lucide-react";
+  ArrowPathIcon as Loader2,
+  UserIcon as User,
+  LockClosedIcon as Lock,
+  TrashIcon as Trash2,
+  ArrowDownTrayIcon as Download,
+  ExclamationTriangleIcon as AlertTriangle,
+  EyeIcon as Eye,
+  EyeSlashIcon as EyeOff,
+  SunIcon as Sun,
+  MoonIcon as Moon,
+  ComputerDesktopIcon as Monitor,
+  PlusIcon as Plus,
+  KeyIcon as Key,
+  CheckIcon as Check,
+  XMarkIcon as X,
+} from "@heroicons/react/24/outline";
 import {
   AlertDialog,
   AlertDialogAction,

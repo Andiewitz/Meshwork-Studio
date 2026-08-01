@@ -4,7 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Eye, EyeOff, AlertCircle, X } from "lucide-react";
+import {
+  ArrowPathIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  ExclamationCircleIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import { MeshworkLogo } from "@/components/MeshworkLogo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuthModal } from "./AuthModalContext";
@@ -120,7 +126,7 @@ function LoginForm() {
           animate={{ opacity: 1, y: 0 }}
           className="p-3 mb-5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium flex items-start gap-2"
         >
-          <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+          <ExclamationCircleIcon className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
           {oauthError}
         </motion.div>
       )}
@@ -207,9 +213,9 @@ function LoginForm() {
               className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors"
             >
               {showPassword ? (
-                <EyeOff className="w-3.5 h-3.5" />
+                <EyeSlashIcon className="w-3.5 h-3.5" />
               ) : (
-                <Eye className="w-3.5 h-3.5" />
+                <EyeIcon className="w-3.5 h-3.5" />
               )}
             </button>
           </div>
@@ -222,7 +228,8 @@ function LoginForm() {
         >
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in...
+              <ArrowPathIcon className="mr-2 h-4 w-4 animate-spin" /> Signing
+              in...
             </>
           ) : (
             "Sign In"
@@ -532,9 +539,9 @@ function RegisterForm() {
               className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors"
             >
               {showPassword ? (
-                <EyeOff className="w-3.5 h-3.5" />
+                <EyeSlashIcon className="w-3.5 h-3.5" />
               ) : (
-                <Eye className="w-3.5 h-3.5" />
+                <EyeIcon className="w-3.5 h-3.5" />
               )}
             </button>
           </div>
@@ -614,9 +621,9 @@ function RegisterForm() {
               className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors"
             >
               {showConfirmPassword ? (
-                <EyeOff className="w-3.5 h-3.5" />
+                <EyeSlashIcon className="w-3.5 h-3.5" />
               ) : (
-                <Eye className="w-3.5 h-3.5" />
+                <EyeIcon className="w-3.5 h-3.5" />
               )}
             </button>
           </div>
@@ -650,7 +657,7 @@ function RegisterForm() {
         >
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating
+              <ArrowPathIcon className="mr-2 h-4 w-4 animate-spin" /> Creating
               account...
             </>
           ) : (
@@ -714,7 +721,7 @@ export function AuthModal() {
                   <div className="relative bg-[#111113] border border-white/[0.08] rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.7)] p-7">
                     {/* Close button */}
                     <DialogPrimitive.Close className="absolute right-4 top-4 text-white/30 hover:text-white transition-colors rounded-full p-1 hover:bg-white/10">
-                      <X className="w-4 h-4" />
+                      <XMarkIcon className="w-4 h-4" />
                       <span className="sr-only">Close</span>
                     </DialogPrimitive.Close>
 

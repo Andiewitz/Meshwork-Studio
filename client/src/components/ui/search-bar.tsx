@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  ArrowUpAZ,
-  ArrowDownAZ,
-  Search,
-  Package,
-  ArrowRight,
-} from "lucide-react";
+  MagnifyingGlassIcon,
+  CubeIcon,
+  ArrowRightIcon,
+  BarsArrowUpIcon,
+  BarsArrowDownIcon,
+} from "@heroicons/react/24/outline";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,7 +90,7 @@ const SearchBar = ({
       <div className="w-full max-w-2xl flex flex-col sm:flex-row gap-3 relative z-30">
         {/* Search input */}
         <div className="relative flex-1 group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30 pointer-events-none transition-colors group-focus-within:text-white/50" />
+          <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30 pointer-events-none transition-colors group-focus-within:text-white/50" />
           <Input
             ref={inputRef}
             type="text"
@@ -129,7 +129,7 @@ const SearchBar = ({
                       {filteredData.slice(0, 6).map((item) => (
                         <Link key={item.id} href={`/workspace/${item.id}`}>
                           <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.06] cursor-pointer transition-colors group/item">
-                            <Package className="w-4 h-4 text-white/30 group-hover/item:text-white transition-colors flex-shrink-0" />
+                            <CubeIcon className="w-4 h-4 text-white/30 group-hover/item:text-white transition-colors flex-shrink-0" />
                             <div className="flex flex-col flex-1 min-w-0">
                               <span className="text-sm text-white/80 group-hover/item:text-white transition-colors leading-tight truncate">
                                 {item.title}
@@ -138,7 +138,7 @@ const SearchBar = ({
                                 {item.type} · #{item.id}
                               </span>
                             </div>
-                            <ArrowRight className="w-4 h-4 text-white/20 opacity-0 group-hover/item:opacity-100 transition-opacity flex-shrink-0" />
+                            <ArrowRightIcon className="w-4 h-4 text-white/20 opacity-0 group-hover/item:opacity-100 transition-opacity flex-shrink-0" />
                           </div>
                         </Link>
                       ))}
@@ -194,7 +194,7 @@ const SearchBar = ({
               )}
             >
               <span>Title Ascending</span>
-              <ArrowUpAZ className="ml-2 h-4 w-4" />
+              <BarsArrowUpIcon className="ml-2 h-4 w-4" />
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setSortOrder("desc")}
@@ -204,7 +204,7 @@ const SearchBar = ({
               )}
             >
               <span>Title Descending</span>
-              <ArrowDownAZ className="ml-2 h-4 w-4" />
+              <BarsArrowDownIcon className="ml-2 h-4 w-4" />
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Helmet } from "react-helmet-async";
 import { MeshworkLogo } from "@/components/MeshworkLogo";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import Lenis from "lenis";
 
 const EFFECTIVE_DATE = "June 4, 2026";
@@ -131,7 +131,7 @@ export default function PrivacyPolicy() {
           </Link>
           <Link href="/">
             <button className="flex items-center gap-2 text-sm font-medium text-white/60 hover:text-white transition-colors cursor-pointer">
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeftIcon className="w-4 h-4" />
               Back to Home
             </button>
           </Link>

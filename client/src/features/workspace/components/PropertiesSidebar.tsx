@@ -4,18 +4,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Trash2,
-  Box,
-  X,
-  RotateCcw,
-  ChevronDown,
-  ChevronUp,
-  Sparkles,
-  Palette,
-  Tag,
-  Sliders,
-  ArrowRight,
-} from "lucide-react";
+  TrashIcon as Trash2,
+  CubeIcon as Box,
+  XMarkIcon as X,
+  ArrowPathIcon as RotateCcw,
+  ChevronDownIcon as ChevronDown,
+  ChevronUpIcon as ChevronUp,
+  SparklesIcon as Sparkles,
+  SwatchIcon as Palette,
+  TagIcon as Tag,
+  AdjustmentsHorizontalIcon as Sliders,
+  ArrowRightIcon as ArrowRight,
+} from "@heroicons/react/24/outline";
 import { nodeTypesList } from "@/features/workspace/utils/nodeTypes";
 import type { NodeData, EdgeData, NodeStyle } from "@/types/canvas";
 
