@@ -75,9 +75,11 @@ export function usePresence(
 
     // Build WS URL from current location
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = import.meta.env.VITE_API_URL
-      ? new URL(import.meta.env.VITE_API_URL as string).host
-      : window.location.host;
+    const rawUrl = (import.meta.env.VITE_API_URL as string) || "";
+    const host =
+      rawUrl && !rawUrl.includes("railway")
+        ? new URL(rawUrl).host
+        : window.location.host;
     const url = `${protocol}//${host}/ws`;
 
     const ws = new WebSocket(url);

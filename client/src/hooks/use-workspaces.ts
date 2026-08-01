@@ -16,7 +16,8 @@ import {
 } from "@shared/permissions";
 import type { Workspace } from "@shared/schema";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
+const rawApiUrl = (import.meta.env.VITE_API_URL as string) || "";
+const API_BASE_URL = rawApiUrl.includes("railway") ? "" : rawApiUrl;
 
 function getApiUrl(path: string): string {
   if (path.startsWith("http")) return path;

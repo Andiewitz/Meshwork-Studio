@@ -8,7 +8,8 @@ import { useQueryClient } from "@tanstack/react-query";
 // eslint-disable-next-line no-secrets/no-secrets
 const ONBOARDING_KEY = "meshwork_onboarding_complete";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+const rawApiUrl = (import.meta.env.VITE_API_URL as string) || "";
+const API_BASE_URL = rawApiUrl.includes("railway") ? "" : rawApiUrl;
 
 const ROLES = [
   { id: "developer", label: "Developer" },
