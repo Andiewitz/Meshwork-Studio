@@ -686,8 +686,6 @@ const Home = () => {
   const { scrollYProgress } = useScroll();
   const [scrolled, setScrolled] = useState(false);
   const [, setLocation] = useLocation();
-  const [activeCategory, setActiveCategory] =
-    useState<TemplateDefinition["category"]>("Featured");
 
   // State to toggle Documentation View vs Main Landing Page
   const [showDocsView, setShowDocsViewState] = useState(() => {
@@ -734,7 +732,16 @@ const Home = () => {
   };
 
   const activeTemplates = PRELOADED_TEMPLATES.filter(
-    (t) => t.category === activeCategory,
+    (t) =>
+      t.slug !== undefined &&
+      [
+        "meshwork-studio",
+        "airbnb",
+        "uber",
+        "shopify",
+        "claude.ai",
+        "figma",
+      ].includes(t.slug),
   );
 
   useEffect(() => {
@@ -1559,134 +1566,73 @@ const Home = () => {
               className="w-full relative z-10 py-20 border-t border-white/10"
             >
               <div className="max-w-6xl mx-auto px-6">
-                <div className="text-center mb-14">
+                <style
+                  dangerouslySetInnerHTML={{
+                    __html: `
+                  @keyframes glisten-sweep {
+                    0% { background-position: 0% 0%; }
+                    50% { background-position: 100% 100%; }
+                    100% { background-position: 0% 0%; }
+                  }
+                `,
+                  }}
+                />
+
+                <div className="mb-10">
                   <h2 className="font-sans text-fluid-h1 font-bold text-white tracking-tight">
                     Templates ready to Remix
                   </h2>
-
-                  <div className="flex flex-wrap justify-center gap-2 mt-10">
-                    {[
-                      "Featured",
-                      "Cloud Architectures",
-                      "Full-Stack",
-                      "Data Pipelines",
-                    ].map((category) => (
-                      <button
-                        key={category}
-                        onClick={() =>
-                          setActiveCategory(
-                            category as TemplateDefinition["category"],
-                          )
-                        }
-                        className={`rounded-full px-5 py-2 text-[13px] font-medium flex items-center gap-2 transition-all ${
-                          activeCategory === category
-                            ? "bg-white/[0.08] text-white border border-white/10 backdrop-blur-sm"
-                            : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
-                        }`}
-                      >
-                        {category === "Featured" && (
-                          <Sparkles className="w-3.5 h-3.5" />
-                        )}
-                        {category === "Cloud Architectures" && (
-                          <Network className="w-3.5 h-3.5" />
-                        )}
-                        {category === "Full-Stack" && (
-                          <FileCode2 className="w-3.5 h-3.5" />
-                        )}
-                        {category === "Data Pipelines" && (
-                          <GitBranch className="w-3.5 h-3.5" />
-                        )}
-                        {category}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
-                <div className="border-t border-white/[0.06] mb-10" />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {activeTemplates.map((template) => {
                     const BRAND_LOGOS: Record<string, React.ReactNode> = {
                       "meshwork-studio": (
-                        <div className="w-6 h-6 flex items-center justify-center">
+                        <div className="w-5 h-5 flex items-center justify-center">
                           <MeshworkLogo />
                         </div>
                       ),
                       airbnb: (
-                        <svg
-                          viewBox="0 0 32 32"
-                          fill="currentColor"
-                          className="w-6 h-6 text-[#FF5A5F]"
-                        >
-                          <path d="M16 1c-2.4 0-4.5 1.5-5.6 3.6-1.8 3.5-3.5 7.1-5.1 10.7-1.4 3-2.3 6.3-2.3 9.7C3 28.6 6.4 32 10.5 32c2.7 0 5.1-1.4 6.5-3.5 1.4 2.1 3.8 3.5 6.5 3.5 4.1 0 7.5-3.4 7.5-7 0-3.4-.9-6.7-2.3-9.7-1.6-3.6-3.3-7.2-5.1-10.7C22.5 2.5 20.4 1 18 1h-2zm0 4c1.1 0 2.2.8 2.8 2 1.6 3.3 3.3 6.7 4.9 10.1 1.2 2.7 1.9 5.5 1.9 8.4 0 2.5-2.1 4.5-4.6 4.5-2.2 0-4.1-1.6-4.5-3.8l-.1-.7-.1.7c-.4 2.2-2.3 3.8-4.5 3.8-2.5 0-4.6-2-4.6-4.5 0-2.9.7-5.7 1.9-8.4C11 13.7 12.7 10.3 14.3 7c.6-1.2 1.7-2 2.7-2z" />
-                        </svg>
+                        <img
+                          src="https://cdn.simpleicons.org/airbnb/FF5A5F"
+                          className="w-5 h-5"
+                          alt="Airbnb"
+                        />
                       ),
                       uber: (
-                        <div className="w-6 h-6 rounded bg-white text-black flex items-center justify-center font-extrabold text-[10px] font-sans tracking-tighter">
-                          UBER
-                        </div>
+                        <img
+                          src="https://cdn.simpleicons.org/uber/FFFFFF"
+                          className="w-5 h-5"
+                          alt="Uber"
+                        />
                       ),
                       shopify: (
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          className="w-6 h-6"
-                        >
-                          <path
-                            d="M15.34 3.5c-.32 0-.6.2-.71.5L13.8 6.5H10.2L9.37 4c-.11-.3-.39-.5-.71-.5H6.2c-.32 0-.6.2-.71.5L1 18.5c-.1.35.15.7.5.7h13c.35 0 .6-.35.5-.7L10.5 4c-.11-.3-.39-.5-.71-.5h-4.45z"
-                            fill="#95BF47"
-                          />
-                          <path
-                            d="M19.5 7.5L16.2 3.5c-.32 0-.6.2-.71.5L14.6 7.5h4.9z"
-                            fill="#5E8E3E"
-                          />
-                        </svg>
+                        <img
+                          src="https://cdn.simpleicons.org/shopify/96BF47"
+                          className="w-5 h-5"
+                          alt="Shopify"
+                        />
                       ),
                       "claude.ai": (
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="w-6 h-6 text-[#D97706]"
-                        >
-                          <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2z" />
-                        </svg>
+                        <img
+                          src="https://cdn.simpleicons.org/anthropic/CC9B7A"
+                          className="w-5 h-5"
+                          alt="Claude.ai"
+                        />
                       ),
                       "claude-ai": (
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="w-6 h-6 text-[#D97706]"
-                        >
-                          <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2z" />
-                        </svg>
+                        <img
+                          src="https://cdn.simpleicons.org/anthropic/CC9B7A"
+                          className="w-5 h-5"
+                          alt="Claude.ai"
+                        />
                       ),
                       figma: (
-                        <svg
-                          viewBox="0 0 38 57"
-                          fill="none"
-                          className="w-4 h-6"
-                        >
-                          <path
-                            d="M19 28.5C19 23.2533 23.2533 19 28.5 19C33.7467 19 38 23.2533 38 28.5C38 33.7467 33.7467 38 28.5 38H19V28.5Z"
-                            fill="#1ABCFE"
-                          />
-                          <path
-                            d="M0 47.5C0 42.2533 4.25329 38 9.5 38H19V47.5C19 52.7467 14.7467 57 9.5 57C4.25329 57 0 52.7467 0 47.5Z"
-                            fill="#0ACF83"
-                          />
-                          <path
-                            d="M19 0V19H28.5C33.7467 19 38 14.7467 38 9.5C38 4.25329 33.7467 0 28.5 0H19Z"
-                            fill="#FF7262"
-                          />
-                          <path
-                            d="M0 9.5C0 14.7467 4.25329 19 9.5 19H19V0H9.5C4.25329 0 0 4.25329 0 9.5Z"
-                            fill="#F24E1E"
-                          />
-                          <path
-                            d="M0 28.5C0 33.7467 4.25329 38 9.5 38H19V19H9.5C4.25329 19 0 23.2533 0 28.5Z"
-                            fill="#A259FF"
-                          />
-                        </svg>
+                        <img
+                          src="https://cdn.simpleicons.org/figma/F24E1E"
+                          className="w-5 h-5"
+                          alt="Figma"
+                        />
                       ),
                     };
 
@@ -1694,56 +1640,93 @@ const Home = () => {
                       <Sparkles className="w-5 h-5 text-white/60" />
                     );
 
+                    const BRAND_SHADOWS: Record<
+                      string,
+                      { shadow: string; glisten: string }
+                    > = {
+                      "meshwork-studio": {
+                        shadow:
+                          "0 18px 45px -10px rgba(37,99,235,0.35), 0 6px 18px -4px rgba(99,102,241,0.2)",
+                        glisten:
+                          "linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.4) 20%, rgba(59,130,246,0.5) 40%, transparent 60%, rgba(255,255,255,0.35) 80%, transparent 100%)",
+                      },
+                      airbnb: {
+                        shadow:
+                          "0 18px 45px -10px rgba(255,90,95,0.35), 0 6px 18px -4px rgba(255,90,95,0.18)",
+                        glisten:
+                          "linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.4) 20%, rgba(255,90,95,0.45) 40%, transparent 60%, rgba(255,255,255,0.35) 80%, transparent 100%)",
+                      },
+                      uber: {
+                        shadow:
+                          "0 18px 45px -10px rgba(180,180,180,0.2), 0 6px 18px -4px rgba(140,140,140,0.12)",
+                        glisten:
+                          "linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.5) 20%, rgba(200,200,200,0.35) 40%, transparent 60%, rgba(255,255,255,0.45) 80%, transparent 100%)",
+                      },
+                      shopify: {
+                        shadow:
+                          "0 18px 45px -10px rgba(150,191,71,0.32), 0 6px 18px -4px rgba(150,191,71,0.18)",
+                        glisten:
+                          "linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.4) 20%, rgba(150,191,71,0.45) 40%, transparent 60%, rgba(255,255,255,0.35) 80%, transparent 100%)",
+                      },
+                      "claude.ai": {
+                        shadow:
+                          "0 18px 45px -10px rgba(204,155,122,0.35), 0 6px 18px -4px rgba(204,155,122,0.18)",
+                        glisten:
+                          "linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.4) 20%, rgba(204,155,122,0.45) 40%, transparent 60%, rgba(255,255,255,0.35) 80%, transparent 100%)",
+                      },
+                      figma: {
+                        shadow:
+                          "0 18px 45px -10px rgba(242,78,30,0.3), 0 6px 18px -4px rgba(26,188,254,0.2)",
+                        glisten:
+                          "linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.4) 20%, rgba(162,89,255,0.4) 40%, transparent 60%, rgba(26,188,254,0.35) 80%, transparent 100%)",
+                      },
+                    };
+
+                    const brandStyle =
+                      BRAND_SHADOWS[template.slug || template.id] ??
+                      BRAND_SHADOWS["meshwork-studio"];
+
                     return (
                       <div
                         key={template.id}
                         onClick={() => handleTemplateClick(template)}
-                        className="group relative cursor-pointer rounded-2xl bg-[#090b10]/90 border border-white/[0.08] hover:border-blue-500/50 p-6 flex flex-col justify-between h-[210px] transition-all duration-300 hover:shadow-[0_10px_35px_rgba(37,99,235,0.18)] hover:-translate-y-1 overflow-hidden"
+                        className="group relative cursor-pointer rounded-xl bg-[#0d0d12] border border-white/[0.08] p-6 flex flex-col gap-4 transition-all duration-200 hover:border-white/[0.15] hover:bg-[#111117] overflow-hidden"
+                        style={{ boxShadow: brandStyle.shadow }}
                       >
-                        {/* Glistening border sheen on hover / active */}
+                        {/* Glistening border sheen — brand-colored on hover */}
                         <div
                           aria-hidden="true"
-                          className="absolute -inset-[1px] rounded-[17px] pointer-events-none p-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
+                          className="absolute -inset-[1px] rounded-[13px] pointer-events-none p-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"
                           style={{
-                            background:
-                              "linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.5) 20%, rgba(59,130,246,0.5) 50%, transparent 80%)",
+                            background: brandStyle.glisten,
                             backgroundSize: "250% 250%",
-                            animation: "glisten-sweep 8s linear infinite",
+                            animation: "glisten-sweep 8s ease-in-out infinite",
                             WebkitMask:
                               "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
                             WebkitMaskComposite: "xor",
                             maskComposite: "exclude",
                           }}
                         />
-
-                        {/* Top Header: Title Left, Brand Logo Right */}
-                        <div>
-                          <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-white text-xl font-bold font-sans tracking-tight group-hover:text-blue-400 transition-colors">
-                              {template.title}
-                            </h3>
-                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.08] group-hover:border-white/20 transition-all">
-                              {logo}
-                            </div>
+                        {/* Top: Title + Logo Badge */}
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="text-[15px] font-medium text-white/90 font-sans leading-snug">
+                            {template.title}
+                          </h3>
+                          <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-white/[0.05] border border-white/[0.08]">
+                            {logo}
                           </div>
-
-                          {/* Description */}
-                          <p className="text-white/50 text-sm leading-relaxed font-sans line-clamp-3">
-                            {template.description}
-                          </p>
                         </div>
 
-                        {/* Footer Stats & Remix indicator */}
-                        <div className="flex items-center justify-between pt-4 border-t border-white/[0.05] mt-auto text-xs text-white/40 font-mono">
-                          <div className="flex items-center gap-1.5 text-white/50 group-hover:text-white/80 transition-colors">
-                            <span className="text-xs">☆</span>
-                            <span>
-                              {template.stars ||
-                                `${template.nodes.length} nodes`}
-                            </span>
-                          </div>
-                          <span className="text-[11px] font-sans font-semibold text-blue-400/80 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all flex items-center gap-1">
-                            Remix <span className="text-xs">→</span>
+                        {/* Description */}
+                        <p className="text-[13px] text-white/45 leading-relaxed font-sans line-clamp-3 flex-1">
+                          {template.description}
+                        </p>
+
+                        {/* Footer */}
+                        <div className="flex items-center gap-1.5 text-white/35 text-[13px] font-mono pt-3 border-t border-white/[0.05]">
+                          <span className="text-xs">☆</span>
+                          <span>
+                            {template.stars || `${template.nodes.length} nodes`}
                           </span>
                         </div>
                       </div>
