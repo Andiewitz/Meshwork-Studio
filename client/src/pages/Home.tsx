@@ -19,7 +19,6 @@ import {
   PlusIcon as Plus,
 } from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
-import { LineSyncLoader } from "@/components/ui/loading-screen";
 
 const TABS = ["Recently viewed", "Shared with me", "Favorites"] as const;
 type Tab = (typeof TABS)[number];
@@ -153,17 +152,7 @@ export default function Home() {
     ? filteredWorkspaces
     : filteredWorkspaces.slice(0, 20);
 
-  if (isAuthLoading || isWorkspacesLoading || isGeneratingBlueprint) {
-    return (
-      <LineSyncLoader
-        message={
-          isGeneratingBlueprint
-            ? "Generating Blueprint..."
-            : "Loading blueprints"
-        }
-      />
-    );
-  }
+  const isLoading = isAuthLoading || isWorkspacesLoading;
 
   return (
     <>
@@ -177,6 +166,14 @@ export default function Home() {
 
       {/* Full-height flex column */}
       <div className="flex flex-col h-[calc(100vh-48px)]">
+        {/* Blueprint Generation Banner */}
+        {isGeneratingBlueprint && (
+          <div className="bg-primary/10 border-b border-primary/20 px-6 py-2 flex items-center justify-between animate-pulse">
+            <span className="text-xs text-primary font-medium">
+              Generating Architecture Blueprint... Please wait.
+            </span>
+          </div>
+        )}
         {/* ── Tab bar ── */}
         <div className="flex items-center justify-between border-b border-white/[0.05] px-6 py-0 shrink-0">
           {/* Left: tabs */}
@@ -294,8 +291,29 @@ export default function Home() {
         {/* ── Scrollable content ── */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-6">
-            {/* Empty state */}
-            {filteredWorkspaces.length === 0 && !searchTerm ? (
+            {/* Loading Skeleton */}
+            {isLoading ? (
+              <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div
+                    key={i}
+                    className="h-44 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 flex flex-col justify-between animate-pulse"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-white/10" />
+                      <div className="space-y-2 flex-1">
+                        <div className="h-3 w-3/4 bg-white/10 rounded" />
+                        <div className="h-2 w-1/2 bg-white/5 rounded" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-2 w-full bg-white/5 rounded" />
+                      <div className="h-2 w-2/3 bg-white/5 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredWorkspaces.length === 0 && !searchTerm ? (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}

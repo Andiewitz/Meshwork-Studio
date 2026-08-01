@@ -31,6 +31,8 @@ import {
   useOnboardingComplete,
 } from "@/components/ui/onboarding-modal";
 import { MobileGate } from "@/components/ui/mobile-gate";
+import { PageErrorBoundary } from "@/components/ui/page-error-boundary";
+import { preloadRoute } from "@/App";
 
 const sidebarVariants = {
   hidden: { opacity: 0, x: -20 },
@@ -202,6 +204,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 <motion.button
                   variants={itemVariants}
                   title={label}
+                  onMouseEnter={() => preloadRoute(href)}
+                  onFocus={() => preloadRoute(href)}
                   className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all duration-300 cursor-figma-pointer ${
                     active
                       ? "bg-white/[0.06] text-white"
@@ -593,7 +597,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               </div>
             }
           >
-            {children}
+            <PageErrorBoundary>{children}</PageErrorBoundary>
           </Suspense>
         </div>
       </main>

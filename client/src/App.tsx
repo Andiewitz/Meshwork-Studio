@@ -20,6 +20,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthModalProvider } from "@/components/auth/AuthModalContext";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { PageErrorBoundary } from "@/components/ui/page-error-boundary";
 
 // Route-level code splitting via React.lazy
 const lazyMap = {
@@ -52,23 +53,25 @@ const {
   AuthPage,
 } = lazyMap;
 
-// Eagerly trigger import for the current route to parallelize with auth fetch
-const currentPath = window.location.pathname;
-if (currentPath === "/" || currentPath === "/landing")
-  void import("@/pages/Landing");
-else if (currentPath === "/home" || currentPath === "/workspaces")
-  void import("@/pages/Home");
-else if (currentPath === "/settings") void import("@/pages/Settings");
-else if (currentPath.startsWith("/workspace/"))
-  void import("@/pages/Workspace");
-else if (currentPath === "/dev") void import("@/pages/Dev");
-else if (currentPath === "/docs") void import("@/pages/Dev");
-else if (currentPath === "/team") void import("@/pages/Team");
-else if (currentPath === "/templates") void import("@/pages/Templates");
-else if (currentPath === "/terms") void import("@/pages/TermsOfService");
-else if (currentPath === "/privacy") void import("@/pages/PrivacyPolicy");
-else if (currentPath === "/login" || currentPath === "/register")
-  void import("@/pages/AuthPage");
+// Preload route chunks on hover or intent
+export function preloadRoute(path: string) {
+  if (path === "/" || path === "/landing") void import("@/pages/Landing");
+  else if (path === "/home" || path === "/workspaces")
+    void import("@/pages/Home");
+  else if (path === "/settings") void import("@/pages/Settings");
+  else if (path.startsWith("/workspace/")) void import("@/pages/Workspace");
+  else if (path === "/dev" || path === "/docs") void import("@/pages/Dev");
+  else if (path === "/team") void import("@/pages/Team");
+  else if (path === "/templates") void import("@/pages/Templates");
+  else if (path === "/terms") void import("@/pages/TermsOfService");
+  else if (path === "/privacy") void import("@/pages/PrivacyPolicy");
+  else if (path === "/login" || path === "/register")
+    void import("@/pages/AuthPage");
+}
+
+// Preload current route immediately on initial script execution
+const initialPath = window.location.pathname;
+preloadRoute(initialPath);
 
 function ProtectedRoute({
   component: Component,
@@ -86,11 +89,12 @@ function ProtectedRoute({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  if (isLoading || isRedirecting) {
+  // Show full-screen loader only during initial auth verification or logout transition
+  if ((isLoading && user === undefined) || isRedirecting) {
     return <RedirectingScreen />;
   }
 
-  if (!user) {
+  if (!user && !isLoading) {
     return <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />;
   }
 
@@ -101,133 +105,9 @@ function ProtectedRoute({
   return <Component />;
 }
 
-function Router() {
+function DashboardRoutes() {
   const [location] = useLocation();
-  const { user, isLoading, isRedirecting } = useAuth();
 
-  // Backwards compat: redirect old /auth/* routes to new full-page routes
-  if (location.startsWith("/auth/")) {
-    const mode = location.includes("register") ? "register" : "login";
-    return <Redirect to={`/${mode}`} />;
-  }
-
-  // Show redirecting screen during auth transitions for protected routes
-  if (isLoading || isRedirecting) {
-    return <RedirectingScreen />;
-  }
-
-  // Public pages (landing, legal)
-  if (location === "/") {
-    if (user) {
-      return <Redirect to="/home" />;
-    }
-    return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key="landing"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-          className="min-h-screen"
-        >
-          <Landing />
-        </motion.div>
-      </AnimatePresence>
-    );
-  }
-
-  // Auth pages (login, register)
-  if (location === "/login" || location === "/register") {
-    if (user) {
-      return <Redirect to="/home" />;
-    }
-    return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={location}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
-          className="min-h-screen"
-        >
-          <AuthPage />
-        </motion.div>
-      </AnimatePresence>
-    );
-  }
-
-  if (location === "/terms" || location === "/privacy") {
-    return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={location}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-          className="min-h-screen"
-        >
-          <Switch location={location}>
-            <Route path="/terms">
-              <TermsOfService />
-            </Route>
-            <Route path="/privacy">
-              <PrivacyPolicy />
-            </Route>
-          </Switch>
-        </motion.div>
-      </AnimatePresence>
-    );
-  }
-
-  // Public docs page — no login required, Google-indexable
-  if (location === "/docs") {
-    return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key="docs"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-          className="min-h-screen"
-        >
-          <Docs />
-        </motion.div>
-      </AnimatePresence>
-    );
-  }
-
-  // Workspace routes - scale animation from card
-  if (location.startsWith("/workspace/")) {
-    return (
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={location}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 1.05 }}
-          transition={{
-            duration: 0.35,
-            ease: [0.25, 0.1, 0.25, 1],
-            opacity: { duration: 0.25 },
-          }}
-          className="h-full"
-          style={{ willChange: "opacity, transform" }}
-        >
-          <Switch location={location} key={location}>
-            <Route path="/workspace/:id">
-              <ProtectedRoute component={Workspace} />
-            </Route>
-          </Switch>
-        </motion.div>
-      </AnimatePresence>
-    );
-  }
-
-  // Dashboard routes with layout
   return (
     <DashboardLayout>
       <AnimatePresence mode="wait">
@@ -236,35 +116,76 @@ function Router() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
           className="h-full"
         >
           <Switch location={location}>
-            <Route path="/home">
-              <ProtectedRoute component={Home} />
-            </Route>
-            <Route path="/workspaces">
-              <ProtectedRoute component={Home} />
-            </Route>
-            <Route path="/settings">
-              <ProtectedRoute component={Settings} />
-            </Route>
-            <Route path="/team">
-              <ProtectedRoute component={Team} />
-            </Route>
-            <Route path="/dev">
-              <ProtectedRoute component={Dev} />
-            </Route>
-            <Route path="/templates">
-              <ProtectedRoute component={Templates} />
-            </Route>
-            <Route>
-              <NotFound />
-            </Route>
+            <Route path="/home" component={Home} />
+            <Route path="/workspaces" component={Home} />
+            <Route path="/settings" component={Settings} />
+            <Route path="/team" component={Team} />
+            <Route path="/dev" component={Dev} />
+            <Route path="/templates" component={Templates} />
+            <Route component={NotFound} />
           </Switch>
         </motion.div>
       </AnimatePresence>
     </DashboardLayout>
+  );
+}
+
+function Router() {
+  const [location] = useLocation();
+  const { user, isLoading } = useAuth();
+
+  // Backwards compat: redirect old /auth/* routes
+  if (location.startsWith("/auth/")) {
+    const mode = location.includes("register") ? "register" : "login";
+    return <Redirect to={`/${mode}`} />;
+  }
+
+  return (
+    <Switch>
+      {/* Public Pages */}
+      <Route path="/">{user ? <Redirect to="/home" /> : <Landing />}</Route>
+      <Route path="/login">
+        {user ? <Redirect to="/home" /> : <AuthPage />}
+      </Route>
+      <Route path="/register">
+        {user ? <Redirect to="/home" /> : <AuthPage />}
+      </Route>
+      <Route path="/terms" component={TermsOfService} />
+      <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/docs" component={Docs} />
+
+      {/* Standalone Workspace Route */}
+      <Route path="/workspace/:id">
+        <ProtectedRoute component={Workspace} />
+      </Route>
+
+      {/* Dashboard Protected Routes */}
+      <Route path="/home">
+        <ProtectedRoute component={DashboardRoutes} />
+      </Route>
+      <Route path="/workspaces">
+        <ProtectedRoute component={DashboardRoutes} />
+      </Route>
+      <Route path="/settings">
+        <ProtectedRoute component={DashboardRoutes} />
+      </Route>
+      <Route path="/team">
+        <ProtectedRoute component={DashboardRoutes} />
+      </Route>
+      <Route path="/dev">
+        <ProtectedRoute component={DashboardRoutes} />
+      </Route>
+      <Route path="/templates">
+        <ProtectedRoute component={DashboardRoutes} />
+      </Route>
+
+      {/* 404 Fallback */}
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
