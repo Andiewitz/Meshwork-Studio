@@ -736,11 +736,11 @@ const Home = () => {
       t.slug !== undefined &&
       [
         "meshwork-studio",
-        "airbnb",
-        "uber",
-        "shopify",
-        "claude.ai",
-        "figma",
+        "go",
+        "flutter",
+        "react",
+        "python-sdk",
+        "opencalw",
       ].includes(t.slug),
   );
 
