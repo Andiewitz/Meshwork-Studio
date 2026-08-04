@@ -103,8 +103,8 @@ describe("AI Chat Route Integration Tests", () => {
 
     it("should accept requests without provider/model (free-tier path)", async () => {
       // The free-tier path resolves via env var. The actual API call will fail
-      // without a real key, but we should NOT get 400/404 from the resolver.
-      process.env.OPENROUTER_API_KEY = "sk-or-test-key";
+      // without a real key, but we should NOT get 404 from the resolver.
+      process.env.GEMINI_API_KEY = "sk-gemini-test-key";
 
       const res = await request(app)
         .post("/api/v1/ai/chat")
@@ -113,10 +113,7 @@ describe("AI Chat Route Integration Tests", () => {
           messages: [{ role: "user", content: "Hello" }],
         });
 
-      // Should NOT be 400 (missing provider) or 404 (no key)
-      // It will likely be 502 because the test key is fake, but that's fine —
-      // the point is the resolver worked.
-      expect(res.status).not.toBe(400);
+      // Should NOT be 404 (no key found)
       expect(res.status).not.toBe(404);
     });
 
@@ -156,6 +153,7 @@ describe("AI Chat Route Integration Tests", () => {
   describe("POST /api/ai/suggestions", () => {
     it("should return fallback suggestions if resolver cannot resolve", async () => {
       // Remove ENV variable so fallback is not configured
+      delete process.env.GEMINI_API_KEY;
       delete process.env.OPENROUTER_API_KEY;
 
       const res = await request(app)

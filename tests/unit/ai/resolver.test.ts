@@ -22,17 +22,25 @@ const mockedGetPlaintext = vi.mocked(getApiKeyWithPlaintext);
 
 describe("resolveProviderForRequest", () => {
   const userId = "user-123";
-  let originalEnv: string | undefined;
+  let originalGeminiEnv: string | undefined;
+  let originalOpenrouterEnv: string | undefined;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    originalEnv = process.env.OPENROUTER_API_KEY;
+    originalGeminiEnv = process.env.GEMINI_API_KEY;
+    originalOpenrouterEnv = process.env.OPENROUTER_API_KEY;
+    delete process.env.GEMINI_API_KEY;
     process.env.OPENROUTER_API_KEY = "sk-or-test-fallback-key";
   });
 
   afterEach(() => {
-    if (originalEnv !== undefined) {
-      process.env.OPENROUTER_API_KEY = originalEnv;
+    if (originalGeminiEnv !== undefined) {
+      process.env.GEMINI_API_KEY = originalGeminiEnv;
+    } else {
+      delete process.env.GEMINI_API_KEY;
+    }
+    if (originalOpenrouterEnv !== undefined) {
+      process.env.OPENROUTER_API_KEY = originalOpenrouterEnv;
     } else {
       delete process.env.OPENROUTER_API_KEY;
     }
@@ -51,7 +59,7 @@ describe("resolveProviderForRequest", () => {
       );
 
       expect(result).toEqual({
-        provider: "openrouter",
+        provider: "gemini",
         model: DEFAULT_FREE_MODEL,
         apiKey: "sk-or-test-fallback-key",
         source: "fallback",
@@ -70,22 +78,23 @@ describe("resolveProviderForRequest", () => {
       );
 
       expect(result.source).toBe("fallback");
-      expect(result.provider).toBe("openrouter");
+      expect(result.provider).toBe("gemini");
       expect(mockedGetActiveKey).not.toHaveBeenCalled();
     });
 
-    it("should use the requested model even on fallback", async () => {
+    it("should sanitize model name and return DEFAULT_FREE_MODEL for openrouter model strings", async () => {
       const result = await resolveProviderForRequest(
         userId,
         undefined,
         "google/gemma-4-31b-it:free",
       );
 
-      expect(result.model).toBe("google/gemma-4-31b-it:free");
+      expect(result.model).toBe(DEFAULT_FREE_MODEL);
       expect(result.source).toBe("fallback");
     });
 
     it("should trim whitespace from OPENROUTER_API_KEY", async () => {
+      delete process.env.GEMINI_API_KEY;
       process.env.OPENROUTER_API_KEY = "  sk-or-test-key  ";
       const result = await resolveProviderForRequest(
         userId,
