@@ -45,6 +45,9 @@ import {
   UserIcon,
   Square2StackIcon as Layers,
   ShareIcon as Network,
+  DevicePhoneMobileIcon as Smartphone,
+  CodeBracketIcon as Code2,
+  DocumentTextIcon as FileCode,
 } from "@heroicons/react/24/outline";
 
 // ── Node types registry for ReactFlow ──

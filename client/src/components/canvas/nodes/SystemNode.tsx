@@ -962,8 +962,7 @@ export function SystemNode({
                     />
                   ) : (
                     <brand.Icon
-                      size={20}
-                      className="text-white/90"
+                      className="w-5 h-5 text-white/90"
                       style={{ color: customFontColor }}
                     />
                   );
@@ -971,9 +970,7 @@ export function SystemNode({
                 if (type === "user") {
                   return (
                     <UserIcon
-                      size={18}
-                      strokeWidth={2}
-                      className="text-white/90"
+                      className="w-[18px] h-[18px] text-white/90"
                       style={{ color: customFontColor }}
                     />
                   );

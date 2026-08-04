@@ -134,6 +134,7 @@ import {
   ArrowsPointingInIcon as Minimize2,
   CommandLineIcon as Keyboard,
   ViewColumnsIcon as PanelLeftOpen,
+  ShieldCheckIcon as ShieldCheck,
 } from "@heroicons/react/24/outline";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
