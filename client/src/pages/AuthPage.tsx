@@ -710,13 +710,13 @@ export default function AuthPage() {
       <div className="min-h-screen flex bg-[#111113]">
         {/* Left: form panel */}
         <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 sm:p-12 relative min-h-screen">
-          {/* Header / Logo */}
-          <div className="w-full max-w-[360px] mx-auto pt-2">
-            <a href="/" className="flex items-end gap-2.5 group w-fit pb-0.5">
-              <div className="w-7 h-7 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_10px_rgba(232,57,26,0.6)]">
+          {/* Header / Logo — Top Left */}
+          <div className="w-full flex justify-start">
+            <a href="/" className="flex items-center gap-3 group">
+              <div className="w-9 h-9 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_14px_rgba(232,57,26,0.7)]">
                 <MeshworkLogo />
               </div>
-              <span className="text-[15px] font-semibold text-white/80 tracking-tight group-hover:text-white transition-colors leading-none">
+              <span className="text-[17px] font-bold text-white/90 tracking-tight group-hover:text-white transition-colors leading-none">
                 Meshwork Studio
               </span>
             </a>
