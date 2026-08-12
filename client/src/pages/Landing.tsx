@@ -1085,11 +1085,14 @@ const Home = () => {
         >
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
             {/* Brand Logo */}
-            <Link href="/" className="flex items-center gap-3 group shrink-0">
-              <div className="w-8 h-8 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(26,115,232,0.5)]">
+            <Link
+              href="/"
+              className="flex items-end gap-2.5 group shrink-0 pb-0.5"
+            >
+              <div className="w-7 h-7 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(232,57,26,0.6)]">
                 <MeshworkLogo />
               </div>
-              <span className="text-lg font-headline font-bold tracking-tight hidden sm:block text-white">
+              <span className="text-lg font-headline font-bold tracking-tight hidden sm:block text-white leading-none">
                 Meshwork Studio
               </span>
             </Link>

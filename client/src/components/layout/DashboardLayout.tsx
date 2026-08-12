@@ -1,4 +1,4 @@
-﻿import { ReactNode, useState, useRef, useEffect, Suspense } from "react";
+import { ReactNode, useState, useRef, useEffect, Suspense } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -107,10 +107,13 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="flex flex-col flex-1 overflow-y-auto space-y-4 pr-1 hide-scrollbar">
           {/* Logo & Workspace Dropdown Header */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 px-2 py-1">
+            <div className="flex items-end gap-2 px-2 py-1 pb-1.5">
               <div className="w-5 h-5 flex items-center justify-center shrink-0">
                 <MeshworkLogo />
               </div>
+              <span className="font-headline font-bold text-white tracking-tight text-sm leading-none">
+                Meshwork Studio
+              </span>
             </div>
 
             {/* Workspace Selector Pill */}
