@@ -190,7 +190,7 @@ export default function Home() {
         </div>
 
         {/* ── Center Hero ── */}
-        <div className="shrink-0 flex flex-col items-center justify-center pt-6 pb-5 relative z-10 px-6">
+        <div className="flex-1 flex flex-col items-center justify-center pt-2 pb-6 relative z-10 px-6 -translate-y-6">
           {/* Heading */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -215,12 +215,12 @@ export default function Home() {
         </div>
 
         {/* ── Bottom Floating Card Container (Nested inside the curved canvas) ── */}
-        <div className="flex-1 p-4 sm:p-5 relative z-20 flex flex-col min-h-0">
+        <div className="p-4 sm:p-6 relative z-20 shrink-0">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-            className="w-full bg-[#111218]/90 backdrop-blur-2xl border border-white/[0.09] rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col flex-1 min-h-0 overflow-hidden"
+            className="w-full bg-[#111218]/90 backdrop-blur-2xl border border-white/[0.09] rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col min-h-[380px] max-h-[500px]"
           >
             {/* Header / Tabs */}
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-3">
