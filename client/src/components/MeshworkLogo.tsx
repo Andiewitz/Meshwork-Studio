@@ -28,23 +28,25 @@ export function MeshworkLogo({
       aria-label="Meshwork Studio Logo"
     >
       <defs>
-        {/* Brand Orange System Gradient (Coral Orange -> Deep Red-Orange -> Dark Crimson) */}
-        <linearGradient id="mw-fill" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FF7A33" />
-          <stop offset="45%" stopColor="#E8391A" />
-          <stop offset="100%" stopColor="#B8240C" />
+        {/* Orange -> Rose -> Magenta -> Electric Blue Spectrum Gradient */}
+        <linearGradient id="mw-fill" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#FF6B35" /> {/* Electric Orange */}
+          <stop offset="38%" stopColor="#F43F5E" /> {/* Rose Red */}
+          <stop offset="70%" stopColor="#D946EF" /> {/* Magenta Pink */}
+          <stop offset="100%" stopColor="#3B82F6" /> {/* Electric Blue */}
         </linearGradient>
 
-        {/* Hypotenuse Specular Highlight */}
+        {/* Specular Edge Gradient */}
         <linearGradient id="mw-stroke-grad" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#FFA07A" stopOpacity="0.8" />
-          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.9" />
+          <stop offset="0%" stopColor="#FFA07A" stopOpacity="0.9" />
+          <stop offset="50%" stopColor="#F472B6" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#93C5FD" stopOpacity="0.9" />
         </linearGradient>
 
-        {/* Soft Ambient Brand Glow Filter */}
-        <filter id="mw-glow" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="4" result="blur" />
-          <feFlood floodColor="#E8391A" floodOpacity="0.4" result="color" />
+        {/* Soft Multi-color Glow Filter */}
+        <filter id="mw-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="4.5" result="blur" />
+          <feFlood floodColor="#D946EF" floodOpacity="0.45" result="color" />
           <feComposite in="color" in2="blur" operator="in" result="glow" />
           <feMerge>
             <feMergeNode in="glow" />
@@ -57,11 +59,11 @@ export function MeshworkLogo({
       <polygon
         points="4,92 96,92 96,8"
         fill="none"
-        stroke="#E8391A"
+        stroke="#D946EF"
         strokeWidth="6"
         strokeLinejoin="miter"
         filter="url(#mw-glow)"
-        opacity="0.5"
+        opacity="0.45"
       />
 
       {/* Main solid triangle */}
