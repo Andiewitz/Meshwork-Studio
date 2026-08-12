@@ -46,8 +46,6 @@ import {
   Square2StackIcon as Layers,
   ShareIcon as Network,
   DevicePhoneMobileIcon as Smartphone,
-  CodeBracketIcon as Code2,
-  DocumentTextIcon as FileCode,
 } from "@heroicons/react/24/outline";
 
 // ── Node types registry for ReactFlow ──
@@ -254,33 +252,33 @@ export const nodeTypesList = [
 
   // ── Templates ──
   {
-    type: "template:go",
-    label: "Go",
+    type: "template:airbnb",
+    label: "Airbnb",
     icon: Server,
     category: "Templates",
   },
   {
-    type: "template:flutter",
-    label: "Flutter",
+    type: "template:netflix",
+    label: "Netflix",
+    icon: PlayCircle,
+    category: "Templates",
+  },
+  {
+    type: "template:stripe",
+    label: "Stripe",
+    icon: CreditCard,
+    category: "Templates",
+  },
+  {
+    type: "template:uber",
+    label: "Uber",
     icon: Smartphone,
     category: "Templates",
   },
   {
-    type: "template:react",
-    label: "React",
-    icon: Code2,
-    category: "Templates",
-  },
-  {
-    type: "template:python-sdk",
-    label: "Python SDK",
-    icon: FileCode,
-    category: "Templates",
-  },
-  {
-    type: "template:opencalw",
-    label: "OpenClaw",
-    icon: MessageSquare,
+    type: "template:discord",
+    label: "Discord",
+    icon: MessageCircle,
     category: "Templates",
   },
   {
