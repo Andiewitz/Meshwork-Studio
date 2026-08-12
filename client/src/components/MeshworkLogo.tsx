@@ -1,9 +1,18 @@
 import React from "react";
 
 /**
- * Global Meshwork Studio logo — Pythagorean Right Triangle
- * Orientation: apex/point on left, long horizontal base at bottom,
- * short vertical side on right, right-angle at bottom-right.
+ * Meshwork Studio — Logomark
+ *
+ * Triangle geometry (right-angle, FLAT horizontal base):
+ *   A = (12, 82)  bottom-left  ← pointy apex
+ *   B = (88, 82)  bottom-right ← right-angle corner
+ *   C = (88, 22)  top-right    ← top of short vertical side
+ *
+ *   AB = flat horizontal base  (long side, at the bottom)
+ *   BC = vertical right side   (short side, on the right)
+ *   CA = hypotenuse            (diagonal, top-right to bottom-left)
+ *
+ * Colors match app design tokens: #E8391A brand orange, dark canvas #0C0C0E
  */
 export function MeshworkLogo({
   className = "w-full h-full",
@@ -16,87 +25,94 @@ export function MeshworkLogo({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      aria-label="Meshwork Studio"
     >
       <defs>
+        {/* Brand orange — warm left tip → deep-orange right */}
         <linearGradient
-          id="pythagorasGrad"
-          x1="10"
-          y1="50"
-          x2="90"
-          y2="80"
+          id="mw-fill"
+          x1="12"
+          y1="82"
+          x2="88"
+          y2="22"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor="#FF5733" />
-          <stop offset="0.5" stopColor="#E8391A" />
-          <stop offset="1" stopColor="#FF1E00" />
+          <stop offset="0%" stopColor="#FF6240" />
+          <stop offset="55%" stopColor="#E8391A" />
+          <stop offset="100%" stopColor="#C42E12" />
         </linearGradient>
+
+        {/* Highlight overlay for depth */}
         <linearGradient
-          id="pythagorasStroke"
-          x1="10"
-          y1="50"
-          x2="90"
-          y2="80"
+          id="mw-highlight"
+          x1="12"
+          y1="22"
+          x2="88"
+          y2="82"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor="#FFA07A" />
-          <stop offset="1" stopColor="#FF4500" />
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.2" />
+          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.0" />
         </linearGradient>
-        <filter
-          id="pythagorasGlow"
-          x="-20%"
-          y="-20%"
-          width="140%"
-          height="140%"
-        >
-          <feGaussianBlur stdDeviation="2.5" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+
+        {/* Ambient brand-orange glow behind the shape */}
+        <filter id="mw-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="5" result="blur" />
+          <feFlood floodColor="#E8391A" floodOpacity="0.4" result="color" />
+          <feComposite in="color" in2="blur" operator="in" result="glow" />
+          <feMerge>
+            <feMergeNode in="glow" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
         </filter>
       </defs>
 
-      {/* Outer glowing frame */}
+      {/* Glow halo layer */}
       <polygon
-        points="8,50 92,83 92,17"
-        fill="url(#pythagorasGrad)"
-        fillOpacity="0.15"
-        stroke="url(#pythagorasStroke)"
-        strokeWidth="3"
-        strokeLinejoin="round"
-      />
-
-      {/* Main right triangle:
-            - Left point (apex): (14, 50)
-            - Bottom-right (right-angle): (86, 80)
-            - Top-right: (86, 20)
-            Long horizontal base: bottom from left tip to bottom-right
-            Short vertical side: right side from top-right down to bottom-right
-            Hypotenuse: from top-right diagonally to left apex
-      */}
-      <polygon
-        points="14,50 86,80 86,20"
-        fill="url(#pythagorasGrad)"
-        fillOpacity="0.9"
-        stroke="#FFFFFF"
-        strokeOpacity="0.3"
-        strokeWidth="2"
-        strokeLinejoin="round"
-        filter="url(#pythagorasGlow)"
-      />
-
-      {/* Right-angle marker at bottom-right corner (86, 80) */}
-      <path
-        d="M 86 68 L 74 68 L 74 80"
+        points="12,82 88,82 88,22"
         fill="none"
-        stroke="#FFFFFF"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeOpacity="0.9"
+        stroke="#E8391A"
+        strokeWidth="8"
+        strokeLinejoin="miter"
+        filter="url(#mw-glow)"
+        opacity="0.55"
       />
 
-      {/* Vertex dots */}
-      <circle cx="14" cy="50" r="3.5" fill="#FFFFFF" />
-      <circle cx="86" cy="80" r="3.5" fill="#FFFFFF" />
-      <circle cx="86" cy="20" r="3.5" fill="#FFFFFF" />
+      {/* Main solid triangle */}
+      <polygon
+        points="12,82 88,82 88,22"
+        fill="url(#mw-fill)"
+        strokeLinejoin="miter"
+      />
+
+      {/* Depth highlight layer */}
+      <polygon
+        points="12,82 88,82 88,22"
+        fill="url(#mw-highlight)"
+        strokeLinejoin="miter"
+      />
+
+      {/* Thin white edge for crispness */}
+      <polygon
+        points="12,82 88,82 88,22"
+        fill="none"
+        stroke="rgba(255,255,255,0.10)"
+        strokeWidth="1"
+        strokeLinejoin="miter"
+      />
+
+      {/* Right-angle square marker at B (88, 82), inset into the triangle */}
+      <path
+        d="M 88 70 L 76 70 L 76 82"
+        fill="none"
+        stroke="rgba(255,255,255,0.7)"
+        strokeWidth="2"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+      />
+
+      {/* Apex dot at the sharp left point */}
+      <circle cx="12" cy="82" r="2.5" fill="rgba(255,255,255,0.85)" />
     </svg>
   );
 }
