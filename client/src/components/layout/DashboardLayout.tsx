@@ -100,6 +100,14 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
   if (isMobile) return <MobileGate />;
 
+  if (location === "/settings") {
+    return (
+      <div className="bg-[#0c0c0e] text-white font-body selection:bg-white/20 selection:text-white min-h-screen antialiased flex flex-col">
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="bg-[#09090b] text-white font-body selection:bg-white/20 selection:text-white min-h-screen antialiased flex p-2.5 gap-2.5 cursor-figma">
       {/* ── Sidebar (240px / w-60) ── */}

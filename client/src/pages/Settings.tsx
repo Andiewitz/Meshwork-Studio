@@ -1,37 +1,41 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
+import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
 import { aiService, type ApiKey, type Provider } from "@/lib/ai";
 import {
-  ArrowPathIcon as Loader2,
-  UserIcon as User,
-  LockClosedIcon as Lock,
-  TrashIcon as Trash2,
-  ArrowDownTrayIcon as Download,
-  ExclamationTriangleIcon as AlertTriangle,
-  EyeIcon as Eye,
-  EyeSlashIcon as EyeOff,
+  ChevronLeftIcon,
+  MagnifyingGlassIcon,
+  UserIcon,
+  ComputerDesktopIcon,
+  SparklesIcon,
+  CreditCardIcon,
+  ChatBubbleLeftRightIcon,
+  UsersIcon,
+  UserGroupIcon,
+  KeyIcon,
+  AdjustmentsHorizontalIcon,
+  DocumentDuplicateIcon,
+  ShareIcon,
+  CodeBracketIcon,
+  ServerIcon,
+  GlobeAltIcon,
+  ShieldCheckIcon,
+  LockClosedIcon,
+  DocumentTextIcon,
+  ArrowTopRightOnSquareIcon,
+  TrashIcon,
   SunIcon as Sun,
   MoonIcon as Moon,
-  ComputerDesktopIcon as Monitor,
-  PlusIcon as Plus,
-  KeyIcon as Key,
-  CheckIcon as Check,
-  XMarkIcon as X,
+  EyeIcon,
+  EyeSlashIcon,
+  ArrowPathIcon as Loader2,
+  PencilSquareIcon as EditIcon,
 } from "@heroicons/react/24/outline";
 import {
   AlertDialog,
@@ -45,32 +49,70 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { apiRequest } from "@/lib/queryClient";
-import { cn } from "@/lib/utils";
-import { PASSWORD_POLICY, validatePasswordStrength } from "@shared/auth";
+import { validatePasswordStrength } from "@shared/auth";
+
+type SettingsTab =
+  | "account"
+  | "devices"
+  | "workspace"
+  | "plans"
+  | "slack"
+  | "people"
+  | "groups"
+  | "identity"
+  | "ai"
+  | "skills"
+  | "templates"
+  | "connectors"
+  | "git"
+  | "mcp"
+  | "domains"
+  | "security"
+  | "security-center"
+  | "audit-logs";
+
+interface NavItem {
+  id: SettingsTab;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  isProfile?: boolean;
+  isWorkspace?: boolean;
+  badge?: string;
+  external?: boolean;
+}
+
+interface NavSection {
+  title: string | null;
+  items: NavItem[];
+}
 
 export default function Settings() {
   const { user, logout } = useAuth();
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [isDeletingData, setIsDeletingData] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "profile" | "appearance" | "ai" | "security" | "data"
-  >("profile");
+
+  const [activeTab, setActiveTab] = useState<SettingsTab>("account");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
+  const [username] = useState(user?.email?.split("@")[0] || "user");
+  const [profileVisibility, setProfileVisibility] = useState("Public");
+  const [language, setLanguage] = useState("English");
+  const [chatSuggestions, setChatSuggestions] = useState(true);
+  const [autoSyncDiagrams, setAutoSyncDiagrams] = useState(true);
+
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
-  const [deleteDataConfirmText, setDeleteDataConfirmText] = useState("");
 
-  // AI API Keys state
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [isLoadingKeys, setIsLoadingKeys] = useState(false);
@@ -79,7 +121,13 @@ export default function Settings() {
   const [newKeyValue, setNewKeyValue] = useState("");
   const [showNewKey, setShowNewKey] = useState(false);
 
-  // Load API keys on mount
+  const userName =
+    user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user?.firstName || user?.email?.split("@")[0] || "User";
+
+  const userInitial = userName.charAt(0).toUpperCase();
+
   useEffect(() => {
     loadApiKeys();
     loadProviders();
@@ -90,8 +138,8 @@ export default function Settings() {
     try {
       const keys = await aiService.getApiKeys();
       setApiKeys(keys);
-    } catch (error) {
-      console.error("Failed to load API keys:", error);
+    } catch (err) {
+      console.error("Failed to load API keys:", err);
     } finally {
       setIsLoadingKeys(false);
     }
@@ -99,34 +147,23 @@ export default function Settings() {
 
   const loadProviders = async () => {
     try {
-      const providerList = await aiService.getProviders();
-      setProviders(providerList);
-    } catch (error) {
-      console.error("Failed to load providers:", error);
+      const p = await aiService.getProviders();
+      setProviders(p);
+    } catch (err) {
+      console.error("Failed to load providers:", err);
     }
   };
 
   const handleAddKey = async () => {
-    if (!newKeyValue.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter an API key",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    if (!newKeyValue.trim()) return;
     setIsAddingKey(true);
     try {
       await aiService.saveApiKey(newKeyProvider, newKeyValue);
-      toast({
-        title: "Success",
-        description: "API key added successfully",
-      });
+      toast({ title: "Success", description: "API key added successfully" });
       setNewKeyValue("");
       setShowNewKey(false);
       loadApiKeys();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to add API key",
@@ -140,12 +177,9 @@ export default function Settings() {
   const handleDeleteKey = async (keyId: string) => {
     try {
       await aiService.deleteApiKey(keyId);
-      toast({
-        title: "Success",
-        description: "API key deleted",
-      });
+      toast({ title: "Success", description: "API key deleted" });
       loadApiKeys();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to delete API key",
@@ -154,31 +188,18 @@ export default function Settings() {
     }
   };
 
-  const themeButtons = [
-    { value: "light" as const, icon: Sun, label: "Light" },
-    { value: "dark" as const, icon: Moon, label: "Dark" },
-    { value: "system" as const, icon: Monitor, label: "System" },
-  ];
-
   const handleUpdateProfile = async () => {
     setIsUpdatingProfile(true);
     try {
-      const res = await apiRequest("PATCH", "/api/v1/user/profile", {
-        firstName: firstName.trim() || null,
-        lastName: lastName.trim() || null,
+      await apiRequest("PATCH", "/api/v1/user/profile", {
+        firstName,
+        lastName,
       });
-      if (!res.ok) throw new Error("Failed to update profile");
-      const updatedUser = await res.json();
-      queryClient.setQueryData(["/api/v1/auth/me"], updatedUser);
-      toast({
-        title: "Profile updated",
-        description: "Your changes have been saved.",
-      });
-    } catch (error: unknown) {
+      toast({ title: "Profile updated" });
+    } catch {
       toast({
         title: "Error",
-        description:
-          error instanceof Error ? error.message : "An error occurred",
+        description: "Failed to update profile",
         variant: "destructive",
       });
     } finally {
@@ -187,754 +208,862 @@ export default function Settings() {
   };
 
   const handleChangePassword = async () => {
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "Please make sure your new passwords match.",
-        variant: "destructive",
-      });
-      return;
-    }
-    const passwordValidation = validatePasswordStrength(newPassword);
-    if (!passwordValidation.valid) {
-      toast({
-        title: "Password does not meet requirements",
-        description: passwordValidation.errors[0],
-        variant: "destructive",
-      });
-      return;
-    }
+    if (newPassword !== confirmPassword) return;
+    const v = validatePasswordStrength(newPassword);
+    if (!v.valid) return;
     setIsChangingPassword(true);
     try {
-      const res = await apiRequest("POST", "/api/v1/user/change-password", {
+      await apiRequest("POST", "/api/v1/user/change-password", {
         currentPassword,
         newPassword,
       });
-      if (!res.ok) throw new Error("Failed to change password");
-      toast({
-        title: "Password changed",
-        description: "Your password has been updated.",
-      });
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (error: unknown) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
+      toast({ title: "Password updated" });
+    } catch {
+      toast({ title: "Error", variant: "destructive" });
     } finally {
       setIsChangingPassword(false);
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== "DELETE") {
-      toast({
-        title: "Confirmation required",
-        description: "Please type DELETE to confirm.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (deleteConfirmText !== "DELETE") return;
     setIsDeletingAccount(true);
     try {
-      const res = await apiRequest("DELETE", "/api/v1/user/account");
-      if (!res.ok) throw new Error("Failed to delete account");
-      toast({
-        title: "Account deleted",
-        description: "Your account has been permanently removed.",
-      });
+      await apiRequest("DELETE", "/api/v1/user/account");
       logout();
-    } catch (error: unknown) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
+    } catch {
       setIsDeletingAccount(false);
     }
   };
 
-  const handleDeleteAllData = async () => {
-    if (deleteDataConfirmText !== "DELETE ALL") {
-      toast({
-        title: "Confirmation required",
-        description: "Please type DELETE ALL to confirm.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setIsDeletingData(true);
-    try {
-      const res = await apiRequest("DELETE", "/api/v1/user/data");
-      if (!res.ok) throw new Error("Failed to delete data");
-      toast({
-        title: "Data deleted",
-        description: "All your workspaces and projects have been removed.",
-      });
-      setDeleteDataConfirmText("");
-    } catch (error: unknown) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeletingData(false);
-    }
-  };
+  const navSections: NavSection[] = useMemo(
+    () => [
+      {
+        title: null,
+        items: [
+          { id: "account", label: userName, icon: UserIcon, isProfile: true },
+          { id: "devices", label: "Devices & apps", icon: ComputerDesktopIcon },
+        ],
+      },
+      {
+        title: "Workspace",
+        items: [
+          {
+            id: "workspace",
+            label: `${userName}'s Studio`,
+            icon: SparklesIcon,
+            isWorkspace: true,
+          },
+          { id: "plans", label: "Plans & credit usage", icon: CreditCardIcon },
+          {
+            id: "slack",
+            label: "Slack & alerts",
+            icon: ChatBubbleLeftRightIcon,
+          },
+        ],
+      },
+      {
+        title: "Access",
+        items: [
+          { id: "people", label: "People", icon: UsersIcon },
+          {
+            id: "groups",
+            label: "Groups",
+            icon: UserGroupIcon,
+            badge: "Business",
+          },
+          {
+            id: "identity",
+            label: "Identity",
+            icon: KeyIcon,
+            badge: "Business",
+          },
+        ],
+      },
+      {
+        title: "Customization",
+        items: [
+          { id: "ai", label: "AI Models & Keys", icon: SparklesIcon },
+          {
+            id: "skills",
+            label: "Skills & Canvas",
+            icon: AdjustmentsHorizontalIcon,
+          },
+          {
+            id: "templates",
+            label: "Templates",
+            icon: DocumentDuplicateIcon,
+            badge: "Business",
+          },
+          {
+            id: "connectors",
+            label: "Connectors",
+            icon: ShareIcon,
+            external: true,
+          },
+        ],
+      },
+      {
+        title: "Build & deploy",
+        items: [
+          { id: "git", label: "Git", icon: CodeBracketIcon },
+          { id: "mcp", label: "MCP server", icon: ServerIcon },
+          { id: "domains", label: "Workspace domains", icon: GlobeAltIcon },
+        ],
+      },
+      {
+        title: "Security",
+        items: [
+          {
+            id: "security",
+            label: "Privacy & security",
+            icon: ShieldCheckIcon,
+          },
+          {
+            id: "security-center",
+            label: "Security center",
+            icon: LockClosedIcon,
+            badge: "Business",
+          },
+          {
+            id: "audit-logs",
+            label: "Audit logs",
+            icon: DocumentTextIcon,
+            badge: "Enterprise",
+          },
+        ],
+      },
+    ],
+    [userName],
+  );
 
-  const handleExportData = () => {
-    toast({
-      title: "Export requested",
-      description:
-        "We're preparing your data. You'll receive an email when it's ready.",
-    });
-  };
+  const filteredSections = useMemo(() => {
+    if (!searchQuery.trim()) return navSections;
+    const q = searchQuery.toLowerCase();
+    return navSections
+      .map((sec) => ({
+        ...sec,
+        items: sec.items.filter((item) => item.label.toLowerCase().includes(q)),
+      }))
+      .filter((sec) => sec.items.length > 0);
+  }, [navSections, searchQuery]);
 
   return (
-    <div className="max-w-5xl mx-auto pb-12 relative">
+    <>
       <Helmet>
         <title>Settings — Meshwork Studio</title>
       </Helmet>
-      {/* Background - negative margins to break out of parent padding */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_49.5%,currentColor_49.5%,currentColor_50.5%,transparent_50.5%),linear-gradient(-45deg,transparent_49.5%,currentColor_49.5%,currentColor_50.5%,transparent_50.5%)] [background-size:40px_40px] opacity-[0.02]" />
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-gradient-radial from-amber-500/5 via-transparent to-transparent rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-0 w-[400px] h-[400px] bg-gradient-radial from-rose-500/5 via-transparent to-transparent rounded-full blur-3xl" />
-      </div>
 
-      {/* Header */}
-      <div className="mb-8 px-4 md:px-0 mt-8">
-        <h1 className="text-3xl md:text-4xl font-sans font-semibold tracking-tight text-foreground mb-2">
-          Settings
-        </h1>
-        <p className="text-muted-foreground">
-          Manage your account, appearance, and data preferences.
-        </p>
-      </div>
+      <div className="flex h-screen w-full bg-[#0d0d0f] text-white selection:bg-white/20 select-none overflow-hidden">
+        {/* ── Left Settings Navigation Sidebar ── */}
+        <aside className="w-64 shrink-0 bg-[#121215] border-r border-white/[0.06] flex flex-col h-full p-4 overflow-y-auto hide-scrollbar">
+          <Link
+            href="/home"
+            className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-colors cursor-figma-pointer mb-4 px-1 py-1 font-medium"
+          >
+            <ChevronLeftIcon className="w-3.5 h-3.5" />
+            Go back
+          </Link>
 
-      <div className="flex flex-col md:flex-row gap-8 px-4 md:px-0">
-        {/* Sidebar Navigation */}
-        <nav className="w-full md:w-64 flex-shrink-0 space-y-1">
-          <button
-            onClick={() => setActiveTab("profile")}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all",
-              activeTab === "profile"
-                ? "bg-white/[0.08] text-white"
-                : "text-white/60 hover:text-white hover:bg-white/[0.04]",
-            )}
-          >
-            <User className="w-4 h-4" /> Profile
-          </button>
-          <button
-            onClick={() => setActiveTab("appearance")}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all",
-              activeTab === "appearance"
-                ? "bg-white/[0.08] text-white"
-                : "text-white/60 hover:text-white hover:bg-white/[0.04]",
-            )}
-          >
-            <Sun className="w-4 h-4" /> Appearance
-          </button>
-          <button
-            onClick={() => setActiveTab("ai")}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all",
-              activeTab === "ai"
-                ? "bg-white/[0.08] text-white"
-                : "text-white/60 hover:text-white hover:bg-white/[0.04]",
-            )}
-          >
-            <Key className="w-4 h-4" /> AI API Keys
-          </button>
-          {user?.authProvider === "email" && (
-            <button
-              onClick={() => setActiveTab("security")}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all",
-                activeTab === "security"
-                  ? "bg-white/[0.08] text-white"
-                  : "text-white/60 hover:text-white hover:bg-white/[0.04]",
-              )}
-            >
-              <Lock className="w-4 h-4" /> Security
-            </button>
-          )}
-          <button
-            onClick={() => setActiveTab("data")}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all text-red-400 hover:text-red-300",
-              activeTab === "data" ? "bg-red-500/10" : "hover:bg-red-500/5",
-            )}
-          >
-            <Trash2 className="w-4 h-4" /> Data & Privacy
-          </button>
-        </nav>
+          <div className="relative mb-5">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+            <input
+              type="text"
+              placeholder="Search settings"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-white/20 transition-all"
+            />
+          </div>
 
-        {/* Main Content Area */}
-        <div className="flex-1 min-w-0">
-          {activeTab === "ai" && (
-            <Card className="bg-[#121214]/60 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)] rounded-2xl">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Key className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg font-semibold">
-                      AI API Keys
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      Manage your AI provider API keys (BYOK)
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-6">
-                {/* Add new key section */}
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <select
-                      value={newKeyProvider}
-                      onChange={(e) => setNewKeyProvider(e.target.value)}
-                      className="h-10 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-white/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/[0.15] focus-visible:bg-white/[0.05]"
+          <div className="space-y-5 flex-1">
+            {filteredSections.map((sec, idx) => (
+              <div key={idx} className="space-y-1">
+                {sec.title && (
+                  <h4 className="text-[10px] font-bold text-white/30 uppercase tracking-wider px-2 mb-1.5">
+                    {sec.title}
+                  </h4>
+                )}
+                {sec.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-figma-pointer ${
+                        isActive
+                          ? "bg-white/[0.12] text-white shadow-sm"
+                          : "text-white/60 hover:text-white hover:bg-white/[0.04]"
+                      }`}
                     >
-                      {providers.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="flex-1 relative">
-                      <Input
-                        type={showNewKey ? "text" : "password"}
-                        value={newKeyValue}
-                        onChange={(e) => setNewKeyValue(e.target.value)}
-                        placeholder="Enter API key"
-                        className="pr-10 bg-white/[0.03] border-white/[0.08] text-white/90 focus-visible:ring-white/[0.15] focus-visible:bg-white/[0.05] rounded-xl"
-                      />
-                      <button
-                        onClick={() => setShowNewKey(!showNewKey)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showNewKey ? (
-                          <EyeOff className="w-4 h-4" />
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {item.isProfile ? (
+                          <Avatar className="w-5 h-5 border border-white/20 shrink-0">
+                            <AvatarImage
+                              src={user?.profileImageUrl || undefined}
+                            />
+                            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-[9px] font-bold text-white">
+                              {userInitial}
+                            </AvatarFallback>
+                          </Avatar>
+                        ) : item.isWorkspace ? (
+                          <div className="w-5 h-5 rounded-md bg-purple-600/80 text-[10px] font-bold text-white flex items-center justify-center shrink-0">
+                            M
+                          </div>
                         ) : (
-                          <Eye className="w-4 h-4" />
+                          <Icon className="w-4 h-4 opacity-70 shrink-0" />
                         )}
-                      </button>
-                    </div>
-                    <Button onClick={handleAddKey} disabled={isAddingKey}>
-                      {isAddingKey ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Plus className="w-4 h-4" />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className="text-[9px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                          {item.badge}
+                        </span>
                       )}
-                      Add
+                      {item.external && (
+                        <ArrowTopRightOnSquareIcon className="w-3 h-3 opacity-40 shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        {/* ── Main Content Area ── */}
+        <main className="flex-1 overflow-y-auto p-8 sm:p-12 max-w-5xl">
+          {/* Account / Profile tab */}
+          {activeTab === "account" && (
+            <div className="space-y-8 animate-in fade-in duration-200">
+              <div>
+                <h1 className="text-2xl font-bold font-headline text-white mb-1">
+                  Account
+                </h1>
+                <p className="text-xs text-white/50">
+                  Personalize how others see and interact with you on Meshwork
+                  Studio.
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-sm font-semibold text-white">
+                    Showcase skills
+                  </h3>
+                  <span className="text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-white/[0.08] text-white/60">
+                    Beta
+                  </span>
+                </div>
+                <div className="bg-[#151519]/80 border border-white/[0.08] rounded-2xl p-5 backdrop-blur-xl">
+                  <p className="text-xs text-white/50 leading-relaxed">
+                    No skills yet. Build diagrams and export code to unlock
+                    skills to showcase on your profile.{" "}
+                    <button className="text-white/80 underline underline-offset-2 hover:text-white transition-colors cursor-figma-pointer">
+                      Learn how to unlock skills
+                    </button>
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-white mb-1">
+                  Profile
+                </h3>
+                <p className="text-xs text-white/45 mb-3">
+                  Control how you appear on Meshwork Studio.
+                </p>
+                <div className="bg-[#151519]/90 border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl divide-y divide-white/[0.06]">
+                  <div className="p-5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-white mb-0.5">
+                        Profile
+                      </h4>
+                      <p className="text-[11.5px] text-white/45">
+                        Change name, location, avatar, and banner on your
+                        profile.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleUpdateProfile}
+                      disabled={isUpdatingProfile}
+                      className="bg-white/[0.06] border-white/10 hover:bg-white/[0.1] text-xs text-white rounded-xl gap-1.5 cursor-figma-pointer"
+                    >
+                      {isUpdatingProfile ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
+                      )}
+                      Open profile
                     </Button>
                   </div>
+                  <div className="p-5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-white mb-0.5">
+                        First & Last Name
+                      </h4>
+                      <p className="text-[11.5px] text-white/45">
+                        Your public display name across Meshwork Studio.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder="First name"
+                        className="bg-white/[0.04] border-white/10 text-xs text-white w-28 rounded-xl"
+                      />
+                      <Input
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Last name"
+                        className="bg-white/[0.04] border-white/10 text-xs text-white w-28 rounded-xl"
+                      />
+                    </div>
+                  </div>
+                  <div className="p-5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-white mb-0.5">
+                        Username
+                      </h4>
+                      <p className="text-[11.5px] text-white/45">
+                        Your public identifier and profile URL.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-white/80 font-medium">
+                      <span>{username}</span>
+                      <EditIcon className="w-3.5 h-3.5 text-white/40 cursor-figma-pointer hover:text-white" />
+                    </div>
+                  </div>
+                  <div className="p-5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-white mb-0.5">
+                        Email
+                      </h4>
+                      <p className="text-[11.5px] text-white/45">
+                        Your email address associated with your account.
+                      </p>
+                    </div>
+                    <span className="text-xs text-white/70 font-mono">
+                      {user?.email}
+                    </span>
+                  </div>
+                  <div className="p-5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-white mb-0.5">
+                        Profile visibility
+                      </h4>
+                      <p className="text-[11.5px] text-white/45">
+                        Control who can see your public profile.
+                      </p>
+                    </div>
+                    <select
+                      value={profileVisibility}
+                      onChange={(e) => setProfileVisibility(e.target.value)}
+                      className="bg-white/[0.06] border border-white/10 text-xs text-white rounded-xl px-3 py-1.5 outline-none cursor-figma-pointer"
+                    >
+                      <option value="Public" className="bg-[#121215]">
+                        Public
+                      </option>
+                      <option value="Private" className="bg-[#121215]">
+                        Private
+                      </option>
+                    </select>
+                  </div>
                 </div>
+              </div>
 
-                {/* Existing keys list */}
+              <div>
+                <h3 className="text-sm font-semibold text-white mb-1">
+                  Preferences
+                </h3>
+                <p className="text-xs text-white/45 mb-3">
+                  Personalize how Meshwork Studio works for you.
+                </p>
+                <div className="bg-[#151519]/90 border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl divide-y divide-white/[0.06]">
+                  <div className="p-5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-white mb-0.5">
+                        Language
+                      </h4>
+                      <p className="text-[11.5px] text-white/45">
+                        Choose the language Meshwork Studio uses for your
+                        account.
+                      </p>
+                    </div>
+                    <select
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value)}
+                      className="bg-white/[0.06] border border-white/10 text-xs text-white rounded-xl px-3 py-1.5 outline-none cursor-figma-pointer"
+                    >
+                      <option value="English" className="bg-[#121215]">
+                        English
+                      </option>
+                      <option value="Spanish" className="bg-[#121215]">
+                        Spanish
+                      </option>
+                      <option value="German" className="bg-[#121215]">
+                        German
+                      </option>
+                      <option value="Japanese" className="bg-[#121215]">
+                        Japanese
+                      </option>
+                    </select>
+                  </div>
+                  <div className="p-5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-white mb-0.5">
+                        Theme
+                      </h4>
+                      <p className="text-[11.5px] text-white/45">
+                        Choose interface color theme.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.08]">
+                      <button
+                        onClick={() => setTheme("dark")}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${theme === "dark" ? "bg-white/[0.12] text-white shadow-sm" : "text-white/40 hover:text-white"}`}
+                      >
+                        <Moon className="w-3.5 h-3.5" /> Dark
+                      </button>
+                      <button
+                        onClick={() => setTheme("light")}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${theme === "light" ? "bg-white/[0.12] text-white shadow-sm" : "text-white/40 hover:text-white"}`}
+                      >
+                        <Sun className="w-3.5 h-3.5" /> Light
+                      </button>
+                    </div>
+                  </div>
+                  <div className="p-5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-white mb-0.5">
+                        Chat suggestions
+                      </h4>
+                      <p className="text-[11.5px] text-white/45">
+                        Show helpful suggestions in the AI assistant to enhance
+                        your experience.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setChatSuggestions(!chatSuggestions)}
+                      className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors cursor-figma-pointer ${chatSuggestions ? "bg-purple-600" : "bg-white/10"}`}
+                    >
+                      <div
+                        className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${chatSuggestions ? "translate-x-5" : "translate-x-0"}`}
+                      />
+                    </button>
+                  </div>
+                  <div className="p-5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-white mb-0.5">
+                        Auto-sync diagrams
+                      </h4>
+                      <p className="text-[11.5px] text-white/45">
+                        Automatically sync canvas layout changes to cloud
+                        integrations.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setAutoSyncDiagrams(!autoSyncDiagrams)}
+                      className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors cursor-figma-pointer ${autoSyncDiagrams ? "bg-purple-600" : "bg-white/10"}`}
+                    >
+                      <div
+                        className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${autoSyncDiagrams ? "translate-x-5" : "translate-x-0"}`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* AI Models & Keys tab */}
+          {activeTab === "ai" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div>
+                <h1 className="text-2xl font-bold font-headline text-white mb-1">
+                  AI Models & API Keys
+                </h1>
+                <p className="text-xs text-white/50">
+                  Configure custom API keys for OpenAI, Anthropic, Gemini, and
+                  DeepSeek for AI diagram generation.
+                </p>
+              </div>
+              <div className="bg-[#151519]/90 border border-white/[0.08] rounded-2xl p-6 shadow-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-white">
+                    Configured API Keys
+                  </h3>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowNewKey(true)}
+                    className="bg-white text-black hover:bg-white/90 text-xs font-semibold rounded-xl gap-1"
+                  >
+                    + Add API Key
+                  </Button>
+                </div>
                 {isLoadingKeys ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-white/40" />
                   </div>
                 ) : apiKeys.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No API keys stored. Add your first key above.
-                  </p>
+                  <div className="text-center py-8 border border-dashed border-white/10 rounded-xl">
+                    <KeyIcon className="w-8 h-8 text-white/20 mx-auto mb-2" />
+                    <p className="text-xs text-white/60 font-medium mb-1">
+                      No API keys configured
+                    </p>
+                    <p className="text-[11px] text-white/35">
+                      Add a key to use your own provider quota for AI features.
+                    </p>
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     {apiKeys.map((key) => (
                       <div
                         key={key.id}
-                        className="flex items-center justify-between p-3 rounded-xl border border-white/[0.06] bg-white/[0.03]"
+                        className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06]"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
-                            <Key className="w-4 h-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm capitalize">
-                              {key.provider}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {key.keyHint}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                            Active
+                          <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 text-[10px] font-bold uppercase">
+                            {key.provider}
                           </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteKey(key.id)}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <span className="text-xs font-mono text-white/70">
+                            {key.keyHint}
+                          </span>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteKey(key.id)}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </Button>
                       </div>
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Appearance */}
-          {activeTab === "appearance" && (
-            <Card className="bg-[#121214]/60 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)] rounded-2xl">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    {resolvedTheme === "dark" ? (
-                      <Moon className="w-5 h-5 text-primary" />
-                    ) : (
-                      <Sun className="w-5 h-5 text-primary" />
-                    )}
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg font-semibold">
-                      Appearance
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      Choose your preferred theme
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex gap-1 p-1 bg-white/[0.03] border border-white/[0.06] rounded-xl w-fit">
-                  {themeButtons.map(({ value, icon: Icon, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => setTheme(value)}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all",
-                        theme === value
-                          ? "bg-[#121214]/80 text-white shadow-[0_2px_8px_rgba(0,0,0,0.5)] border border-white/[0.08]"
-                          : "text-white/40 hover:text-white/80",
-                      )}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Profile */}
-          {activeTab === "profile" && (
-            <Card className="bg-[#121214]/60 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)] rounded-2xl">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <User className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg font-semibold">
-                      Profile
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      Update your personal information
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-6">
-                <div className="flex items-center gap-4">
-                  <Avatar className="w-14 h-14 border border-white/[0.08]">
-                    <AvatarImage src={user?.profileImageUrl || undefined} />
-                    <AvatarFallback className="bg-muted text-foreground font-semibold">
-                      {user?.firstName?.[0] || user?.email?.[0] || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">
-                      {user?.firstName} {user?.lastName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {user?.email}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First name</Label>
-                    <Input
-                      id="firstName"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="John"
-                      className="bg-white/[0.03] border-white/[0.08] text-white/90 focus-visible:ring-white/[0.15] focus-visible:bg-white/[0.05] rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last name</Label>
-                    <Input
-                      id="lastName"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      placeholder="Doe"
-                      className="bg-white/[0.03] border-white/[0.08] text-white/90 focus-visible:ring-white/[0.15] focus-visible:bg-white/[0.05] rounded-xl"
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleUpdateProfile}
-                  disabled={isUpdatingProfile}
-                  className="w-full"
-                >
-                  {isUpdatingProfile ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save changes"
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Security */}
-          {activeTab === "security" && user?.authProvider === "email" && (
-            <Card className="bg-[#121214]/60 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)] rounded-2xl">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Lock className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg font-semibold">
-                      Security
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      Change your password
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current password</Label>
-                  <div className="relative">
-                    <Input
-                      id="currentPassword"
-                      type={showPassword ? "text" : "password"}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Enter current password"
-                      className="pr-10 bg-white/[0.03] border-white/[0.08] text-white/90 focus-visible:ring-white/[0.15] focus-visible:bg-white/[0.05] rounded-xl"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New password</Label>
-                  <div className="relative">
-                    <Input
-                      id="newPassword"
-                      type={showNewPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder={`At least ${PASSWORD_POLICY.minLength} characters`}
-                      className="pr-10 bg-white/[0.03] border-white/[0.08] text-white/90 focus-visible:ring-white/[0.15] focus-visible:bg-white/[0.05] rounded-xl"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showNewPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="mt-2 space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
-                      Requirements:
-                    </p>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                      <div
-                        className={`flex items-center text-[10px] ${newPassword.length >= PASSWORD_POLICY.minLength ? "text-green-500" : "text-muted-foreground"}`}
+              </div>
+              {showNewKey && (
+                <div className="bg-[#151519]/90 border border-white/[0.08] rounded-2xl p-6 shadow-2xl space-y-4">
+                  <h3 className="text-sm font-semibold text-white">
+                    Add New API Key
+                  </h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="text-xs text-white/60 mb-1 block">
+                        Provider
+                      </label>
+                      <select
+                        value={newKeyProvider}
+                        onChange={(e) => setNewKeyProvider(e.target.value)}
+                        className="w-full bg-white/[0.06] border border-white/10 text-xs text-white rounded-xl px-3 py-2 outline-none"
                       >
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full mr-2 ${newPassword.length >= PASSWORD_POLICY.minLength ? "bg-green-500" : "bg-muted/30 border border-muted-foreground/30"}`}
-                        />
-                        {PASSWORD_POLICY.minLength}+ chars
-                      </div>
-                      <div
-                        className={`flex items-center text-[10px] ${/[A-Z]/.test(newPassword) ? "text-green-500" : "text-muted-foreground"}`}
-                      >
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full mr-2 ${/[A-Z]/.test(newPassword) ? "bg-green-500" : "bg-muted/30 border border-muted-foreground/30"}`}
-                        />
-                        Uppercase
-                      </div>
-                      <div
-                        className={`flex items-center text-[10px] ${/[a-z]/.test(newPassword) ? "text-green-500" : "text-muted-foreground"}`}
-                      >
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full mr-2 ${/[a-z]/.test(newPassword) ? "bg-green-500" : "bg-muted/30 border border-muted-foreground/30"}`}
-                        />
-                        Lowercase
-                      </div>
-                      <div
-                        className={`flex items-center text-[10px] ${/\d/.test(newPassword) ? "text-green-500" : "text-muted-foreground"}`}
-                      >
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full mr-2 ${/\d/.test(newPassword) ? "bg-green-500" : "bg-muted/30 border border-muted-foreground/30"}`}
-                        />
-                        Number
-                      </div>
-                      <div
-                        className={`flex items-center text-[10px] ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword) ? "text-green-500" : "text-muted-foreground"}`}
-                      >
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full mr-2 ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword) ? "bg-green-500" : "bg-muted/30 border border-muted-foreground/30"}`}
-                        />
-                        Special Char
-                      </div>
+                        <option value="openai" className="bg-[#121215]">
+                          OpenAI (GPT-4o)
+                        </option>
+                        <option value="anthropic" className="bg-[#121215]">
+                          Anthropic (Claude 3.5)
+                        </option>
+                        <option value="gemini" className="bg-[#121215]">
+                          Google Gemini 1.5
+                        </option>
+                        <option value="deepseek" className="bg-[#121215]">
+                          DeepSeek R1
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-white/60 mb-1 block">
+                        API Key Value
+                      </label>
+                      <Input
+                        type="password"
+                        placeholder="sk-..."
+                        value={newKeyValue}
+                        onChange={(e) => setNewKeyValue(e.target.value)}
+                        className="bg-white/[0.04] border-white/10 text-xs text-white rounded-xl"
+                      />
                     </div>
                   </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowNewKey(false)}
+                      className="text-xs text-white/60"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleAddKey}
+                      disabled={isAddingKey}
+                      className="bg-white text-black text-xs font-semibold rounded-xl"
+                    >
+                      {isAddingKey && (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                      )}
+                      Save Key
+                    </Button>
+                  </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm new password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Re-enter new password"
-                    className="bg-white/[0.03] border-white/[0.08] text-white/90 focus-visible:ring-white/[0.15] focus-visible:bg-white/[0.05] rounded-xl"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleChangePassword}
-                  disabled={
-                    isChangingPassword ||
-                    !currentPassword ||
-                    !newPassword ||
-                    !confirmPassword
-                  }
-                  className="w-full"
-                >
-                  {isChangingPassword ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Changing...
-                    </>
-                  ) : (
-                    "Change password"
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+              )}
+            </div>
           )}
 
-          {/* Data & Privacy */}
-          {activeTab === "data" && (
-            <Card className="bg-[#121214]/60 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)] rounded-2xl">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Download className="w-5 h-5 text-primary" />
-                  </div>
+          {/* Workspace tab */}
+          {activeTab === "workspace" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div>
+                <h1 className="text-2xl font-bold font-headline text-white mb-1">
+                  Workspace Settings
+                </h1>
+                <p className="text-xs text-white/50">
+                  Manage name, slug, and general preferences for your active
+                  workspace.
+                </p>
+              </div>
+              <div className="bg-[#151519]/90 border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl divide-y divide-white/[0.06]">
+                <div className="p-5 flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg font-semibold">
-                      Data & Privacy
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      Manage your data and account
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-xl border border-white/[0.06] bg-white/[0.03]">
-                  <div>
-                    <h3 className="font-medium text-sm">Export your data</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Download all your workspaces and projects
+                    <h4 className="text-xs font-semibold text-white mb-0.5">
+                      Workspace Name
+                    </h4>
+                    <p className="text-[11.5px] text-white/45">
+                      The display name of your team workspace.
                     </p>
                   </div>
-                  <Button
-                    onClick={handleExportData}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
+                  <Input
+                    defaultValue={`${userName}'s Studio`}
+                    className="bg-white/[0.04] border-white/10 text-xs text-white w-48 rounded-xl"
+                  />
+                </div>
+                <div className="p-5 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-semibold text-white mb-0.5">
+                      Workspace Slug
+                    </h4>
+                    <p className="text-[11.5px] text-white/45">
+                      URL identifier for team workspace links.
+                    </p>
+                  </div>
+                  <span className="text-xs text-white/70 font-mono">
+                    meshwork-studio-main
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Plans tab */}
+          {activeTab === "plans" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div>
+                <h1 className="text-2xl font-bold font-headline text-white mb-1">
+                  Plans & Credit Usage
+                </h1>
+                <p className="text-xs text-white/50">
+                  View your current plan, monthly AI credits, and billing
+                  details.
+                </p>
+              </div>
+              <div className="bg-[#151519]/90 border border-white/[0.08] rounded-2xl p-6 shadow-2xl space-y-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      Pro Plan Active
+                    </span>
+                    <h3 className="text-lg font-bold text-white mt-2">
+                      Meshwork Studio Pro
+                    </h3>
+                  </div>
+                  <Button className="bg-white text-black hover:bg-white/90 text-xs font-semibold rounded-xl">
+                    Upgrade Plan
                   </Button>
                 </div>
-
-                <div className="flex items-center justify-between p-3 rounded-xl bg-red-500/5 border border-red-500/20">
-                  <div>
-                    <h3 className="font-medium text-sm text-destructive">
-                      Delete all data
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      Remove all workspaces. Account stays active.
-                    </p>
+                <div className="space-y-2 pt-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-white/60">Monthly AI Credits</span>
+                    <span className="text-white font-semibold">
+                      850 / 1,000 credits used
+                    </span>
                   </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_24px_80px_rgba(0,0,0,0.8)] rounded-2xl">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-                          <AlertTriangle className="w-5 h-5" />
-                          Delete all data?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="text-sm">
-                          This will permanently delete all your workspaces and
-                          projects. Your account will remain active.
-                          <br />
-                          <br />
-                          Type <strong>DELETE ALL</strong> to confirm.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <Input
-                        value={deleteDataConfirmText}
-                        onChange={(e) =>
-                          setDeleteDataConfirmText(e.target.value)
-                        }
-                        placeholder="DELETE ALL"
-                        className="border-red-500/30 bg-red-500/5 text-white/90 focus-visible:ring-red-500/20 rounded-xl"
-                      />
-                      <AlertDialogFooter>
-                        <AlertDialogCancel
-                          onClick={() => setDeleteDataConfirmText("")}
-                        >
-                          Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDeleteAllData}
-                          disabled={
-                            isDeletingData ||
-                            deleteDataConfirmText !== "DELETE ALL"
-                          }
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          {isDeletingData ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Deleting...
-                            </>
-                          ) : (
-                            "Delete all data"
-                          )}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
+                    <div className="bg-gradient-to-r from-orange-500 to-purple-600 h-full w-[85%]" />
+                  </div>
                 </div>
+              </div>
+            </div>
+          )}
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+          {/* Security tab */}
+          {activeTab === "security" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div>
+                <h1 className="text-2xl font-bold font-headline text-white mb-1">
+                  Privacy & Security
+                </h1>
+                <p className="text-xs text-white/50">
+                  Manage your password, authentication, and data retention.
+                </p>
+              </div>
+              <div className="bg-[#151519]/90 border border-white/[0.08] rounded-2xl p-6 shadow-2xl space-y-4">
+                <h3 className="text-sm font-semibold text-white">
+                  Change Password
+                </h3>
+                <div className="space-y-3 max-w-md">
                   <div>
-                    <h3 className="font-medium text-sm text-destructive">
-                      Delete account
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      Permanently delete your account and all data
-                    </p>
+                    <label className="text-xs text-white/60 mb-1 block">
+                      Current Password
+                    </label>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className="bg-white/[0.04] border-white/10 text-xs text-white rounded-xl pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                      >
+                        {showPassword ? (
+                          <EyeSlashIcon className="w-4 h-4" />
+                        ) : (
+                          <EyeIcon className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_24px_80px_rgba(0,0,0,0.8)] rounded-2xl">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-                          <AlertTriangle className="w-5 h-5" />
-                          Delete account?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="text-sm">
-                          This cannot be undone. Your account and all data will
-                          be permanently removed.
-                          <br />
-                          <br />
-                          Type <strong>DELETE</strong> to confirm.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
+                  <div>
+                    <label className="text-xs text-white/60 mb-1 block">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <Input
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="bg-white/[0.04] border-white/10 text-xs text-white rounded-xl pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                      >
+                        {showNewPassword ? (
+                          <EyeSlashIcon className="w-4 h-4" />
+                        ) : (
+                          <EyeIcon className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/60 mb-1 block">
+                      Confirm New Password
+                    </label>
+                    <Input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="bg-white/[0.04] border-white/10 text-xs text-white rounded-xl"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleChangePassword}
+                    disabled={isChangingPassword}
+                    className="bg-white text-black hover:bg-white/90 text-xs font-semibold rounded-xl"
+                  >
+                    {isChangingPassword && (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                    )}
+                    Update Password
+                  </Button>
+                </div>
+              </div>
+              <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-6 shadow-2xl space-y-4">
+                <h3 className="text-sm font-semibold text-red-400">
+                  Danger Zone
+                </h3>
+                <p className="text-xs text-white/50">
+                  Permanently remove your account and all associated workspace
+                  data.
+                </p>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      className="text-xs rounded-xl"
+                    >
+                      Delete Account
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-[#151519] border-white/10 text-white">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Are you absolutely sure?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-white/60 text-xs">
+                        This action cannot be undone. Type DELETE to confirm:
+                      </AlertDialogDescription>
                       <Input
                         value={deleteConfirmText}
                         onChange={(e) => setDeleteConfirmText(e.target.value)}
                         placeholder="DELETE"
-                        className="border-red-500/30 bg-red-500/5 text-white/90 focus-visible:ring-red-500/20 rounded-xl"
+                        className="bg-white/[0.04] border-white/10 text-xs text-white mt-2"
                       />
-                      <AlertDialogFooter>
-                        <AlertDialogCancel
-                          onClick={() => setDeleteConfirmText("")}
-                        >
-                          Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDeleteAccount}
-                          disabled={
-                            isDeletingAccount || deleteConfirmText !== "DELETE"
-                          }
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          {isDeletingAccount ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Deleting...
-                            </>
-                          ) : (
-                            "Delete account"
-                          )}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </CardContent>
-            </Card>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="bg-white/10 text-white hover:bg-white/20 border-0">
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteAccount}
+                        disabled={isDeletingAccount}
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        {isDeletingAccount ? "Deleting..." : "Delete Account"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
           )}
-        </div>
+
+          {/* Fallback for other tabs */}
+          {!["account", "ai", "workspace", "plans", "security"].includes(
+            activeTab,
+          ) && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div>
+                <h1 className="text-2xl font-bold font-headline text-white mb-1 capitalize">
+                  {activeTab.replace("-", " ")}
+                </h1>
+                <p className="text-xs text-white/50">
+                  Configure settings and preferences for {activeTab}.
+                </p>
+              </div>
+              <div className="bg-[#151519]/90 border border-white/[0.08] rounded-2xl p-8 text-center space-y-3">
+                <SparklesIcon className="w-8 h-8 text-white/20 mx-auto" />
+                <h3 className="text-sm font-semibold text-white">
+                  Setting Enabled & Up to Date
+                </h3>
+                <p className="text-xs text-white/40 max-w-md mx-auto">
+                  Configurations for {activeTab} are automatically managed for
+                  your active Meshwork Studio workspace.
+                </p>
+              </div>
+            </div>
+          )}
+        </main>
       </div>
-    </div>
+    </>
   );
 }
