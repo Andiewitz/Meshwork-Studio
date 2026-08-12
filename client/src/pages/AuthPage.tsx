@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -625,16 +625,21 @@ export default function AuthPage() {
       </Helmet>
       <div className="min-h-screen flex bg-[#111113]">
         {/* Left: form panel */}
-        <div className="w-full lg:w-[46%] flex flex-col px-8 sm:px-14 lg:px-16 py-10 relative">
-          <a href="/" className="flex items-center gap-2.5 mb-12 group w-fit">
-            <div className="w-8 h-8 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]">
-              <MeshworkLogo />
-            </div>
-            <span className="text-[15px] font-semibold text-white/80 tracking-tight group-hover:text-white transition-colors">
-              Meshwork Studio
-            </span>
-          </a>
-          <div className="flex-1 flex flex-col justify-center max-w-[340px] w-full mx-auto lg:mx-0">
+        <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 sm:p-12 relative min-h-screen">
+          {/* Header / Logo */}
+          <div className="w-full max-w-[360px] mx-auto pt-2">
+            <a href="/" className="flex items-center gap-2.5 group w-fit">
+              <div className="w-8 h-8 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]">
+                <MeshworkLogo />
+              </div>
+              <span className="text-[15px] font-semibold text-white/80 tracking-tight group-hover:text-white transition-colors">
+                Meshwork Studio
+              </span>
+            </a>
+          </div>
+
+          {/* Form area — Centered */}
+          <div className="w-full max-w-[360px] mx-auto my-auto py-8">
             <AnimatePresence mode="wait">
               {mode === "login" ? (
                 <motion.div
@@ -644,7 +649,7 @@ export default function AuthPage() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.15 }}
                 >
-                  <h1 className="text-[22px] font-semibold text-white tracking-tight mb-1">
+                  <h1 className="text-[24px] font-bold text-white tracking-tight mb-1">
                     Log in
                   </h1>
                   <p className="text-[13px] text-white/35 mb-7">
@@ -660,7 +665,7 @@ export default function AuthPage() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.15 }}
                 >
-                  <h1 className="text-[22px] font-semibold text-white tracking-tight mb-1">
+                  <h1 className="text-[24px] font-bold text-white tracking-tight mb-1">
                     Create your account
                   </h1>
                   <p className="text-[13px] text-white/35 mb-7">
@@ -671,16 +676,18 @@ export default function AuthPage() {
               )}
             </AnimatePresence>
           </div>
-          <div className="mt-10 flex items-center justify-between text-[11px] text-white/20">
+
+          {/* Footer */}
+          <div className="w-full max-w-[360px] mx-auto pb-2 flex items-center justify-between text-[11px] text-white/20">
             <a href="/" className="hover:text-white/40 transition-colors">
-              Back to home
+              ← Back to home
             </a>
             <span>© {new Date().getFullYear()} Meshwork Studio</span>
           </div>
         </div>
 
         {/* Right: animated gradient panel */}
-        <div className="hidden lg:block lg:w-[54%] relative overflow-hidden">
+        <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
           <div className="absolute inset-0 bg-[#0d0f1a]" />
           <motion.div
             initial={{ opacity: 0, scale: 0.6 }}
