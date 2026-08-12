@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+﻿import { useState, useMemo, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link, useLocation } from "wouter";
 import {
@@ -15,42 +15,16 @@ import {
   Squares2X2Icon as LayoutGrid,
   Bars3Icon as List,
   CubeIcon as Package,
-  ChevronDownIcon as ChevronDown,
   PlusIcon as Plus,
 } from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
 
-const TABS = ["Recently viewed", "Shared with me", "Favorites"] as const;
+const TABS = ["My projects", "Recently viewed"] as const;
 type Tab = (typeof TABS)[number];
-
-const TYPE_FILTERS = [
-  "All types",
-  "Architecture",
-  "Network",
-  "Database",
-] as const;
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05, delayChildren: 0.05 },
-  },
-  exit: {
-    opacity: 0,
-    transition: { staggerChildren: 0.03, staggerDirection: -1 },
-  },
-};
-
-const fadeUpVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
-  exit: { opacity: 0, y: -6, transition: { duration: 0.15, ease: "easeIn" } },
-};
 
 export default function Home() {
   const [location, setLocation] = useLocation();
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user } = useAuth();
   const { data: workspaces, isLoading: isWorkspacesLoading } = useWorkspaces();
   const deleteWorkspace = useDeleteWorkspace();
   const createWorkspace = useCreateWorkspace();
@@ -63,7 +37,6 @@ export default function Home() {
     );
     if (pendingTemplateStr && user && !isGeneratingBlueprint) {
       setIsGeneratingBlueprint(true);
-
       const executeTemplateCreation = async () => {
         try {
           const template = JSON.parse(pendingTemplateStr);
@@ -74,14 +47,12 @@ export default function Home() {
             groups: [],
             tags: [template.category],
           });
-
           const normalizedEdges = template.edges.map(
             (edge: { animated?: boolean; [key: string]: unknown }) => ({
               ...edge,
               animated: edge.animated ? 1 : 0,
             }),
           );
-
           await secureFetch(`/api/v1/workspaces/${ws.id}/canvas`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -90,7 +61,6 @@ export default function Home() {
               edges: normalizedEdges,
             }),
           });
-
           localStorage.removeItem("meshwork_pending_template");
           setLocation(`/workspace/${ws.id}`);
         } catch (e) {
@@ -99,23 +69,22 @@ export default function Home() {
           localStorage.removeItem("meshwork_pending_template");
         }
       };
-
       executeTemplateCreation();
     }
   }, [user, createWorkspace, setLocation, isGeneratingBlueprint]);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<Tab>("Recently viewed");
+  const [activeTab, setActiveTab] = useState<Tab>("My projects");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [typeFilter, setTypeFilter] = useState<string>("All types");
-  const [filterOpen, setFilterOpen] = useState(false);
 
   const isWorkspacesPage = location === "/workspaces";
 
   const handleDelete = (id: number) => {
     deleteWorkspace.mutate(id);
   };
+
+  const firstName = user?.firstName || user?.email?.split("@")[0] || "there";
 
   const filteredWorkspaces = useMemo(() => {
     if (!workspaces) return [];
@@ -124,35 +93,27 @@ export default function Home() {
         ws.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ws.type.toLowerCase().includes(searchTerm.toLowerCase()),
     );
-
-    // Tab filtering
-    if (activeTab === "Favorites") {
-      result = result.filter((ws) => ws.isFavorite);
+    if (activeTab === "Recently viewed") {
+      result = [...result].sort((a, b) => {
+        const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+    } else {
+      result = [...result].sort((a, b) => {
+        if (a.isFavorite && !b.isFavorite) return -1;
+        if (!a.isFavorite && b.isFavorite) return 1;
+        const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
     }
-    // "Shared with me" would filter for shared — keeping all for now since share data may vary
-
-    // Type filtering
-    if (typeFilter !== "All types") {
-      result = result.filter((ws) =>
-        ws.type.toLowerCase().includes(typeFilter.toLowerCase()),
-      );
-    }
-
-    result = [...result].sort((a, b) => {
-      if (a.isFavorite && !b.isFavorite) return -1;
-      if (!a.isFavorite && b.isFavorite) return 1;
-      const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-      const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-      return dateB - dateA;
-    });
     return result;
-  }, [workspaces, searchTerm, activeTab, typeFilter]);
+  }, [workspaces, searchTerm, activeTab]);
 
   const displayWorkspaces = isWorkspacesPage
     ? filteredWorkspaces
     : filteredWorkspaces.slice(0, 20);
-
-  const isLoading = isAuthLoading || isWorkspacesLoading;
 
   return (
     <>
@@ -164,259 +125,252 @@ export default function Home() {
         </title>
       </Helmet>
 
-      {/* Full-height flex column */}
-      <div className="flex flex-col h-[calc(100vh-48px)]">
-        {/* Blueprint Generation Banner */}
-        {isGeneratingBlueprint && (
-          <div className="bg-primary/10 border-b border-primary/20 px-6 py-2 flex items-center justify-between animate-pulse">
-            <span className="text-xs text-primary font-medium">
-              Generating Architecture Blueprint... Please wait.
-            </span>
-          </div>
-        )}
-        {/* ── Tab bar ── */}
-        <div className="flex items-center justify-between border-b border-white/[0.05] px-6 py-0 shrink-0">
-          {/* Left: tabs */}
-          <div className="flex items-center gap-0">
-            {TABS.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`relative px-4 py-3 text-xs font-medium transition-colors cursor-figma-pointer ${
-                  activeTab === tab
-                    ? "text-white"
-                    : "text-white/30 hover:text-white/60"
-                }`}
-              >
-                {tab}
-                {activeTab === tab && (
-                  <motion.div
-                    layoutId="tab-indicator"
-                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-              </button>
-            ))}
-          </div>
+      {/* Blueprint Generation Banner */}
+      {isGeneratingBlueprint && (
+        <div className="fixed top-0 left-40 right-0 z-50 bg-primary/10 border-b border-primary/20 px-6 py-2 flex items-center justify-center animate-pulse">
+          <span className="text-xs text-primary font-medium">
+            Generating Architecture Blueprint... Please wait.
+          </span>
+        </div>
+      )}
 
-          {/* Right: filter + search + view toggle */}
-          <div className="flex items-center gap-2 py-1.5">
-            {/* Search */}
-            <div className="relative group">
-              <Search className="absolute inset-y-0 left-2 my-auto w-3.5 h-3.5 text-white/20 group-focus-within:text-primary transition-colors" />
-              <input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                type="text"
-                placeholder="Filter..."
-                className="bg-white/[0.02] border border-white/[0.06] rounded-md pl-7 pr-3 py-1 text-xs outline-none focus:border-primary/50 text-white placeholder:text-white/20 transition-colors w-32 cursor-figma"
-              />
-            </div>
-
-            {/* Type filter */}
-            <div className="relative">
-              <button
-                onClick={() => setFilterOpen((v) => !v)}
-                className="flex items-center gap-1 rounded-md border border-white/[0.06] px-2.5 py-1 text-xs text-white/30 hover:text-white/60 hover:border-white/[0.1] transition-colors cursor-figma-pointer"
-              >
-                {typeFilter}
-                <ChevronDown className="h-3 w-3" />
-              </button>
-              <AnimatePresence>
-                {filterOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -4, scale: 0.97 }}
-                    transition={{ duration: 0.12 }}
-                    className="absolute right-0 top-full mt-1 z-30 bg-surface-container-highest border border-white/[0.06] rounded-lg shadow-2xl overflow-hidden min-w-[120px]"
-                  >
-                    {TYPE_FILTERS.map((f) => (
-                      <button
-                        key={f}
-                        onClick={() => {
-                          setTypeFilter(f);
-                          setFilterOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 text-xs transition-colors cursor-figma-pointer ${
-                          typeFilter === f
-                            ? "bg-white/[0.06] text-white"
-                            : "text-white/40 hover:bg-white/[0.04] hover:text-white/70"
-                        }`}
-                      >
-                        {f}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* View mode toggle */}
-            <div className="flex items-center rounded-md border border-white/[0.06] overflow-hidden">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`flex h-7 w-7 items-center justify-center transition-colors cursor-figma-pointer ${
-                  viewMode === "grid"
-                    ? "bg-white/[0.06] text-white"
-                    : "text-white/20 hover:text-white/50"
-                }`}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`flex h-7 w-7 items-center justify-center transition-colors cursor-figma-pointer ${
-                  viewMode === "list"
-                    ? "bg-white/[0.06] text-white"
-                    : "text-white/20 hover:text-white/50"
-                }`}
-              >
-                <List className="h-3.5 w-3.5" />
-              </button>
-            </div>
-
-            {/* New workspace button */}
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary/90 transition-all active:scale-95 cursor-figma-pointer"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New
-            </button>
-          </div>
+      {/* Full-screen layout */}
+      <div className="relative min-h-screen flex flex-col overflow-hidden bg-[#0d0f1a]">
+        {/* ── Animated gradient background ── */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {/* Top-left navy blob */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 2.4, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute -top-[20%] -left-[10%] w-[70%] h-[75%] rounded-full"
+            style={{
+              background:
+                "radial-gradient(ellipse at center, rgba(30,64,175,0.7) 0%, rgba(49,46,129,0.5) 45%, transparent 75%)",
+              filter: "blur(70px)",
+            }}
+          />
+          {/* Center purple haze */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 2.8, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+            className="absolute top-[5%] left-[15%] w-[75%] h-[65%] rounded-full"
+            style={{
+              background:
+                "radial-gradient(ellipse at center, rgba(109,40,217,0.45) 0%, rgba(139,92,246,0.25) 40%, transparent 70%)",
+              filter: "blur(80px)",
+            }}
+          />
+          {/* Bottom-right magenta bloom */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.4 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 3.0, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+            className="absolute top-[20%] right-[-10%] w-[65%] h-[70%] rounded-full"
+            style={{
+              background:
+                "radial-gradient(ellipse at center, rgba(236,72,153,0.6) 0%, rgba(192,38,211,0.4) 35%, rgba(124,58,237,0.2) 65%, transparent 80%)",
+              filter: "blur(65px)",
+            }}
+          />
+          {/* Bottom blue accent */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 3.2, ease: "easeOut", delay: 0.4 }}
+            className="absolute bottom-[20%] left-[5%] w-[40%] h-[35%] rounded-full"
+            style={{
+              background:
+                "radial-gradient(ellipse at center, rgba(59,130,246,0.35) 0%, transparent 70%)",
+              filter: "blur(60px)",
+            }}
+          />
         </div>
 
-        {/* ── Scrollable content ── */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6">
-            {/* Loading Skeleton */}
-            {isLoading ? (
-              <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
+        {/* ── Hero area ── */}
+        <div className="flex-1 flex flex-col items-center justify-center pb-[310px] relative z-10 px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-col items-center text-center"
+          >
+            <h1 className="text-[clamp(1.8rem,3.5vw,2.8rem)] font-bold text-white leading-tight tracking-tight mb-3">
+              What should we build, {firstName}?
+            </h1>
+            <p className="text-[14px] text-white/40 mb-8 max-w-sm leading-relaxed">
+              Design, visualize, and manage your cloud infrastructure from one
+              canvas.
+            </p>
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 hover:border-white/25 text-white text-sm font-medium transition-all duration-200 backdrop-blur-sm cursor-figma-pointer active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              New workspace
+            </button>
+          </motion.div>
+        </div>
+
+        {/* ── Bottom floating project panel ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
+          className="fixed bottom-0 left-40 right-0 z-20 bg-[#0e0e0f]/85 backdrop-blur-2xl border-t border-white/[0.07]"
+          style={{ height: "310px" }}
+        >
+          {/* Tab bar */}
+          <div className="flex items-center justify-between px-6 py-2.5 border-b border-white/[0.05]">
+            <div className="flex items-center gap-1">
+              {TABS.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`relative px-3 py-1.5 text-[12px] font-medium rounded-md transition-all duration-150 cursor-figma-pointer ${
+                    activeTab === tab
+                      ? "bg-white/[0.07] text-white"
+                      : "text-white/35 hover:text-white/60 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+
+              {/* View mode */}
+              <div className="flex items-center ml-2 rounded-md border border-white/[0.07] overflow-hidden">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`flex h-6 w-6 items-center justify-center transition-colors cursor-figma-pointer ${
+                    viewMode === "grid"
+                      ? "bg-white/[0.08] text-white"
+                      : "text-white/25 hover:text-white/50"
+                  }`}
+                >
+                  <LayoutGrid className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`flex h-6 w-6 items-center justify-center transition-colors cursor-figma-pointer ${
+                    viewMode === "list"
+                      ? "bg-white/[0.08] text-white"
+                      : "text-white/25 hover:text-white/50"
+                  }`}
+                >
+                  <List className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute inset-y-0 left-2 my-auto w-3 h-3 text-white/25" />
+                <input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  type="text"
+                  placeholder="Search..."
+                  className="bg-white/[0.04] border border-white/[0.07] rounded-md pl-6 pr-3 py-1 text-[11px] outline-none focus:border-white/20 text-white placeholder:text-white/25 transition-colors w-28 cursor-figma"
+                />
+              </div>
+
+              {!isWorkspacesPage && filteredWorkspaces.length > 20 && (
+                <Link href="/workspaces">
+                  <span className="text-[11px] text-white/35 hover:text-white/60 transition-colors cursor-figma-pointer">
+                    Browse all →
+                  </span>
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="overflow-y-auto h-[calc(310px-48px)] px-6 py-4">
+            {isWorkspacesLoading ? (
+              <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {[1, 2, 3, 4, 5].map((i) => (
                   <div
                     key={i}
-                    className="h-44 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 flex flex-col justify-between animate-pulse"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-white/10" />
-                      <div className="space-y-2 flex-1">
-                        <div className="h-3 w-3/4 bg-white/10 rounded" />
-                        <div className="h-2 w-1/2 bg-white/5 rounded" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="h-2 w-full bg-white/5 rounded" />
-                      <div className="h-2 w-2/3 bg-white/5 rounded" />
-                    </div>
-                  </div>
+                    className="h-28 rounded-xl border border-white/[0.05] bg-white/[0.02] animate-pulse"
+                  />
                 ))}
               </div>
             ) : filteredWorkspaces.length === 0 && !searchTerm ? (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col items-center justify-center py-20 text-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center h-full text-center gap-3"
               >
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.06]">
-                  <Package className="h-8 w-8 text-white/20" />
+                <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
+                  <Package className="h-5 w-5 text-white/20" />
                 </div>
-                <p className="mb-1 text-sm font-medium text-white">
-                  No workspaces yet
-                </p>
-                <p className="mb-4 text-xs text-white/30">
-                  Create your first workspace to start designing architectures.
-                </p>
+                <div>
+                  <p className="text-sm font-medium text-white/70 mb-1">
+                    No workspaces yet
+                  </p>
+                  <p className="text-xs text-white/30">
+                    Create your first workspace to get started.
+                  </p>
+                </div>
                 <button
                   onClick={() => setIsCreateOpen(true)}
-                  className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-white hover:bg-primary/90 transition-all duration-150 active:scale-95 cursor-figma-pointer"
+                  className="px-4 py-1.5 rounded-lg bg-white/[0.07] hover:bg-white/[0.1] border border-white/[0.08] text-xs text-white/70 hover:text-white transition-all cursor-figma-pointer"
                 >
                   New workspace
                 </button>
               </motion.div>
             ) : filteredWorkspaces.length === 0 && searchTerm ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-20 text-center"
-              >
-                <Search className="h-10 w-10 text-white/15 mb-3" />
-                <p className="text-sm font-medium text-white">
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <Search className="h-7 w-7 text-white/15 mb-2" />
+                <p className="text-sm text-white/40">
                   No results for "{searchTerm}"
                 </p>
-                <p className="text-xs text-white/30 mt-1">
-                  Try a different search term.
-                </p>
-              </motion.div>
+              </div>
             ) : (
-              <>
-                {/* Section header */}
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-xs font-bold tracking-[0.15em] uppercase text-white/20">
-                    {displayWorkspaces.length} workspace
-                    {displayWorkspaces.length !== 1 ? "s" : ""}
-                  </h3>
-                  {!isWorkspacesPage && filteredWorkspaces.length > 20 && (
-                    <Link href="/workspaces">
-                      <span className="text-[10px] text-primary hover:underline underline-offset-4 uppercase tracking-widest cursor-figma-pointer">
-                        View all
-                      </span>
-                    </Link>
-                  )}
-                </div>
-
-                <AnimatePresence mode="popLayout">
-                  {viewMode === "grid" ? (
-                    <motion.div
-                      key="grid"
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
-                      variants={containerVariants}
-                      className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-                    >
-                      {displayWorkspaces.map((workspace) => (
-                        <motion.div
-                          key={workspace.id}
-                          variants={fadeUpVariants}
-                        >
-                          <WorkspaceCard
-                            workspace={workspace}
-                            onDelete={handleDelete}
-                            viewMode="grid"
-                          />
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="list"
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
-                      variants={containerVariants}
-                      className="flex flex-col gap-3"
-                    >
-                      {displayWorkspaces.map((workspace) => (
-                        <motion.div
-                          key={workspace.id}
-                          variants={fadeUpVariants}
-                        >
-                          <WorkspaceCard
-                            workspace={workspace}
-                            onDelete={handleDelete}
-                            viewMode="list"
-                          />
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </>
+              <AnimatePresence mode="popLayout">
+                {viewMode === "grid" ? (
+                  <motion.div
+                    key="grid"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+                  >
+                    {displayWorkspaces.map((workspace) => (
+                      <WorkspaceCard
+                        key={workspace.id}
+                        workspace={workspace}
+                        onDelete={handleDelete}
+                        viewMode="grid"
+                      />
+                    ))}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="list"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col gap-2"
+                  >
+                    {displayWorkspaces.map((workspace) => (
+                      <WorkspaceCard
+                        key={workspace.id}
+                        workspace={workspace}
+                        onDelete={handleDelete}
+                        viewMode="list"
+                      />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
 
       <CreateWorkspaceDialog
