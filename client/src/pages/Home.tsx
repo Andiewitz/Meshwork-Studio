@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link, useLocation } from "wouter";
 import {
@@ -17,7 +17,6 @@ import {
   CubeIcon as Package,
   PlusIcon as Plus,
   SparklesIcon as Sparkles,
-  ArrowRightIcon as ArrowRight,
 } from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -190,24 +189,8 @@ export default function Home() {
           />
         </div>
 
-        {/* ── Top Announcement Badge & Center Hero ── */}
-        <div className="flex-1 flex flex-col items-center justify-center pt-10 pb-6 relative z-10 px-6">
-          {/* Announcement Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="mb-6 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.12] hover:border-white/20 transition-all cursor-pointer backdrop-blur-md"
-          >
-            <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold tracking-wide uppercase">
-              New
-            </span>
-            <span className="text-[12px] font-medium text-white/80">
-              Meshwork Studio v2.0 is live
-            </span>
-            <ArrowRight className="w-3 h-3 text-white/50" />
-          </motion.div>
-
+        {/* ── Center Hero ── */}
+        <div className="flex-1 flex flex-col items-center justify-center pt-2 pb-6 relative z-10 px-6 -translate-y-6">
           {/* Heading */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -237,7 +220,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-            className="w-full bg-[#111218]/90 backdrop-blur-2xl border border-white/[0.09] rounded-2xl p-4 shadow-2xl flex flex-col min-h-[260px] max-h-[340px]"
+            className="w-full bg-[#111218]/90 backdrop-blur-2xl border border-white/[0.09] rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col min-h-[380px] max-h-[500px]"
           >
             {/* Header / Tabs */}
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-3">
