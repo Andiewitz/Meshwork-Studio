@@ -56,6 +56,28 @@ type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 
 // Register auth-specific routes
 export function registerAuthRoutes(app: Express, context: AppContext): void {
+  // GitHub OAuth routes
+  app.get(
+    "/api/v1/auth/github",
+    (req: Request, res: Response, next: NextFunction) => {
+      const isConfigured =
+        process.env.NODE_ENV === "test" ||
+        (Boolean(process.env.GITHUB_CLIENT_ID) &&
+          Boolean(process.env.GITHUB_CLIENT_SECRET));
+
+      if (!isConfigured) {
+        log.warn(
+          "GitHub OAuth attempted but strategy is not configured (missing GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET)",
+        );
+        return res.redirect("/?auth=login&error=github_not_configured");
+      }
+
+      passport.authenticate("github", {
+        scope: ["user:email"],
+      })(req, res, next);
+    },
+  );
+
   // Google OAuth routes
   app.get(
     "/api/v1/auth/google",
