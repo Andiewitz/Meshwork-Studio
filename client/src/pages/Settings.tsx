@@ -433,7 +433,7 @@ export default function Settings() {
         </aside>
 
         {/* ── Main Content Area ── */}
-        <main className="flex-1 overflow-y-auto p-8 sm:p-12 max-w-5xl">
+        <main className="flex-1 overflow-y-auto p-8 sm:p-12 w-full min-w-0">
           {/* Account / Profile tab */}
           {activeTab === "account" && (
             <div className="space-y-8 animate-in fade-in duration-200">
