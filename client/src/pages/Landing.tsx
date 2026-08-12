@@ -1509,12 +1509,39 @@ const Home = () => {
             {/* HERO SECTION — subtle, elegant dark atmospheric gradient starting from bottom */}
             <main className="w-full relative z-10 min-h-screen flex flex-col items-center justify-center overflow-x-hidden pt-16 bg-[#080911]">
               <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
-                {/* Subtle Top-center Deep Blue Veil */}
-                <div className="absolute -top-[20%] left-[20%] right-[20%] h-[40vh] rounded-full bg-[radial-gradient(ellipse_at_top,_rgba(59,130,246,0.18)_0%,_transparent_70%)] blur-[90px]" />
-                {/* Refined Bottom Glow starting from the bottom — Blue / Indigo / Magenta */}
-                <div className="absolute -bottom-[10%] left-[10%] right-[10%] h-[45vh] rounded-full bg-[radial-gradient(ellipse_at_bottom,_rgba(236,72,153,0.35)_0%,_rgba(139,92,246,0.30)_35%,_rgba(59,130,246,0.22)_65%,_transparent_85%)] blur-[90px]" />
+                {/* Subtle Top-center Deep Blue Veil — expands in */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.3 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    duration: 1.8,
+                    ease: [0.16, 1, 0.3, 1],
+                    delay: 0.2,
+                  }}
+                  className="absolute -top-[20%] left-[20%] right-[20%] h-[40vh] rounded-full bg-[radial-gradient(ellipse_at_top,_rgba(59,130,246,0.18)_0%,_transparent_70%)] blur-[90px] origin-center"
+                />
+                {/* Refined Bottom Glow — expands in from center-bottom */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.2 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    duration: 2.2,
+                    ease: [0.16, 1, 0.3, 1],
+                    delay: 0.1,
+                  }}
+                  className="absolute -bottom-[10%] left-[10%] right-[10%] h-[45vh] rounded-full bg-[radial-gradient(ellipse_at_bottom,_rgba(236,72,153,0.35)_0%,_rgba(139,92,246,0.30)_35%,_rgba(59,130,246,0.22)_65%,_transparent_85%)] blur-[90px] origin-bottom"
+                />
                 {/* Soft ambient dark vignette */}
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(8,9,17,0.3)_0%,_transparent_80%)]" />
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{
+                    duration: 2.5,
+                    ease: "easeOut",
+                    delay: 0.4,
+                  }}
+                  className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(8,9,17,0.3)_0%,_transparent_80%)]"
+                />
               </div>
               <motion.div
                 variants={containerVariants}
