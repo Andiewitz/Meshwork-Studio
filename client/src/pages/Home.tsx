@@ -190,7 +190,7 @@ export default function Home() {
         </div>
 
         {/* ── Center Hero ── */}
-        <div className="flex-1 flex flex-col items-center justify-center pt-2 pb-6 relative z-10 px-6 -translate-y-6">
+        <div className="flex-1 flex flex-col items-center justify-center pt-10 pb-6 relative z-10 px-6">
           {/* Heading */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -220,7 +220,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-            className="w-full bg-[#111218]/90 backdrop-blur-2xl border border-white/[0.09] rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col min-h-[380px] max-h-[500px]"
+            className="w-full bg-[#111218]/90 backdrop-blur-2xl border border-white/[0.09] rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col min-h-[480px] max-h-[600px]"
           >
             {/* Header / Tabs */}
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-3">
