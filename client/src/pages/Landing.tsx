@@ -66,6 +66,7 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useToast } from "@/hooks/use-toast";
+import { CookieBanner } from "@/components/ui/cookie-banner";
 
 interface BlogPost {
   id: number;
@@ -1978,6 +1979,9 @@ const Home = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Cookie consent banner */}
+      <CookieBanner />
     </div>
   );
 };
