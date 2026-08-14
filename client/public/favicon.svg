@@ -1,20 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
   <defs>
     <linearGradient id="mw-fav-fill" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stopColor="#FF6B35" />
-      <stop offset="38%" stopColor="#F43F5E" />
-      <stop offset="70%" stopColor="#D946EF" />
-      <stop offset="100%" stopColor="#3B82F6" />
+      <stop offset="0%" stop-color="#FF6B35" />
+      <stop offset="38%" stop-color="#F43F5E" />
+      <stop offset="70%" stop-color="#D946EF" />
+      <stop offset="100%" stop-color="#3B82F6" />
     </linearGradient>
     <linearGradient id="mw-fav-stroke" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stopColor="#FFA07A" stopOpacity="0.9" />
-      <stop offset="50%" stopColor="#F472B6" stopOpacity="0.8" />
-      <stop offset="100%" stopColor="#93C5FD" stopOpacity="0.9" />
+      <stop offset="0%" stop-color="#FFA07A" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#F472B6" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#93C5FD" stop-opacity="0.9" />
     </linearGradient>
   </defs>
-  <polygon points="4,92 96,92 96,8" fill="url(#mw-fav-fill)" strokeLinejoin="miter" />
-  <line x1="4" y1="92" x2="96" y2="8" stroke="url(#mw-fav-stroke)" stroke-width="3" stroke-linecap="round" />
-  <polygon points="4,92 96,92 96,8" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" strokeLinejoin="miter" />
-  <path d="M 96 76 L 80 76 L 80 92" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="square" strokeLinejoin="miter" />
-  <circle cx="4" cy="92" r="3.5" fill="#FFFFFF" />
+  <!-- Main vibrant gradient triangle -->
+  <polygon points="4,92 96,92 96,8" fill="url(#mw-fav-fill)" stroke-linejoin="miter" />
+  <!-- Hypotenuse accent line -->
+  <line x1="4" y1="92" x2="96" y2="8" stroke="url(#mw-fav-stroke)" stroke-width="4" stroke-linecap="round" />
+  <!-- Crisp white border -->
+  <polygon points="4,92 96,92 96,8" fill="none" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="2" stroke-linejoin="miter" />
+  <!-- Inset right-angle marker -->
+  <path d="M 96 74 L 78 74 L 78 92" fill="none" stroke="#FFFFFF" stroke-opacity="0.9" stroke-width="3.5" stroke-linecap="square" stroke-linejoin="miter" />
+  <!-- Apex point dot -->
+  <circle cx="4" cy="92" r="4.5" fill="#FFFFFF" />
 </svg>
