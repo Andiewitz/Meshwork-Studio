@@ -272,7 +272,7 @@ app.get("/admin/:secret", (req, res) => {
     log.info("All modules initialized successfully");
 
     // Initialize WebSocket presence server for real-time cursors
-    const { initializeWebSocket } = await import("./modules/team/websocket");
+    const { initializeWebSocket } = await import("@services/team/websocket");
     initializeWebSocket(httpServer);
     log.info("WebSocket presence server initialized");
 

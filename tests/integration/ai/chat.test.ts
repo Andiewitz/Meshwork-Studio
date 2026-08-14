@@ -4,7 +4,15 @@ import express from "express";
 import aiRoutes from "@server/modules/ai/routes";
 
 // Mock DB calls — by default return null/empty to simulate no BYOK keys
-vi.mock("@server/modules/ai/db", () => ({
+vi.mock("@services/ai/db/storage", () => ({
+  getApiKeyWithPlaintext: vi.fn().mockResolvedValue(null),
+  getActiveKeyForProvider: vi.fn().mockResolvedValue(null),
+  getUserApiKeys: vi.fn().mockResolvedValue([]),
+  createApiKey: vi.fn(),
+  deleteApiKey: vi.fn(),
+}));
+
+vi.mock("@services/ai/db", () => ({
   getApiKeyWithPlaintext: vi.fn().mockResolvedValue(null),
   getActiveKeyForProvider: vi.fn().mockResolvedValue(null),
   getUserApiKeys: vi.fn().mockResolvedValue([]),

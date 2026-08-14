@@ -1,0 +1,16 @@
+{
+  "name": "@meshwork/ai-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "drizzle-orm": "^0.45.2",
+    "drizzle-zod": "^0.7.0",
+    "express": "^5.0.1",
+    "express-rate-limit": "^8.3.1",
+    "openai": "^6.27.0",
+    "pg": "^8.16.3",
+    "zod": "^3.24.2"
+  }
+}

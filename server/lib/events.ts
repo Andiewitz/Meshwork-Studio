@@ -1,14 +1,10 @@
 import { EventEmitter } from "events";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type * as schema from "@shared/schema";
+import type { PgTransaction } from "drizzle-orm/pg-core";
 
 /**
- * Drizzle transaction type — derived from the NodePgDatabase instance so it
- * stays in sync with the driver without duplicating the signature manually.
+ * Drizzle transaction type — compatible across all service DB boundaries.
  */
-export type DrizzleTx = Parameters<
-  Parameters<NodePgDatabase<typeof schema>["transaction"]>[0]
->[0];
+export type DrizzleTx = PgTransaction<any, any, any>;
 
 // Define typed events
 export interface AppEvents {

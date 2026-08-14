@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "workspaces": [
+    "client",
+    "server/services/*"
+  ],
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
     "build": "tsx scripts/ts/build.ts",
