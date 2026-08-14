@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
-import { ShieldCheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 const COOKIE_CONSENT_KEY = "meshwork_cookie_consent";
 
@@ -9,10 +8,8 @@ export function CookieBanner() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    // Check if user already made a choice
     const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
     if (!consent) {
-      // Delay showing slightly for smoother UX
       const timer = setTimeout(() => setShow(true), 1200);
       return () => clearTimeout(timer);
     }
@@ -32,63 +29,51 @@ export function CookieBanner() {
     <AnimatePresence>
       {show && (
         <motion.aside
-          initial={{ opacity: 0, y: 50, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 30, scale: 0.95 }}
-          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed bottom-5 right-5 left-5 sm:left-auto sm:max-w-md z-50 p-5 rounded-2xl bg-zinc-950/95 border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.8)] backdrop-blur-xl font-sans"
-          aria-label="Cookie consent banner"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+          className="fixed bottom-0 left-0 right-0 z-50"
+          aria-label="Cookie consent"
         >
-          <div className="flex items-start gap-3.5">
-            <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0 text-orange-400 mt-0.5">
-              <ShieldCheckIcon className="w-5 h-5" />
-            </div>
+          {/* Sharp top border accent */}
+          <div className="h-[2px] w-full bg-white/20" />
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2 mb-1.5">
-                <h3 className="text-sm font-semibold text-white tracking-tight">
-                  Cookie &amp; Privacy Notice
-                </h3>
-                <button
-                  onClick={handleDecline}
-                  className="text-white/40 hover:text-white transition-colors p-1 -mr-1 -mt-1 rounded-lg"
-                  aria-label="Close cookie banner"
-                >
-                  <XMarkIcon className="w-4 h-4" />
-                </button>
-              </div>
-
-              <p className="text-xs leading-relaxed text-white/60 mb-3.5">
+          <div className="bg-zinc-950 border-t-0 border-b border-l border-r border-white/10 px-5 py-4 sm:px-8 sm:py-5">
+            <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+              {/* Text — stretches to fill horizontal space */}
+              <p className="flex-1 text-sm leading-relaxed text-white/55 font-sans">
                 We use essential cookies for authentication and session
-                management. By continuing to browse, you agree to our{" "}
+                management. By continuing you agree to our{" "}
                 <Link
                   href="/privacy"
-                  className="text-white/90 underline decoration-white/30 hover:decoration-white transition-colors"
+                  className="text-white font-semibold underline underline-offset-2 decoration-white/40 hover:decoration-white transition-colors"
                 >
                   Privacy Policy
                 </Link>{" "}
                 and{" "}
                 <Link
                   href="/terms"
-                  className="text-white/90 underline decoration-white/30 hover:decoration-white transition-colors"
+                  className="text-white font-semibold underline underline-offset-2 decoration-white/40 hover:decoration-white transition-colors"
                 >
                   Terms of Service
                 </Link>
                 .
               </p>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleAccept}
-                  className="flex-1 py-2 px-3.5 rounded-lg bg-white text-black hover:bg-white/90 text-xs font-semibold tracking-tight transition-all duration-150 cursor-pointer shadow-sm active:scale-[0.98]"
-                >
-                  Accept All
-                </button>
+              {/* Actions */}
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={handleDecline}
-                  className="py-2 px-3.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white/70 hover:text-white text-xs font-medium transition-all duration-150 cursor-pointer active:scale-[0.98]"
+                  className="py-2 px-5 text-xs font-medium text-white/50 hover:text-white/80 transition-colors cursor-pointer whitespace-nowrap"
                 >
-                  Essential Only
+                  Essential only
+                </button>
+                <button
+                  onClick={handleAccept}
+                  className="py-2 px-5 bg-white text-black text-xs font-semibold hover:bg-white/90 active:scale-[0.98] transition-all duration-150 cursor-pointer whitespace-nowrap"
+                >
+                  Accept all
                 </button>
               </div>
             </div>
