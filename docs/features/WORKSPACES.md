@@ -85,6 +85,7 @@ Response 400: { "message": "Zod validation error" }
 ```
 
 **Title validation rules (enforced by Zod + client-side):**
+
 - Minimum 1 character, maximum **16 characters**
 - No emojis
 - Letters, numbers, spaces, hyphens, and underscores only
@@ -141,6 +142,7 @@ Response 404: Source workspace not found
 ```
 
 **How duplication works:**
+
 1. A new workspace row is created with the provided (or auto-generated) title
 2. All canvas data from the source workspace is copied to the new workspace
 3. The response is the new workspace object — the original is untouched
@@ -259,7 +261,8 @@ if (!workspace) return res.status(404).json({ message: "Not found" });
 
 // 3. Verify ownership
 const userId = req.user!.id;
-if (workspace.userId !== userId) return res.status(401).json({ message: "Unauthorized" });
+if (workspace.userId !== userId)
+  return res.status(401).json({ message: "Unauthorized" });
 
 // 4. Now safe to operate
 await workspaceStorage.updateWorkspace(id, input);
@@ -273,14 +276,14 @@ This pattern is tested in `tests/integration/workspace/routes.test.ts`.
 
 All workspace operations are wrapped in TanStack Query hooks in `client/src/hooks/use-workspaces.ts`:
 
-| Hook | Purpose | Invalidates |
-|------|---------|-------------|
-| `useWorkspaces()` | List all workspaces | — |
-| `useWorkspace(id)` | Single workspace by ID | — |
-| `useCreateWorkspace()` | Create mutation | workspace list |
-| `useUpdateWorkspace()` | Update mutation | workspace list |
-| `useDeleteWorkspace()` | Delete mutation | workspace list |
-| `useDuplicateWorkspace()` | Duplicate mutation | workspace list |
+| Hook                      | Purpose                | Invalidates    |
+| ------------------------- | ---------------------- | -------------- |
+| `useWorkspaces()`         | List all workspaces    | —              |
+| `useWorkspace(id)`        | Single workspace by ID | —              |
+| `useCreateWorkspace()`    | Create mutation        | workspace list |
+| `useUpdateWorkspace()`    | Update mutation        | workspace list |
+| `useDeleteWorkspace()`    | Delete mutation        | workspace list |
+| `useDuplicateWorkspace()` | Duplicate mutation     | workspace list |
 
 All mutation hooks use `secureFetch` (not raw `fetch`) to automatically include the CSRF token. Read-only hooks use plain `fetch` with `credentials: "include"`.
 
@@ -288,11 +291,11 @@ All mutation hooks use `secureFetch` (not raw `fetch`) to automatically include 
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `server/modules/workspace/routes.ts` | All workspace + collection route handlers |
-| `server/modules/workspace/storage.ts` | Database operations for workspaces + collections |
-| `server/modules/canvas/storage.ts` | Canvas duplication logic |
-| `client/src/hooks/use-workspaces.ts` | TanStack Query hooks for all workspace operations |
-| `shared/schema.ts` | Drizzle schema: `workspaces`, `collections` tables |
-| `tests/integration/workspace/routes.test.ts` | IDOR + validation integration tests |
+| File                                         | Purpose                                            |
+| -------------------------------------------- | -------------------------------------------------- |
+| `server/modules/workspace/routes.ts`         | All workspace + collection route handlers          |
+| `server/modules/workspace/storage.ts`        | Database operations for workspaces + collections   |
+| `server/modules/canvas/storage.ts`           | Canvas duplication logic                           |
+| `client/src/hooks/use-workspaces.ts`         | TanStack Query hooks for all workspace operations  |
+| `shared/schema.ts`                           | Drizzle schema: `workspaces`, `collections` tables |
+| `tests/integration/workspace/routes.test.ts` | IDOR + validation integration tests                |

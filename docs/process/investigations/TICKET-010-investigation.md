@@ -1,12 +1,13 @@
 # Investigation: TICKET-010 (Test Coverage Analysis)
 
 ## Findings
+
 I conducted an extensive test coverage calculation across the entire monolith using Vitest (`npx vitest run --coverage`).
 
 1. **Current Coverage Stats**:
    - The current repository runs exactly **55 tests**.
-   - These tests are localized almost *entirely* to two files: `tests/integration/auth/lockout-routes.test.ts` and `tests/unit/auth/lockout.test.ts`.
-   - **Result**: The Account Lockout logic has fantastic, enterprise-grade coverage. 
+   - These tests are localized almost _entirely_ to two files: `tests/integration/auth/lockout-routes.test.ts` and `tests/unit/auth/lockout.test.ts`.
+   - **Result**: The Account Lockout logic has fantastic, enterprise-grade coverage.
    - **Vulnerability**: Every other feature in the application (including Workspace CRUD, Canvas Math, and AI parsing) has absolutely **0% test coverage**.
 
 2. **Critical Un-Tested Paths**:
@@ -18,6 +19,7 @@ I conducted an extensive test coverage calculation across the entire monolith us
    - Vitest handles Unit/Integration perfectly, but this is a highly visual, drag-and-drop SPA (Single Page Application). You cannot fully test an interactive Canvas with purely Node-based Unit tests. It requires an End-to-End (E2E) browser driver.
 
 ## Questions Answered
+
 - **What test coverage exists?** Strong coverage on Auth Lockouts. Zero coverage elsewhere.
 - **Do existing tests pass?** Yes, all 55 tests pass phenomenally in under 500ms.
 - **What critical functionality is untested?** ReactFlow canvas component and Auth routing IDOR guards.

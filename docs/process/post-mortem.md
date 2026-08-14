@@ -15,30 +15,37 @@ Login page displayed a blank white screen instead of the login form. This occurr
 
 **Root Cause:**
 Multiple issues compounded:
+
 1. **Stale Nginx cache**: After rebuild, frontend container served old `index.html` referencing non-existent JS chunks (e.g., `index-t9Tdg8vJ.js` not found)
 2. **Missing wouter context**: `useLocation()` was called outside of `<Router>` context
 3. **Docker bind mount staleness**: Nginx container didn't auto-pick up new assets from host
 
 **The Fix:**
+
 1. Wrapped app with `WouterRouter` in `App.tsx`:
+
 ```tsx
 import { Router as WouterRouter } from "wouter";
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <WouterRouter>  // Added
+      <WouterRouter>
+        {" "}
+        // Added
         <TooltipProvider>
           <Toaster />
           <Router />
         </TooltipProvider>
-      </WouterRouter>  // Added
+      </WouterRouter>{" "}
+      // Added
     </QueryClientProvider>
   );
 }
 ```
 
 2. Force container restart after builds to pick up new assets:
+
 ```bash
 docker-compose restart emnesh-frontend
 ```
@@ -57,6 +64,7 @@ Legacy links in the frontend pointed to `/api/login` instead of the correct fron
 
 **The Fix:**
 Added explicit Nginx redirect in `nginx.conf`:
+
 ```nginx
 # Redirect old/broken /api/login to correct frontend route
 location = /api/login {
@@ -65,6 +73,7 @@ location = /api/login {
 ```
 
 Also updated all frontend links from `/api/login` to `/auth/login` in:
+
 - `client/src/pages/Landing.tsx`
 - `client/src/pages/AuthPage.tsx`
 - `client/src/lib/auth-utils.ts`
@@ -83,15 +92,20 @@ The frontend routing handled `/auth` as a catch-all redirect, but the redirect w
 
 **The Fix:**
 Added explicit redirect route in `App.tsx` Router component:
+
 ```tsx
 if (location.startsWith("/auth/") || location === "/auth") {
   return (
     <AnimatePresence mode="wait">
       <Switch location={location} key={location}>
-        <Route path="/auth/login"><Login /></Route>
-        <Route path="/auth/register"><Register /></Route>
+        <Route path="/auth/login">
+          <Login />
+        </Route>
+        <Route path="/auth/register">
+          <Register />
+        </Route>
         <Route path="/auth">
-          <Redirect to="/auth/login" />  // Added
+          <Redirect to="/auth/login" /> // Added
         </Route>
       </Switch>
     </AnimatePresence>
@@ -113,6 +127,7 @@ Backend auth strategies and routes used vague error messages that didn't disting
 
 **The Fix:**
 Updated auth module with specific error messages:
+
 - `server/modules/auth/strategies/local.ts`: Separate "No account found with this email address" from "Incorrect password" from "This account uses social login"
 - `server/modules/auth/authCore.ts`: Changed "Unauthorized" to "Session expired or not logged in"
 - `server/modules/auth/routes.ts`: Added descriptive messages for registration failures, login failures, and user fetch failures
@@ -128,10 +143,12 @@ Updated auth module with specific error messages:
 CAPTCHA was basic and required for login, which is annoying for returning users.
 
 **Root Cause:**
+
 1. CAPTCHA middleware lacked replay protection, IP validation, proper error handling
 2. CAPTCHA was applied to both login and registration
 
 **The Fix:**
+
 1. Made CAPTCHA production-grade:
    - Token deduplication (replay attack prevention)
    - IP-based validation
@@ -141,6 +158,7 @@ CAPTCHA was basic and required for login, which is annoying for returning users.
    - Added `optionalCaptchaMiddleware` for dev mode
 
 2. Removed CAPTCHA from login - now only required for registration:
+
 ```typescript
 // Registration still requires CAPTCHA
 app.post("/api/auth/register", captchaMiddleware, async (req, res) => {...});
@@ -163,13 +181,14 @@ Framer Motion transitions used `scale: 0.99`, `filter: "blur(4px)"` which looked
 
 **The Fix:**
 Simplified to clean fade with subtle slide:
+
 ```tsx
 const PageTransition = ({ children, className }) => (
   <motion.div
-    initial={{ opacity: 0, y: 8 }}        // Changed from scale+blur
+    initial={{ opacity: 0, y: 8 }} // Changed from scale+blur
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, y: -8 }}
-    transition={{ duration: 0.2 }}         // Changed from 0.4s
+    transition={{ duration: 0.2 }} // Changed from 0.4s
     className={cn("flex-1", className)}
   >
     {children}
@@ -189,6 +208,7 @@ const PageTransition = ({ children, className }) => (
 Register page showed a completely blank white screen. Browser network tab showed 404 errors for CSS/JS assets with old hashes. Issue persisted across browsers (Edge, Chrome) and hard refreshes.
 
 **Root Cause:**
+
 1. **Invalid Express 4 route pattern**: `app.use("*", ...)` in `server/static.ts` threw an error on server startup: "path array should have only strings or regexps"
 2. **Backend container crash**: Express failed to start, so nginx fell through to the backend which wasn't serving the SPA correctly
 3. **Stale assets in backend image**: Even after fixing the route pattern, the backend image had old built files from Feb 26
@@ -196,6 +216,7 @@ Register page showed a completely blank white screen. Browser network tab showed
 **The Fix:**
 
 1. Changed Express catch-all route to use regex pattern (Express 4 compatible):
+
 ```typescript
 // Before (INVALID in Express 4):
 app.use("*", (_req, res) => {
@@ -209,6 +230,7 @@ app.get(/.*/, (_req, res) => {
 ```
 
 2. Rebuilt Docker image with no cache to get fresh assets:
+
 ```bash
 docker-compose build --no-cache emnesh-backend
 docker-compose up -d emnesh-backend
@@ -270,9 +292,9 @@ The mismatch had always existed in the schema but wasn't triggered until animate
 Normalize `edge.animated` to an integer before the API request in `use-canvas.ts`:
 
 ```typescript
-const normalizedEdges = edges.map(edge => ({
-    ...edge,
-    animated: edge.animated ? 1 : 0
+const normalizedEdges = edges.map((edge) => ({
+  ...edge,
+  animated: edge.animated ? 1 : 0,
 }));
 const res = await apiRequest("POST", url, { nodes, edges: normalizedEdges });
 ```
@@ -285,6 +307,7 @@ const res = await apiRequest("POST", url, { nodes, edges: normalizedEdges });
 
 **The Problem:**
 Dark mode looked visually cheap. Specific issues:
+
 - Primary accent color switched from `#FF3D00` (brand orange-red) to a random purple (`#8B5CF6`) — no design reason
 - Neo-brutalist box shadows used pure white (`rgba(255, 255, 255, 1)`) which looked fluorescent and harsh
 - All borders were pure white, further increasing the harsh contrast
@@ -295,13 +318,12 @@ The `.dark` CSS class block in `index.css` had been written as a simple inversio
 **The Fix:**
 Redesigned dark mode as a distinct palette:
 
-| Property | Before | After |
-|----------|--------|-------|
-| Primary | Purple `262 83% 65%` | Brand red `#FF3D00` (unchanged from light) |
-| Background | Pure black `#0D0D0D` | Deep charcoal `#121212` |
-| Foreground | Pure white | Warm off-white `#EBEBEA` |
-| Borders | Pure white | Warm off-white `#CECECB` |
-| Shadows | White `rgba(255,255,255,1)` | Brand red `rgba(255,61,0,0.7)` |
+| Property   | Before                      | After                                      |
+| ---------- | --------------------------- | ------------------------------------------ |
+| Primary    | Purple `262 83% 65%`        | Brand red `#FF3D00` (unchanged from light) |
+| Background | Pure black `#0D0D0D`        | Deep charcoal `#121212`                    |
+| Foreground | Pure white                  | Warm off-white `#EBEBEA`                   |
+| Borders    | Pure white                  | Warm off-white `#CECECB`                   |
+| Shadows    | White `rgba(255,255,255,1)` | Brand red `rgba(255,61,0,0.7)`             |
 
 **Files Changed:** `client/src/index.css`
-

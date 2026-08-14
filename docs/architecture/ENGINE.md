@@ -45,14 +45,14 @@ Every draggable component on the canvas is a **Node**. Meshwork Studio ships wit
 
 ### Node Categories
 
-| Category | Examples | Use Case |
-|----------|----------|----------|
-| **Compute** | `server`, `lambda`, `worker`, `microservice` | Application services |
-| **Data** | `database`, `cache`, `storage`, `search` | Data stores and caches |
-| **Networking** | `gateway`, `loadBalancer`, `cdn`, `route53` | Traffic routing |
-| **Containers** | `k8s-pod`, `k8s-deployment`, `k8s-service` | Kubernetes resources |
-| **Regions** | `vpc`, `region`, `k8s-namespace` | Container boundaries |
-| **Annotations** | `note`, `annotation`, `text` | Documentation overlays |
+| Category        | Examples                                     | Use Case               |
+| --------------- | -------------------------------------------- | ---------------------- |
+| **Compute**     | `server`, `lambda`, `worker`, `microservice` | Application services   |
+| **Data**        | `database`, `cache`, `storage`, `search`     | Data stores and caches |
+| **Networking**  | `gateway`, `loadBalancer`, `cdn`, `route53`  | Traffic routing        |
+| **Containers**  | `k8s-pod`, `k8s-deployment`, `k8s-service`   | Kubernetes resources   |
+| **Regions**     | `vpc`, `region`, `k8s-namespace`             | Container boundaries   |
+| **Annotations** | `note`, `annotation`, `text`                 | Documentation overlays |
 
 Each node type has a predefined pixel dimension defined in `client/src/features/workspace/utils/dimensions.ts`. For example, a VPC container is `408×312px` while a Lambda function is `120×72px`. These dimensions ensure consistent, professional-looking diagrams regardless of zoom level.
 
@@ -73,6 +73,7 @@ CREATE TABLE nodes (
 ```
 
 ### Dynamic Tooltips
+
 Nodes support dynamic hover tooltips that consume user-defined content. Instead of generic helper text, hovering over a node displays the custom `description` field bound to that specific node's data (configurable via the Properties Sidebar). The tooltip renders via a portal to ensure it escapes any `overflow: hidden` restrictions and maintains `whitespace-pre-wrap` for structured documentation.
 
 ---
@@ -81,10 +82,10 @@ Nodes support dynamic hover tooltips that consume user-defined content. Instead 
 
 To prevent unintended layout changes, canvas interactions are strictly decoupled across specific tools:
 
-| Mode | Node Dragging | Selection | Use Case |
-|------|---------------|-----------|----------|
-| **Select / Infrastructure** | Disabled | Enabled | Default state. Cursor acts as a standard pointer. Clicking and dragging on the canvas initiates a box-selection or pans the canvas (if dragging the background). Dragging a node explicitly *does not* move it. |
-| **Pan / Grab** | Enabled | Disabled | Movement state. Cursor turns into a grab hand. Nodes cannot be selected. Dragging a node *moves* the node. Clicking and dragging the background pans the canvas. |
+| Mode                        | Node Dragging | Selection | Use Case                                                                                                                                                                                                        |
+| --------------------------- | ------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Select / Infrastructure** | Disabled      | Enabled   | Default state. Cursor acts as a standard pointer. Clicking and dragging on the canvas initiates a box-selection or pans the canvas (if dragging the background). Dragging a node explicitly _does not_ move it. |
+| **Pan / Grab**              | Enabled       | Disabled  | Movement state. Cursor turns into a grab hand. Nodes cannot be selected. Dragging a node _moves_ the node. Clicking and dragging the background pans the canvas.                                                |
 
 This behavior is enforced by dynamically toggling React Flow's `nodesDraggable` and `elementsSelectable` props based on the active `drawingMode` state, ensuring a predictable user experience.
 
@@ -99,23 +100,27 @@ This is the logic that makes dragging an EC2 instance into a VPC actually **nest
 When a user finishes dragging a node, the engine runs a spatial check:
 
 **Step 1: Find all containers on the canvas**
+
 ```
 Filter nodes where type is "vpc", "region", or "k8s-namespace"
 ```
 
 **Step 2: Calculate the center point of the dragged node**
+
 ```
 centerX = node.position.x + (node.width / 2)
 centerY = node.position.y + (node.height / 2)
 ```
 
 **Step 3: Check if that center point falls inside any container's bounding box**
+
 ```
 Is centerX between container.x and container.x + container.width?
 Is centerY between container.y and container.y + container.height?
 ```
 
 **Step 4: If yes, calculate the local position** (relative to the parent)
+
 ```
 localX = node.position.x - container.position.x
 localY = node.position.y - container.position.y
@@ -159,26 +164,28 @@ Before data reaches the database, it passes through a **local cache layer** that
 ### Local Cache
 
 Every change to nodes or edges is immediately written to `localStorage` using the key:
+
 ```
 meshwork-canvas-cache-{workspaceId}
 ```
 
 The cache stores:
+
 ```typescript
 interface CanvasCache {
-    nodes: Node[];
-    edges: Edge[];
-    timestamp: number;  // Unix ms
+  nodes: Node[];
+  edges: Edge[];
+  timestamp: number; // Unix ms
 }
 ```
 
 ### Why This Matters
 
-| Scenario | Without Cache | With Cache |
-|----------|--------------|------------|
-| Refresh before auto-save | ❌ Work lost | ✅ Restored from localStorage |
+| Scenario                  | Without Cache          | With Cache                                |
+| ------------------------- | ---------------------- | ----------------------------------------- |
+| Refresh before auto-save  | ❌ Work lost           | ✅ Restored from localStorage             |
 | Network drops mid-session | ❌ Sync fails silently | ✅ Cache persists, retries on next change |
-| Browser crash | ❌ Work lost | ✅ Restored on next open |
+| Browser crash             | ❌ Work lost           | ✅ Restored on next open                  |
 
 ### Auto-Save (Debounced)
 
@@ -198,9 +205,9 @@ A 3-second debounce is applied to the database sync — only the final resting s
 PostgreSQL stores `edge.animated` as `INTEGER` (0 or 1). React Flow uses JavaScript booleans. Before every sync, edges are normalized in `use-canvas.ts`:
 
 ```typescript
-const normalizedEdges = edges.map(edge => ({
-    ...edge,
-    animated: edge.animated ? 1 : 0
+const normalizedEdges = edges.map((edge) => ({
+  ...edge,
+  animated: edge.animated ? 1 : 0,
 }));
 ```
 
@@ -266,12 +273,12 @@ COMMIT;
 
 ### Performance Impact
 
-| Scenario | Before (Nuke & Rebuild) | After (Upsert Diff) |
-|----------|------------------------|---------------------|
-| Move 1 node in a 5,000-node diagram | 16,000 row ops | 1 row op |
-| Delete 3 nodes | 16,000 row ops | 3 row ops |
-| Add 1 new node | 16,000 row ops | 1 row op |
-| No changes (idle save) | 16,000 row ops | 0 row ops |
+| Scenario                            | Before (Nuke & Rebuild) | After (Upsert Diff) |
+| ----------------------------------- | ----------------------- | ------------------- |
+| Move 1 node in a 5,000-node diagram | 16,000 row ops          | 1 row op            |
+| Delete 3 nodes                      | 16,000 row ops          | 3 row ops           |
+| Add 1 new node                      | 16,000 row ops          | 1 row op            |
+| No changes (idle save)              | 16,000 row ops          | 0 row ops           |
 
 The implementation lives in `server/modules/canvas/storage.ts` in the `CanvasDatabaseStorage.syncCanvas()` method.
 
@@ -283,12 +290,12 @@ Meshwork Studio ships with 4 pre-built architecture templates that populate a ne
 
 **File:** `client/src/features/workspace/utils/templates.ts`
 
-| Template | Description |
-|----------|-------------|
-| `ecommerce` | Standard e-commerce stack: CDN, load balancer, app servers, database cluster, cache |
-| `ai-platform` | AI/ML platform: model servers, vector database, API gateway, training pipeline |
-| `enterprise-k8s` | Kubernetes-based microservices: namespaces, deployments, services, ingress |
-| `fintech-saas` | Financial SaaS: multi-region setup with compliance zones, audit logging, encryption |
+| Template         | Description                                                                         |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| `ecommerce`      | Standard e-commerce stack: CDN, load balancer, app servers, database cluster, cache |
+| `ai-platform`    | AI/ML platform: model servers, vector database, API gateway, training pipeline      |
+| `enterprise-k8s` | Kubernetes-based microservices: namespaces, deployments, services, ingress          |
+| `fintech-saas`   | Financial SaaS: multi-region setup with compliance zones, audit logging, encryption |
 
 Each template is a function that returns a `{ nodes, edges }` object with pre-positioned, pre-connected components. Templates use the same node types from `nodeTypes.ts` and are loaded directly into the React Flow state when a user selects one from the workspace new-diagram dialog.
 
@@ -334,14 +341,14 @@ User drags node ──► React Flow fires onNodeDragStop
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `client/src/features/workspace/utils/containment.ts` | Spatial containment math |
-| `client/src/features/workspace/utils/dimensions.ts` | Node size definitions (60+ types) |
-| `client/src/features/workspace/utils/nodeTypes.ts` | Node component registry |
-| `client/src/features/workspace/utils/templates.ts` | 4 built-in architecture templates |
-| `client/src/lib/canvas-cache.ts` | localStorage persistence utilities |
-| `client/src/hooks/use-canvas.ts` | React Query hook + debounced sync + normalization |
-| `server/modules/canvas/storage.ts` | Upsert sync + database operations |
-| `server/modules/canvas/routes.ts` | Canvas API endpoints |
-| `shared/schema.ts` | Drizzle ORM schema (nodes & edges tables) |
+| File                                                 | Purpose                                           |
+| ---------------------------------------------------- | ------------------------------------------------- |
+| `client/src/features/workspace/utils/containment.ts` | Spatial containment math                          |
+| `client/src/features/workspace/utils/dimensions.ts`  | Node size definitions (60+ types)                 |
+| `client/src/features/workspace/utils/nodeTypes.ts`   | Node component registry                           |
+| `client/src/features/workspace/utils/templates.ts`   | 4 built-in architecture templates                 |
+| `client/src/lib/canvas-cache.ts`                     | localStorage persistence utilities                |
+| `client/src/hooks/use-canvas.ts`                     | React Query hook + debounced sync + normalization |
+| `server/modules/canvas/storage.ts`                   | Upsert sync + database operations                 |
+| `server/modules/canvas/routes.ts`                    | Canvas API endpoints                              |
+| `shared/schema.ts`                                   | Drizzle ORM schema (nodes & edges tables)         |

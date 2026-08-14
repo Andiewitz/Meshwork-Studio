@@ -1,6 +1,7 @@
 # Investigation: TICKET-002 (Passport User Type Extension)
 
 ## Findings
+
 During an exhaustive Type System audit focusing on the `req.user` casting issues, I discovered the following:
 
 1. **Occurrences of Bypass (`as any`)**:
@@ -16,9 +17,11 @@ During an exhaustive Type System audit focusing on the `req.user` casting issues
    - The `tsconfig.json` for the server explicitly includes `server/**/*`, meaning any ambient declaration file we place there will automatically attach to the global Express namespace.
 
 ## Questions Answered
+
 1. **How many files are affected?** 3 primary route files (`workspace`, `canvas`, `ai`).
 2. **What properties are accessed?** Currently just `id`, but future additions will likely need `email`, `stripeCustomerId`, etc.
 3. **Is there existing infrastructure?** No, the `types` directory is missing.
 
 ## Resolution Path
+
 We must declare a Global TypeScript Augmentation for the Express namespace, linking `Express.User` to your database schema types.

@@ -53,22 +53,22 @@ Meshwork Studio implements a **defense-in-depth** security model. No single laye
 
 Users can authenticate via two methods, handled by [Passport.js](http://www.passportjs.org/):
 
-| Strategy | How It Works | When It's Used |
-|----------|-------------|----------------|
-| **Local** | Email + password with bcrypt hashing (12 salt rounds) | Users who register directly |
-| **Google OAuth 2.0** | Redirect to Google, receive profile back | Users who prefer social login |
+| Strategy             | How It Works                                          | When It's Used                |
+| -------------------- | ----------------------------------------------------- | ----------------------------- |
+| **Local**            | Email + password with bcrypt hashing (12 salt rounds) | Users who register directly   |
+| **Google OAuth 2.0** | Redirect to Google, receive profile back              | Users who prefer social login |
 
 ### Session Management
 
 After authentication, a session is created and stored server-side:
 
-| Setting | Value | Why |
-|---------|-------|-----|
-| `httpOnly` | `true` | JavaScript cannot read the session cookie (prevents XSS token theft) |
-| `sameSite` | `strict` | Cookie only sent from the same origin (prevents CSRF) |
-| `secure` | `true` (production) | Cookie only sent over HTTPS |
-| `maxAge` | 7 days | Balanced between convenience and security |
-| **Storage** | PostgreSQL (production) / Memory (development) | Sessions survive server restarts in production |
+| Setting     | Value                                          | Why                                                                  |
+| ----------- | ---------------------------------------------- | -------------------------------------------------------------------- |
+| `httpOnly`  | `true`                                         | JavaScript cannot read the session cookie (prevents XSS token theft) |
+| `sameSite`  | `strict`                                       | Cookie only sent from the same origin (prevents CSRF)                |
+| `secure`    | `true` (production)                            | Cookie only sent over HTTPS                                          |
+| `maxAge`    | 7 days                                         | Balanced between convenience and security                            |
+| **Storage** | PostgreSQL (production) / Memory (development) | Sessions survive server restarts in production                       |
 
 ### Password Requirements
 
@@ -81,6 +81,7 @@ After authentication, a session is created and stored server-side:
 CAPTCHA is required for **registration only** — returning users shouldn't be punished for being loyal.
 
 The implementation includes enterprise features most apps skip:
+
 - **Replay protection**: Each CAPTCHA token can only be used once (tracked server-side)
 - **Token expiration**: Tokens expire after 5 minutes
 - **Score thresholds**: reCAPTCHA v3 scores below 0.5 are rejected
@@ -122,8 +123,8 @@ All state-changing fetch calls in the app go through `secureFetch` instead of th
 
 ```typescript
 // Usage is identical to fetch()
-const res = await secureFetch('/api/workspaces', {
-  method: 'POST',
+const res = await secureFetch("/api/workspaces", {
+  method: "POST",
   body: JSON.stringify(data),
 });
 ```
@@ -146,18 +147,19 @@ Forward to native fetch() — response returned as-is
 **Why `sessionStorage`, not `localStorage`?**
 
 The CSRF token is intentionally tab-scoped. `sessionStorage` is cleared when the browser tab closes. This means:
+
 - A tab opened from a phishing link cannot read another tab's CSRF token
 - Closing and reopening a tab forces a fresh token fetch (from `/api/csrf-token`)
 - Multiple open tabs each have their own independent CSRF token
 
 **Token lifecycle:**
 
-| Event | Effect |
-|-------|--------|
+| Event                    | Effect                                                                             |
+| ------------------------ | ---------------------------------------------------------------------------------- |
 | App loads / user logs in | `use-csrf-token.ts` fetches token from `/api/csrf-token`, calls `storeCsrfToken()` |
-| State-changing request | `secureFetch` reads from sessionStorage and injects header |
-| User logs out | `clearCsrfToken()` removes token from sessionStorage |
-| Tab closed | sessionStorage cleared automatically by browser |
+| State-changing request   | `secureFetch` reads from sessionStorage and injects header                         |
+| User logs out            | `clearCsrfToken()` removes token from sessionStorage                               |
+| Tab closed               | sessionStorage cleared automatically by browser                                    |
 
 ---
 
@@ -167,14 +169,14 @@ The CSRF token is intentionally tab-scoped. `sessionStorage` is cleared when the
 
 After too many failed login attempts, the account is temporarily locked with **progressive delays**:
 
-| Failed Attempts | What Happens |
-|----------------|--------------|
-| 1–5 | Normal login allowed |
-| 6 | Account locked for **1 minute** |
-| 7 | Locked for **5 minutes** |
-| 8 | Locked for **15 minutes** |
-| 9 | Locked for **30 minutes** |
-| 10+ | Locked for **60 minutes** |
+| Failed Attempts | What Happens                    |
+| --------------- | ------------------------------- |
+| 1–5             | Normal login allowed            |
+| 6               | Account locked for **1 minute** |
+| 7               | Locked for **5 minutes**        |
+| 8               | Locked for **15 minutes**       |
+| 9               | Locked for **30 minutes**       |
+| 10+             | Locked for **60 minutes**       |
 
 - Lockout state is tracked per email in the `login_attempts` table
 - Successful login resets the counter to zero
@@ -184,10 +186,10 @@ After too many failed login attempts, the account is temporarily locked with **p
 
 Two tiers of rate limiting protect against automated attacks:
 
-| Limiter | Scope | Limit | Window |
-|---------|-------|-------|--------|
-| **API Limiter** | All `/api/` routes | 100 requests | 1 minute |
-| **Auth Limiter** | Login & register only | 10 requests | 15 minutes |
+| Limiter          | Scope                 | Limit        | Window     |
+| ---------------- | --------------------- | ------------ | ---------- |
+| **API Limiter**  | All `/api/` routes    | 100 requests | 1 minute   |
+| **Auth Limiter** | Login & register only | 10 requests  | 15 minutes |
 
 Both are implemented with `express-rate-limit` and return standard `429 Too Many Requests` responses.
 
@@ -240,16 +242,17 @@ Clears decrypted key from memory
 
 ### Security Properties
 
-| Property | Implementation |
-|----------|---------------|
-| **Algorithm** | AES-256-GCM (authenticated encryption) |
-| **Key length** | 256-bit master key (32 bytes, base64 encoded) |
-| **IV** | Unique 16-byte random IV per encryption (prevents pattern analysis) |
-| **Auth tag** | 16-byte GCM tag (detects tampering) |
-| **Key hint** | Only last 4 characters shown in UI (`...wxyz`) |
-| **Key validation** | Format-checked per provider before storage |
+| Property           | Implementation                                                      |
+| ------------------ | ------------------------------------------------------------------- |
+| **Algorithm**      | AES-256-GCM (authenticated encryption)                              |
+| **Key length**     | 256-bit master key (32 bytes, base64 encoded)                       |
+| **IV**             | Unique 16-byte random IV per encryption (prevents pattern analysis) |
+| **Auth tag**       | 16-byte GCM tag (detects tampering)                                 |
+| **Key hint**       | Only last 4 characters shown in UI (`...wxyz`)                      |
+| **Key validation** | Format-checked per provider before storage                          |
 
 The master encryption key is loaded from the `ENCRYPTION_KEY` environment variable. Generate one with:
+
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
@@ -293,21 +296,21 @@ User input is validated at **four independent layers**. If any layer is bypassed
 
 Applied globally via `helmet` middleware:
 
-| Header | Value | Protection |
-|--------|-------|------------|
-| `Content-Security-Policy` | Restricts script sources | XSS mitigation |
-| `X-Frame-Options` | `SAMEORIGIN` | Prevents clickjacking |
-| `X-Content-Type-Options` | `nosniff` | Prevents MIME sniffing |
-| `Strict-Transport-Security` | 1 year | Forces HTTPS |
-| `Referrer-Policy` | Strict | Protects user privacy |
-| `Permissions-Policy` | Restricted | Disables camera, mic, geolocation |
+| Header                      | Value                    | Protection                        |
+| --------------------------- | ------------------------ | --------------------------------- |
+| `Content-Security-Policy`   | Restricts script sources | XSS mitigation                    |
+| `X-Frame-Options`           | `SAMEORIGIN`             | Prevents clickjacking             |
+| `X-Content-Type-Options`    | `nosniff`                | Prevents MIME sniffing            |
+| `Strict-Transport-Security` | 1 year                   | Forces HTTPS                      |
+| `Referrer-Policy`           | Strict                   | Protects user privacy             |
+| `Permissions-Policy`        | Restricted               | Disables camera, mic, geolocation |
 
 ### CORS Configuration
 
-| Environment | Allowed Origin | Credentials |
-|-------------|---------------|-------------|
-| Development | `http://localhost:5173` | Yes |
-| Production | `process.env.FRONTEND_URL` | Yes |
+| Environment | Allowed Origin             | Credentials |
+| ----------- | -------------------------- | ----------- |
+| Development | `http://localhost:5173`    | Yes         |
+| Production  | `process.env.FRONTEND_URL` | Yes         |
 
 ### Request Size Limits
 
@@ -337,12 +340,12 @@ The redaction function recursively traverses nested objects, so even deeply nest
 
 ### Error Message Philosophy
 
-| Scenario | What the User Sees | Why |
-|----------|-------------------|-----|
-| Wrong password | "Invalid email or password" | Prevents email enumeration |
-| User not found | "Invalid email or password" | Same message — no info leak |
-| OAuth account tries password login | "Invalid email or password" | Doesn't reveal auth method |
-| Account locked | "Account temporarily locked..." | Tells user what to do |
+| Scenario                           | What the User Sees              | Why                         |
+| ---------------------------------- | ------------------------------- | --------------------------- |
+| Wrong password                     | "Invalid email or password"     | Prevents email enumeration  |
+| User not found                     | "Invalid email or password"     | Same message — no info leak |
+| OAuth account tries password login | "Invalid email or password"     | Doesn't reveal auth method  |
+| Account locked                     | "Account temporarily locked..." | Tells user what to do       |
 
 ---
 
@@ -350,11 +353,11 @@ The redaction function recursively traverses nested objects, so even deeply nest
 
 ### Required Variables
 
-| Variable | Required In | Purpose |
-|----------|------------|---------|
-| `SESSION_SECRET` | Production | Session cookie signing (server crashes without it) |
-| `ENCRYPTION_KEY` | When using BYOK AI | AES-256 master key for API key encryption |
-| `DATABASE_URL` | Production | PostgreSQL connection string |
+| Variable         | Required In        | Purpose                                            |
+| ---------------- | ------------------ | -------------------------------------------------- |
+| `SESSION_SECRET` | Production         | Session cookie signing (server crashes without it) |
+| `ENCRYPTION_KEY` | When using BYOK AI | AES-256 master key for API key encryption          |
+| `DATABASE_URL`   | Production         | PostgreSQL connection string                       |
 
 ### Fail-Safe Defaults
 
@@ -383,8 +386,11 @@ logs/
 
 ```typescript
 // Use secureFetch for all state-changing requests
-import { secureFetch } from '@/lib/secure-fetch';
-const res = await secureFetch('/api/workspaces', { method: 'POST', body: JSON.stringify(data) });
+import { secureFetch } from "@/lib/secure-fetch";
+const res = await secureFetch("/api/workspaces", {
+  method: "POST",
+  body: JSON.stringify(data),
+});
 
 // Use req.user!.id (type-safe, backed by Express.User declaration)
 const userId = req.user!.id;
@@ -393,27 +399,28 @@ const userId = req.user!.id;
 const input = api.workspaces.create.input.parse(req.body);
 
 // Check ownership on every data-modifying route
-if (workspace.userId !== userId) return res.status(401).json({ message: "Unauthorized" });
+if (workspace.userId !== userId)
+  return res.status(401).json({ message: "Unauthorized" });
 ```
 
 ### Don't Do This ❌
 
 ```typescript
 // Don't log sensitive data
-console.log(`User logged in: ${email}`);       // ❌ Leaks PII
-console.log(`User authentication processed`);   // ✅ Safe
+console.log(`User logged in: ${email}`); // ❌ Leaks PII
+console.log(`User authentication processed`); // ✅ Safe
 
 // Don't use raw SQL
-db.execute(`SELECT * FROM users WHERE id = '${userId}'`);  // ❌ SQL injection
-db.select().from(users).where(eq(users.id, userId));        // ✅ Parameterized
+db.execute(`SELECT * FROM users WHERE id = '${userId}'`); // ❌ SQL injection
+db.select().from(users).where(eq(users.id, userId)); // ✅ Parameterized
 
 // Don't cast req.user unsafely
-const userId = (req.user as any).id;   // ❌ No type safety
-const userId = req.user!.id;           // ✅ Backed by express.d.ts declaration
+const userId = (req.user as any).id; // ❌ No type safety
+const userId = req.user!.id; // ✅ Backed by express.d.ts declaration
 
 // Don't skip IDOR checks
-app.put('/api/workspaces/:id', async (req, res) => {
-  await storage.updateWorkspace(id, req.body);  // ❌ Anyone can update anything
+app.put("/api/workspaces/:id", async (req, res) => {
+  await storage.updateWorkspace(id, req.body); // ❌ Anyone can update anything
 });
 ```
 
@@ -421,16 +428,16 @@ app.put('/api/workspaces/:id', async (req, res) => {
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `server/modules/auth/authCore.ts` | Session setup, Passport initialization |
-| `server/modules/auth/strategies/local.ts` | Email/password authentication |
-| `server/modules/auth/strategies/google.ts` | Google OAuth 2.0 authentication |
-| `server/modules/auth/lockout.ts` | Brute-force protection with progressive delays |
-| `server/modules/auth/captcha.ts` | CAPTCHA verification with replay protection |
-| `server/modules/auth/password.ts` | Password hashing and strength validation |
-| `server/modules/ai/encryption.ts` | AES-256-GCM API key encryption |
-| `server/middleware/csrf.ts` | CSRF token generation and validation |
-| `server/middleware/rateLimit.ts` | API and auth rate limiters |
-| `server/types/express.d.ts` | Global Express.User type augmentation |
-| `server/index.ts` | Helmet headers, CORS, request logging, PII redaction |
+| File                                       | Purpose                                              |
+| ------------------------------------------ | ---------------------------------------------------- |
+| `server/modules/auth/authCore.ts`          | Session setup, Passport initialization               |
+| `server/modules/auth/strategies/local.ts`  | Email/password authentication                        |
+| `server/modules/auth/strategies/google.ts` | Google OAuth 2.0 authentication                      |
+| `server/modules/auth/lockout.ts`           | Brute-force protection with progressive delays       |
+| `server/modules/auth/captcha.ts`           | CAPTCHA verification with replay protection          |
+| `server/modules/auth/password.ts`          | Password hashing and strength validation             |
+| `server/modules/ai/encryption.ts`          | AES-256-GCM API key encryption                       |
+| `server/middleware/csrf.ts`                | CSRF token generation and validation                 |
+| `server/middleware/rateLimit.ts`           | API and auth rate limiters                           |
+| `server/types/express.d.ts`                | Global Express.User type augmentation                |
+| `server/index.ts`                          | Helmet headers, CORS, request logging, PII redaction |

@@ -65,12 +65,12 @@ When the Mosh AI generates new nodes, the viewport center is injected into the s
 
 ### Required Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Unique node identifier. Stable across saves. |
-| `type` | `string` | Must be a value from the [Type Registry](#node-type-registry). |
-| `position` | `{ x: number, y: number }` | Canvas coordinate (logical pixels). |
-| `data` | `NodeData` | Application metadata (label, tags, AI notes, etc.). |
+| Field      | Type                       | Description                                                    |
+| ---------- | -------------------------- | -------------------------------------------------------------- |
+| `id`       | `string`                   | Unique node identifier. Stable across saves.                   |
+| `type`     | `string`                   | Must be a value from the [Type Registry](#node-type-registry). |
+| `position` | `{ x: number, y: number }` | Canvas coordinate (logical pixels).                            |
+| `data`     | `NodeData`                 | Application metadata (label, tags, AI notes, etc.).            |
 
 ### Node Type Registry
 
@@ -78,97 +78,97 @@ Node types control which SVG icon, colour accent, and layout renderer is used. A
 
 #### Compute
 
-| Type | Description | Size (w×h) |
-|------|-------------|-----------|
-| `server` | Generic VM or bare-metal host | 168×96 |
-| `microservice` | Containerised service or API pod | 168×72 |
-| `worker` | Background job or async processor | 168×72 |
-| `logic` | Serverless function (Lambda, Cloud Run) | 120×72 |
+| Type           | Description                             | Size (w×h) |
+| -------------- | --------------------------------------- | ---------- |
+| `server`       | Generic VM or bare-metal host           | 168×96     |
+| `microservice` | Containerised service or API pod        | 168×72     |
+| `worker`       | Background job or async processor       | 168×72     |
+| `logic`        | Serverless function (Lambda, Cloud Run) | 120×72     |
 
 #### Data
 
-| Type | Description | Size (w×h) |
-|------|-------------|-----------|
-| `database` | Relational or document database | 144×120 |
-| `cache` | In-memory cache (Redis, Memcached) | 144×120 |
-| `storage` | Object/blob store (S3, GCS) | 144×120 |
-| `search` | Search engine (Elasticsearch, OpenSearch) | 144×120 |
-| `influxdb` | Time-series database | 144×120 |
-| `snowflake` | Cloud data warehouse | 144×120 |
-| `clickhouse` | Columnar analytics database | 144×120 |
+| Type         | Description                               | Size (w×h) |
+| ------------ | ----------------------------------------- | ---------- |
+| `database`   | Relational or document database           | 144×120    |
+| `cache`      | In-memory cache (Redis, Memcached)        | 144×120    |
+| `storage`    | Object/blob store (S3, GCS)               | 144×120    |
+| `search`     | Search engine (Elasticsearch, OpenSearch) | 144×120    |
+| `influxdb`   | Time-series database                      | 144×120    |
+| `snowflake`  | Cloud data warehouse                      | 144×120    |
+| `clickhouse` | Columnar analytics database               | 144×120    |
 
 #### Networking
 
-| Type | Description | Size (w×h) |
-|------|-------------|-----------|
-| `gateway` | API Gateway | 192×72 |
-| `loadBalancer` | L4/L7 load balancer (ALB, NGINX) | 192×72 |
-| `cdn` | Content delivery network | 192×72 |
-| `bus` | Event bus / message broker (Kafka) | 192×72 |
-| `queue` | Message queue (RabbitMQ, SQS) | 192×72 |
-| `route53` | DNS / Route53 | 192×72 |
-| `nats` | NATS messaging | 192×72 |
-| `socketio` | WebSocket server | 144×72 |
+| Type           | Description                        | Size (w×h) |
+| -------------- | ---------------------------------- | ---------- |
+| `gateway`      | API Gateway                        | 192×72     |
+| `loadBalancer` | L4/L7 load balancer (ALB, NGINX)   | 192×72     |
+| `cdn`          | Content delivery network           | 192×72     |
+| `bus`          | Event bus / message broker (Kafka) | 192×72     |
+| `queue`        | Message queue (RabbitMQ, SQS)      | 192×72     |
+| `route53`      | DNS / Route53                      | 192×72     |
+| `nats`         | NATS messaging                     | 192×72     |
+| `socketio`     | WebSocket server                   | 144×72     |
 
 #### Security
 
-| Type | Description | Size (w×h) |
-|------|-------------|-----------|
-| `vault` | Secrets manager (HashiCorp Vault) | 168×72 |
-| `auth0` | Identity provider (Auth0, Okta) | 168×72 |
-| `waf` | Web application firewall | 168×72 |
+| Type    | Description                       | Size (w×h) |
+| ------- | --------------------------------- | ---------- |
+| `vault` | Secrets manager (HashiCorp Vault) | 168×72     |
+| `auth0` | Identity provider (Auth0, Okta)   | 168×72     |
+| `waf`   | Web application firewall          | 168×72     |
 
 #### Monitoring
 
-| Type | Description | Size (w×h) |
-|------|-------------|-----------|
-| `prometheus` | Metrics collection | 168×72 |
-| `grafana` | Metrics dashboards | 168×72 |
-| `datadog` | Observability platform | 168×72 |
+| Type         | Description            | Size (w×h) |
+| ------------ | ---------------------- | ---------- |
+| `prometheus` | Metrics collection     | 168×72     |
+| `grafana`    | Metrics dashboards     | 168×72     |
+| `datadog`    | Observability platform | 168×72     |
 
 #### Infrastructure Containers
 
 These types act as **grouping containers** — other nodes can be nested inside them using `parentId`.
 
-| Type | Description | Size (w×h) |
-|------|-------------|-----------|
-| `vpc` | Virtual Private Cloud | 408×312 |
-| `region` | Cloud region boundary | 600×408 |
-| `k8s-namespace` | Kubernetes namespace | 408×312 |
+| Type            | Description           | Size (w×h) |
+| --------------- | --------------------- | ---------- |
+| `vpc`           | Virtual Private Cloud | 408×312    |
+| `region`        | Cloud region boundary | 600×408    |
+| `k8s-namespace` | Kubernetes namespace  | 408×312    |
 
 #### Kubernetes Workloads
 
-| Type | Size (w×h) | Type | Size (w×h) |
-|------|-----------|------|-----------|
-| `k8s-pod` | 144×96 | `k8s-deployment` | 192×96 |
-| `k8s-replicaset` | 192×96 | `k8s-statefulset` | 192×96 |
-| `k8s-daemonset` | 192×96 | `k8s-service` | 168×72 |
-| `k8s-ingress` | 168×72 | `k8s-configmap` | 168×72 |
-| `k8s-secret` | 168×72 | `k8s-pvc` | 168×96 |
-| `k8s-job` | 144×72 | `k8s-cronjob` | 168×96 |
-| `k8s-hpa` | 168×96 | | |
+| Type             | Size (w×h) | Type              | Size (w×h) |
+| ---------------- | ---------- | ----------------- | ---------- |
+| `k8s-pod`        | 144×96     | `k8s-deployment`  | 192×96     |
+| `k8s-replicaset` | 192×96     | `k8s-statefulset` | 192×96     |
+| `k8s-daemonset`  | 192×96     | `k8s-service`     | 168×72     |
+| `k8s-ingress`    | 168×72     | `k8s-configmap`   | 168×72     |
+| `k8s-secret`     | 168×72     | `k8s-pvc`         | 168×96     |
+| `k8s-job`        | 144×72     | `k8s-cronjob`     | 168×96     |
+| `k8s-hpa`        | 168×96     |                   |            |
 
 #### External / SaaS
 
-| Type | Size (w×h) | Type | Size (w×h) |
-|------|-----------|------|-----------|
-| `user` | 96×96 | `app` | 168×72 |
-| `api` | 168×72 | `stripe` | 168×72 |
-| `twilio` | 168×72 | `shopify` | 168×72 |
+| Type     | Size (w×h) | Type      | Size (w×h) |
+| -------- | ---------- | --------- | ---------- |
+| `user`   | 96×96      | `app`     | 168×72     |
+| `api`    | 168×72     | `stripe`  | 168×72     |
+| `twilio` | 168×72     | `shopify` | 168×72     |
 
 #### CI/CD
 
-| Type | Size (w×h) | Type | Size (w×h) |
-|------|-----------|------|-----------|
-| `github_actions` | 168×72 | `jenkins` | 168×72 |
-| `gitlab` | 168×72 | `argocd` | 168×72 |
+| Type             | Size (w×h) | Type      | Size (w×h) |
+| ---------------- | ---------- | --------- | ---------- |
+| `github_actions` | 168×72     | `jenkins` | 168×72     |
+| `gitlab`         | 168×72     | `argocd`  | 168×72     |
 
 #### Text & Labels
 
-| Type | Description | Size (w×h) |
-|------|-------------|-----------|
-| `annotation` | Inline text label / callout | 160×48 |
-| `note` | Sticky-note block with markdown body | 192×192 |
+| Type         | Description                          | Size (w×h) |
+| ------------ | ------------------------------------ | ---------- |
+| `annotation` | Inline text label / callout          | 160×48     |
+| `note`       | Sticky-note block with markdown body | 192×192    |
 
 ### Canonical Sizes
 
@@ -180,14 +180,14 @@ You may intentionally override dimensions in `style.width` / `style.height` (e.g
 
 ```ts
 interface NodeData {
-  label: string;           // Required. Display name on the node card. Max 64 chars.
-  category?: string;       // Logical group: "Core" | "Data" | "Networking" | etc.
-  description?: string;   // Optional notes shown in the Properties sidebar.
-  tags?: string[];         // Freeform tags for filtering and AI context.
-  ai?: NodeAiMetadata;     // Mosh AI-generated annotations.
-  provider?: string;       // Cloud provider badge: "aws" | "gcp" | "azure" | "self-hosted"
-  accentColor?: string;    // Hex color override for the node accent glow.
-  note?: string;           // Markdown body text — 'note' type nodes only.
+  label: string; // Required. Display name on the node card. Max 64 chars.
+  category?: string; // Logical group: "Core" | "Data" | "Networking" | etc.
+  description?: string; // Optional notes shown in the Properties sidebar.
+  tags?: string[]; // Freeform tags for filtering and AI context.
+  ai?: NodeAiMetadata; // Mosh AI-generated annotations.
+  provider?: string; // Cloud provider badge: "aws" | "gcp" | "azure" | "self-hosted"
+  accentColor?: string; // Hex color override for the node accent glow.
+  note?: string; // Markdown body text — 'note' type nodes only.
 }
 ```
 
@@ -215,15 +215,15 @@ All style fields are optional. Missing values fall back to the design-system def
 
 ```ts
 interface NodeStyle {
-  width?: number;           // px. Use canonical sizes unless intentionally overriding.
-  height?: number;          // px.
+  width?: number; // px. Use canonical sizes unless intentionally overriding.
+  height?: number; // px.
   backgroundColor?: string; // Card fill. Default: "#1a1a2e"
-  borderColor?: string;     // Border color. Default: "#555"
-  borderRadius?: number;    // Corners in px. Default: 8, max: 48
-  opacity?: number;         // 0–1. Default: 1
-  fontColor?: string;       // Label text color. Default: "#ffffff"
-  fontSize?: number;        // px. Default: 13
-  icon?: string | null;     // Lucide icon name or image URL override.
+  borderColor?: string; // Border color. Default: "#555"
+  borderRadius?: number; // Corners in px. Default: 8, max: 48
+  opacity?: number; // 0–1. Default: 1
+  fontColor?: string; // Label text color. Default: "#ffffff"
+  fontSize?: number; // px. Default: 13
+  icon?: string | null; // Lucide icon name or image URL override.
   theme?: "default" | "minimal" | "glass" | "neon"; // Default: "default"
 }
 ```
@@ -234,9 +234,9 @@ Every node carries an `ai` sub-object populated by the Mosh co-pilot. It is **ne
 
 ```ts
 interface NodeAiMetadata {
-  summary?: string;        // Short AI description of this component's role.
-  notes?: string;          // Extended design notes authored by Mosh.
-  lastAnalyzed?: string | null;  // ISO 8601 timestamp of last Mosh interaction.
+  summary?: string; // Short AI description of this component's role.
+  notes?: string; // Extended design notes authored by Mosh.
+  lastAnalyzed?: string | null; // ISO 8601 timestamp of last Mosh interaction.
 }
 ```
 
@@ -272,9 +272,9 @@ Container nodes (`vpc`, `region`, `k8s-namespace`) can hold child nodes. To nest
 
 ### Required Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Unique edge identifier. |
+| Field    | Type     | Description                                                |
+| -------- | -------- | ---------------------------------------------------------- |
+| `id`     | `string` | Unique edge identifier.                                    |
 | `source` | `string` | ID of the originating node. Must exist in the same canvas. |
 | `target` | `string` | ID of the destination node. Must exist in the same canvas. |
 
@@ -282,21 +282,21 @@ Container nodes (`vpc`, `region`, `k8s-namespace`) can hold child nodes. To nest
 
 ```ts
 interface EdgeStyle {
-  stroke?: string;          // Line color. Default: "#555"
-  strokeWidth?: number;     // Line thickness in px. Default: 1.5
+  stroke?: string; // Line color. Default: "#555"
+  strokeWidth?: number; // Line thickness in px. Default: 1.5
   strokeDasharray?: string; // SVG dash pattern (e.g. "5 3" for dashes, "2 2" for dots).
 }
 ```
 
 **Connection type** (`type` field) controls the path shape:
 
-| Value | Description |
-|-------|-------------|
-| `smoothstep` | *(Default)* Right-angle path with rounded corners |
-| `bezier` | Smooth S-curve |
-| `straight` | Direct line |
-| `step` | Right-angle path without rounding |
-| `default` | ReactFlow default (bezier) |
+| Value        | Description                                       |
+| ------------ | ------------------------------------------------- |
+| `smoothstep` | _(Default)_ Right-angle path with rounded corners |
+| `bezier`     | Smooth S-curve                                    |
+| `straight`   | Direct line                                       |
+| `step`       | Right-angle path without rounding                 |
+| `default`    | ReactFlow default (bezier)                        |
 
 ### Edge Markers
 
@@ -311,21 +311,21 @@ Arrowheads are set via `markerEnd`:
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `type` | `"arrow" \| "arrowclosed"` | Open or filled arrowhead |
-| `color` | `string` | Should match the edge `stroke` color |
-| `width` | `number` | Arrowhead width multiplier |
-| `height` | `number` | Arrowhead height multiplier |
+| Field    | Type                       | Description                          |
+| -------- | -------------------------- | ------------------------------------ |
+| `type`   | `"arrow" \| "arrowclosed"` | Open or filled arrowhead             |
+| `color`  | `string`                   | Should match the edge `stroke` color |
+| `width`  | `number`                   | Arrowhead width multiplier           |
+| `height` | `number`                   | Arrowhead height multiplier          |
 
 ### Edge Data Object
 
 ```ts
 interface EdgeData {
-  label?: string;       // Mirrors top-level label for sidebar editing.
+  label?: string; // Mirrors top-level label for sidebar editing.
   description?: string; // What this connection represents (protocol, SLA, etc.).
   ai?: {
-    notes?: string;     // Mosh AI notes about this connection.
+    notes?: string; // Mosh AI notes about this connection.
   };
 }
 ```
@@ -358,20 +358,20 @@ interface EdgeData {
 
 Mosh and external importers may emit common technology names that don't match valid types. The `validateAndRepairCanvas` utility in [`client/src/lib/ai-canvas-utils.ts`](../client/src/lib/ai-canvas-utils.ts) normalises these automatically before applying them to the canvas:
 
-| Input alias(es) | Resolved type |
-|-----------------|---------------|
-| `postgres`, `postgresql`, `mysql`, `mongodb`, `dynamodb` | `database` |
-| `redis`, `elasticache`, `memcached` | `cache` |
-| `api-gateway`, `apigw`, `api_gateway` | `gateway` |
-| `nginx`, `alb`, `elb`, `haproxy` | `loadBalancer` |
-| `lambda`, `aws-lambda`, `azure-function` | `logic` |
-| `service`, `docker`, `container` | `microservice` |
-| `kafka`, `kinesis` | `bus` |
-| `rabbitmq`, `sqs`, `celery` | `queue` |
-| `s3`, `blob`, `gcs` | `storage` |
-| `cloudfront`, `fastly`, `akamai` | `cdn` |
-| `react`, `vue`, `angular`, `nextjs`, `nuxt` | `app` |
-| `text` | `annotation` |
+| Input alias(es)                                          | Resolved type  |
+| -------------------------------------------------------- | -------------- |
+| `postgres`, `postgresql`, `mysql`, `mongodb`, `dynamodb` | `database`     |
+| `redis`, `elasticache`, `memcached`                      | `cache`        |
+| `api-gateway`, `apigw`, `api_gateway`                    | `gateway`      |
+| `nginx`, `alb`, `elb`, `haproxy`                         | `loadBalancer` |
+| `lambda`, `aws-lambda`, `azure-function`                 | `logic`        |
+| `service`, `docker`, `container`                         | `microservice` |
+| `kafka`, `kinesis`                                       | `bus`          |
+| `rabbitmq`, `sqs`, `celery`                              | `queue`        |
+| `s3`, `blob`, `gcs`                                      | `storage`      |
+| `cloudfront`, `fastly`, `akamai`                         | `cdn`          |
+| `react`, `vue`, `angular`, `nextjs`, `nuxt`              | `app`          |
+| `text`                                                   | `annotation`   |
 
 Any type string not in the registry **and** not in the alias table falls back to `server`.
 
@@ -562,12 +562,12 @@ At runtime, the [`validateAndRepairCanvas`](../client/src/lib/ai-canvas-utils.ts
 
 ## Key Source Files
 
-| File | Purpose |
-|------|---------|
-| [`docs/canvas-schema.json`](./canvas-schema.json) | Machine-readable JSON Schema (Draft-07) for the full canvas format |
-| [`client/src/lib/ai-canvas-utils.ts`](../client/src/lib/ai-canvas-utils.ts) | `validateAndRepairCanvas` — runtime type normalisation, size enforcement, ID deduplication |
-| [`shared/schema.ts`](../shared/schema.ts) | Drizzle ORM schema for `nodes`, `edges`, and `workspaces` Postgres tables |
-| [`server/modules/canvas/storage.ts`](../server/modules/canvas/storage.ts) | `syncCanvas()` — persistence layer that writes nodes and edges to the DB |
+| File                                                                                                                        | Purpose                                                                                     |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [`docs/canvas-schema.json`](./canvas-schema.json)                                                                           | Machine-readable JSON Schema (Draft-07) for the full canvas format                          |
+| [`client/src/lib/ai-canvas-utils.ts`](../client/src/lib/ai-canvas-utils.ts)                                                 | `validateAndRepairCanvas` — runtime type normalisation, size enforcement, ID deduplication  |
+| [`shared/schema.ts`](../shared/schema.ts)                                                                                   | Drizzle ORM schema for `nodes`, `edges`, and `workspaces` Postgres tables                   |
+| [`server/modules/canvas/storage.ts`](../server/modules/canvas/storage.ts)                                                   | `syncCanvas()` — persistence layer that writes nodes and edges to the DB                    |
 | [`client/src/features/workspace/components/AiChatDrawer.tsx`](../client/src/features/workspace/components/AiChatDrawer.tsx) | Mosh AI drawer — constructs system prompt using node/edge registry, parses AI JSON response |
-| [`docs/mosh-ai-architecture.md`](./mosh-ai-architecture.md) | How Mosh uses the canvas schema in prompts and responses |
-| [`docs/WORKSPACES.md`](./WORKSPACES.md) | Workspace and collection API reference |
+| [`docs/mosh-ai-architecture.md`](./mosh-ai-architecture.md)                                                                 | How Mosh uses the canvas schema in prompts and responses                                    |
+| [`docs/WORKSPACES.md`](./WORKSPACES.md)                                                                                     | Workspace and collection API reference                                                      |

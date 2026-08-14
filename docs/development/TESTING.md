@@ -19,7 +19,7 @@
 
 We follow three rules:
 
-1. **Test behavior, not implementation.** We don't care *how* a function calculates containment — we care that dropping a node at `(150, 150)` inside a `500×500` container returns the correct parent ID.
+1. **Test behavior, not implementation.** We don't care _how_ a function calculates containment — we care that dropping a node at `(150, 150)` inside a `500×500` container returns the correct parent ID.
 
 2. **Every security boundary gets an integration test.** If a route checks ownership, there's a test proving that User A cannot touch User B's workspace.
 
@@ -42,11 +42,11 @@ We follow three rules:
           └─────────┘
 ```
 
-| Layer | Tool | Speed | What It Catches |
-|-------|------|-------|-----------------|
-| **Unit** | Vitest | ~50ms | Algorithm bugs, math errors, edge cases |
-| **Integration** | Vitest + Supertest | ~200ms | Auth bypass, IDOR, validation failures |
-| **E2E** | Playwright | ~5s | Blank screens, React crashes, broken routing |
+| Layer           | Tool               | Speed  | What It Catches                              |
+| --------------- | ------------------ | ------ | -------------------------------------------- |
+| **Unit**        | Vitest             | ~50ms  | Algorithm bugs, math errors, edge cases      |
+| **Integration** | Vitest + Supertest | ~200ms | Auth bypass, IDOR, validation failures       |
+| **E2E**         | Playwright         | ~5s    | Blank screens, React crashes, broken routing |
 
 ---
 
@@ -103,13 +103,13 @@ Unit tests validate **pure logic** — functions that take inputs and return out
 
 These tests verify the spatial logic that determines whether a dragged node lands inside a container (like a VPC or Kubernetes namespace).
 
-| Test | What It Proves |
-|------|---------------|
-| *Should snap a node inside a valid container* | A node dropped at `(100, 100)` inside a `500×500` container correctly returns `parentId: "vpc-1"` |
-| *Should return undefined when outside* | A node dropped at `(600, 600)` outside all containers returns no parent |
-| *Should not reparent if already in that parent* | Moving a node within its current parent doesn't trigger unnecessary state updates |
-| *Should calculate global position* | Converting from local `(50, 50)` inside a parent at `(200, 200)` correctly returns global `(250, 250)` |
-| *Should return undefined with no parent* | Nodes without parents have no global position to calculate |
+| Test                                            | What It Proves                                                                                         |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| _Should snap a node inside a valid container_   | A node dropped at `(100, 100)` inside a `500×500` container correctly returns `parentId: "vpc-1"`      |
+| _Should return undefined when outside_          | A node dropped at `(600, 600)` outside all containers returns no parent                                |
+| _Should not reparent if already in that parent_ | Moving a node within its current parent doesn't trigger unnecessary state updates                      |
+| _Should calculate global position_              | Converting from local `(50, 50)` inside a parent at `(200, 200)` correctly returns global `(250, 250)` |
+| _Should return undefined with no parent_        | Nodes without parents have no global position to calculate                                             |
 
 ### Canvas Local Cache
 
@@ -117,13 +117,13 @@ These tests verify the spatial logic that determines whether a dragged node land
 
 These tests verify the localStorage persistence layer that acts as an offline-first fail-safe for unsaved canvas changes.
 
-| Test | What It Proves |
-|------|---------------|
-| *Should save canvas data with a timestamp* | `saveCanvasToLocalCache` writes nodes, edges, and a Unix timestamp to localStorage |
-| *Should retrieve correctly parsed canvas data* | `getCanvasFromLocalCache` reads and correctly parses stored JSON |
-| *Should return null if no cache exists* | Returns `null` for an unknown workspace ID — no exception thrown |
-| *Should clear only the specific workspace cache* | `clearCanvasLocalCache(42)` removes workspace 42 but leaves workspace 99 intact |
-| *Should handle corrupt JSON gracefully* | Returns `null` and fires `console.warn` instead of crashing the app |
+| Test                                             | What It Proves                                                                     |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| _Should save canvas data with a timestamp_       | `saveCanvasToLocalCache` writes nodes, edges, and a Unix timestamp to localStorage |
+| _Should retrieve correctly parsed canvas data_   | `getCanvasFromLocalCache` reads and correctly parses stored JSON                   |
+| _Should return null if no cache exists_          | Returns `null` for an unknown workspace ID — no exception thrown                   |
+| _Should clear only the specific workspace cache_ | `clearCanvasLocalCache(42)` removes workspace 42 but leaves workspace 99 intact    |
+| _Should handle corrupt JSON gracefully_          | Returns `null` and fires `console.warn` instead of crashing the app                |
 
 **Note on environment:** Vitest runs in a Node environment where `localStorage` doesn't exist. These tests use `vi.stubGlobal` to mock it:
 
@@ -131,14 +131,20 @@ These tests verify the localStorage persistence layer that acts as an offline-fi
 let mockStorage: Record<string, string> = {};
 
 beforeEach(() => {
-    mockStorage = {};
-    vi.stubGlobal('localStorage', {
-        getItem: vi.fn((key) => mockStorage[key] || null),
-        setItem: vi.fn((key, value) => { mockStorage[key] = value; }),
-        removeItem: vi.fn((key) => { delete mockStorage[key]; }),
-        clear: vi.fn(() => { mockStorage = {}; })
-    });
-    vi.clearAllMocks();
+  mockStorage = {};
+  vi.stubGlobal("localStorage", {
+    getItem: vi.fn((key) => mockStorage[key] || null),
+    setItem: vi.fn((key, value) => {
+      mockStorage[key] = value;
+    }),
+    removeItem: vi.fn((key) => {
+      delete mockStorage[key];
+    }),
+    clear: vi.fn(() => {
+      mockStorage = {};
+    }),
+  });
+  vi.clearAllMocks();
 });
 ```
 
@@ -160,34 +166,34 @@ Integration tests spin up a real Express server (with mocked database calls) and
 
 **File:** `tests/integration/workspace/routes.test.ts`
 
-| Test | What It Proves |
-|------|---------------|
-| *IDOR: User A cannot modify User B's workspace* | `PUT /api/workspaces/1` with `userId: "user_A"` against a workspace owned by `"user_B"` returns `401 Unauthorized` |
-| *404 for missing workspaces* | Requesting a workspace that doesn't exist returns `404` instead of crashing |
-| *Zod validation rejects bad input* | Sending a title longer than 16 characters returns `400 Bad Request` with a human-readable error |
-| *Valid update succeeds* | Owner sending a valid title gets `200 OK` with the updated workspace |
+| Test                                            | What It Proves                                                                                                     |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| _IDOR: User A cannot modify User B's workspace_ | `PUT /api/workspaces/1` with `userId: "user_A"` against a workspace owned by `"user_B"` returns `401 Unauthorized` |
+| _404 for missing workspaces_                    | Requesting a workspace that doesn't exist returns `404` instead of crashing                                        |
+| _Zod validation rejects bad input_              | Sending a title longer than 16 characters returns `400 Bad Request` with a human-readable error                    |
+| _Valid update succeeds_                         | Owner sending a valid title gets `200 OK` with the updated workspace                                               |
 
 **How Mocking Works:**
 
 ```typescript
 // We mock the database layer, not the routes
-vi.mock('@server/modules/workspace/storage', () => ({
+vi.mock("@server/modules/workspace/storage", () => ({
   workspaceStorage: {
     getWorkspace: (...args) => mockGetWorkspace(...args),
     updateWorkspace: (...args) => mockUpdateWorkspace(...args),
-  }
+  },
 }));
 
 // We mock the auth middleware to inject test users
-vi.mock('@server/modules/auth', () => ({
+vi.mock("@server/modules/auth", () => ({
   AuthModule: {
     middleware: {
       isAuthenticated: (req, res, next) => {
-        req.user = { id: req.headers['x-test-user-id'] };
+        req.user = { id: req.headers["x-test-user-id"] };
         next();
-      }
-    }
-  }
+      },
+    },
+  },
 }));
 ```
 
@@ -227,9 +233,9 @@ E2E tests use [Playwright](https://playwright.dev/) to launch a real browser and
 
 **File:** `tests/e2e/canvas.spec.ts`
 
-| Test | What It Proves |
-|------|---------------|
-| *Should render without runtime crashes* | The app loads in Chromium without a white screen of death or React error boundaries firing |
+| Test                                    | What It Proves                                                                             |
+| --------------------------------------- | ------------------------------------------------------------------------------------------ |
+| _Should render without runtime crashes_ | The app loads in Chromium without a white screen of death or React error boundaries firing |
 
 This is a **smoke test** — it catches the catastrophic failures that unit and integration tests can't see (like a missing CSS import crashing the entire React tree).
 
@@ -278,11 +284,11 @@ The project uses a unified `tsconfig.json` that covers the entire monorepo:
 3. Use path aliases (`@/`, `@server/`, `@shared/`)
 
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { myFunction } from '@/utils/myFunction';
+import { describe, it, expect } from "vitest";
+import { myFunction } from "@/utils/myFunction";
 
-describe('myFunction', () => {
-  it('should return the correct result', () => {
+describe("myFunction", () => {
+  it("should return the correct result", () => {
     expect(myFunction(2, 3)).toBe(5);
   });
 });
@@ -295,18 +301,18 @@ describe('myFunction', () => {
 3. Use Supertest to fire HTTP requests
 
 ```typescript
-import request from 'supertest';
-import express from 'express';
+import request from "supertest";
+import express from "express";
 
 const app = express();
 app.use(express.json());
 registerYourRoutes(app);
 
-it('should return 401 for unauthorized access', async () => {
+it("should return 401 for unauthorized access", async () => {
   const res = await request(app)
-    .put('/api/your-route/1')
-    .set('x-test-user-id', 'wrong-user')
-    .send({ title: 'Hacked' });
+    .put("/api/your-route/1")
+    .set("x-test-user-id", "wrong-user")
+    .send({ title: "Hacked" });
 
   expect(res.status).toBe(401);
 });
@@ -319,10 +325,10 @@ it('should return 401 for unauthorized access', async () => {
 3. Start the dev server first (or let Playwright do it)
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('should show the login page', async ({ page }) => {
-  await page.goto('/auth/login');
-  await expect(page.locator('h1')).toContainText('Login');
+test("should show the login page", async ({ page }) => {
+  await page.goto("/auth/login");
+  await expect(page.locator("h1")).toContainText("Login");
 });
 ```
