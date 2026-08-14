@@ -1,0 +1,14 @@
+{
+  "name": "@meshwork/team-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "drizzle-zod": "^0.7.0",
+    "express": "^5.0.1",
+    "pg": "^8.16.3",
+    "ws": "^8.18.0",
+    "zod": "^3.24.2"
+  }
+}

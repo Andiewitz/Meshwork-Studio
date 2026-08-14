@@ -1,0 +1,24 @@
+{
+  "name": "@meshwork/auth-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "connect-redis": "^7.1.1",
+    "cookie": "^1.1.1",
+    "cookie-parser": "^1.4.7",
+    "drizzle-orm": "^0.45.2",
+    "drizzle-zod": "^0.7.0",
+    "express": "^5.0.1",
+    "express-rate-limit": "^8.3.1",
+    "express-session": "^1.19.0",
+    "jsonwebtoken": "^9.0.3",
+    "memorystore": "^1.6.7",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "passport-local": "^1.0.0",
+    "pg": "^8.16.3",
+    "zod": "^3.24.2"
+  }
+}

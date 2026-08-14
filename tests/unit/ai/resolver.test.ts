@@ -4,10 +4,10 @@ import {
   ProviderResolutionError,
   DEFAULT_PROVIDER,
   DEFAULT_FREE_MODEL,
-} from "@server/modules/ai/resolver";
+} from "@services/ai/resolver";
 
 // Mock the DB functions used by the resolver
-vi.mock("@server/modules/ai/db", () => ({
+vi.mock("@services/ai/db/storage", () => ({
   getActiveKeyForProvider: vi.fn(),
   getApiKeyWithPlaintext: vi.fn(),
 }));
@@ -15,7 +15,7 @@ vi.mock("@server/modules/ai/db", () => ({
 import {
   getActiveKeyForProvider,
   getApiKeyWithPlaintext,
-} from "@server/modules/ai/db";
+} from "@services/ai/db/storage";
 
 const mockedGetActiveKey = vi.mocked(getActiveKeyForProvider);
 const mockedGetPlaintext = vi.mocked(getApiKeyWithPlaintext);

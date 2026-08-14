@@ -4,8 +4,8 @@ import express from "express";
 import { registerAuthRoutes } from "@server/modules/auth/routes";
 
 // Mock DB, password, rateLimit, csrf, and captcha modules so they don't block
-vi.mock("@server/modules/auth/db", () => ({
-  db: {
+const { mockDb } = vi.hoisted(() => ({
+  mockDb: {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
@@ -15,7 +15,17 @@ vi.mock("@server/modules/auth/db", () => ({
   },
 }));
 
-vi.mock("@server/modules/auth/password", () => ({
+vi.mock("@services/auth/db/connection", () => ({ db: mockDb, pool: {} }));
+vi.mock("@services/auth/db", () => ({ db: mockDb, pool: {} }));
+
+vi.mock("@services/auth/password/password", () => ({
+  hashPassword: vi.fn().mockResolvedValue("hashed"),
+  verifyPassword: vi.fn().mockResolvedValue(true),
+  validatePasswordStrength: vi
+    .fn()
+    .mockReturnValue({ valid: true, errors: [] }),
+}));
+vi.mock("@services/auth/password", () => ({
   hashPassword: vi.fn().mockResolvedValue("hashed"),
   verifyPassword: vi.fn().mockResolvedValue(true),
   validatePasswordStrength: vi
@@ -29,11 +39,23 @@ vi.mock("@server/middleware/rateLimit", () => ({
   apiLimiter: (req: any, res: any, next: any) => next(),
 }));
 
+vi.mock("@services/auth/rate-limit/rateLimit", () => ({
+  authLimiter: (req: any, res: any, next: any) => next(),
+  refreshLimiter: (req: any, res: any, next: any) => next(),
+}));
+vi.mock("@services/auth/rate-limit", () => ({
+  authLimiter: (req: any, res: any, next: any) => next(),
+  refreshLimiter: (req: any, res: any, next: any) => next(),
+}));
+
 vi.mock("@server/middleware/csrf", () => ({
   csrfProtection: (req: any, res: any, next: any) => next(),
 }));
 
-vi.mock("@server/modules/auth/captcha", () => ({
+vi.mock("@services/auth/captcha/captcha", () => ({
+  optionalCaptchaMiddleware: (req: any, res: any, next: any) => next(),
+}));
+vi.mock("@services/auth/captcha", () => ({
   optionalCaptchaMiddleware: (req: any, res: any, next: any) => next(),
 }));
 

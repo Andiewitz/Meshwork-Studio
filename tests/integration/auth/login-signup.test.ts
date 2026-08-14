@@ -61,9 +61,25 @@ const { mockUsers, mockRedisStore, state, dbProxy, resetDbChain } = vi.hoisted(
   },
 );
 
-vi.mock("@server/modules/auth/db", () => ({ db: dbProxy }));
+vi.mock("@services/auth/db/connection", () => ({ db: dbProxy, pool: {} }));
+vi.mock("@services/auth/db", () => ({ db: dbProxy, pool: {} }));
 
-vi.mock("@server/modules/auth/password", () => ({
+vi.mock("@services/auth/password/password", () => ({
+  hashPassword: vi
+    .fn()
+    .mockImplementation(async (pwd: string) => `hashed:${pwd}`),
+  verifyPassword: vi
+    .fn()
+    .mockImplementation(
+      async (pwd: string, hash: string) => hash === `hashed:${pwd}`,
+    ),
+  validatePasswordStrength: vi.fn().mockImplementation((pwd: string) => {
+    const errors: string[] = [];
+    if (pwd.length < 8) errors.push("Too short");
+    return { valid: errors.length === 0, errors };
+  }),
+}));
+vi.mock("@services/auth/password", () => ({
   hashPassword: vi
     .fn()
     .mockImplementation(async (pwd: string) => `hashed:${pwd}`),
@@ -85,12 +101,29 @@ vi.mock("@server/middleware/rateLimit", () => ({
   apiLimiter: (_req: any, _res: any, next: any) => next(),
 }));
 
+vi.mock("@services/auth/rate-limit/rateLimit", () => ({
+  authLimiter: (_req: any, _res: any, next: any) => next(),
+  refreshLimiter: (_req: any, _res: any, next: any) => next(),
+}));
+vi.mock("@services/auth/rate-limit", () => ({
+  authLimiter: (_req: any, _res: any, next: any) => next(),
+  refreshLimiter: (_req: any, _res: any, next: any) => next(),
+  checkAccountLockout: vi.fn().mockResolvedValue(null),
+  recordFailedLoginAttempt: vi.fn().mockResolvedValue(null),
+  resetLoginAttempts: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@server/middleware/csrf", () => ({
   csrfProtection: (_req: any, _res: any, next: any) => next(),
 }));
 
-vi.mock("@server/modules/auth/captcha", () => ({
+vi.mock("@services/auth/captcha/captcha", () => ({
   optionalCaptchaMiddleware: (_req: any, _res: any, next: any) => next(),
+  verifyCaptcha: vi.fn().mockResolvedValue(true),
+}));
+vi.mock("@services/auth/captcha", () => ({
+  optionalCaptchaMiddleware: (_req: any, _res: any, next: any) => next(),
+  verifyCaptcha: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock("@server/middleware/validate", () => ({

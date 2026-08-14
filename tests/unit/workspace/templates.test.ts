@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { PRELOADED_TEMPLATES } from "../../../client/src/features/workspace/utils/preloadedTemplates";
-import { insertWorkspaceSchema } from "../../../shared/schema";
+import { insertWorkspaceSchema } from "@shared/schema";
 
 describe("Preloaded Templates Validation", () => {
   it("should export exactly 6 templates", () => {
