@@ -45,7 +45,7 @@ Every canvas is represented as a JSON object with exactly two top-level arrays:
 }
 ```
 
-This is the format stored in the `nodes` and `edges` Postgres tables per workspace, exchanged with the Mosh AI co-pilot on every `/api/ai/chat` request, and returned from `/api/workspaces/:id/canvas`.
+This is the format stored in the `nodes` and `edges` Postgres tables per workspace, exchanged with the Meshwork AI co-pilot on every `/api/ai/chat` request, and returned from `/api/workspaces/:id/canvas`.
 
 ---
 
@@ -57,7 +57,7 @@ Positions are in **logical canvas pixels** — not screen pixels. The canvas is 
 - `y` increases **downward**
 - The origin `(0, 0)` is the default center of a blank canvas
 
-When the Mosh AI generates new nodes, the viewport center is injected into the system prompt so new components land near the visible area. The `validateAndRepairCanvas` utility enforces that any node without a position is placed at `(i * 220 + 100, 100)` as a safe fallback.
+When the Meshwork AI generates new nodes, the viewport center is injected into the system prompt so new components land near the visible area. The `validateAndRepairCanvas` utility enforces that any node without a position is placed at `(i * 220 + 100, 100)` as a safe fallback.
 
 ---
 
@@ -184,7 +184,7 @@ interface NodeData {
   category?: string; // Logical group: "Core" | "Data" | "Networking" | etc.
   description?: string; // Optional notes shown in the Properties sidebar.
   tags?: string[]; // Freeform tags for filtering and AI context.
-  ai?: NodeAiMetadata; // Mosh AI-generated annotations.
+  ai?: NodeAiMetadata; // Meshwork AI-generated annotations.
   provider?: string; // Cloud provider badge: "aws" | "gcp" | "azure" | "self-hosted"
   accentColor?: string; // Hex color override for the node accent glow.
   note?: string; // Markdown body text — 'note' type nodes only.
@@ -230,13 +230,13 @@ interface NodeStyle {
 
 ### AI Metadata
 
-Every node carries an `ai` sub-object populated by the Mosh co-pilot. It is **never rendered in the UI directly** — it serves as context for follow-up AI prompts.
+Every node carries an `ai` sub-object populated by the Meshwork AI co-pilot. It is **never rendered in the UI directly** — it serves as context for follow-up AI prompts.
 
 ```ts
 interface NodeAiMetadata {
   summary?: string; // Short AI description of this component's role.
-  notes?: string; // Extended design notes authored by Mosh.
-  lastAnalyzed?: string | null; // ISO 8601 timestamp of last Mosh interaction.
+  notes?: string; // Extended design notes authored by Meshwork AI.
+  lastAnalyzed?: string | null; // ISO 8601 timestamp of last AI interaction.
 }
 ```
 
@@ -261,7 +261,7 @@ Container nodes (`vpc`, `region`, `k8s-namespace`) can hold child nodes. To nest
 ```
 
 > [!IMPORTANT]
-> Child positions are **relative to the parent's top-left corner**, not the canvas origin. When Mosh generates nested architectures, it places children at offsets like `(80, 120)` inside a VPC positioned at `(50, 50)` on the canvas — the child's absolute canvas position would be `(130, 170)`.
+> Child positions are **relative to the parent's top-left corner**, not the canvas origin. When Meshwork AI generates nested architectures, it places children at offsets like `(80, 120)` inside a VPC positioned at `(50, 50)` on the canvas — the child's absolute canvas position would be `(130, 170)`.
 
 > [!WARNING]
 > Never set `extent: "parent"` without also setting `parentId`, and vice versa. The `validateAndRepairCanvas` utility will silently strip a mismatched `extent` without `parentId`.

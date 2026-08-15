@@ -16,7 +16,7 @@ import { validateAndRepairCanvas } from "@/lib/ai-canvas-utils";
 // GROUND TRUTH SYSTEM PROMPT
 // Updated whenever node types or sizes change in dimensions.ts
 // ─────────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `You are Mosh — an expert cloud architecture co-pilot embedded inside Meshwork Studio, a professional infrastructure diagramming tool.
+const SYSTEM_PROMPT = `You are Meshwork AI — an expert cloud architecture co-pilot embedded inside Meshwork Studio, a professional infrastructure diagramming tool.
 
 BEHAVIOR RULES:
 1. Always reply in clear, natural language. Explain what you designed or changed (2-4 sentences) like a senior architect briefing their team.
@@ -507,7 +507,7 @@ export function AiChatDrawer({
           <CpuChipIcon className="w-3.5 h-3.5 text-[#00E5A0]" />
         </motion.div>
         <span className="text-[11px] font-semibold tracking-widest uppercase text-white/60">
-          Mosh
+          Meshwork AI
         </span>
         <span className="text-[9px] text-white/25 border border-white/10 px-1.5 py-0.5 rounded-md font-mono">
           BETA
@@ -539,7 +539,7 @@ export function AiChatDrawer({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[12px] font-[#00E5A0] font-semibold text-white/90 tracking-wide">
-                      MOSH
+                      MESHWORK AI
                     </span>
                     <span className="text-[9px] text-[#00E5A0] border border-[rgba(0,229,160,0.22)] bg-[rgba(0,229,160,0.10)] px-1.5 py-0.5 rounded font-mono tracking-wider">
                       BETA
@@ -580,7 +580,7 @@ export function AiChatDrawer({
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-white font-medium text-sm">
-                      I'm Mosh. Let's design.
+                      I'm Meshwork AI. Let's design.
                     </h3>
                     <p className="text-white/40 text-xs max-w-[240px]">
                       Describe your cloud infrastructure or ask me to modify the

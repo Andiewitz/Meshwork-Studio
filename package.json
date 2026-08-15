@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "workspaces": [
     "client",
     "server/services/*"
@@ -58,7 +61,7 @@
   "devDependencies": {
     "@commitlint/cli": "^21.1.0",
     "@commitlint/config-conventional": "^21.1.0",
-    "@eslint/js": "^10.6.0",
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.59.0",
     "@types/bcrypt": "^5.0.2",
     "@types/cookie-parser": "^1.4.10",
@@ -79,7 +82,7 @@
     "@vitest/coverage-v8": "^4.1.1",
     "@vitest/ui": "^4.1.1",
     "esbuild": "^0.25.0",
-    "eslint": "^10.6.0",
+    "eslint": "^10.0.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-no-secrets": "^2.3.3",
     "eslint-plugin-security": "^4.0.1",

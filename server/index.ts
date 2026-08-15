@@ -158,7 +158,7 @@ app.use(cookieParser());
 // Session middleware is initialized by setupAuth() in registerRoutes()
 
 // Real Health Check endpoint
-app.get("/health", async (_req, res) => {
+app.get(["/health", "/healthz"], async (_req, res) => {
   try {
     const checks = {
       postgres: false,

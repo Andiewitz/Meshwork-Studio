@@ -29,32 +29,39 @@ export function CookieBanner() {
     <AnimatePresence>
       {show && (
         <motion.aside
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 24, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 16, scale: 0.98 }}
           transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed bottom-0 left-0 right-0 z-50"
+          className="fixed bottom-3 left-3 right-3 sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-lg z-50 pointer-events-auto"
           aria-label="Cookie consent"
         >
-          {/* Sharp top border accent */}
-          <div className="h-[2px] w-full bg-white/20" />
+          <div className="bg-zinc-950/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl p-4 sm:p-5">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <h4 className="text-xs font-semibold text-white tracking-wide uppercase font-mono">
+                    Privacy & Storage Notice
+                  </h4>
+                </div>
+              </div>
 
-          <div className="bg-zinc-950 border-t-0 border-b border-l border-r border-white/10 px-5 py-4 sm:px-8 sm:py-5">
-            <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-              {/* Text — stretches to fill horizontal space */}
-              <p className="flex-1 text-sm leading-relaxed text-white/55 font-sans">
-                We use essential cookies for authentication and session
-                management. By continuing you agree to our{" "}
+              <p className="text-xs leading-relaxed text-zinc-400 font-sans">
+                We store essential secure session tokens and local workspace
+                preferences to keep you signed in and preserve your diagram
+                state. We do not use third-party advertising or tracking
+                cookies. Learn more in our{" "}
                 <Link
                   href="/privacy"
-                  className="text-white font-semibold underline underline-offset-2 decoration-white/40 hover:decoration-white transition-colors"
+                  className="text-white underline underline-offset-2 decoration-white/40 hover:decoration-white font-medium transition-colors"
                 >
                   Privacy Policy
                 </Link>{" "}
                 and{" "}
                 <Link
                   href="/terms"
-                  className="text-white font-semibold underline underline-offset-2 decoration-white/40 hover:decoration-white transition-colors"
+                  className="text-white underline underline-offset-2 decoration-white/40 hover:decoration-white font-medium transition-colors"
                 >
                   Terms of Service
                 </Link>
@@ -62,16 +69,18 @@ export function CookieBanner() {
               </p>
 
               {/* Actions */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center justify-end gap-2 pt-1">
                 <button
+                  type="button"
                   onClick={handleDecline}
-                  className="py-2 px-5 text-xs font-medium text-white/50 hover:text-white/80 transition-colors cursor-pointer whitespace-nowrap"
+                  className="px-3.5 py-1.5 text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
                 >
                   Essential only
                 </button>
                 <button
+                  type="button"
                   onClick={handleAccept}
-                  className="py-2 px-5 bg-white text-black text-xs font-semibold hover:bg-white/90 active:scale-[0.98] transition-all duration-150 cursor-pointer whitespace-nowrap"
+                  className="px-4 py-1.5 bg-white text-zinc-950 rounded-lg text-xs font-semibold hover:bg-zinc-100 active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap shadow-sm"
                 >
                   Accept all
                 </button>

@@ -86,7 +86,7 @@ resource "aws_ecs_service" "backend" {
   service_role    = "service.amazonaws.com"
   health_check    = {
     interval       = 30s
-    path           = "/healthz"
+    path           = "/health"
     protocol       = "HTTP"
     successful_exit = 200
   }
@@ -114,7 +114,7 @@ resource "aws_lb_target_group" "main" {
   vpc_id      = aws_vpc.main.id
   health_check = {
     interval    = 30s
-    path        = "/healthz"
+    path        = "/health"
     healthy_threshold = 2
     unhealthy_threshold = 2
     timeout      = 5s
@@ -133,7 +133,7 @@ resource "aws_ecs_service" "frontend" {
   service_role    = "service.amazonaws.com"
   health_check    = {
     interval       = 30s
-    path           = "/healthz"
+    path           = "/health"
     protocol       = "HTTP"
     successful_exit = 200
   }

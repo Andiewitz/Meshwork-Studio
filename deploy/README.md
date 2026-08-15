@@ -1,4 +1,8 @@
-# Meshwork Studio — Free Tier Deploy (No Domain)
+# Meshwork Studio — Single-Node EC2 / Evaluation Deployment
+
+> [!NOTE]
+> This folder contains scripts and documentation for running Meshwork Studio on a **single EC2 instance** (useful for staging, evaluation, or emergency self-hosted backup).
+> For canonical production deployments, see the declarative **ECS / Fargate + ALB + Multi-AZ RDS / ElastiCache Terraform infrastructure** in [`terraform/`](../terraform).
 
 ## Quick Start
 
@@ -56,7 +60,7 @@ chmod 600 .env
 
 ```bash
 cd /home/ec2-user/app
-git clone https://github.com/Andiewitz/meshwork-studiov2.git meshwork-studio
+git clone https://github.com/Andiewitz/Meshwork-Studio.git meshwork-studio
 cd meshwork-studio
 ./deploy/deploy.sh
 ```

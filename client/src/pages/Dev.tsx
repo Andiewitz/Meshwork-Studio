@@ -140,7 +140,7 @@ Interactive components (Dialogs, Dropdowns, Tooltips, Accordions) use Radix UI p
     content: `
 ## What Is the Canvas Schema?
 
-Every diagram in Meshwork Studio is represented as a JSON object with two arrays: \`nodes\` and \`edges\`. This payload is what gets stored in the database, exchanged with the Mosh AI co-pilot, and synced across collaborators in real time. Understanding it is essential for building integrations, debugging AI output, or extending the canvas renderer.
+Every diagram in Meshwork Studio is represented as a JSON object with two arrays: \`nodes\` and \`edges\`. This payload is what gets stored in the database, exchanged with the Meshwork AI co-pilot, and synced across collaborators in real time. Understanding it is essential for building integrations, debugging AI output, or extending the canvas renderer.
 
 ## Node Structure
 
@@ -159,7 +159,7 @@ Every node type has a canonical width and height baked into the renderer. For ex
 
 ## Type Aliases & AI Normalisation
 
-Mosh and external importers often emit common technology names that don't map directly to valid types. A built-in alias table normalises these automatically: \`postgres\` → \`database\`, \`redis\` → \`cache\`, \`nginx\` → \`loadBalancer\`, \`lambda\` → \`logic\`, \`kafka\` → \`bus\`, \`s3\` → \`storage\`, and so on. Any unrecognised type falls back to \`server\`.
+Meshwork AI and external importers often emit common technology names that don't map directly to valid types. A built-in alias table normalises these automatically: \`postgres\` → \`database\`, \`redis\` → \`cache\`, \`nginx\` → \`loadBalancer\`, \`lambda\` → \`logic\`, \`kafka\` → \`bus\`, \`s3\` → \`storage\`, and so on. Any unrecognised type falls back to \`server\`.
 
 ## Parent–Child Nesting
 
@@ -169,11 +169,11 @@ Container nodes (\`vpc\`, \`region\`, \`k8s-namespace\`) support nesting. To nes
 
 Edges require \`id\`, \`source\`, and \`target\`. Optional fields control how the connection is drawn: \`type\` (\`smoothstep\`, \`bezier\`, \`straight\`, \`step\`), \`label\` (a protocol badge rendered at the midpoint), \`animated\` (marching-ants for active data flows), \`style\` (stroke color, width, dash pattern), and \`markerEnd\` (arrowhead type and color).
 
-The \`data\` sub-object stores metadata readable by the Properties sidebar: a \`label\` mirror, a \`description\`, and \`ai.notes\` populated by Mosh during analysis.
+The \`data\` sub-object stores metadata readable by the Properties sidebar: a \`label\` mirror, a \`description\`, and \`ai.notes\` populated by Meshwork AI during analysis.
 
 ## AI Metadata Fields
 
-Every node and edge carries an \`ai\` sub-object — never rendered directly in the UI, but used by Mosh as working memory across follow-up prompts. Fields include \`summary\` (Mosh's understanding of the component's role), \`notes\` (extended design observations), and \`lastAnalyzed\` (ISO 8601 timestamp of the last Mosh interaction).
+Every node and edge carries an \`ai\` sub-object — never rendered directly in the UI, but used by Meshwork AI as working memory across follow-up prompts. Fields include \`summary\` (understanding of the component's role), \`notes\` (extended design observations), and \`lastAnalyzed\` (ISO 8601 timestamp of the last interaction).
 
 > [!NOTE]
 > AI metadata is completely stripped out before generating a public shareable link.

@@ -62,15 +62,15 @@ Meshwork Studio lets you design system architecture diagrams by dragging infrast
 
 ### Prerequisites
 
-- **Docker Desktop** (for the full stack) or **Node.js 18+** (for local dev)
+- **Docker Desktop** (for the full stack) or **Node.js 20+** (for local dev)
 
 ### Option 1: Docker (Full Stack)
 
 ```bash
-git clone https://github.com/yourusername/meshwork-studio.git
-cd meshwork-studio
+git clone https://github.com/Andiewitz/Meshwork-Studio.git
+cd Meshwork-Studio
 
-cp .env.template .env
+cp .env.example .env
 # Edit .env with your credentials
 
 docker-compose up -d
@@ -160,21 +160,30 @@ docker-compose down -v   # Stop and remove volumes
 
 Every major system has its own deep-dive guide:
 
-| Document                                                | What You'll Learn                                                                                         |
-| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **[Security Architecture](./docs/SECURITY.md)**         | Auth flows, IDOR protection, brute-force lockouts, AES-256 encryption, CSRF, rate limiting, PII redaction |
-| **[Canvas Engine](./docs/ENGINE.md)**                   | How drag-and-drop works, spatial containment logic, the Postgres upsert sync strategy                     |
-| **[Canvas Persistence](./docs/PERSISTENCE.md)**         | The offline-first localStorage cache layer, debounced auto-save, and edge normalization fix               |
-| **[Workspace & Collections API](./docs/WORKSPACES.md)** | Full REST API reference for workspaces and collections, IDOR pattern, client hooks                        |
-| **[AI Engine Guide](./docs/AI_ENGINE.md)**              | Bring-your-own-key AI integration, encryption flow, and API endpoints                                     |
-| **[Theming & Design System](./docs/THEMING.md)**        | Dark/light/system modes, neo-brutalist CSS utilities, brand identity                                      |
-| **[Testing Strategy](./docs/TESTING.md)**               | The testing pyramid, how to run tests, how to write new ones                                              |
-| **[AWS EC2 Deployment](./docs/INFRASTRUCTURE.md)**      | How to deploy full stack with SSL, NGINX reverse proxy, and systemd/PM2                                   |
-| **[NGINX Architecture](./docs/NGINX_ARCHITECTURE.md)**  | Why NGINX sits in front of Express, SPA routing, caching                                                  |
-| **[Settings & Privacy](./docs/SETTINGS.md)**            | User profile management, account deletion, data export                                                    |
-| **[Database Backup & Restore](./docs/BACKUP.md)**       | How to back up both Postgres databases and restore from a dump                                            |
-| **[Security Audit Report](./docs/AUDIT_REPORT.md)**     | The original security audit and critical fixes implemented during hardening                               |
-| **[Post-Mortem Log](./docs/post-mortem.md)**            | Every production bug we've found and fixed, with root cause analysis                                      |
+| Document                                                           | What You'll Learn                                                                                               |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| **[Security Architecture](./docs/SECURITY.md)**                    | Auth flows, IDOR protection, brute-force lockouts, AES-256 encryption, CSRF, rate limiting, PII redaction       |
+| **[Canvas Engine](./docs/ENGINE.md)**                              | How drag-and-drop works, spatial containment logic, the Postgres upsert sync strategy                           |
+| **[Canvas Persistence](./docs/PERSISTENCE.md)**                    | The offline-first localStorage cache layer, debounced auto-save, and edge normalization fix                     |
+| **[Workspace & Collections API](./docs/WORKSPACES.md)**            | Full REST API reference for workspaces and collections, IDOR pattern, client hooks                              |
+| **[AI Engine Guide](./docs/AI_ENGINE.md)**                         | Bring-your-own-key AI integration, encryption flow, and API endpoints                                           |
+| **[Theming & Design System](./docs/THEMING.md)**                   | Dark/light/system modes, neo-brutalist CSS utilities, brand identity                                            |
+| **[Testing Strategy](./docs/TESTING.md)**                          | The testing pyramid, how to run tests, how to write new ones                                                    |
+| **[AWS Infrastructure (ECS/Terraform)](./docs/INFRASTRUCTURE.md)** | Production ECS/Fargate + ALB + RDS + Redis architecture via Terraform (with EC2 single-node emergency fallback) |
+| **[NGINX Architecture](./docs/NGINX_ARCHITECTURE.md)**             | Why NGINX sits in front of Express, SPA routing, caching                                                        |
+| **[Settings & Privacy](./docs/SETTINGS.md)**                       | User profile management, account deletion, data export                                                          |
+| **[Database Backup & Restore](./docs/BACKUP.md)**                  | How to back up both Postgres databases and restore from a dump                                                  |
+| **[Security Audit Report](./docs/AUDIT_REPORT.md)**                | The original security audit and critical fixes implemented during hardening                                     |
+| **[Post-Mortem Log](./docs/post-mortem.md)**                       | Every production bug we've found and fixed, with root cause analysis                                            |
+
+---
+
+## Deployment Architectures
+
+Meshwork Studio supports two deployment workflows:
+
+1. **Production (Canonical)**: **AWS ECS / Fargate behind an Application Load Balancer** with Amazon RDS Multi-AZ PostgreSQL, ElastiCache Redis, and S3/CloudFront static assets managed via declarative Terraform in `terraform/`. Security groups enforce strict SG-to-SG isolation (RDS/Redis accessible only from ECS; ECS accessible only from ALB).
+2. **Single-Node / Emergency Fallback**: Automated bash and systemd/PM2 scripts in `deploy/` for running the entire stack (NGINX reverse proxy + Node.js API + local DB) on a single EC2 instance for rapid evaluation or disaster recovery.
 
 ---
 
@@ -215,22 +224,23 @@ meshwork-studio/
 │   │   └── ai/                  # BYOK encryption and AI proxy
 │   ├── middleware/              # CSRF, rate limiting
 │   └── types/                   # Express.User type augmentation
+├── terraform/                   # Production ECS/RDS/Redis/ALB IAC
+├── deploy/                      # Single-node EC2 deployment & NGINX scripts
 ├── shared/                      # Drizzle schema + Zod validators
 ├── tests/
 │   ├── unit/                    # Pure logic tests
 │   ├── integration/             # HTTP route tests with Supertest
 │   └── e2e/                     # Playwright browser tests
 ├── docs/                        # Deep-dive documentation
-├── docker-compose.yml           # Full stack orchestration
-├── nginx.conf                   # Reverse proxy configuration
-└── vitest.config.ts             # Test runner configuration
+├── docker-compose.yml           # Full stack local orchestration
+├── vitest.config.ts             # Test runner configuration
 ```
 
 ---
 
 ## Environment Variables
 
-Copy `.env.template` to `.env` and fill in your values:
+Copy `.env.example` to `.env` and fill in your values:
 
 ```bash
 # Database

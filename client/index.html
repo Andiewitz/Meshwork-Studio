@@ -6,15 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <meta name="description" content="Design, visualize, and auto-sync your cloud architecture with Meshwork Studio. Fast, collaborative, and beautifully brutal." />
   <meta name="theme-color" content="#E8391A" />
+  <link rel="canonical" href="https://meshwork-studio.duckdns.org/" />
   
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://meshworkstudio.com/" />
+  <meta property="og:url" content="https://meshwork-studio.duckdns.org/" />
   <meta property="og:title" content="Meshwork Studio" />
   <meta property="og:description" content="Design, visualize, and auto-sync your cloud architecture with Meshwork Studio." />
   
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://meshwork-studio.duckdns.org/" />
   <meta property="twitter:title" content="Meshwork Studio" />
   <meta property="twitter:description" content="Design, visualize, and auto-sync your cloud architecture with Meshwork Studio." />
 
@@ -27,10 +29,80 @@
     href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Geist+Mono:wght@100..900&family=Geomini:wght@100..800&display=swap"
     rel="stylesheet">
   <title>Meshwork Studio</title>
+  <style>
+    #initial-loading-shell {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #09090b;
+      color: #fafafa;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      z-index: 99999;
+      user-select: none;
+    }
+    .loading-logo {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+      animation: pulse-scale 2s ease-in-out infinite;
+    }
+    .loading-title {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    .loading-message {
+      font-size: 13px;
+      color: #a1a1aa;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .loading-spinner {
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: #ff5722;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulse-scale {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.85; }
+    }
+  </style>
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div id="initial-loading-shell">
+      <svg class="loading-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="mw-init-fill" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#FF6B35" />
+            <stop offset="38%" stop-color="#F43F5E" />
+            <stop offset="70%" stop-color="#D946EF" />
+            <stop offset="100%" stop-color="#3B82F6" />
+          </linearGradient>
+        </defs>
+        <polygon points="4,92 96,92 96,8" fill="url(#mw-init-fill)" />
+        <circle cx="4" cy="92" r="4.5" fill="#FFFFFF" />
+      </svg>
+      <div class="loading-title">Meshwork Studio</div>
+      <div class="loading-message">
+        <div class="loading-spinner"></div>
+        <span>Loading workspace…</span>
+      </div>
+    </div>
+  </div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 
