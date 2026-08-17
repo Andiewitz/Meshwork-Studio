@@ -177,8 +177,8 @@ import {
 import { nodeDimensions } from "@/features/workspace/utils/dimensions";
 import { generateTemplate } from "@/features/workspace/utils/templates";
 import { PropertiesSidebar } from "@/features/workspace/components/PropertiesSidebar";
-import { AiChatDrawer } from "@/features/workspace/components/AiChatDrawer";
-import { NodeLibrarySidebar } from "@/features/workspace/components/NodeLibrarySidebar";
+import { WorkspaceHeader } from "@/features/workspace/components/WorkspaceHeader";
+import { WorkspaceLeftSidebar } from "@/features/workspace/components/WorkspaceLeftSidebar";
 import { WorkspaceToolbar } from "@/features/workspace/components/WorkspaceToolbar";
 import {
   calculateContainment,
@@ -266,9 +266,12 @@ function WorkspaceView() {
   const [drawingMode, setDrawingMode] = useState<
     "select" | "pan" | "annotation" | "infrastructure"
   >("select");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [sidebarTab, setSidebarTab] = useState<"ai" | "nodes">("ai");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [gridSize, setGridSize] = useState(20);
   const [bgVariant, setBgVariant] = useState<BgVariant>("dots");
+  const [activeView, setActiveView] = useState<"ai" | "canvas" | "properties">("canvas");
 
   // ── Role-based access control ──
   const { data: roleData } = useWorkspaceRole(workspaceId);
@@ -1504,7 +1507,7 @@ function WorkspaceView() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden font-sans text-sm selection:bg-white/10 technical-gradient text-white relative">
+    <div className="h-screen w-screen overflow-hidden font-sans text-sm selection:bg-white/10 bg-[#09090b] text-white flex flex-col relative">
       <Helmet>
         <title>
           {workspace?.title
@@ -1512,1175 +1515,548 @@ function WorkspaceView() {
             : "Workspace — Meshwork Studio"}
         </title>
       </Helmet>
-      {canEdit && (
-        <NodeLibrarySidebar
-          onDragStart={onDragStart}
-          collapsed={sidebarCollapsed}
-          setCollapsed={setSidebarCollapsed}
-        />
-      )}
 
-      <motion.main
-        ref={canvasWrapperRef}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="flex-1 h-full relative bg-[#0A0A0A]"
-        data-cursor={drawingMode}
-        style={{ cursor: drawingMode === "pan" ? "grab" : undefined }}
+      {/* Top Navigation Header & Project Menu (Image 3) */}
+      <WorkspaceHeader
+        workspace={workspace}
+        workspaceId={workspaceId}
+        user={user}
+        userRole={userRole}
+        canEdit={canEdit}
+        canManage={canManage}
+        canDelete={canDelete}
+        saveStatus={saveStatus}
+        isSimulating={isSimulating}
+        setIsSimulating={setIsSimulating}
+        undo={undo}
+        redo={redo}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        sidebarTab={sidebarTab}
+        setSidebarTab={setSidebarTab}
+        collaborators={collaborators}
+        teamMembers={teamMembers}
+        teamId={teamId}
+        updateRole={updateRole}
+        handleExportPng={handleExportPng}
+        handleExportSvg={handleExportSvg}
+        handleExportJson={handleExportJson}
+        handleImportJson={handleImportJson}
+        handleDuplicate={handleDuplicate}
+        handleCopyInvite={handleCopyInvite}
+        handleDeleteWorkspace={() => {
+          if (confirm("Delete this project?")) {
+            deleteWorkspace.mutate(workspaceId, {
+              onSuccess: () => {
+                toast({ title: "Deleted" });
+                setLocation("/home");
+              },
+            });
+          }
+        }}
+        handleRename={(newTitle) => {
+          updateWorkspace.mutate(
+            { id: workspaceId, title: newTitle },
+            {
+              onSuccess: () => toast({ title: "Renamed project" }),
+              onError: (e: Error) =>
+                toast({
+                  title: "Rename failed",
+                  description: e.message,
+                  variant: "destructive",
+                }),
+            },
+          );
+        }}
+        openSettings={() => setIsSettingsOpen(true)}
+        snapToGrid={snapToGrid}
+        setSnapToGrid={setSnapToGrid}
+        gridSize={gridSize}
+        setGridSize={setGridSize}
+        hasArrow={hasArrow}
+        setHasArrow={setHasArrow}
+        edgeType={edgeType}
+        setEdgeType={setEdgeType}
+        edgeStyle={edgeStyle}
+        setEdgeStyle={setEdgeStyle}
+        bgVariant={bgVariant}
+        setBgVariant={setBgVariant}
+        canvasStack={canvasStack}
+        exitToLevel={exitToLevel}
+        nodesCount={nodes.length}
+        edgesCount={edges.length}
+        activeView={activeView}
+        setActiveView={setActiveView}
+      />
+
+      {/* Main Workspace Layout: 3-column grid (Sidebar | Canvas | Properties) */}
+      <div
+        className="flex-1 min-h-0 overflow-hidden grid gap-2 p-2 pt-0 transition-all duration-300 ease-in-out"
+        style={{
+          gridTemplateColumns: isSidebarOpen && canEdit
+            ? (selectedNode || selectedEdge)
+              ? "minmax(340px, 28%) 1fr minmax(240px, 22%)"
+              : "minmax(340px, 28%) 1fr"
+            : (selectedNode || selectedEdge)
+              ? "0px 1fr minmax(240px, 22%)"
+              : "0px 1fr",
+        }}
       >
-        {/* ── Canvas transition overlay ── */}
-        <AnimatePresence>
-          {canvasTransition !== "idle" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18, ease: "easeInOut" }}
-              className="absolute inset-0 z-[999] bg-[#0A0A0A] pointer-events-none"
-            />
-          )}
-        </AnimatePresence>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          onNodeDoubleClick={onNodeDoubleClick}
-          onEdgeClick={onEdgeClick}
-          onNodeDragStart={onNodeDragStart}
-          onNodeDrag={onNodeDrag}
-          onNodeDragStop={onNodeDragStop}
-          onNodeContextMenu={onNodeContextMenu}
-          onSelectionContextMenu={onSelectionContextMenu}
-          onEdgeContextMenu={onEdgeContextMenu}
-          onPaneContextMenu={onPaneContextMenu as any}
-          onNodesDelete={() => takeSnapshot()}
-          onEdgesDelete={() => takeSnapshot()}
-          onPaneClick={onPaneClick}
-          onDragOver={onDragOver}
-          onDrop={onDrop}
-          nodeTypes={nodeTypes}
-          fitView
-          className={
-            drawingMode === "select"
-              ? "[&_.react-flow__pane]:!cursor-default"
-              : ""
-          }
-          defaultEdgeOptions={{
-            type: "step",
-            style: { stroke: "#555", strokeWidth: 2 },
-          }}
-          snapToGrid={snapToGrid}
-          snapGrid={[gridSize, gridSize]}
-          colorMode="dark"
-          connectionMode={ConnectionMode.Loose}
-          panOnScroll={true}
-          panOnDrag={drawingMode === "pan" ? true : [1, 2]}
-          selectionOnDrag={
-            drawingMode === "select" ||
-            drawingMode === "infrastructure" ||
-            drawingMode === "annotation"
-          }
-          selectionMode={SelectionMode.Partial}
-          nodesDraggable={canEdit && drawingMode === "pan"}
-          elementsSelectable={canEdit}
-          onMouseMove={handlePaneMouseMove}
+        {/* Collapsible Left Sidebar (Mosh AI + Components) */}
+        <div
+          className={`min-h-0 overflow-hidden transition-all duration-300 ease-in-out ${
+            isSidebarOpen && canEdit ? "opacity-100" : "opacity-0 pointer-events-none w-0"
+          }`}
         >
-          <Controls
-            position="bottom-left"
-            className="!bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !text-white/50 !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl overflow-hidden !m-6 [&_button]:!bg-transparent [&_button]:!border-white/[0.05] [&_button]:hover:!bg-white/10 [&_button_svg]:!fill-white/70"
-          />
-          <MiniMap
-            position="bottom-right"
-            className="!bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl !mr-6 !mb-6 overflow-hidden [&_.react-flow__minimap-mask]:!fill-white/80"
-          />
-          {bgVariant !== "none" && (
-            <Background
-              variant={bgVariant as any}
-              gap={gridSize}
-              size={1.2}
-              color="#ffffff22"
+          <div className="h-full rounded-2xl bg-[#111114]/95 backdrop-blur-2xl border border-white/[0.06] overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
+            <WorkspaceLeftSidebar
+              isOpen={isSidebarOpen && canEdit}
+              onClose={() => setIsSidebarOpen(false)}
+              activeTab={sidebarTab}
+              setActiveTab={setSidebarTab}
+              onDragStart={onDragStart}
             />
-          )}
+          </div>
+        </div>
 
-          {/* Collaborator cursors — inside ReactFlow so they follow the viewport like nodes */}
-          <CollaboratorCursors collaborators={collaborators} />
+        {/* Framed Canvas Viewport */}
+        <motion.main
+          ref={canvasWrapperRef}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="h-full relative bg-[#0A0A0A] overflow-hidden rounded-2xl border border-white/[0.06] shadow-[0_8px_40px_rgba(0,0,0,0.4)]"
+          data-cursor={drawingMode}
+          style={{ cursor: drawingMode === "pan" ? "grab" : undefined }}
+        >
+          {/* ── Canvas transition overlay ── */}
+          <AnimatePresence>
+            {canvasTransition !== "idle" && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18, ease: "easeInOut" }}
+                className="absolute inset-0 z-[999] bg-[#0A0A0A] pointer-events-none"
+              />
+            )}
+          </AnimatePresence>
 
-          {/* ── Top-left panel — inside ReactFlow so it tracks canvas not root ── */}
-          <Panel
-            position="top-left"
-            className="my-5"
-            style={{
-              marginLeft: sidebarCollapsed ? 20 : 280,
-              transition: "margin-left 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            onNodeDoubleClick={onNodeDoubleClick}
+            onEdgeClick={onEdgeClick}
+            onNodeDragStart={onNodeDragStart}
+            onNodeDrag={onNodeDrag}
+            onNodeDragStop={onNodeDragStop}
+            onNodeContextMenu={onNodeContextMenu}
+            onSelectionContextMenu={onSelectionContextMenu}
+            onEdgeContextMenu={onEdgeContextMenu}
+            onPaneContextMenu={onPaneContextMenu as any}
+            onNodesDelete={() => takeSnapshot()}
+            onEdgesDelete={() => takeSnapshot()}
+            onPaneClick={onPaneClick}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
+            nodeTypes={nodeTypes}
+            fitView
+            className={
+              drawingMode === "select"
+                ? "[&_.react-flow__pane]:!cursor-default"
+                : ""
+            }
+            defaultEdgeOptions={{
+              type: "step",
+              style: { stroke: "#555", strokeWidth: 2 },
             }}
+            snapToGrid={snapToGrid}
+            snapGrid={[gridSize, gridSize]}
+            colorMode="dark"
+            connectionMode={ConnectionMode.Loose}
+            panOnScroll={true}
+            panOnDrag={drawingMode === "pan" ? true : [1, 2]}
+            selectionOnDrag={
+              drawingMode === "select" ||
+              drawingMode === "infrastructure" ||
+              drawingMode === "annotation"
+            }
+            selectionMode={SelectionMode.Partial}
+            nodesDraggable={canEdit && drawingMode === "pan"}
+            elementsSelectable={canEdit}
+            onMouseMove={handlePaneMouseMove}
           >
-            <motion.div
-              initial={{ opacity: 0, y: -16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="flex items-center gap-1.5 px-1.5 py-1.5 rounded-xl bg-[#121214]/80 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_12px_rgba(0,0,0,0.5)]"
-            >
-              {/* Sidebar toggle — shows open icon when collapsed */}
-              {canEdit && sidebarCollapsed && (
-                <button
-                  onClick={() => setSidebarCollapsed(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-white/80 hover:bg-white/[0.07] transition-all"
-                  title="Open component library"
-                >
-                  <PanelLeftOpen className="w-4 h-4" />
-                </button>
-              )}
-              <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-white/80 hover:bg-white/[0.07] transition-all"
-                    title="Menu"
-                  >
-                    <Menu className="w-4 h-4" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-52 p-1.5 bg-[#121214]/85 backdrop-blur-2xl border border-white/[0.08] rounded-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)] z-[200]"
-                  side="bottom"
-                  align="start"
-                  sideOffset={8}
-                >
-                  <Link href="/">
-                    <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.07] transition-all">
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                      Back to Library
-                    </button>
-                  </Link>
-                  <div className="h-px bg-white/[0.06] my-1" />
-                  {/* ── Quick actions ── */}
-                  {canEdit &&
-                    (isRenaming ? (
-                      <div className="px-2 py-1">
-                        <input
-                          autoFocus
-                          value={renameValue}
-                          onChange={(e) => setRenameValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleRename();
-                            if (e.key === "Escape") setIsRenaming(false);
-                          }}
-                          onBlur={handleRename}
-                          maxLength={16}
-                          className="w-full px-2.5 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.12] text-[12px] text-white/90 outline-none focus:border-white/25 transition-all"
-                          placeholder="Project name..."
-                        />
-                      </div>
-                    ) : (
-                      <button
-                        onClick={handleStartRename}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.07] transition-all"
-                      >
-                        <Pen className="w-3.5 h-3.5" />
-                        Rename Project
-                      </button>
-                    ))}
-                  {canEdit && (
-                    <button
-                      onClick={() => {
-                        setIsSettingsOpen(true);
-                        setMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.07] transition-all"
-                    >
-                      <Settings className="w-3.5 h-3.5" />
-                      Workspace Settings
-                    </button>
-                  )}
-                  {canEdit && (
-                    <button
-                      onClick={handleDuplicate}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.07] transition-all"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Duplicate Project
-                    </button>
-                  )}
-                  <button
-                    onClick={handleCopyInvite}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.07] transition-all"
-                  >
-                    <Link2 className="w-3.5 h-3.5" />
-                    Share (Invite Code)
-                  </button>
-                  <div className="h-px bg-white/[0.06] my-1" />
-                  {/* ── Export ── */}
-                  <button
-                    onClick={handleExportPng}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.07] transition-all"
-                  >
-                    <Image className="w-3.5 h-3.5" />
-                    Export as PNG
-                  </button>
-                  <button
-                    onClick={handleExportSvg}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.07] transition-all"
-                  >
-                    <FileDown className="w-3.5 h-3.5" />
-                    Export as SVG
-                  </button>
-                  <button
-                    onClick={handleExportJson}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.07] transition-all"
-                  >
-                    <FileJson className="w-3.5 h-3.5" />
-                    Export as JSON
-                  </button>
-                  {/* ── Import (editor+ only) ── */}
-                  {canEdit && (
-                    <>
-                      <button
-                        onClick={() => importFileRef.current?.click()}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.07] transition-all"
-                      >
-                        <FileUp className="w-3.5 h-3.5" />
-                        Import JSON
-                      </button>
-                      <input
-                        ref={importFileRef}
-                        type="file"
-                        accept=".json"
-                        onChange={handleImportJson}
-                        className="hidden"
-                      />
-                    </>
-                  )}
-                  <div className="h-px bg-white/[0.06] my-1" />
-                  {/* ── View ── */}
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      handleToggleFullscreen();
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.07] transition-all"
-                  >
-                    {isFullscreen ? (
-                      <Minimize2 className="w-3.5 h-3.5" />
-                    ) : (
-                      <Maximize2 className="w-3.5 h-3.5" />
-                    )}
-                    {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                  </button>
-                  {/* ── Keyboard Shortcuts (nested popover) ── */}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.07] transition-all">
-                        <span className="flex items-center gap-2.5">
-                          <Keyboard className="w-3.5 h-3.5" />
-                          Keyboard Shortcuts
-                        </span>
-                        <ChevronRight className="w-3 h-3 opacity-40" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-64 p-2 bg-[#121214]/85 backdrop-blur-2xl border border-white/[0.08] rounded-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)] z-[300] max-h-[70vh] overflow-y-auto"
-                      side="right"
-                      align="start"
-                      sideOffset={4}
-                      style={{ scrollbarWidth: "none" }}
-                    >
-                      {(
-                        ["Navigation", "Editing", "Canvas", "View"] as const
-                      ).map((category) => {
-                        const colors: Record<string, string> = {
-                          Navigation: "text-blue-400",
-                          Editing: "text-emerald-400",
-                          Canvas: "text-amber-400",
-                          View: "text-purple-400",
-                        };
-                        const shortcuts: Record<
-                          string,
-                          { key: string; label: string }[]
-                        > = {
-                          Navigation: [
-                            { key: "V", label: "Select mode" },
-                            { key: "H", label: "Pan mode" },
-                            { key: "A", label: "Annotation" },
-                            { key: "I", label: "Infrastructure" },
-                          ],
-                          Editing: [
-                            { key: "Ctrl+Z", label: "Undo" },
-                            { key: "Ctrl+Shift+Z", label: "Redo" },
-                            { key: "Ctrl+S", label: "Save" },
-                            { key: "Delete", label: "Delete selected" },
-                            { key: "Ctrl+D", label: "Duplicate" },
-                            { key: "Ctrl+A", label: "Select all" },
-                          ],
-                          Canvas: [
-                            { key: "Ctrl++", label: "Zoom in" },
-                            { key: "Ctrl+-", label: "Zoom out" },
-                            { key: "Ctrl+0", label: "Fit view" },
-                          ],
-                          View: [
-                            { key: "F11", label: "Fullscreen" },
-                            { key: "?", label: "Shortcuts" },
-                          ],
-                        };
-                        return (
-                          <div key={category} className="mb-2 last:mb-0">
-                            <div className="px-2 py-1">
-                              <span
-                                className={`text-[10px] font-bold uppercase tracking-widest ${colors[category]}`}
-                              >
-                                {category}
-                              </span>
-                            </div>
-                            {shortcuts[category].map((s) => (
-                              <div
-                                key={s.key}
-                                className="flex items-center justify-between px-2 py-1 rounded-md hover:bg-white/[0.03]"
-                              >
-                                <span className="text-[11px] text-white/50">
-                                  {s.label}
-                                </span>
-                                <div className="flex items-center gap-0.5">
-                                  {s.key.split("+").map((k, i) => (
-                                    <React.Fragment key={i}>
-                                      {i > 0 && (
-                                        <span className="text-[9px] text-white/15">
-                                          +
-                                        </span>
-                                      )}
-                                      <kbd className="px-1 py-0.5 rounded bg-white/[0.06] border border-white/[0.08] text-[9px] font-mono text-white/40 min-w-[18px] text-center">
-                                        {k}
-                                      </kbd>
-                                    </React.Fragment>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </PopoverContent>
-                  </Popover>
-                  {/* ── Canvas Settings (nested popover) ── */}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.07] transition-all">
-                        <span className="flex items-center gap-2.5">
-                          <Settings className="w-3.5 h-3.5" />
-                          Canvas Settings
-                        </span>
-                        <ChevronRight className="w-3 h-3 opacity-40" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-56 p-2 bg-[#121214]/85 backdrop-blur-2xl border border-white/[0.08] rounded-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)] z-[300]"
-                      side="right"
-                      align="start"
-                      sideOffset={4}
-                    >
-                      <div className="px-2 py-1 mb-1">
-                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                          Canvas
-                        </span>
-                      </div>
-
-                      {/* Snap to Grid */}
-                      <button
-                        onClick={() => setSnapToGrid(!snapToGrid)}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${snapToGrid ? "text-emerald-400 bg-emerald-500/10" : "text-white/50 hover:bg-white/[0.06]"}`}
-                      >
-                        Snap to Grid
-                        <div
-                          className={`w-6 h-3.5 rounded-full transition-all ${snapToGrid ? "bg-emerald-500" : "bg-white/10"}`}
-                        >
-                          <div
-                            className={`w-2.5 h-2.5 rounded-full bg-white mt-0.5 transition-all ${snapToGrid ? "ml-3" : "ml-0.5"}`}
-                          />
-                        </div>
-                      </button>
-
-                      {/* Grid Size */}
-                      <div className="px-2.5 py-1.5">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[11px] text-white/50">
-                            Grid Size
-                          </span>
-                          <span className="text-[10px] text-white/30 font-mono">
-                            {gridSize}px
-                          </span>
-                        </div>
-                        <input
-                          type="range"
-                          min={GRID_SIZE_MIN}
-                          max={GRID_SIZE_MAX}
-                          step={5}
-                          value={gridSize}
-                          onChange={(e) => setGridSize(Number(e.target.value))}
-                          className="w-full h-1 rounded-full appearance-none bg-white/10 accent-white/60"
-                        />
-                      </div>
-
-                      {/* Arrow Heads */}
-                      <button
-                        onClick={() => setHasArrow(!hasArrow)}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${hasArrow ? "text-blue-400 bg-blue-500/10" : "text-white/50 hover:bg-white/[0.06]"}`}
-                      >
-                        Arrow Heads
-                        <div
-                          className={`w-6 h-3.5 rounded-full transition-all ${hasArrow ? "bg-blue-500" : "bg-white/10"}`}
-                        >
-                          <div
-                            className={`w-2.5 h-2.5 rounded-full bg-white mt-0.5 transition-all ${hasArrow ? "ml-3" : "ml-0.5"}`}
-                          />
-                        </div>
-                      </button>
-
-                      <div className="h-px bg-white/[0.06] my-1.5" />
-                      <div className="px-2 py-1">
-                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                          Edge Type
-                        </span>
-                      </div>
-
-                      {/* Edge Type */}
-                      <div className="flex gap-1 px-2 py-1">
-                        {EDGE_TYPES.map((t) => (
-                          <button
-                            key={t}
-                            onClick={() => setEdgeType(t)}
-                            className={`flex-1 px-1.5 py-1 rounded-md text-[10px] font-medium transition-all ${edgeType === t ? "bg-white/[0.1] text-white/90" : "text-white/35 hover:text-white/60 hover:bg-white/[0.04]"}`}
-                          >
-                            {EDGE_TYPE_LABELS[t]}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Edge Style */}
-                      <div className="px-2 py-1 mt-0.5">
-                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                          Edge Style
-                        </span>
-                      </div>
-                      <div className="flex gap-1 px-2 py-1">
-                        {EDGE_STYLES.map((s) => (
-                          <button
-                            key={s}
-                            onClick={() => setEdgeStyle(s)}
-                            className={`flex-1 px-1.5 py-1 rounded-md text-[10px] font-medium capitalize transition-all ${edgeStyle === s ? "bg-white/[0.1] text-white/90" : "text-white/35 hover:text-white/60 hover:bg-white/[0.04]"}`}
-                          >
-                            {s}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="h-px bg-white/[0.06] my-1.5" />
-                      <div className="px-2 py-1">
-                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                          Background
-                        </span>
-                      </div>
-
-                      {/* Background Variant */}
-                      <div className="flex gap-1 px-2 py-1">
-                        {BG_VARIANTS.map((v) => (
-                          <button
-                            key={v}
-                            onClick={() => setBgVariant(v)}
-                            className={`flex-1 px-1.5 py-1 rounded-md text-[10px] font-medium transition-all ${bgVariant === v ? "bg-white/[0.1] text-white/90" : "text-white/35 hover:text-white/60 hover:bg-white/[0.04]"}`}
-                          >
-                            {BG_VARIANT_LABELS[v]}
-                          </button>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  {/* ── Danger zone ── */}
-                  {canDelete && (
-                    <>
-                      <div className="h-px bg-white/[0.06] my-1" />
-                      <button
-                        onClick={() => {
-                          if (confirm("Delete this project?"))
-                            deleteWorkspace.mutate(workspaceId, {
-                              onSuccess: () => {
-                                toast({ title: "Deleted" });
-                                setLocation("/");
-                              },
-                            });
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-red-400/70 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Delete Project
-                      </button>
-                    </>
-                  )}
-                </PopoverContent>
-              </Popover>
-              <div className="w-px h-4 bg-white/[0.08]" />
-              {isNested ? (
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => exitToLevel(0)}
-                    className="px-2 py-1 rounded-md text-[12px] text-white/40 hover:text-white hover:bg-white/[0.07] transition-all"
-                  >
-                    {workspace?.title || "Main"}
-                  </button>
-                  {canvasStack.map((level, i) => (
-                    <React.Fragment key={level.nodeId}>
-                      <ChevronRight className="w-3 h-3 text-white/15" />
-                      {i === canvasStack.length - 1 ? (
-                        <span className="px-2 py-1 rounded-md text-[12px] font-semibold text-white/80 bg-white/[0.07]">
-                          {level.label}
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => exitToLevel(i + 1)}
-                          className="px-2 py-1 rounded-md text-[12px] text-white/40 hover:text-white hover:bg-white/[0.07] transition-all"
-                        >
-                          {level.label}
-                        </button>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
-              ) : (
-                <span className="px-1.5 text-[13px] font-semibold text-white/80 pr-2">
-                  {workspace?.title || "Untitled"}
-                </span>
-              )}
-              {canEdit && (
-                <>
-                  <div className="w-px h-4 bg-white/[0.08] mx-0.5" />
-                  <button
-                    onClick={undo}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-white/35 hover:text-white/80 hover:bg-white/[0.07] transition-all"
-                    title="Undo (Ctrl+Z)"
-                  >
-                    <Undo2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={redo}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-white/35 hover:text-white/80 hover:bg-white/[0.07] transition-all"
-                    title="Redo (Ctrl+Y)"
-                  >
-                    <Redo2 className="w-3.5 h-3.5" />
-                  </button>
-                  <div className="w-px h-4 bg-white/[0.08] mx-0.5" />
-                  <button
-                    onClick={() => setIsSimulating(!isSimulating)}
-                    className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${isSimulating ? "bg-green-500/20 text-green-400" : "text-white/35 hover:text-white/80 hover:bg-white/[0.07]"}`}
-                    title={isSimulating ? "Stop simulation" : "Simulate"}
-                  >
-                    <Play
-                      className={`w-3 h-3 ${isSimulating ? "fill-green-400" : ""}`}
-                    />
-                  </button>
-                </>
-              )}
-              <div className="flex items-center pr-1">
-                {saveStatus === "saved" && (
-                  <span className="text-[10px] text-white/25">Saved</span>
-                )}
-                {saveStatus === "saving" && (
-                  <span className="text-[10px] text-blue-400/70 animate-pulse">
-                    Saving…
-                  </span>
-                )}
-                {saveStatus === "unsaved" && (
-                  <span
-                    className="w-2 h-2 rounded-full bg-amber-400/70 cursor-pointer block"
-                    onClick={handleSave}
-                    title="Unsaved changes"
-                  />
-                )}
-              </div>
-            </motion.div>
-          </Panel>
-
-          {/* ── Top-right panel ── */}
-          <Panel position="top-right" className="m-5">
-            <motion.div
-              initial={{ opacity: 0, y: -16, x: 0 }}
-              animate={{
-                opacity: 1,
-                y: 0,
-                x: selectedNode || selectedEdge ? -280 : 0,
-              }}
-              transition={{
-                default: { duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.1 },
-                x: { duration: 0.25, ease: [0.16, 1, 0.3, 1] },
-              }}
-              className="flex items-center gap-2"
-            >
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className="flex items-center focus:outline-none cursor-pointer hover:opacity-90 transition-opacity">
-                    <div className="flex -space-x-2 overflow-hidden">
-                      {/* Current user — always shown */}
-                      <Avatar
-                        className="size-6 border-2 border-[#121214]"
-                        title={`${user?.firstName || user?.email?.split("@")[0] || "You"} (you)`}
-                      >
-                        <AvatarImage src={user?.profileImageUrl || ""} />
-                        <AvatarFallback className="text-[9px] font-bold bg-indigo-500/30 text-indigo-200">
-                          {(
-                            user?.firstName?.[0] ||
-                            user?.email?.[0] ||
-                            "?"
-                          ).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      {/* Live collaborators */}
-                      {collaborators
-                        .filter((c) => c.userId !== user?.id)
-                        .slice(0, 3)
-                        .map((u) => (
-                          <Avatar
-                            key={u.userId}
-                            className="size-6 border-2 border-[#121214]"
-                            title={u.name}
-                          >
-                            <AvatarFallback
-                              className="text-[9px] font-bold"
-                              style={{
-                                backgroundColor: `${u.color}28`,
-                                color: u.color,
-                              }}
-                            >
-                              {u.name[0]?.toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                      {/* Overflow count */}
-                      {collaborators.filter((c) => c.userId !== user?.id)
-                        .length > 3 && (
-                        <Avatar className="size-6 border-2 border-[#121214]">
-                          <AvatarFallback className="text-[8px] font-bold bg-white/[0.07] text-white/40">
-                            +
-                            {collaborators.filter((c) => c.userId !== user?.id)
-                              .length - 3}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                    </div>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-72 p-0 bg-[#121214]/85 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)] z-[200]"
-                  side="bottom"
-                  align="end"
-                  sideOffset={8}
-                >
-                  <div className="px-3 py-2.5 border-b border-white/[0.06] flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-white/50 uppercase tracking-widest">
-                      Team Members
-                    </span>
-                    <span className="text-[10px] text-white/20">
-                      {teamMembers.length} member
-                      {teamMembers.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <div className="max-h-[280px] overflow-y-auto py-1">
-                    {teamMembers.length === 0 ? (
-                      <div className="px-3 py-4 text-center text-[11px] text-white/20">
-                        No team members
-                      </div>
-                    ) : (
-                      teamMembers.map((member) => {
-                        const isMe = member.userId === user?.id;
-                        const isOnline =
-                          isMe ||
-                          collaborators.some((c) => c.userId === member.userId);
-                        const r = member.role;
-                        const icon =
-                          r === "owner" ? (
-                            <Crown className="w-3 h-3 text-amber-400" />
-                          ) : r === "admin" ? (
-                            <ShieldCheck className="w-3 h-3 text-blue-400" />
-                          ) : r === "editor" ? (
-                            <Pen className="w-3 h-3 text-emerald-400" />
-                          ) : (
-                            <Eye className="w-3 h-3 text-white/30" />
-                          );
-                        const label =
-                          r === "owner"
-                            ? "Owner"
-                            : r === "admin"
-                              ? "Admin"
-                              : r === "editor"
-                                ? "Editor"
-                                : "Viewer";
-                        const color =
-                          r === "owner"
-                            ? "text-amber-400/80"
-                            : r === "admin"
-                              ? "text-blue-400/80"
-                              : r === "editor"
-                                ? "text-emerald-400/80"
-                                : "text-white/30";
-                        const canChangeThis =
-                          canManage && r !== "owner" && !isMe && !!teamId;
-                        const isOwnerActor = isOwner(userRole);
-
-                        return (
-                          <div key={member.userId} className="px-2 py-1">
-                            <div className="flex items-center gap-2.5 px-1.5 py-1.5 rounded-lg hover:bg-white/[0.03] transition-colors group">
-                              <div className="relative">
-                                <div
-                                  className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold border-2"
-                                  style={{
-                                    borderColor: member.color,
-                                    backgroundColor: `${member.color}15`,
-                                    color: member.color,
-                                  }}
-                                >
-                                  {(member.firstName ||
-                                    member.email)?.[0]?.toUpperCase() || "?"}
-                                </div>
-                                {isOnline && (
-                                  <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-[#121214] shadow-[0_0_4px_rgba(52,211,153,0.5)]" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-[11px] font-medium text-white/70 truncate">
-                                  {member.firstName ||
-                                    member.email.split("@")[0]}
-                                  {isMe && (
-                                    <span className="text-white/25 ml-1">
-                                      (you)
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              {canChangeThis ? (
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <button
-                                      className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] transition-all cursor-pointer ${color}`}
-                                    >
-                                      {icon}
-                                      <span className="text-[9px] font-bold uppercase tracking-wider">
-                                        {label}
-                                      </span>
-                                      <ChevronDown className="w-2.5 h-2.5 opacity-40" />
-                                    </button>
-                                  </PopoverTrigger>
-                                  <PopoverContent
-                                    className="w-36 p-1 bg-[#121214]/85 backdrop-blur-2xl border border-white/[0.08] rounded-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)] z-[300]"
-                                    side="left"
-                                    align="center"
-                                    sideOffset={4}
-                                  >
-                                    {isOwnerActor && (
-                                      <button
-                                        onClick={() =>
-                                          updateRole.mutate({
-                                            teamId: teamId,
-                                            userId: member.userId,
-                                            role: "admin",
-                                          })
-                                        }
-                                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${r === "admin" ? "bg-blue-500/10 text-blue-400" : "text-white/60 hover:text-white hover:bg-white/[0.06]"}`}
-                                      >
-                                        <ShieldCheck className="w-3.5 h-3.5" />
-                                        Admin
-                                      </button>
-                                    )}
-                                    <button
-                                      onClick={() =>
-                                        updateRole.mutate({
-                                          teamId: teamId,
-                                          userId: member.userId,
-                                          role: "editor",
-                                        })
-                                      }
-                                      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${r === "editor" ? "bg-emerald-500/10 text-emerald-400" : "text-white/60 hover:text-white hover:bg-white/[0.06]"}`}
-                                    >
-                                      <Pen className="w-3.5 h-3.5" />
-                                      Editor
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        updateRole.mutate({
-                                          teamId: teamId,
-                                          userId: member.userId,
-                                          role: "viewer",
-                                        })
-                                      }
-                                      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${r === "viewer" ? "bg-white/[0.06] text-white/60" : "text-white/60 hover:text-white hover:bg-white/[0.06]"}`}
-                                    >
-                                      <Eye className="w-3.5 h-3.5" />
-                                      Viewer
-                                    </button>
-                                  </PopoverContent>
-                                </Popover>
-                              ) : (
-                                <div
-                                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/[0.04] ${color}`}
-                                >
-                                  {icon}
-                                  <span className="text-[9px] font-bold uppercase tracking-wider">
-                                    {label}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              {/* Viewer badge */}
-              {!canEdit && (
-                <div className="h-9 px-4 flex items-center gap-1.5 rounded-xl bg-[#121214]/80 backdrop-blur-xl border border-white/[0.08] text-white/40 text-[12px] font-semibold">
-                  <Eye className="w-3.5 h-3.5" />
-                  View Only
-                </div>
-              )}
-            </motion.div>
-          </Panel>
-          <div
-            className="absolute inset-0 pointer-events-none z-[0]"
-            style={{
-              WebkitMaskImage:
-                "radial-gradient(circle at var(--mouse-x, -1000px) var(--mouse-y, -1000px), black 0px, transparent 350px)",
-              maskImage:
-                "radial-gradient(circle at var(--mouse-x, -1000px) var(--mouse-y, -1000px), black 0px, transparent 350px)",
-            }}
-          >
+            <Controls
+              position="bottom-left"
+              className="!bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !text-white/50 !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl overflow-hidden !m-6 [&_button]:!bg-transparent [&_button]:!border-white/[0.05] [&_button]:hover:!bg-white/10 [&_button_svg]:!fill-white/70"
+            />
+            <MiniMap
+              position="bottom-right"
+              className="!bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl !mr-6 !mb-6 overflow-hidden [&_.react-flow__minimap-mask]:!fill-white/80"
+            />
             {bgVariant !== "none" && (
               <Background
                 variant={bgVariant as any}
                 gap={gridSize}
-                size={1.5}
-                color="#FFFFFF"
-                className="opacity-50"
+                size={1.2}
+                color="#ffffff22"
               />
             )}
-          </div>
 
-          {menu && (
-            <motion.div
-              ref={menuRef}
-              initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
-              animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-              transition={{ type: "spring", damping: 20, stiffness: 300 }}
-              style={{ top: menu.top, left: menu.left }}
-              className="fixed rounded-xl py-1.5 z-[100] min-w-[200px] bg-[#121214]/85 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)]"
-              onClick={() => setMenu(null)}
+            {/* Collaborator cursors */}
+            <CollaboratorCursors collaborators={collaborators} />
+
+            {/* Mouse glow mask */}
+            <div
+              className="absolute inset-0 pointer-events-none z-[0]"
+              style={{
+                WebkitMaskImage:
+                  "radial-gradient(circle at var(--mouse-x, -1000px) var(--mouse-y, -1000px), black 0px, transparent 350px)",
+                maskImage:
+                  "radial-gradient(circle at var(--mouse-x, -1000px) var(--mouse-y, -1000px), black 0px, transparent 350px)",
+              }}
             >
-              {menu.type === "node" ? (
-                (() => {
-                  const selectedNodes = nodes.filter(
-                    (n) => n.selected || n.id === menu.id,
-                  );
-                  const isMultiSelect = selectedNodes.length > 1;
+              {bgVariant !== "none" && (
+                <Background
+                  variant={bgVariant as any}
+                  gap={gridSize}
+                  size={1.5}
+                  color="#FFFFFF"
+                  className="opacity-50"
+                />
+              )}
+            </div>
 
-                  return (
-                    <>
-                      {!isMultiSelect && (
+            {menu && (
+              <motion.div
+                ref={menuRef}
+                initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
+                animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                style={{ top: menu.top, left: menu.left }}
+                className="fixed rounded-xl py-1.5 z-[100] min-w-[200px] bg-[#121214]/85 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)]"
+                onClick={() => setMenu(null)}
+              >
+                {menu.type === "node" ? (
+                  (() => {
+                    const selectedNodes = nodes.filter(
+                      (n) => n.selected || n.id === menu.id,
+                    );
+                    const isMultiSelect = selectedNodes.length > 1;
+
+                    return (
+                      <>
+                        {!isMultiSelect && (
+                          <button
+                            onClick={() => {
+                              setSelectedNodeId(menu.id);
+                              setActiveTab("properties");
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span className="flex-1 text-left">
+                              Edit Properties
+                            </span>
+                            <span className="text-[10px] text-white/20 font-mono">
+                              Dbl-click
+                            </span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() =>
+                            isMultiSelect
+                              ? duplicateSelection(selectedNodes.map((n) => n.id))
+                              : duplicateNode(menu.id)
+                          }
+                          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span className="flex-1 text-left">
+                            Duplicate{isMultiSelect ? " All" : ""}
+                          </span>
+                          <span className="text-[10px] text-white/20 font-mono">
+                            ⌘D
+                          </span>
+                        </button>
+                        <div className="h-px my-1 mx-2 bg-white/[0.04]" />
                         <button
                           onClick={() => {
-                            setSelectedNodeId(menu.id);
-                            setActiveTab("properties");
+                            takeSnapshot();
+                            setNodes((nds) =>
+                              nds.map((n) => {
+                                if (n.selected || n.id === menu.id) {
+                                  const currentW =
+                                    (n.style?.width as number) ||
+                                    n.measured?.width ||
+                                    120;
+                                  const currentH =
+                                    (n.style?.height as number) ||
+                                    n.measured?.height ||
+                                    80;
+                                  return {
+                                    ...n,
+                                    position: {
+                                      x: Math.round(n.position.x / 12) * 12,
+                                      y: Math.round(n.position.y / 12) * 12,
+                                    },
+                                    style: {
+                                      ...n.style,
+                                      width: Math.round(currentW / 24) * 24,
+                                      height: Math.round(currentH / 24) * 24,
+                                    },
+                                  };
+                                }
+                                return n;
+                              }),
+                            );
                           }}
                           className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
+                          <Grid className="w-3.5 h-3.5" />
+                          <span className="flex-1 text-left">Snap to Grid</span>
+                        </button>
+                        {selectedNodes.length >= 2 && (
+                          <>
+                            <button
+                              onClick={() => {
+                                if (selectedNodes.length < 2) return;
+                                takeSnapshot();
+                                const anchor = selectedNodes[0];
+                                const anchorW =
+                                  (anchor.style?.width as number) ||
+                                  anchor.measured?.width ||
+                                  0;
+                                const targetCenterX =
+                                  anchor.position.x + anchorW / 2;
+                                setNodes((nds) =>
+                                  nds.map((n) => {
+                                    if (n.selected || n.id === menu.id) {
+                                      const w =
+                                        (n.style?.width as number) ||
+                                        n.measured?.width ||
+                                        0;
+                                      return {
+                                        ...n,
+                                        position: {
+                                          ...n.position,
+                                          x:
+                                            Math.round(
+                                              (targetCenterX - w / 2) / 12,
+                                            ) * 12,
+                                        },
+                                      };
+                                    }
+                                    return n;
+                                  }),
+                                );
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                            >
+                              <AlignVerticalJustifyCenter className="w-3.5 h-3.5" />
+                              <span className="flex-1 text-left">
+                                Align Vertical
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (selectedNodes.length < 2) return;
+                                takeSnapshot();
+                                const anchor = selectedNodes[0];
+                                const anchorH =
+                                  (anchor.style?.height as number) ||
+                                  anchor.measured?.height ||
+                                  0;
+                                const targetCenterY =
+                                  anchor.position.y + anchorH / 2;
+                                setNodes((nds) =>
+                                  nds.map((n) => {
+                                    if (n.selected || n.id === menu.id) {
+                                      const h =
+                                        (n.style?.height as number) ||
+                                        n.measured?.height ||
+                                        0;
+                                      return {
+                                        ...n,
+                                        position: {
+                                          ...n.position,
+                                          y:
+                                            Math.round(
+                                              (targetCenterY - h / 2) / 12,
+                                            ) * 12,
+                                        },
+                                      };
+                                    }
+                                    return n;
+                                  }),
+                                );
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                            >
+                              <AlignHorizontalJustifyCenter className="w-3.5 h-3.5" />
+                              <span className="flex-1 text-left">
+                                Align Horizontal
+                              </span>
+                            </button>
+                          </>
+                        )}
+                        <div className="h-px my-1 mx-2 bg-white/[0.04]" />
+                        <button
+                          onClick={() => {
+                            const selectedIds = nodes
+                              .filter((n) => n.selected)
+                              .map((n) => n.id);
+                            if (
+                              menu.id !== "selection" &&
+                              !selectedIds.includes(menu.id)
+                            )
+                              selectedIds.push(menu.id);
+                            deleteNodes(selectedIds);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] hover:bg-red-500/10 transition-colors text-red-400/80 hover:text-red-300"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                           <span className="flex-1 text-left">
-                            Edit Properties
+                            Delete
+                            {selectedNodes.length > 1
+                              ? ` (${selectedNodes.length})`
+                              : ""}
                           </span>
-                          <span className="text-[10px] text-white/20 font-mono">
-                            Dbl-click
+                          <span className="text-[10px] text-red-400/30 font-mono">
+                            ⌫
                           </span>
                         </button>
-                      )}
+                      </>
+                    );
+                  })()
+                ) : (
+                  /* ── Pane context menu: quick-add favorites ── */
+                  <>
+                    <div className="px-3.5 py-1.5 text-[9px] uppercase font-bold text-white/20 tracking-[0.15em]">
+                      Quick Add
+                    </div>
+                    {favoriteNodes.map((node) => (
                       <button
-                        onClick={() =>
-                          isMultiSelect
-                            ? duplicateSelection(selectedNodes.map((n) => n.id))
-                            : duplicateNode(menu.id)
-                        }
-                        className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                        <span className="flex-1 text-left">
-                          Duplicate{isMultiSelect ? " All" : ""}
-                        </span>
-                        <span className="text-[10px] text-white/20 font-mono">
-                          ⌘D
-                        </span>
-                      </button>
-                      <div className="h-px my-1 mx-2 bg-white/[0.04]" />
-                      <button
+                        key={node.type}
                         onClick={() => {
-                          takeSnapshot();
-                          setNodes((nds) =>
-                            nds.map((n) => {
-                              if (n.selected || n.id === menu.id) {
-                                const currentW =
-                                  (n.style?.width as number) ||
-                                  n.measured?.width ||
-                                  120;
-                                const currentH =
-                                  (n.style?.height as number) ||
-                                  n.measured?.height ||
-                                  80;
-                                return {
-                                  ...n,
-                                  position: {
-                                    x: Math.round(n.position.x / 12) * 12,
-                                    y: Math.round(n.position.y / 12) * 12,
-                                  },
-                                  style: {
-                                    ...n.style,
-                                    width: Math.round(currentW / 24) * 24,
-                                    height: Math.round(currentH / 24) * 24,
-                                  },
-                                };
-                              }
-                              return n;
-                            }),
-                          );
+                          const pos = screenToFlowPosition({
+                            x: menu.left,
+                            y: menu.top,
+                          });
+                          addNode(node.type, node.label, {
+                            x: Math.round(pos.x / 12) * 12,
+                            y: Math.round(pos.y / 12) * 12,
+                          });
                         }}
                         className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
                       >
-                        <Grid className="w-3.5 h-3.5" />
-                        <span className="flex-1 text-left">Snap to Grid</span>
+                        <node.icon className="w-3.5 h-3.5 text-white/40" />
+                        {node.label}
                       </button>
-                      {selectedNodes.length >= 2 && (
-                        <>
-                          <button
-                            onClick={() => {
-                              if (selectedNodes.length < 2) return;
-                              takeSnapshot();
-                              const anchor = selectedNodes[0];
-                              const anchorW =
-                                (anchor.style?.width as number) ||
-                                anchor.measured?.width ||
-                                0;
-                              const targetCenterX =
-                                anchor.position.x + anchorW / 2;
-                              setNodes((nds) =>
-                                nds.map((n) => {
-                                  if (n.selected || n.id === menu.id) {
-                                    const w =
-                                      (n.style?.width as number) ||
-                                      n.measured?.width ||
-                                      0;
-                                    return {
-                                      ...n,
-                                      position: {
-                                        ...n.position,
-                                        x:
-                                          Math.round(
-                                            (targetCenterX - w / 2) / 12,
-                                          ) * 12,
-                                      },
-                                    };
-                                  }
-                                  return n;
-                                }),
-                              );
-                            }}
-                            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
-                          >
-                            <AlignVerticalJustifyCenter className="w-3.5 h-3.5" />
-                            <span className="flex-1 text-left">
-                              Align Vertical
-                            </span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (selectedNodes.length < 2) return;
-                              takeSnapshot();
-                              const anchor = selectedNodes[0];
-                              const anchorH =
-                                (anchor.style?.height as number) ||
-                                anchor.measured?.height ||
-                                0;
-                              const targetCenterY =
-                                anchor.position.y + anchorH / 2;
-                              setNodes((nds) =>
-                                nds.map((n) => {
-                                  if (n.selected || n.id === menu.id) {
-                                    const h =
-                                      (n.style?.height as number) ||
-                                      n.measured?.height ||
-                                      0;
-                                    return {
-                                      ...n,
-                                      position: {
-                                        ...n.position,
-                                        y:
-                                          Math.round(
-                                            (targetCenterY - h / 2) / 12,
-                                          ) * 12,
-                                      },
-                                    };
-                                  }
-                                  return n;
-                                }),
-                              );
-                            }}
-                            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
-                          >
-                            <AlignHorizontalJustifyCenter className="w-3.5 h-3.5" />
-                            <span className="flex-1 text-left">
-                              Align Horizontal
-                            </span>
-                          </button>
-                        </>
-                      )}
-                      <div className="h-px my-1 mx-2 bg-white/[0.04]" />
-                      <button
-                        onClick={() => {
-                          const selectedIds = nodes
-                            .filter((n) => n.selected)
-                            .map((n) => n.id);
-                          if (
-                            menu.id !== "selection" &&
-                            !selectedIds.includes(menu.id)
-                          )
-                            selectedIds.push(menu.id);
-                          deleteNodes(selectedIds);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] hover:bg-red-500/10 transition-colors text-red-400/80 hover:text-red-300"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span className="flex-1 text-left">
-                          Delete
-                          {selectedNodes.length > 1
-                            ? ` (${selectedNodes.length})`
-                            : ""}
-                        </span>
-                        <span className="text-[10px] text-red-400/30 font-mono">
-                          ⌫
-                        </span>
-                      </button>
-                    </>
-                  );
-                })()
-              ) : (
-                /* ── Pane context menu: quick-add favorites ── */
-                <>
-                  <div className="px-3.5 py-1.5 text-[9px] uppercase font-bold text-white/20 tracking-[0.15em]">
-                    Quick Add
-                  </div>
-                  {favoriteNodes.map((node) => (
+                    ))}
+                    <div className="h-px my-1 mx-2 bg-white/[0.04]" />
                     <button
-                      key={node.type}
                       onClick={() => {
                         const pos = screenToFlowPosition({
                           x: menu.left,
                           y: menu.top,
                         });
-                        addNode(node.type, node.label, {
+                        addNode("note", "Note...", {
                           x: Math.round(pos.x / 12) * 12,
                           y: Math.round(pos.y / 12) * 12,
                         });
                       }}
                       className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
                     >
-                      <node.icon className="w-3.5 h-3.5 text-white/40" />
-                      {node.label}
+                      <Type className="w-3.5 h-3.5 text-white/40" />
+                      Sticky Note
                     </button>
-                  ))}
-                  <div className="h-px my-1 mx-2 bg-white/[0.04]" />
-                  <button
-                    onClick={() => {
-                      const pos = screenToFlowPosition({
-                        x: menu.left,
-                        y: menu.top,
-                      });
-                      addNode("note", "Note...", {
-                        x: Math.round(pos.x / 12) * 12,
-                        y: Math.round(pos.y / 12) * 12,
-                      });
+                    <button
+                      onClick={() => {
+                        const pos = screenToFlowPosition({
+                          x: menu.left,
+                          y: menu.top,
+                        });
+                        addNode("junction", "Junction", {
+                          x: Math.round(pos.x / 12) * 12,
+                          y: Math.round(pos.y / 12) * 12,
+                        });
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                    >
+                      <Circle className="w-3.5 h-3.5 text-white/40" />
+                      Junction
+                    </button>
+                  </>
+                )}
+              </motion.div>
+            )}
+
+            {/* ── Bottom-center horizontal toolbar ── */}
+            <WorkspaceToolbar
+              drawingMode={drawingMode}
+              setDrawingMode={setDrawingMode}
+              edgeStyle={edgeStyle}
+              setEdgeStyle={setEdgeStyle}
+              hasArrow={hasArrow}
+              setHasArrow={setHasArrow}
+              edgeType={edgeType}
+              setEdgeType={setEdgeType}
+              setEdges={setEdges}
+              fitView={fitView}
+              onAddNote={() => {
+                const pos = screenToFlowPosition({
+                  x: window.innerWidth / 2,
+                  y: window.innerHeight / 2,
+                });
+                addNode("note", "Sticky Note", {
+                  x: Math.round(pos.x / 12) * 12,
+                  y: Math.round(pos.y / 12) * 12,
+                });
+              }}
+            />
+          </ReactFlow>
+          <MoshZoneOverlay />
+        </motion.main>
+
+        {/* ── Right properties panel (3rd grid column) ── */}
+        <AnimatePresence>
+          {(selectedNode || selectedEdge) && (
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 40 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="min-h-0 overflow-hidden"
+            >
+              <div className="h-full rounded-2xl bg-[#111114]/95 backdrop-blur-2xl border border-white/[0.06] overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
+                <div
+                  className="h-full overflow-y-auto"
+                  style={{ scrollbarWidth: "none" }}
+                >
+                  <PropertiesSidebar
+                    selectedNode={selectedNode}
+                    selectedEdge={selectedEdge}
+                    updateNodeData={updateNodeData}
+                    updateNodeStyle={updateNodeStyle}
+                    updateEdgeData={updateEdgeData}
+                    deleteNode={onDelete}
+                    deleteEdge={deleteEdge}
+                    onClose={() => {
+                      setSelectedNodeId(null);
+                      setSelectedEdgeId(null);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
-                  >
-                    <Type className="w-3.5 h-3.5 text-white/40" />
-                    Sticky Note
-                  </button>
-                  <button
-                    onClick={() => {
-                      const pos = screenToFlowPosition({
-                        x: menu.left,
-                        y: menu.top,
-                      });
-                      addNode("junction", "Junction", {
-                        x: Math.round(pos.x / 12) * 12,
-                        y: Math.round(pos.y / 12) * 12,
-                      });
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
-                  >
-                    <Circle className="w-3.5 h-3.5 text-white/40" />
-                    Junction
-                  </button>
-                </>
-              )}
+                  />
+                </div>
+              </div>
             </motion.div>
           )}
-
-          {/* ── Bottom-center horizontal toolbar ── */}
-          <WorkspaceToolbar
-            drawingMode={drawingMode}
-            setDrawingMode={setDrawingMode}
-            edgeStyle={edgeStyle}
-            setEdgeStyle={setEdgeStyle}
-            hasArrow={hasArrow}
-            setHasArrow={setHasArrow}
-            edgeType={edgeType}
-            setEdgeType={setEdgeType}
-            setEdges={setEdges}
-            fitView={fitView}
-          />
-        </ReactFlow>
-        <MoshZoneOverlay />
-        <AiChatDrawer
-          isLeftSidebarOpen={!sidebarCollapsed}
-          isRightSidebarOpen={!!(selectedNode || selectedEdge)}
-        />
-      </motion.main>
-
-      {/* ── Right properties panel ── overlays canvas, z-40 above sidebar ── */}
-      <AnimatePresence>
-        {(selectedNode || selectedEdge) && (
-          <motion.aside
-            initial={{ x: 280, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 280, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute right-0 top-0 h-full w-[280px] bg-[#121214]/80 backdrop-blur-xl border-l border-white/[0.08] shadow-[inset_1px_0_0_rgba(255,255,255,0.05),-4px_0_24px_rgba(0,0,0,0.5)] overflow-hidden z-40"
-          >
-            <div
-              className="h-full overflow-y-auto"
-              style={{ scrollbarWidth: "none" }}
-            >
-              <PropertiesSidebar
-                selectedNode={selectedNode}
-                selectedEdge={selectedEdge}
-                updateNodeData={updateNodeData}
-                updateNodeStyle={updateNodeStyle}
-                updateEdgeData={updateEdgeData}
-                deleteNode={onDelete}
-                deleteEdge={deleteEdge}
-                onClose={() => {
-                  setSelectedNodeId(null);
-                  setSelectedEdgeId(null);
-                }}
-              />
-            </div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>
+      </div>
 
       {/* Workspace Settings Dialog */}
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>

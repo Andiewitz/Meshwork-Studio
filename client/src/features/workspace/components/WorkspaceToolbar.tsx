@@ -15,6 +15,8 @@ import {
   FlagIcon,
   PencilIcon,
   ArrowsPointingOutIcon,
+  HashtagIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { Panel } from "@xyflow/react";
 import type { Edge } from "@xyflow/react";
@@ -36,6 +38,7 @@ interface WorkspaceToolbarProps {
   setEdgeType: (type: EdgeType) => void;
   setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
   fitView: (options?: { duration?: number }) => void;
+  onAddNote?: () => void;
 }
 
 export function WorkspaceToolbar({
@@ -49,80 +52,92 @@ export function WorkspaceToolbar({
   setEdgeType,
   setEdges,
   fitView,
+  onAddNote,
 }: WorkspaceToolbarProps) {
   return (
-    <Panel position="bottom-center" className="mb-6 z-50">
+    <Panel position="bottom-center" className="mb-8 z-40">
       <motion.div
         initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-        className="flex items-center rounded-2xl p-1.5 gap-0.5 bg-[#121214]/80 backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)]"
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+        className="flex items-center rounded-2xl p-1 gap-0.5 bg-[#121214]/90 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_40px_rgba(0,0,0,0.6)]"
       >
-        {[
-          {
-            mode: "select" as const,
-            icon: CursorArrowRaysIcon,
-            title: "Select",
-          },
-          { mode: "pan" as const, icon: HandRaisedIcon, title: "Pan" },
-        ].map((tool) => (
-          <motion.button
-            key={tool.mode}
-            onClick={() => setDrawingMode(tool.mode)}
-            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === tool.mode ? "bg-[#F0521E]/12 text-[#F0521E] border border-[#F0521E]/25 shadow-sm" : "text-[#A0A0B0] hover:text-[#FAFAFA] hover:bg-[#242430]"}`}
-            title={tool.title}
-            whileTap={{ scale: 0.92 }}
-          >
-            <tool.icon className="w-4 h-4" />
-          </motion.button>
-        ))}
+        {/* Select Tool */}
+        <button
+          onClick={() => setDrawingMode("select")}
+          className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${
+            drawingMode === "select"
+              ? "bg-white/[0.15] text-white shadow-sm"
+              : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
+          }`}
+          title="Select tool (V)"
+        >
+          <CursorArrowRaysIcon className="w-3.5 h-3.5" />
+        </button>
 
-        <div className="w-px h-5 bg-[#1E1E24] mx-1" />
+        {/* Pan Tool */}
+        <button
+          onClick={() => setDrawingMode("pan")}
+          className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${
+            drawingMode === "pan"
+              ? "bg-white/[0.15] text-white shadow-sm"
+              : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
+          }`}
+          title="Pan canvas (H)"
+        >
+          <HandRaisedIcon className="w-3.5 h-3.5" />
+        </button>
 
-        <motion.button
+        <div className="w-px h-3.5 bg-white/[0.08] mx-0.5" />
+
+        {/* Infrastructure Zone (VPC) */}
+        <button
           onClick={() =>
             setDrawingMode(
               drawingMode === "infrastructure" ? "select" : "infrastructure",
             )
           }
-          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === "infrastructure" ? "bg-[#F0521E]/12 text-[#F0521E] border border-[#F0521E]/25 shadow-sm" : "text-[#A0A0B0] hover:text-[#FAFAFA] hover:bg-[#242430]"}`}
-          title="Infrastructure Zone"
-          whileTap={{ scale: 0.92 }}
+          className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${
+            drawingMode === "infrastructure"
+              ? "bg-[#00E5A0]/20 text-[#00E5A0] border border-[#00E5A0]/30 shadow-[0_0_12px_rgba(0,229,160,0.2)]"
+              : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
+          }`}
+          title="VPC / Container Zone"
         >
-          <RectangleGroupIcon className="w-4 h-4" />
-        </motion.button>
+          <RectangleGroupIcon className="w-3.5 h-3.5" />
+        </button>
 
+        {/* Connection Settings Popover */}
         <Popover>
           <PopoverTrigger asChild>
-            <motion.button
-              className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all text-white/40 hover:text-white hover:bg-white/[0.06]`}
-              title="Connection Settings"
-              whileTap={{ scale: 0.92 }}
+            <button
+              className="w-8 h-8 flex items-center justify-center rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+              title="Connection Style"
             >
-              <ShareIcon className="w-4 h-4" />
-            </motion.button>
+              <ShareIcon className="w-3.5 h-3.5" />
+            </button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-64 p-3 bg-[#121214]/85 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)] z-[150] space-y-4"
+            className="w-64 p-3 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)] z-[150] space-y-3.5 text-white"
             side="top"
             align="center"
-            sideOffset={16}
+            sideOffset={14}
           >
-            <div className="space-y-2">
-              <div className="text-[10px] uppercase font-bold tracking-widest text-white/40 px-1">
+            <div className="space-y-1.5">
+              <div className="text-[10px] uppercase font-bold tracking-wider text-white/40 px-1">
                 Line Style
               </div>
               <div className="grid grid-cols-3 gap-1">
                 {[
                   {
                     id: "solid",
-                    label: "Normal",
+                    label: "Solid",
                     icon: MinusIcon,
                     hasArrow: false,
                   },
                   {
                     id: "dashed",
-                    label: "Broken",
+                    label: "Dashed",
                     icon: MinusIcon,
                     hasArrow: false,
                   },
@@ -165,29 +180,34 @@ export function WorkspaceToolbar({
                           }),
                         );
                       }}
-                      className={`flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl border transition-all ${isSelected ? "bg-white/10 border-white/20 text-white" : "border-transparent text-white/40 hover:bg-white/5 hover:text-white/80"}`}
+                      className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl border transition-all ${
+                        isSelected
+                          ? "bg-white/15 border-white/20 text-white font-semibold"
+                          : "border-transparent text-white/40 hover:bg-white/5 hover:text-white/70"
+                      }`}
                     >
-                      <style.icon className="w-4 h-4" />
+                      <style.icon className="w-3 h-3" />
                       <span className="text-[10px]">{style.label}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="text-[10px] uppercase font-bold tracking-widest text-white/40 px-1">
+
+            <div className="space-y-1.5">
+              <div className="text-[10px] uppercase font-bold tracking-wider text-white/40 px-1">
                 Line Shape
               </div>
               <div className="grid grid-cols-3 gap-1">
                 {[
                   {
                     id: "straight",
-                    label: "Diagonal",
+                    label: "Straight",
                     icon: MinusIcon,
                     rotate: true,
                   },
                   { id: "default", label: "Curved", icon: ShareIcon },
-                  { id: "step", label: "Orthogonal", icon: FlagIcon },
+                  { id: "step", label: "Step", icon: FlagIcon },
                 ].map((tool) => (
                   <button
                     key={tool.id}
@@ -199,12 +219,16 @@ export function WorkspaceToolbar({
                         ),
                       );
                     }}
-                    className={`flex flex-col items-center justify-center gap-1.5 h-16 rounded-lg border transition-all ${edgeType === tool.id ? "bg-white text-black border-white shadow-md" : "bg-transparent text-white/60 border-white/5 hover:bg-white/5 hover:border-white/10"}`}
+                    className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl border transition-all ${
+                      edgeType === tool.id
+                        ? "bg-white text-black border-white shadow-md font-semibold"
+                        : "border-white/5 text-white/40 hover:bg-white/5 hover:text-white/70"
+                    }`}
                   >
                     <tool.icon
-                      className={`w-4 h-4 ${tool.rotate ? "rotate-45" : ""}`}
+                      className={`w-3 h-3 ${tool.rotate ? "rotate-45" : ""}`}
                     />
-                    <span className="text-[10px] font-bold">{tool.label}</span>
+                    <span className="text-[10px]">{tool.label}</span>
                   </button>
                 ))}
               </div>
@@ -212,27 +236,44 @@ export function WorkspaceToolbar({
           </PopoverContent>
         </Popover>
 
-        <motion.button
+        {/* Text / Sticky Note */}
+        {onAddNote && (
+          <button
+            onClick={onAddNote}
+            className="w-8 h-8 flex items-center justify-center rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+            title="Add Sticky Note"
+          >
+            <HashtagIcon className="w-3.5 h-3.5" />
+          </button>
+        )}
+
+        {/* Annotation Tool */}
+        <button
           onClick={() =>
             setDrawingMode(
               drawingMode === "annotation" ? "select" : "annotation",
             )
           }
-          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${drawingMode === "annotation" ? "bg-[#F0521E]/12 text-[#F0521E] border border-[#F0521E]/25 shadow-sm" : "text-[#A0A0B0] hover:text-[#FAFAFA] hover:bg-[#242430]"}`}
-          title="Annotation"
-          whileTap={{ scale: 0.92 }}
+          className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${
+            drawingMode === "annotation"
+              ? "bg-[#FF6B35]/20 text-[#FF6B35] border border-[#FF6B35]/30 shadow-[0_0_12px_rgba(255,107,53,0.2)]"
+              : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
+          }`}
+          title="Annotation Tool (A)"
         >
-          <PencilIcon className="w-4 h-4" />
-        </motion.button>
+          <PencilIcon className="w-3.5 h-3.5" />
+        </button>
 
-        <motion.button
-          onClick={() => fitView({ duration: 800 })}
-          className="w-10 h-10 flex items-center justify-center rounded-xl transition-all text-white/40 hover:text-white hover:bg-white/[0.06]"
-          title="Fit View"
-          whileTap={{ scale: 0.92 }}
+        <div className="w-px h-3.5 bg-white/[0.08] mx-0.5" />
+
+        {/* Fit View */}
+        <button
+          onClick={() => fitView({ duration: 600 })}
+          className="w-8 h-8 flex items-center justify-center rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+          title="Fit View (Ctrl+0)"
         >
-          <ArrowsPointingOutIcon className="w-4 h-4" />
-        </motion.button>
+          <ArrowsPointingOutIcon className="w-3.5 h-3.5" />
+        </button>
       </motion.div>
     </Panel>
   );
