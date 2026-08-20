@@ -151,7 +151,7 @@ export function CanvasSidebar({
   const [isLoading, setIsLoading] = useState(false);
   const [isDesigning, setIsDesigning] = useState(false);
   const [suggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
-  const [selectedModel] = useState("gemini-2.0-flash");
+  const [selectedModel] = useState("gemini-3.5-flash");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 

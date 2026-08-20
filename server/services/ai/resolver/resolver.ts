@@ -4,7 +4,7 @@ import { getActiveKeyForProvider, getApiKeyWithPlaintext } from "../db/storage";
 const log = createChildLogger("ai-resolver");
 
 export const DEFAULT_PROVIDER = "gemini";
-export const DEFAULT_FREE_MODEL = "gemini-2.5-flash";
+export const DEFAULT_FREE_MODEL = "gemini-3.5-flash";
 
 export interface ResolvedProvider {
   provider: string; // "gemini" | "anthropic" | "openai" | "openrouter"

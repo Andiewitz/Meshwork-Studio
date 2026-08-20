@@ -193,7 +193,7 @@ export function AiChatDrawer({
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
-  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
+  const [selectedModel, setSelectedModel] = useState("gemini-3.5-flash");
 
   const nodesKey = nodes.map((n) => `${n.id}:${n.type}`).join(",");
   const edgesKey = edges.map((e) => `${e.source}->${e.target}`).join(",");

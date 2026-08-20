@@ -78,8 +78,14 @@ const DEFAULT_SUGGESTIONS = [
 ];
 
 const AVAILABLE_MODELS = [
-  { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", provider: "Google" },
-  { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", provider: "Google" },
+  { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", provider: "Google" },
+  {
+    id: "gemini-3.5-flash-lite",
+    name: "Gemini 3.5 Flash Lite",
+    provider: "Google",
+  },
+  { id: "gemini-3.6-flash", name: "Gemini 3.6 Flash", provider: "Google" },
+  { id: "gemini-3.7-flash", name: "Gemini 3.7 Flash", provider: "Google" },
   { id: "gpt-4o", name: "GPT-4o", provider: "OpenAI" },
   { id: "claude-3-5-sonnet", name: "Claude 3.5 Sonnet", provider: "Anthropic" },
   { id: "gpt-oss-120b", name: "GPT OSS 120B", provider: "Meshwork" },
@@ -100,7 +106,7 @@ export function WorkspaceLeftSidebar({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isDesigning, setIsDesigning] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("gemini-2.0-flash");
+  const [selectedModel, setSelectedModel] = useState("gemini-3.5-flash");
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
