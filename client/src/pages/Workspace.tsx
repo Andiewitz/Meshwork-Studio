@@ -1589,14 +1589,14 @@ function WorkspaceView() {
         setActiveView={setActiveView}
       />
 
-      {/* Main Workspace Layout: Sidebar connected to header + framed Canvas */}
-      <div className="flex-1 min-h-0 overflow-hidden flex transition-all duration-300 ease-in-out">
+      {/* Main Workspace Layout: Sidebar connected to header + Canvas */}
+      <div className="flex-1 min-h-0 overflow-hidden flex bg-[#111114]">
         {/* Collapsible Left Sidebar connected flush to Header */}
         <div
-          className={`min-h-0 overflow-hidden transition-all duration-300 ease-in-out border-r border-white/[0.08] bg-[#111114] shrink-0 ${
+          className={`min-h-0 overflow-hidden transition-all duration-300 ease-in-out bg-[#111114] shrink-0 ${
             isSidebarOpen && canEdit
               ? "w-[360px] opacity-100"
-              : "w-0 opacity-0 pointer-events-none border-r-0"
+              : "w-0 opacity-0 pointer-events-none"
           }`}
         >
           <WorkspaceLeftSidebar
@@ -1605,21 +1605,19 @@ function WorkspaceView() {
           />
         </div>
 
-        {/* Framed Canvas & Properties Section */}
-        <div
-          className="flex-1 min-h-0 p-2 grid gap-2 overflow-hidden"
-          style={{
-            gridTemplateColumns:
-              selectedNode || selectedEdge ? "1fr minmax(260px, 24%)" : "1fr",
-          }}
-        >
-          {/* Framed Canvas Viewport */}
+        {/* Canvas & Properties Section */}
+        <div className="flex-1 min-h-0 flex overflow-hidden relative bg-[#111114]">
+          {/* Canvas Viewport: curved top-left intersection when sidebar is open */}
           <motion.main
             ref={canvasWrapperRef}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="h-full relative bg-[#0A0A0A] overflow-hidden rounded-2xl border border-white/[0.06] shadow-[0_8px_40px_rgba(0,0,0,0.4)]"
+            className={`flex-1 h-full relative bg-[#0A0A0A] overflow-hidden transition-all duration-300 ease-in-out ${
+              isSidebarOpen && canEdit
+                ? "rounded-tl-2xl border-t border-l border-white/[0.08]"
+                : "border-t border-white/[0.08]"
+            }`}
             data-cursor={drawingMode}
             style={{ cursor: drawingMode === "pan" ? "grab" : undefined }}
           >
@@ -2021,35 +2019,33 @@ function WorkspaceView() {
             <MoshZoneOverlay />
           </motion.main>
 
-          {/* ── Right properties panel (3rd grid column) ── */}
+          {/* ── Right properties panel ── */}
           <AnimatePresence>
             {(selectedNode || selectedEdge) && (
               <motion.div
-                initial={{ opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 40 }}
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 320 }}
+                exit={{ opacity: 0, width: 0 }}
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="min-h-0 overflow-hidden"
+                className="h-full min-h-0 overflow-hidden border-l border-t border-white/[0.08] bg-[#111114] shrink-0"
               >
-                <div className="h-full rounded-2xl bg-[#111114]/95 backdrop-blur-2xl border border-white/[0.06] overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
-                  <div
-                    className="h-full overflow-y-auto"
-                    style={{ scrollbarWidth: "none" }}
-                  >
-                    <PropertiesSidebar
-                      selectedNode={selectedNode}
-                      selectedEdge={selectedEdge}
-                      updateNodeData={updateNodeData}
-                      updateNodeStyle={updateNodeStyle}
-                      updateEdgeData={updateEdgeData}
-                      deleteNode={onDelete}
-                      deleteEdge={deleteEdge}
-                      onClose={() => {
-                        setSelectedNodeId(null);
-                        setSelectedEdgeId(null);
-                      }}
-                    />
-                  </div>
+                <div
+                  className="h-full overflow-y-auto"
+                  style={{ scrollbarWidth: "none" }}
+                >
+                  <PropertiesSidebar
+                    selectedNode={selectedNode}
+                    selectedEdge={selectedEdge}
+                    updateNodeData={updateNodeData}
+                    updateNodeStyle={updateNodeStyle}
+                    updateEdgeData={updateEdgeData}
+                    deleteNode={onDelete}
+                    deleteEdge={deleteEdge}
+                    onClose={() => {
+                      setSelectedNodeId(null);
+                      setSelectedEdgeId(null);
+                    }}
+                  />
                 </div>
               </motion.div>
             )}
