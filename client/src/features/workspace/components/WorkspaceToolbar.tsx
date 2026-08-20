@@ -6,6 +6,12 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import {
   CursorArrowRaysIcon,
   HandRaisedIcon,
   RectangleGroupIcon,
@@ -16,7 +22,6 @@ import {
   PencilIcon,
   ArrowsPointingOutIcon,
   HashtagIcon,
-  SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { Panel } from "@xyflow/react";
 import type { Edge } from "@xyflow/react";
@@ -55,67 +60,93 @@ export function WorkspaceToolbar({
   onAddNote,
 }: WorkspaceToolbarProps) {
   return (
-    <Panel position="bottom-center" className="mb-8 z-40">
+    <Panel position="bottom-center" className="mb-6 z-40">
       <motion.div
         initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-        className="flex items-center rounded-2xl p-1 gap-0.5 bg-[#121214]/90 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_40px_rgba(0,0,0,0.6)]"
+        className="flex items-center rounded-2xl p-1 gap-0.5 bg-[#121214]/90 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_40px_rgba(0,0,0,0.6)] select-none"
       >
         {/* Select Tool */}
-        <button
-          onClick={() => setDrawingMode("select")}
-          className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${
-            drawingMode === "select"
-              ? "bg-white/[0.15] text-white shadow-sm"
-              : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
-          }`}
-          title="Select tool (V)"
-        >
-          <CursorArrowRaysIcon className="w-3.5 h-3.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setDrawingMode("select")}
+              className={`w-8 h-8 rounded-xl transition-all ${
+                drawingMode === "select"
+                  ? "bg-white/[0.15] text-white shadow-sm"
+                  : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
+              }`}
+            >
+              <CursorArrowRaysIcon className="w-3.5 h-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Select tool (V)</TooltipContent>
+        </Tooltip>
 
         {/* Pan Tool */}
-        <button
-          onClick={() => setDrawingMode("pan")}
-          className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${
-            drawingMode === "pan"
-              ? "bg-white/[0.15] text-white shadow-sm"
-              : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
-          }`}
-          title="Pan canvas (H)"
-        >
-          <HandRaisedIcon className="w-3.5 h-3.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setDrawingMode("pan")}
+              className={`w-8 h-8 rounded-xl transition-all ${
+                drawingMode === "pan"
+                  ? "bg-white/[0.15] text-white shadow-sm"
+                  : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
+              }`}
+            >
+              <HandRaisedIcon className="w-3.5 h-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Pan canvas (H)</TooltipContent>
+        </Tooltip>
 
         <div className="w-px h-3.5 bg-white/[0.08] mx-0.5" />
 
         {/* Infrastructure Zone (VPC) */}
-        <button
-          onClick={() =>
-            setDrawingMode(
-              drawingMode === "infrastructure" ? "select" : "infrastructure",
-            )
-          }
-          className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${
-            drawingMode === "infrastructure"
-              ? "bg-[#00E5A0]/20 text-[#00E5A0] border border-[#00E5A0]/30 shadow-[0_0_12px_rgba(0,229,160,0.2)]"
-              : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
-          }`}
-          title="VPC / Container Zone"
-        >
-          <RectangleGroupIcon className="w-3.5 h-3.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+                setDrawingMode(
+                  drawingMode === "infrastructure"
+                    ? "select"
+                    : "infrastructure",
+                )
+              }
+              className={`w-8 h-8 rounded-xl transition-all ${
+                drawingMode === "infrastructure"
+                  ? "bg-[#00E5A0]/20 text-[#00E5A0] border border-[#00E5A0]/30 shadow-[0_0_12px_rgba(0,229,160,0.2)]"
+                  : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
+              }`}
+            >
+              <RectangleGroupIcon className="w-3.5 h-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Infrastructure Zone (I)</TooltipContent>
+        </Tooltip>
 
         {/* Connection Settings Popover */}
         <Popover>
           <PopoverTrigger asChild>
-            <button
-              className="w-8 h-8 flex items-center justify-center rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
-              title="Connection Style"
-            >
-              <ShareIcon className="w-3.5 h-3.5" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-8 h-8 rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+                >
+                  <ShareIcon className="w-3.5 h-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Connection Style</TooltipContent>
+            </Tooltip>
           </PopoverTrigger>
           <PopoverContent
             className="w-64 p-3 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)] z-[150] space-y-3.5 text-white"
@@ -238,42 +269,60 @@ export function WorkspaceToolbar({
 
         {/* Text / Sticky Note */}
         {onAddNote && (
-          <button
-            onClick={onAddNote}
-            className="w-8 h-8 flex items-center justify-center rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
-            title="Add Sticky Note"
-          >
-            <HashtagIcon className="w-3.5 h-3.5" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onAddNote}
+                className="w-8 h-8 rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+              >
+                <HashtagIcon className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Add Sticky Note</TooltipContent>
+          </Tooltip>
         )}
 
         {/* Annotation Tool */}
-        <button
-          onClick={() =>
-            setDrawingMode(
-              drawingMode === "annotation" ? "select" : "annotation",
-            )
-          }
-          className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${
-            drawingMode === "annotation"
-              ? "bg-[#FF6B35]/20 text-[#FF6B35] border border-[#FF6B35]/30 shadow-[0_0_12px_rgba(255,107,53,0.2)]"
-              : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
-          }`}
-          title="Annotation Tool (A)"
-        >
-          <PencilIcon className="w-3.5 h-3.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+                setDrawingMode(
+                  drawingMode === "annotation" ? "select" : "annotation",
+                )
+              }
+              className={`w-8 h-8 rounded-xl transition-all ${
+                drawingMode === "annotation"
+                  ? "bg-[#FF6B35]/20 text-[#FF6B35] border border-[#FF6B35]/30 shadow-[0_0_12px_rgba(255,107,53,0.2)]"
+                  : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
+              }`}
+            >
+              <PencilIcon className="w-3.5 h-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Annotation Tool (A)</TooltipContent>
+        </Tooltip>
 
         <div className="w-px h-3.5 bg-white/[0.08] mx-0.5" />
 
         {/* Fit View */}
-        <button
-          onClick={() => fitView({ duration: 600 })}
-          className="w-8 h-8 flex items-center justify-center rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
-          title="Fit View (Ctrl+0)"
-        >
-          <ArrowsPointingOutIcon className="w-3.5 h-3.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => fitView({ duration: 600 })}
+              className="w-8 h-8 rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+            >
+              <ArrowsPointingOutIcon className="w-3.5 h-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Fit View (Ctrl+0)</TooltipContent>
+        </Tooltip>
       </motion.div>
     </Panel>
   );
