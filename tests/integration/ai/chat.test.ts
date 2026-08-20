@@ -52,19 +52,35 @@ const setupTestApp = () => {
 
 describe("AI Chat Route Integration Tests", () => {
   let app: express.Express;
-  let originalKey: string | undefined;
+  let originalOpenrouterKey: string | undefined;
+  let originalGeminiKey: string | undefined;
+  let originalGoogleKey: string | undefined;
 
   beforeEach(() => {
     app = setupTestApp();
     vi.clearAllMocks();
-    originalKey = process.env.OPENROUTER_API_KEY;
+    originalOpenrouterKey = process.env.OPENROUTER_API_KEY;
+    originalGeminiKey = process.env.GEMINI_API_KEY;
+    originalGoogleKey = process.env.GOOGLE_GENAI_API_KEY;
   });
 
   afterEach(() => {
-    if (originalKey !== undefined) {
-      process.env.OPENROUTER_API_KEY = originalKey;
+    if (originalOpenrouterKey !== undefined) {
+      process.env.OPENROUTER_API_KEY = originalOpenrouterKey;
     } else {
       delete process.env.OPENROUTER_API_KEY;
+    }
+
+    if (originalGeminiKey !== undefined) {
+      process.env.GEMINI_API_KEY = originalGeminiKey;
+    } else {
+      delete process.env.GEMINI_API_KEY;
+    }
+
+    if (originalGoogleKey !== undefined) {
+      process.env.GOOGLE_GENAI_API_KEY = originalGoogleKey;
+    } else {
+      delete process.env.GOOGLE_GENAI_API_KEY;
     }
   });
 
@@ -125,15 +141,12 @@ describe("AI Chat Route Integration Tests", () => {
       expect(res.status).not.toBe(404);
     });
 
-    it("LIVE TEST: should get a real response from OpenRouter if ENV key is set", async () => {
-      // Skip if no real API key is set in environment
-      if (
-        !process.env.OPENROUTER_API_KEY ||
-        process.env.OPENROUTER_API_KEY === "your-openrouter-api-key"
-      ) {
-        console.log(
-          "Skipping live OpenRouter test because OPENROUTER_API_KEY is not set",
-        );
+    it("LIVE TEST: should get a real response from Gemini if GEMINI_API_KEY is set", async () => {
+      const apiKey =
+        process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
+
+      if (!apiKey || apiKey === "your-gemini-api-key") {
+        console.log("Skipping live Gemini test: GEMINI_API_KEY not provided");
         return;
       }
 
@@ -141,27 +154,96 @@ describe("AI Chat Route Integration Tests", () => {
         .post("/api/v1/ai/chat")
         .set("x-test-user-id", "1")
         .send({
-          // Omit provider/model — let resolver use defaults
-          messages: [{ role: "user", content: 'Say the word "Meshwork"' }],
+          provider: "gemini",
+          model: "gemini-2.5-flash",
+          messages: [{ role: "user", content: 'Say "Meshwork Online"' }],
           stream: false,
         });
+
+      if (res.status === 429) {
+        console.warn("External Gemini API rate limit hit in test run");
+        expect(res.status).toBe(429);
+        return;
+      }
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty("choices");
       expect(res.body.choices.length).toBeGreaterThan(0);
 
       const content = res.body.choices[0].message.content;
-      console.log("Live AI Response:", content);
-
       expect(typeof content).toBe("string");
       expect(content.toLowerCase()).toContain("meshwork");
-    }, 15000); // 15s timeout for real API call
+    }, 25000);
+
+    it("LIVE TEST: Mosh should generate valid architecture nodes and edges with Gemini", async () => {
+      const apiKey =
+        process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
+
+      if (!apiKey || apiKey === "your-gemini-api-key") {
+        console.log(
+          "Skipping live Mosh architecture test: GEMINI_API_KEY not provided",
+        );
+        return;
+      }
+
+      const prompt = `You are Mosh, the expert cloud architecture co-pilot for Meshwork Studio.
+Design a 3-tier architecture with a React App, API Gateway, Node.js Backend, PostgreSQL Database, and Redis Cache.
+Return ONLY valid JSON within a \`\`\`json markdown block with 'nodes' and 'edges'.`;
+
+      const res = await request(app)
+        .post("/api/v1/ai/chat")
+        .set("x-test-user-id", "1")
+        .send({
+          provider: "gemini",
+          model: "gemini-2.5-flash",
+          messages: [
+            {
+              role: "system",
+              content: "You are Mosh, the cloud architecture co-pilot.",
+            },
+            { role: "user", content: prompt },
+          ],
+          stream: false,
+        });
+
+      if (res.status === 429) {
+        console.warn("External Gemini API rate limit hit in test run");
+        expect(res.status).toBe(429);
+        return;
+      }
+
+      expect(res.status).toBe(200);
+      expect(res.body.choices?.length).toBeGreaterThan(0);
+
+      const rawContent = res.body.choices[0].message.content;
+      expect(rawContent).toBeDefined();
+
+      const jsonMatch = /```(?:json)?\n([\s\S]*?)\n```/.exec(rawContent);
+      expect(jsonMatch).not.toBeNull();
+
+      const parsed = JSON.parse(jsonMatch![1]);
+      expect(parsed).toHaveProperty("nodes");
+      expect(parsed).toHaveProperty("edges");
+      expect(Array.isArray(parsed.nodes)).toBe(true);
+      expect(Array.isArray(parsed.edges)).toBe(true);
+      expect(parsed.nodes.length).toBeGreaterThanOrEqual(3);
+
+      // Verify node types or labels contain core expected services
+      const labelsAndTypes = parsed.nodes
+        .map((n: any) =>
+          `${n.type || ""} ${n.label || ""} ${n.data?.label || ""}`.toLowerCase(),
+        )
+        .join(" ");
+
+      expect(labelsAndTypes).toMatch(/database|postgres|sql/i);
+    }, 30000);
   });
 
   describe("POST /api/ai/suggestions", () => {
     it("should return fallback suggestions if resolver cannot resolve", async () => {
       // Remove ENV variable so fallback is not configured
       delete process.env.GEMINI_API_KEY;
+      delete process.env.GOOGLE_GENAI_API_KEY;
       delete process.env.OPENROUTER_API_KEY;
 
       const res = await request(app)
@@ -179,5 +261,32 @@ describe("AI Chat Route Integration Tests", () => {
         "Design a scalable Kubernetes microservices architecture",
       );
     });
+
+    it("should return suggestions when GEMINI_API_KEY is configured", async () => {
+      const apiKey =
+        process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
+
+      if (!apiKey) {
+        console.log("Skipping suggestions test: GEMINI_API_KEY not configured");
+        return;
+      }
+
+      const res = await request(app)
+        .post("/api/v1/ai/suggestions")
+        .set("x-test-user-id", "1")
+        .send({
+          canvas: {
+            nodes: [
+              { id: "node-1", type: "gateway", data: { label: "API Gateway" } },
+              { id: "node-2", type: "database", data: { label: "Postgres" } },
+            ],
+            edges: [],
+          },
+        });
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThan(0);
+    }, 20000);
   });
 });

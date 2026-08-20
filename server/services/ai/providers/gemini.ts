@@ -3,9 +3,16 @@ import type { ChatCompletionRequest } from "./types";
 
 export * from "./types";
 
+const MAX_RETRIES = 3;
+const BASE_RETRY_DELAY_MS = 1000;
+
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * Gemini Provider Handler
- * Uses Google's OpenAI-compatible endpoint
+ * Uses Google's OpenAI-compatible endpoint with automatic retry for rate limits
  */
 export async function createGeminiChatCompletion(
   apiKey: string,
@@ -16,15 +23,33 @@ export async function createGeminiChatCompletion(
     baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
   });
 
-  const response = await openai.chat.completions.create({
-    model: request.model || "gemini-2.5-flash",
-    messages: request.messages,
-    temperature: request.temperature ?? 0.7,
-    max_tokens: request.maxTokens,
-    stream: request.stream ?? false,
-  });
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await openai.chat.completions.create({
+        model: request.model || "gemini-2.5-flash",
+        messages: request.messages,
+        temperature: request.temperature ?? 0.7,
+        max_tokens: request.maxTokens,
+        stream: request.stream ?? false,
+      });
 
-  return response;
+      return response;
+    } catch (err: any) {
+      lastError = err;
+      const status = err?.status ?? err?.statusCode;
+      const isRetryable = status === 429 || (status >= 500 && status < 600);
+
+      if (isRetryable && attempt < MAX_RETRIES) {
+        const delay = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
+        await sleep(delay);
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastError;
 }
 
 /**
@@ -39,13 +64,36 @@ export async function* streamGeminiChatCompletion(
     baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
   });
 
-  const stream = await openai.chat.completions.create({
-    model: request.model || "gemini-2.5-flash",
-    messages: request.messages,
-    temperature: request.temperature ?? 0.7,
-    max_tokens: request.maxTokens,
-    stream: true,
-  });
+  let stream: any;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      stream = await openai.chat.completions.create({
+        model: request.model || "gemini-2.5-flash",
+        messages: request.messages,
+        temperature: request.temperature ?? 0.7,
+        max_tokens: request.maxTokens,
+        stream: true,
+      });
+      break;
+    } catch (err: any) {
+      lastError = err;
+      const status = err?.status ?? err?.statusCode;
+      const isRetryable = status === 429 || (status >= 500 && status < 600);
+
+      if (isRetryable && attempt < MAX_RETRIES) {
+        const delay = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
+        await sleep(delay);
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  if (!stream) {
+    throw lastError;
+  }
 
   for await (const chunk of stream) {
     const content = chunk.choices[0]?.delta?.content;

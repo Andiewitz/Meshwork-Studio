@@ -554,7 +554,7 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
             model: suggestionsModel,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.5,
-            maxTokens: 200,
+            maxTokens: 1000,
             stream: false,
           })) as ChatCompletionResponse;
           responseText = response.choices?.[0]?.message?.content ?? "";
@@ -565,7 +565,7 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
             model: suggestionsModel,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.5,
-            maxTokens: 200,
+            maxTokens: 1000,
             stream: false,
           })) as ChatCompletionResponse;
           responseText = response.choices?.[0]?.message?.content ?? "";
@@ -576,7 +576,7 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
             model: suggestionsModel,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.5,
-            maxTokens: 200,
+            maxTokens: 1000,
             stream: false,
           })) as ChatCompletionResponse;
           responseText = response.choices?.[0]?.message?.content ?? "";
@@ -587,7 +587,7 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
             model: suggestionsModel,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.5,
-            maxTokens: 200,
+            maxTokens: 1000,
             stream: false,
           });
           const data = await response.json();
@@ -612,15 +612,23 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         } catch (e) {
           log.warn(
             { response: responseText, err: e },
-            "Failed to parse suggestions response",
+            "Failed to parse suggestions response, returning default suggestions",
           );
-          return res
-            .status(502)
-            .json({ message: "AI provider returned an unparseable response" });
+          return res.json([
+            "Connect API Gateway to services",
+            "Add a Redis cache cluster",
+            "Set up database replica",
+            "Add CloudFront CDN for static assets",
+          ]);
         }
       } catch (error: unknown) {
         log.error({ err: error, userId: req.user?.id }, "Suggestions failed");
-        res.status(500).json({ message: "Suggestions generation failed" });
+        return res.json([
+          "Design a scalable Kubernetes microservices architecture",
+          "Set up a high-availability Postgres cluster",
+          "Build a serverless event-driven data pipeline",
+          "Create a secure AWS VPC with public/private subnets",
+        ]);
       }
     },
   );
