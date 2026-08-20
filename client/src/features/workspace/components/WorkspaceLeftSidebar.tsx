@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   SparklesIcon,
@@ -171,6 +177,7 @@ export function WorkspaceLeftSidebar({
           }
         }
       } catch {
+        // suggestions fallback to defaults
       } finally {
         setIsLoadingSuggestions(false);
       }
@@ -489,8 +496,30 @@ export function WorkspaceLeftSidebar({
 
           {/* Chat Messages Feed */}
           <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 scrollbar-thin scrollbar-thumb-white/[0.08]">
+            {/* Top continue & status row */}
+            <div className="flex items-center justify-between pb-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] text-[10px] text-white/70">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${isLoading ? "bg-amber-400 animate-pulse" : "bg-emerald-400"}`}
+                />
+                <span>{isLoading ? "Working..." : "Ready"}</span>
+              </div>
+
+              <button
+                onClick={() =>
+                  void executePrompt(
+                    "continue designing and refining this architecture",
+                  )
+                }
+                disabled={isLoading}
+                className="px-3 py-1 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-white/80 hover:text-white text-[10px] font-medium transition-all shadow-sm active:scale-95 disabled:opacity-30"
+              >
+                continue
+              </button>
+            </div>
+
             {messages.length === 0 && (
-              <div className="py-4 flex flex-col items-center text-center space-y-3">
+              <div className="py-3 flex flex-col items-center text-center space-y-2.5">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00E5A0]/20 to-[#3B82F6]/20 border border-[#00E5A0]/30 flex items-center justify-center shadow-[0_0_24px_rgba(0,229,160,0.15)]">
                   <SparklesIcon className="w-5 h-5 text-[#00E5A0]" />
                 </div>
@@ -499,8 +528,8 @@ export function WorkspaceLeftSidebar({
                     Meshwork AI Architect
                   </h3>
                   <p className="text-[11px] text-white/40 max-w-[240px]">
-                    Describe any system or ask to design, connect, and
-                    optimize cloud topologies.
+                    Describe any system or ask to design, connect, and optimize
+                    cloud topologies.
                   </p>
                 </div>
 
@@ -569,9 +598,7 @@ export function WorkspaceLeftSidebar({
               <div className="flex items-center gap-2 text-[11px] text-white/50 py-1.5">
                 <ArrowPathIcon className="w-3.5 h-3.5 text-[#00E5A0] animate-spin" />
                 <span className="font-mono text-[10px] text-[#00E5A0]">
-                  {isDesigning
-                    ? "Synthesizing architecture..."
-                    : "Thinking..."}
+                  {isDesigning ? "Synthesizing architecture..." : "Thinking..."}
                 </span>
               </div>
             )}
@@ -579,58 +606,88 @@ export function WorkspaceLeftSidebar({
             <div ref={messagesEndRef} />
           </div>
 
-          {/* ── Composer ── */}
-          <div className="p-2.5 border-t border-white/[0.06]">
-            <form
-              onSubmit={handleSubmit}
-              className="rounded-xl bg-white/[0.04] border border-white/[0.08] focus-within:border-[#00E5A0]/40 transition-all p-2 space-y-1.5"
-            >
-              <div className="flex items-center justify-between px-0.5 text-[9px] text-white/40">
-                <span className="flex items-center gap-1">
-                  <span className="text-[#00E5A0]">@</span> Canvas ({nodes.length} nodes)
-                </span>
-                <span className="font-mono text-[8px] text-white/20">
-                  Shift+Enter ↵
+          {/* ── Reuse work card ── */}
+          <div className="px-2.5 pb-1.5">
+            <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] text-white/70">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <span className="text-[#00E5A0]">@</span> Reuse work from
+                  other projects
                 </span>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setInput((prev) => prev + " @reference");
+                  textareaRef.current?.focus();
+                }}
+                className="px-2.5 py-1 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-white/80 text-[10px] font-medium border border-white/[0.08] transition-all"
+              >
+                Add reference
+              </button>
+            </div>
+          </div>
 
+          {/* ── Composer Card ── */}
+          <div className="p-2.5 pt-0">
+            <form
+              onSubmit={handleSubmit}
+              className="rounded-2xl bg-white/[0.04] border border-white/[0.08] focus-within:border-[#00E5A0]/40 transition-all p-2.5 space-y-2"
+            >
               <textarea
                 ref={textareaRef}
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Tell Mosh what to build..."
-                className="w-full bg-transparent border-0 resize-none outline-none text-white text-[11px] placeholder:text-white/30 px-0.5 py-0.5 leading-relaxed min-h-[36px] max-h-24 scrollbar-thin"
+                placeholder="Queue follow-up..."
+                className="w-full bg-transparent border-0 resize-none outline-none text-white text-[12px] placeholder:text-white/30 px-0.5 py-0.5 leading-relaxed min-h-[44px] max-h-28 scrollbar-thin"
                 rows={1}
               />
 
-              <div className="flex items-center justify-between pt-0.5">
-                <div className="flex items-center gap-1">
+              <div className="flex items-center justify-between pt-1 border-t border-white/[0.04]">
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => {
-                      setInput((prev) => prev + " @database @server");
+                      setInput((prev) => prev + " @context");
                       textareaRef.current?.focus();
                     }}
-                    className="px-1.5 py-0.5 rounded-md text-[9px] font-medium text-white/50 hover:text-white hover:bg-white/[0.06] transition-all flex items-center gap-0.5"
-                    title="Add Reference"
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/[0.06] transition-all"
+                    title="Add context"
                   >
-                    <PlusIcon className="w-2.5 h-2.5" />
-                    <span>Ref</span>
+                    <PlusIcon className="w-3.5 h-3.5" />
                   </button>
+
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="h-6 px-2 rounded-full bg-white/[0.06] border border-white/[0.08] text-white text-[10px] font-medium outline-none cursor-pointer hover:bg-white/[0.1] transition-all"
+                  >
+                    {AVAILABLE_MODELS.map((m) => (
+                      <option
+                        key={m.id}
+                        value={m.id}
+                        className="bg-[#18181b] text-white"
+                      >
+                        Build ▾ ({m.name.split(" ")[0]})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={!input.trim() || isLoading}
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-black disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 active:scale-95 transition-all"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #00E5A0, #059669)",
-                  }}
-                >
-                  <PaperAirplaneIcon className="w-3 h-3" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="submit"
+                    disabled={!input.trim() || isLoading}
+                    className="h-7 px-3 rounded-full flex items-center gap-1.5 text-black font-semibold text-[11px] disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 active:scale-95 transition-all shadow-sm"
+                    style={{
+                      background: "linear-gradient(135deg, #00E5A0, #059669)",
+                    }}
+                  >
+                    <PaperAirplaneIcon className="w-3 h-3" />
+                    <span>Build</span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -701,9 +758,7 @@ export function WorkspaceLeftSidebar({
                     <div
                       key={node.type}
                       draggable
-                      onDragStart={(e) =>
-                        onDragStart(e, node.type, node.label)
-                      }
+                      onDragStart={(e) => onDragStart(e, node.type, node.label)}
                       className="flex items-center gap-1.5 p-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.06] hover:border-white/15 cursor-grab active:cursor-grabbing transition-all group select-none"
                       title={`Drag: ${NODE_DESCRIPTIONS[node.type] || node.label}`}
                     >
