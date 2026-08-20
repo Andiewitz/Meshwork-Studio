@@ -10,6 +10,7 @@ import {
   TrashIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
+import { LuHistory, LuPlus } from "react-icons/lu";
 import { useReactFlow, useNodes, useEdges } from "@xyflow/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -399,25 +400,23 @@ export function WorkspaceLeftSidebar({
 
         {/* Chat Messages Feed */}
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 scrollbar-thin scrollbar-thumb-white/[0.08]">
-          {/* Top continue & status row */}
+          {/* Top action icons: reverse clock (history) and plus (new chat) */}
           <div className="flex items-center justify-between pb-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] text-[10px] text-white/70">
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${isLoading ? "bg-amber-400 animate-pulse" : "bg-emerald-400"}`}
-              />
-              <span>{isLoading ? "Working..." : "Ready"}</span>
-            </div>
+            <button
+              type="button"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors"
+              title="Chat History"
+            >
+              <LuHistory className="w-4 h-4" />
+            </button>
 
             <button
-              onClick={() =>
-                void executePrompt(
-                  "continue designing and refining this architecture",
-                )
-              }
-              disabled={isLoading}
-              className="px-3 py-1 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-white/80 hover:text-white text-[10px] font-medium transition-all shadow-sm active:scale-95 disabled:opacity-30"
+              type="button"
+              onClick={() => setMessages([])}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors"
+              title="New Chat"
             >
-              continue
+              <LuPlus className="w-4 h-4" />
             </button>
           </div>
 
