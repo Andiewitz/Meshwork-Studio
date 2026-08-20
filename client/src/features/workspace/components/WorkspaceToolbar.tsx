@@ -12,17 +12,17 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import {
-  CursorArrowRaysIcon,
-  HandRaisedIcon,
-  RectangleGroupIcon,
-  ShareIcon,
-  MinusIcon,
-  ArrowRightIcon,
-  FlagIcon,
-  PencilIcon,
-  ArrowsPointingOutIcon,
-  HashtagIcon,
-} from "@heroicons/react/24/outline";
+  FiMousePointer,
+  FiSquare,
+  FiShare2,
+  FiMinus,
+  FiArrowRight,
+  FiCornerDownRight,
+  FiEdit3,
+  FiMaximize2,
+  FiFileText,
+} from "react-icons/fi";
+import { FaHand } from "react-icons/fa6";
 import { Panel } from "@xyflow/react";
 import type { Edge } from "@xyflow/react";
 import type {
@@ -80,7 +80,7 @@ export function WorkspaceToolbar({
                   : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
               }`}
             >
-              <CursorArrowRaysIcon className="w-3.5 h-3.5" />
+              <FiMousePointer className="w-3.5 h-3.5" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">Select tool (V)</TooltipContent>
@@ -99,7 +99,7 @@ export function WorkspaceToolbar({
                   : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
               }`}
             >
-              <HandRaisedIcon className="w-3.5 h-3.5" />
+              <FaHand className="w-3.5 h-3.5" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">Pan canvas (H)</TooltipContent>
@@ -126,7 +126,7 @@ export function WorkspaceToolbar({
                   : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
               }`}
             >
-              <RectangleGroupIcon className="w-3.5 h-3.5" />
+              <FiSquare className="w-3.5 h-3.5" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">Infrastructure Zone (I)</TooltipContent>
@@ -142,7 +142,7 @@ export function WorkspaceToolbar({
                   size="icon"
                   className="w-8 h-8 rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
                 >
-                  <ShareIcon className="w-3.5 h-3.5" />
+                  <FiShare2 className="w-3.5 h-3.5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top">Connection Style</TooltipContent>
@@ -163,19 +163,19 @@ export function WorkspaceToolbar({
                   {
                     id: "solid",
                     label: "Solid",
-                    icon: MinusIcon,
+                    icon: FiMinus,
                     hasArrow: false,
                   },
                   {
                     id: "dashed",
                     label: "Dashed",
-                    icon: MinusIcon,
+                    icon: FiMinus,
                     hasArrow: false,
                   },
                   {
                     id: "arrow",
                     label: "Arrow",
-                    icon: ArrowRightIcon,
+                    icon: FiArrowRight,
                     hasArrow: true,
                   },
                 ].map((style) => {
@@ -234,11 +234,11 @@ export function WorkspaceToolbar({
                   {
                     id: "straight",
                     label: "Straight",
-                    icon: MinusIcon,
+                    icon: FiMinus,
                     rotate: true,
                   },
-                  { id: "default", label: "Curved", icon: ShareIcon },
-                  { id: "step", label: "Step", icon: FlagIcon },
+                  { id: "default", label: "Curved", icon: FiShare2 },
+                  { id: "step", label: "Step", icon: FiCornerDownRight },
                 ].map((tool) => (
                   <button
                     key={tool.id}
@@ -277,7 +277,7 @@ export function WorkspaceToolbar({
                 onClick={onAddNote}
                 className="w-8 h-8 rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
               >
-                <HashtagIcon className="w-3.5 h-3.5" />
+                <FiFileText className="w-3.5 h-3.5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">Add Sticky Note</TooltipContent>
@@ -301,7 +301,7 @@ export function WorkspaceToolbar({
                   : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
               }`}
             >
-              <PencilIcon className="w-3.5 h-3.5" />
+              <FiEdit3 className="w-3.5 h-3.5" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">Annotation Tool (A)</TooltipContent>
@@ -318,7 +318,7 @@ export function WorkspaceToolbar({
               onClick={() => fitView({ duration: 600 })}
               className="w-8 h-8 rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
             >
-              <ArrowsPointingOutIcon className="w-3.5 h-3.5" />
+              <FiMaximize2 className="w-3.5 h-3.5" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">Fit View (Ctrl+0)</TooltipContent>

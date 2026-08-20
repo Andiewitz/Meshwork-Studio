@@ -17,7 +17,6 @@ import {
   ChevronLeftIcon,
   ChevronDownIcon,
   ChevronRightIcon,
-  SparklesIcon,
   ShareIcon,
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
@@ -25,19 +24,16 @@ import {
   PencilSquareIcon,
   TrashIcon,
   Cog6ToothIcon,
-  CommandLineIcon,
   PhotoIcon,
   DocumentTextIcon,
   Squares2X2Icon,
-  ViewColumnsIcon,
-  CubeIcon,
-  ComputerDesktopIcon,
-  ArrowPathIcon,
-  ArrowTopRightOnSquareIcon,
-  GlobeAltIcon,
-  CodeBracketIcon,
-  ClockIcon,
   BoltIcon,
+  CheckCircleIcon,
+  ArrowPathIcon,
+  ArrowUturnLeftIcon,
+  ArrowUturnRightIcon,
+  Bars3BottomLeftIcon,
+  CommandLineIcon,
 } from "@heroicons/react/24/outline";
 import {
   BG_VARIANTS,
@@ -66,8 +62,6 @@ export interface WorkspaceHeaderProps {
   canRedo?: boolean;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
-  sidebarTab: "ai" | "nodes";
-  setSidebarTab: (tab: "ai" | "nodes") => void;
   collaborators: { userId: string; name: string; color: string }[];
   teamMembers: any[];
   teamId?: string | number | null;
@@ -116,8 +110,6 @@ export function WorkspaceHeader({
   redo,
   isSidebarOpen,
   setIsSidebarOpen,
-  sidebarTab,
-  setSidebarTab,
   collaborators,
   teamMembers,
   teamId,
@@ -432,114 +424,69 @@ export function WorkspaceHeader({
           </Popover>
 
           {/* Status badge */}
-          <span className="text-[11px] text-white/40 hidden md:inline-block">
-            {saveStatus === "saving"
-              ? "Saving..."
-              : isSimulating
-                ? "Live Preview"
-                : "Canvas Ready"}
-          </span>
+          {/* Save Status dot */}
+          <div
+            className="flex items-center gap-1 text-[10px]"
+            title={
+              saveStatus === "saving"
+                ? "Saving..."
+                : saveStatus === "saved"
+                  ? "All changes saved"
+                  : "Unsaved changes"
+            }
+          >
+            {saveStatus === "saving" ? (
+              <ArrowPathIcon className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+            ) : (
+              <CheckCircleIcon
+                className={`w-3.5 h-3.5 ${
+                  saveStatus === "saved" ? "text-emerald-400" : "text-white/20"
+                }`}
+              />
+            )}
+          </div>
 
           <div className="w-px h-3.5 bg-white/[0.08] mx-0.5" />
 
-          {/* History Icon */}
+          {/* Undo */}
           <button
             onClick={undo}
             className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/[0.06] transition-all"
             title="Undo (Ctrl+Z)"
           >
-            <ClockIcon className="w-3.5 h-3.5" />
+            <ArrowUturnLeftIcon className="w-3.5 h-3.5" />
           </button>
 
-          {/* Left Sidebar Toggle Icon */}
+          {/* Redo */}
+          <button
+            onClick={redo}
+            className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/[0.06] transition-all"
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            <ArrowUturnRightIcon className="w-3.5 h-3.5" />
+          </button>
+
+          <div className="w-px h-3.5 bg-white/[0.08] mx-0.5" />
+
+          {/* Left Sidebar Toggle — single button in header */}
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${
               isSidebarOpen
-                ? "text-[#00E5A0] bg-white/[0.08]"
+                ? "text-[#00E5A0] bg-[#00E5A0]/10"
                 : "text-white/40 hover:text-white hover:bg-white/[0.06]"
             }`}
-            title="Toggle Sidebar"
+            title={isSidebarOpen ? "Collapse Sidebar" : "Open Sidebar"}
           >
-            <ViewColumnsIcon className="w-3.5 h-3.5" />
+            <Bars3BottomLeftIcon className="w-3.5 h-3.5" />
           </button>
-
-          {/* View Mode Pills (Preview | Code | Layers) */}
-          <div className="flex items-center gap-0.5 bg-white/[0.04] p-0.5 rounded-lg border border-white/[0.06]">
-            <button
-              onClick={() => {
-                setActiveView?.("canvas");
-                setIsSidebarOpen(false);
-              }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
-                activeView === "canvas" && !isSidebarOpen
-                  ? "bg-[#3B82F6]/20 text-[#60A5FA] shadow-sm border border-[#3B82F6]/30"
-                  : "text-white/50 hover:text-white"
-              }`}
-            >
-              <GlobeAltIcon className="w-3 h-3" />
-              <span>Preview</span>
-            </button>
-            <button
-              onClick={() => {
-                setIsSidebarOpen(true);
-                setSidebarTab("ai");
-              }}
-              className={`w-7 h-6 flex items-center justify-center rounded-md transition-all ${
-                isSidebarOpen && sidebarTab === "ai"
-                  ? "bg-[#00E5A0]/20 text-[#00E5A0]"
-                  : "text-white/40 hover:text-white"
-              }`}
-              title="AI Code Copilot"
-            >
-              <CodeBracketIcon className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => {
-                setIsSidebarOpen(true);
-                setSidebarTab("nodes");
-              }}
-              className={`w-7 h-6 flex items-center justify-center rounded-md transition-all ${
-                isSidebarOpen && sidebarTab === "nodes"
-                  ? "bg-white/[0.12] text-white"
-                  : "text-white/40 hover:text-white"
-              }`}
-              title="Components"
-            >
-              <CubeIcon className="w-3.5 h-3.5" />
-            </button>
-          </div>
         </div>
 
-        {/* ── Center Section: Responsive Device Preview Bar ── */}
-        <div className="hidden lg:flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-xl px-2 py-0.5">
-          <button
-            className="w-6 h-6 flex items-center justify-center text-white/50 hover:text-white rounded transition-colors"
-            title="Desktop view"
-          >
-            <ComputerDesktopIcon className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setIsSimulating(!isSimulating)}
-            className="w-6 h-6 flex items-center justify-center text-white/50 hover:text-white rounded transition-colors"
-            title="Refresh simulation"
-          >
-            <ArrowPathIcon
-              className={`w-3.5 h-3.5 ${isSimulating ? "animate-spin text-[#00E5A0]" : ""}`}
-            />
-          </button>
-          <div className="w-px h-3 bg-white/[0.08]" />
-          <button className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] text-white/70 hover:text-white">
-            <span>{currentRoute}</span>
-            <ChevronDownIcon className="w-2.5 h-2.5 opacity-40" />
-          </button>
-          <div className="w-px h-3 bg-white/[0.08]" />
-          <button
-            className="w-6 h-6 flex items-center justify-center text-white/50 hover:text-white rounded transition-colors"
-            title="Open in new window"
-          >
-            <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
-          </button>
+        {/* ── Center Section: project status breadcrumb ── */}
+        <div className="hidden lg:flex items-center gap-1.5 text-white/40 text-[11px]">
+          <span className="font-medium text-white/60 truncate max-w-[160px]">
+            {workspace?.title ?? "Untitled"}
+          </span>
         </div>
 
         {/* ── Right Section: Collaborators, Share, Upgrade, Publish ── */}

@@ -271,7 +271,9 @@ function WorkspaceView() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [gridSize, setGridSize] = useState(20);
   const [bgVariant, setBgVariant] = useState<BgVariant>("dots");
-  const [activeView, setActiveView] = useState<"ai" | "canvas" | "properties">("canvas");
+  const [activeView, setActiveView] = useState<"ai" | "canvas" | "properties">(
+    "canvas",
+  );
 
   // ── Role-based access control ──
   const { data: roleData } = useWorkspaceRole(workspaceId);
@@ -1532,8 +1534,6 @@ function WorkspaceView() {
         redo={redo}
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
-        sidebarTab={sidebarTab}
-        setSidebarTab={setSidebarTab}
         collaborators={collaborators}
         teamMembers={teamMembers}
         teamId={teamId}
@@ -1589,473 +1589,472 @@ function WorkspaceView() {
         setActiveView={setActiveView}
       />
 
-      {/* Main Workspace Layout: 3-column grid (Sidebar | Canvas | Properties) */}
-      <div
-        className="flex-1 min-h-0 overflow-hidden grid gap-2 p-2 pt-0 transition-all duration-300 ease-in-out"
-        style={{
-          gridTemplateColumns: isSidebarOpen && canEdit
-            ? (selectedNode || selectedEdge)
-              ? "minmax(340px, 28%) 1fr minmax(240px, 22%)"
-              : "minmax(340px, 28%) 1fr"
-            : (selectedNode || selectedEdge)
-              ? "0px 1fr minmax(240px, 22%)"
-              : "0px 1fr",
-        }}
-      >
-        {/* Collapsible Left Sidebar (Mosh AI + Components) */}
+      {/* Main Workspace Layout: Sidebar connected to header + framed Canvas */}
+      <div className="flex-1 min-h-0 overflow-hidden flex transition-all duration-300 ease-in-out">
+        {/* Collapsible Left Sidebar connected flush to Header */}
         <div
-          className={`min-h-0 overflow-hidden transition-all duration-300 ease-in-out ${
-            isSidebarOpen && canEdit ? "opacity-100" : "opacity-0 pointer-events-none w-0"
+          className={`min-h-0 overflow-hidden transition-all duration-300 ease-in-out border-r border-white/[0.08] bg-[#111114] shrink-0 ${
+            isSidebarOpen && canEdit
+              ? "w-[360px] opacity-100"
+              : "w-0 opacity-0 pointer-events-none border-r-0"
           }`}
         >
-          <div className="h-full rounded-2xl bg-[#111114]/95 backdrop-blur-2xl border border-white/[0.06] overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
-            <WorkspaceLeftSidebar
-              isOpen={isSidebarOpen && canEdit}
-              onClose={() => setIsSidebarOpen(false)}
-              activeTab={sidebarTab}
-              setActiveTab={setSidebarTab}
-              onDragStart={onDragStart}
-            />
-          </div>
+          <WorkspaceLeftSidebar
+            isOpen={isSidebarOpen && canEdit}
+            onClose={() => setIsSidebarOpen(false)}
+          />
         </div>
 
-        {/* Framed Canvas Viewport */}
-        <motion.main
-          ref={canvasWrapperRef}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="h-full relative bg-[#0A0A0A] overflow-hidden rounded-2xl border border-white/[0.06] shadow-[0_8px_40px_rgba(0,0,0,0.4)]"
-          data-cursor={drawingMode}
-          style={{ cursor: drawingMode === "pan" ? "grab" : undefined }}
+        {/* Framed Canvas & Properties Section */}
+        <div
+          className="flex-1 min-h-0 p-2 grid gap-2 overflow-hidden"
+          style={{
+            gridTemplateColumns:
+              selectedNode || selectedEdge ? "1fr minmax(260px, 24%)" : "1fr",
+          }}
         >
-          {/* ── Canvas transition overlay ── */}
-          <AnimatePresence>
-            {canvasTransition !== "idle" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18, ease: "easeInOut" }}
-                className="absolute inset-0 z-[999] bg-[#0A0A0A] pointer-events-none"
-              />
-            )}
-          </AnimatePresence>
-
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            onNodeDoubleClick={onNodeDoubleClick}
-            onEdgeClick={onEdgeClick}
-            onNodeDragStart={onNodeDragStart}
-            onNodeDrag={onNodeDrag}
-            onNodeDragStop={onNodeDragStop}
-            onNodeContextMenu={onNodeContextMenu}
-            onSelectionContextMenu={onSelectionContextMenu}
-            onEdgeContextMenu={onEdgeContextMenu}
-            onPaneContextMenu={onPaneContextMenu as any}
-            onNodesDelete={() => takeSnapshot()}
-            onEdgesDelete={() => takeSnapshot()}
-            onPaneClick={onPaneClick}
-            onDragOver={onDragOver}
-            onDrop={onDrop}
-            nodeTypes={nodeTypes}
-            fitView
-            className={
-              drawingMode === "select"
-                ? "[&_.react-flow__pane]:!cursor-default"
-                : ""
-            }
-            defaultEdgeOptions={{
-              type: "step",
-              style: { stroke: "#555", strokeWidth: 2 },
-            }}
-            snapToGrid={snapToGrid}
-            snapGrid={[gridSize, gridSize]}
-            colorMode="dark"
-            connectionMode={ConnectionMode.Loose}
-            panOnScroll={true}
-            panOnDrag={drawingMode === "pan" ? true : [1, 2]}
-            selectionOnDrag={
-              drawingMode === "select" ||
-              drawingMode === "infrastructure" ||
-              drawingMode === "annotation"
-            }
-            selectionMode={SelectionMode.Partial}
-            nodesDraggable={canEdit && drawingMode === "pan"}
-            elementsSelectable={canEdit}
-            onMouseMove={handlePaneMouseMove}
+          {/* Framed Canvas Viewport */}
+          <motion.main
+            ref={canvasWrapperRef}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="h-full relative bg-[#0A0A0A] overflow-hidden rounded-2xl border border-white/[0.06] shadow-[0_8px_40px_rgba(0,0,0,0.4)]"
+            data-cursor={drawingMode}
+            style={{ cursor: drawingMode === "pan" ? "grab" : undefined }}
           >
-            <Controls
-              position="bottom-left"
-              className="!bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !text-white/50 !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl overflow-hidden !m-6 [&_button]:!bg-transparent [&_button]:!border-white/[0.05] [&_button]:hover:!bg-white/10 [&_button_svg]:!fill-white/70"
-            />
-            <MiniMap
-              position="bottom-right"
-              className="!bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl !mr-6 !mb-6 overflow-hidden [&_.react-flow__minimap-mask]:!fill-white/80"
-            />
-            {bgVariant !== "none" && (
-              <Background
-                variant={bgVariant as any}
-                gap={gridSize}
-                size={1.2}
-                color="#ffffff22"
-              />
-            )}
+            {/* ── Canvas transition overlay ── */}
+            <AnimatePresence>
+              {canvasTransition !== "idle" && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18, ease: "easeInOut" }}
+                  className="absolute inset-0 z-[999] bg-[#0A0A0A] pointer-events-none"
+                />
+              )}
+            </AnimatePresence>
 
-            {/* Collaborator cursors */}
-            <CollaboratorCursors collaborators={collaborators} />
-
-            {/* Mouse glow mask */}
-            <div
-              className="absolute inset-0 pointer-events-none z-[0]"
-              style={{
-                WebkitMaskImage:
-                  "radial-gradient(circle at var(--mouse-x, -1000px) var(--mouse-y, -1000px), black 0px, transparent 350px)",
-                maskImage:
-                  "radial-gradient(circle at var(--mouse-x, -1000px) var(--mouse-y, -1000px), black 0px, transparent 350px)",
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              onNodeDoubleClick={onNodeDoubleClick}
+              onEdgeClick={onEdgeClick}
+              onNodeDragStart={onNodeDragStart}
+              onNodeDrag={onNodeDrag}
+              onNodeDragStop={onNodeDragStop}
+              onNodeContextMenu={onNodeContextMenu}
+              onSelectionContextMenu={onSelectionContextMenu}
+              onEdgeContextMenu={onEdgeContextMenu}
+              onPaneContextMenu={onPaneContextMenu as any}
+              onNodesDelete={() => takeSnapshot()}
+              onEdgesDelete={() => takeSnapshot()}
+              onPaneClick={onPaneClick}
+              onDragOver={onDragOver}
+              onDrop={onDrop}
+              nodeTypes={nodeTypes}
+              fitView
+              className={
+                drawingMode === "select"
+                  ? "[&_.react-flow__pane]:!cursor-default"
+                  : ""
+              }
+              defaultEdgeOptions={{
+                type: "step",
+                style: { stroke: "#555", strokeWidth: 2 },
               }}
+              snapToGrid={snapToGrid}
+              snapGrid={[gridSize, gridSize]}
+              colorMode="dark"
+              connectionMode={ConnectionMode.Loose}
+              panOnScroll={true}
+              panOnDrag={drawingMode === "pan" ? true : [1, 2]}
+              selectionOnDrag={
+                drawingMode === "select" ||
+                drawingMode === "infrastructure" ||
+                drawingMode === "annotation"
+              }
+              selectionMode={SelectionMode.Partial}
+              nodesDraggable={canEdit && drawingMode === "pan"}
+              elementsSelectable={canEdit}
+              onMouseMove={handlePaneMouseMove}
             >
+              <Controls
+                position="bottom-left"
+                className="!bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !text-white/50 !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl overflow-hidden !m-6 [&_button]:!bg-transparent [&_button]:!border-white/[0.05] [&_button]:hover:!bg-white/10 [&_button_svg]:!fill-white/70"
+              />
+              <MiniMap
+                position="bottom-right"
+                className="!bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl !mr-6 !mb-6 overflow-hidden [&_.react-flow__minimap-mask]:!fill-white/80"
+              />
               {bgVariant !== "none" && (
                 <Background
                   variant={bgVariant as any}
                   gap={gridSize}
-                  size={1.5}
-                  color="#FFFFFF"
-                  className="opacity-50"
+                  size={1.2}
+                  color="#ffffff22"
                 />
               )}
-            </div>
 
-            {menu && (
-              <motion.div
-                ref={menuRef}
-                initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
-                animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                style={{ top: menu.top, left: menu.left }}
-                className="fixed rounded-xl py-1.5 z-[100] min-w-[200px] bg-[#121214]/85 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)]"
-                onClick={() => setMenu(null)}
+              {/* Collaborator cursors */}
+              <CollaboratorCursors collaborators={collaborators} />
+
+              {/* Mouse glow mask */}
+              <div
+                className="absolute inset-0 pointer-events-none z-[0]"
+                style={{
+                  WebkitMaskImage:
+                    "radial-gradient(circle at var(--mouse-x, -1000px) var(--mouse-y, -1000px), black 0px, transparent 350px)",
+                  maskImage:
+                    "radial-gradient(circle at var(--mouse-x, -1000px) var(--mouse-y, -1000px), black 0px, transparent 350px)",
+                }}
               >
-                {menu.type === "node" ? (
-                  (() => {
-                    const selectedNodes = nodes.filter(
-                      (n) => n.selected || n.id === menu.id,
-                    );
-                    const isMultiSelect = selectedNodes.length > 1;
+                {bgVariant !== "none" && (
+                  <Background
+                    variant={bgVariant as any}
+                    gap={gridSize}
+                    size={1.5}
+                    color="#FFFFFF"
+                    className="opacity-50"
+                  />
+                )}
+              </div>
 
-                    return (
-                      <>
-                        {!isMultiSelect && (
+              {menu && (
+                <motion.div
+                  ref={menuRef}
+                  initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
+                  animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                  transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                  style={{ top: menu.top, left: menu.left }}
+                  className="fixed rounded-xl py-1.5 z-[100] min-w-[200px] bg-[#121214]/85 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)]"
+                  onClick={() => setMenu(null)}
+                >
+                  {menu.type === "node" ? (
+                    (() => {
+                      const selectedNodes = nodes.filter(
+                        (n) => n.selected || n.id === menu.id,
+                      );
+                      const isMultiSelect = selectedNodes.length > 1;
+
+                      return (
+                        <>
+                          {!isMultiSelect && (
+                            <button
+                              onClick={() => {
+                                setSelectedNodeId(menu.id);
+                                setActiveTab("properties");
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              <span className="flex-1 text-left">
+                                Edit Properties
+                              </span>
+                              <span className="text-[10px] text-white/20 font-mono">
+                                Dbl-click
+                              </span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() =>
+                              isMultiSelect
+                                ? duplicateSelection(
+                                    selectedNodes.map((n) => n.id),
+                                  )
+                                : duplicateNode(menu.id)
+                            }
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                            <span className="flex-1 text-left">
+                              Duplicate{isMultiSelect ? " All" : ""}
+                            </span>
+                            <span className="text-[10px] text-white/20 font-mono">
+                              ⌘D
+                            </span>
+                          </button>
+                          <div className="h-px my-1 mx-2 bg-white/[0.04]" />
                           <button
                             onClick={() => {
-                              setSelectedNodeId(menu.id);
-                              setActiveTab("properties");
+                              takeSnapshot();
+                              setNodes((nds) =>
+                                nds.map((n) => {
+                                  if (n.selected || n.id === menu.id) {
+                                    const currentW =
+                                      (n.style?.width as number) ||
+                                      n.measured?.width ||
+                                      120;
+                                    const currentH =
+                                      (n.style?.height as number) ||
+                                      n.measured?.height ||
+                                      80;
+                                    return {
+                                      ...n,
+                                      position: {
+                                        x: Math.round(n.position.x / 12) * 12,
+                                        y: Math.round(n.position.y / 12) * 12,
+                                      },
+                                      style: {
+                                        ...n.style,
+                                        width: Math.round(currentW / 24) * 24,
+                                        height: Math.round(currentH / 24) * 24,
+                                      },
+                                    };
+                                  }
+                                  return n;
+                                }),
+                              );
                             }}
                             className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
+                            <Grid className="w-3.5 h-3.5" />
                             <span className="flex-1 text-left">
-                              Edit Properties
-                            </span>
-                            <span className="text-[10px] text-white/20 font-mono">
-                              Dbl-click
+                              Snap to Grid
                             </span>
                           </button>
-                        )}
+                          {selectedNodes.length >= 2 && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  if (selectedNodes.length < 2) return;
+                                  takeSnapshot();
+                                  const anchor = selectedNodes[0];
+                                  const anchorW =
+                                    (anchor.style?.width as number) ||
+                                    anchor.measured?.width ||
+                                    0;
+                                  const targetCenterX =
+                                    anchor.position.x + anchorW / 2;
+                                  setNodes((nds) =>
+                                    nds.map((n) => {
+                                      if (n.selected || n.id === menu.id) {
+                                        const w =
+                                          (n.style?.width as number) ||
+                                          n.measured?.width ||
+                                          0;
+                                        return {
+                                          ...n,
+                                          position: {
+                                            ...n.position,
+                                            x:
+                                              Math.round(
+                                                (targetCenterX - w / 2) / 12,
+                                              ) * 12,
+                                          },
+                                        };
+                                      }
+                                      return n;
+                                    }),
+                                  );
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                              >
+                                <AlignVerticalJustifyCenter className="w-3.5 h-3.5" />
+                                <span className="flex-1 text-left">
+                                  Align Vertical
+                                </span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (selectedNodes.length < 2) return;
+                                  takeSnapshot();
+                                  const anchor = selectedNodes[0];
+                                  const anchorH =
+                                    (anchor.style?.height as number) ||
+                                    anchor.measured?.height ||
+                                    0;
+                                  const targetCenterY =
+                                    anchor.position.y + anchorH / 2;
+                                  setNodes((nds) =>
+                                    nds.map((n) => {
+                                      if (n.selected || n.id === menu.id) {
+                                        const h =
+                                          (n.style?.height as number) ||
+                                          n.measured?.height ||
+                                          0;
+                                        return {
+                                          ...n,
+                                          position: {
+                                            ...n.position,
+                                            y:
+                                              Math.round(
+                                                (targetCenterY - h / 2) / 12,
+                                              ) * 12,
+                                          },
+                                        };
+                                      }
+                                      return n;
+                                    }),
+                                  );
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                              >
+                                <AlignHorizontalJustifyCenter className="w-3.5 h-3.5" />
+                                <span className="flex-1 text-left">
+                                  Align Horizontal
+                                </span>
+                              </button>
+                            </>
+                          )}
+                          <div className="h-px my-1 mx-2 bg-white/[0.04]" />
+                          <button
+                            onClick={() => {
+                              const selectedIds = nodes
+                                .filter((n) => n.selected)
+                                .map((n) => n.id);
+                              if (
+                                menu.id !== "selection" &&
+                                !selectedIds.includes(menu.id)
+                              )
+                                selectedIds.push(menu.id);
+                              deleteNodes(selectedIds);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] hover:bg-red-500/10 transition-colors text-red-400/80 hover:text-red-300"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span className="flex-1 text-left">
+                              Delete
+                              {selectedNodes.length > 1
+                                ? ` (${selectedNodes.length})`
+                                : ""}
+                            </span>
+                            <span className="text-[10px] text-red-400/30 font-mono">
+                              ⌫
+                            </span>
+                          </button>
+                        </>
+                      );
+                    })()
+                  ) : (
+                    /* ── Pane context menu: quick-add favorites ── */
+                    <>
+                      <div className="px-3.5 py-1.5 text-[9px] uppercase font-bold text-white/20 tracking-[0.15em]">
+                        Quick Add
+                      </div>
+                      {favoriteNodes.map((node) => (
                         <button
-                          onClick={() =>
-                            isMultiSelect
-                              ? duplicateSelection(selectedNodes.map((n) => n.id))
-                              : duplicateNode(menu.id)
-                          }
-                          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                          <span className="flex-1 text-left">
-                            Duplicate{isMultiSelect ? " All" : ""}
-                          </span>
-                          <span className="text-[10px] text-white/20 font-mono">
-                            ⌘D
-                          </span>
-                        </button>
-                        <div className="h-px my-1 mx-2 bg-white/[0.04]" />
-                        <button
+                          key={node.type}
                           onClick={() => {
-                            takeSnapshot();
-                            setNodes((nds) =>
-                              nds.map((n) => {
-                                if (n.selected || n.id === menu.id) {
-                                  const currentW =
-                                    (n.style?.width as number) ||
-                                    n.measured?.width ||
-                                    120;
-                                  const currentH =
-                                    (n.style?.height as number) ||
-                                    n.measured?.height ||
-                                    80;
-                                  return {
-                                    ...n,
-                                    position: {
-                                      x: Math.round(n.position.x / 12) * 12,
-                                      y: Math.round(n.position.y / 12) * 12,
-                                    },
-                                    style: {
-                                      ...n.style,
-                                      width: Math.round(currentW / 24) * 24,
-                                      height: Math.round(currentH / 24) * 24,
-                                    },
-                                  };
-                                }
-                                return n;
-                              }),
-                            );
+                            const pos = screenToFlowPosition({
+                              x: menu.left,
+                              y: menu.top,
+                            });
+                            addNode(node.type, node.label, {
+                              x: Math.round(pos.x / 12) * 12,
+                              y: Math.round(pos.y / 12) * 12,
+                            });
                           }}
                           className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
                         >
-                          <Grid className="w-3.5 h-3.5" />
-                          <span className="flex-1 text-left">Snap to Grid</span>
+                          <node.icon className="w-3.5 h-3.5 text-white/40" />
+                          {node.label}
                         </button>
-                        {selectedNodes.length >= 2 && (
-                          <>
-                            <button
-                              onClick={() => {
-                                if (selectedNodes.length < 2) return;
-                                takeSnapshot();
-                                const anchor = selectedNodes[0];
-                                const anchorW =
-                                  (anchor.style?.width as number) ||
-                                  anchor.measured?.width ||
-                                  0;
-                                const targetCenterX =
-                                  anchor.position.x + anchorW / 2;
-                                setNodes((nds) =>
-                                  nds.map((n) => {
-                                    if (n.selected || n.id === menu.id) {
-                                      const w =
-                                        (n.style?.width as number) ||
-                                        n.measured?.width ||
-                                        0;
-                                      return {
-                                        ...n,
-                                        position: {
-                                          ...n.position,
-                                          x:
-                                            Math.round(
-                                              (targetCenterX - w / 2) / 12,
-                                            ) * 12,
-                                        },
-                                      };
-                                    }
-                                    return n;
-                                  }),
-                                );
-                              }}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
-                            >
-                              <AlignVerticalJustifyCenter className="w-3.5 h-3.5" />
-                              <span className="flex-1 text-left">
-                                Align Vertical
-                              </span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (selectedNodes.length < 2) return;
-                                takeSnapshot();
-                                const anchor = selectedNodes[0];
-                                const anchorH =
-                                  (anchor.style?.height as number) ||
-                                  anchor.measured?.height ||
-                                  0;
-                                const targetCenterY =
-                                  anchor.position.y + anchorH / 2;
-                                setNodes((nds) =>
-                                  nds.map((n) => {
-                                    if (n.selected || n.id === menu.id) {
-                                      const h =
-                                        (n.style?.height as number) ||
-                                        n.measured?.height ||
-                                        0;
-                                      return {
-                                        ...n,
-                                        position: {
-                                          ...n.position,
-                                          y:
-                                            Math.round(
-                                              (targetCenterY - h / 2) / 12,
-                                            ) * 12,
-                                        },
-                                      };
-                                    }
-                                    return n;
-                                  }),
-                                );
-                              }}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
-                            >
-                              <AlignHorizontalJustifyCenter className="w-3.5 h-3.5" />
-                              <span className="flex-1 text-left">
-                                Align Horizontal
-                              </span>
-                            </button>
-                          </>
-                        )}
-                        <div className="h-px my-1 mx-2 bg-white/[0.04]" />
-                        <button
-                          onClick={() => {
-                            const selectedIds = nodes
-                              .filter((n) => n.selected)
-                              .map((n) => n.id);
-                            if (
-                              menu.id !== "selection" &&
-                              !selectedIds.includes(menu.id)
-                            )
-                              selectedIds.push(menu.id);
-                            deleteNodes(selectedIds);
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] hover:bg-red-500/10 transition-colors text-red-400/80 hover:text-red-300"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span className="flex-1 text-left">
-                            Delete
-                            {selectedNodes.length > 1
-                              ? ` (${selectedNodes.length})`
-                              : ""}
-                          </span>
-                          <span className="text-[10px] text-red-400/30 font-mono">
-                            ⌫
-                          </span>
-                        </button>
-                      </>
-                    );
-                  })()
-                ) : (
-                  /* ── Pane context menu: quick-add favorites ── */
-                  <>
-                    <div className="px-3.5 py-1.5 text-[9px] uppercase font-bold text-white/20 tracking-[0.15em]">
-                      Quick Add
-                    </div>
-                    {favoriteNodes.map((node) => (
+                      ))}
+                      <div className="h-px my-1 mx-2 bg-white/[0.04]" />
                       <button
-                        key={node.type}
                         onClick={() => {
                           const pos = screenToFlowPosition({
                             x: menu.left,
                             y: menu.top,
                           });
-                          addNode(node.type, node.label, {
+                          addNode("note", "Note...", {
                             x: Math.round(pos.x / 12) * 12,
                             y: Math.round(pos.y / 12) * 12,
                           });
                         }}
                         className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
                       >
-                        <node.icon className="w-3.5 h-3.5 text-white/40" />
-                        {node.label}
+                        <Type className="w-3.5 h-3.5 text-white/40" />
+                        Sticky Note
                       </button>
-                    ))}
-                    <div className="h-px my-1 mx-2 bg-white/[0.04]" />
-                    <button
-                      onClick={() => {
-                        const pos = screenToFlowPosition({
-                          x: menu.left,
-                          y: menu.top,
-                        });
-                        addNode("note", "Note...", {
-                          x: Math.round(pos.x / 12) * 12,
-                          y: Math.round(pos.y / 12) * 12,
-                        });
+                      <button
+                        onClick={() => {
+                          const pos = screenToFlowPosition({
+                            x: menu.left,
+                            y: menu.top,
+                          });
+                          addNode("junction", "Junction", {
+                            x: Math.round(pos.x / 12) * 12,
+                            y: Math.round(pos.y / 12) * 12,
+                          });
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                      >
+                        <Circle className="w-3.5 h-3.5 text-white/40" />
+                        Junction
+                      </button>
+                    </>
+                  )}
+                </motion.div>
+              )}
+
+              {/* ── Bottom-center horizontal toolbar ── */}
+              <WorkspaceToolbar
+                drawingMode={drawingMode}
+                setDrawingMode={setDrawingMode}
+                edgeStyle={edgeStyle}
+                setEdgeStyle={setEdgeStyle}
+                hasArrow={hasArrow}
+                setHasArrow={setHasArrow}
+                edgeType={edgeType}
+                setEdgeType={setEdgeType}
+                setEdges={setEdges}
+                fitView={fitView}
+                onAddNote={() => {
+                  const pos = screenToFlowPosition({
+                    x: window.innerWidth / 2,
+                    y: window.innerHeight / 2,
+                  });
+                  addNode("note", "Sticky Note", {
+                    x: Math.round(pos.x / 12) * 12,
+                    y: Math.round(pos.y / 12) * 12,
+                  });
+                }}
+              />
+            </ReactFlow>
+            <MoshZoneOverlay />
+          </motion.main>
+
+          {/* ── Right properties panel (3rd grid column) ── */}
+          <AnimatePresence>
+            {(selectedNode || selectedEdge) && (
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 40 }}
+                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                className="min-h-0 overflow-hidden"
+              >
+                <div className="h-full rounded-2xl bg-[#111114]/95 backdrop-blur-2xl border border-white/[0.06] overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
+                  <div
+                    className="h-full overflow-y-auto"
+                    style={{ scrollbarWidth: "none" }}
+                  >
+                    <PropertiesSidebar
+                      selectedNode={selectedNode}
+                      selectedEdge={selectedEdge}
+                      updateNodeData={updateNodeData}
+                      updateNodeStyle={updateNodeStyle}
+                      updateEdgeData={updateEdgeData}
+                      deleteNode={onDelete}
+                      deleteEdge={deleteEdge}
+                      onClose={() => {
+                        setSelectedNodeId(null);
+                        setSelectedEdgeId(null);
                       }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
-                    >
-                      <Type className="w-3.5 h-3.5 text-white/40" />
-                      Sticky Note
-                    </button>
-                    <button
-                      onClick={() => {
-                        const pos = screenToFlowPosition({
-                          x: menu.left,
-                          y: menu.top,
-                        });
-                        addNode("junction", "Junction", {
-                          x: Math.round(pos.x / 12) * 12,
-                          y: Math.round(pos.y / 12) * 12,
-                        });
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
-                    >
-                      <Circle className="w-3.5 h-3.5 text-white/40" />
-                      Junction
-                    </button>
-                  </>
-                )}
+                    />
+                  </div>
+                </div>
               </motion.div>
             )}
-
-            {/* ── Bottom-center horizontal toolbar ── */}
-            <WorkspaceToolbar
-              drawingMode={drawingMode}
-              setDrawingMode={setDrawingMode}
-              edgeStyle={edgeStyle}
-              setEdgeStyle={setEdgeStyle}
-              hasArrow={hasArrow}
-              setHasArrow={setHasArrow}
-              edgeType={edgeType}
-              setEdgeType={setEdgeType}
-              setEdges={setEdges}
-              fitView={fitView}
-              onAddNote={() => {
-                const pos = screenToFlowPosition({
-                  x: window.innerWidth / 2,
-                  y: window.innerHeight / 2,
-                });
-                addNode("note", "Sticky Note", {
-                  x: Math.round(pos.x / 12) * 12,
-                  y: Math.round(pos.y / 12) * 12,
-                });
-              }}
-            />
-          </ReactFlow>
-          <MoshZoneOverlay />
-        </motion.main>
-
-        {/* ── Right properties panel (3rd grid column) ── */}
-        <AnimatePresence>
-          {(selectedNode || selectedEdge) && (
-            <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 40 }}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="min-h-0 overflow-hidden"
-            >
-              <div className="h-full rounded-2xl bg-[#111114]/95 backdrop-blur-2xl border border-white/[0.06] overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
-                <div
-                  className="h-full overflow-y-auto"
-                  style={{ scrollbarWidth: "none" }}
-                >
-                  <PropertiesSidebar
-                    selectedNode={selectedNode}
-                    selectedEdge={selectedEdge}
-                    updateNodeData={updateNodeData}
-                    updateNodeStyle={updateNodeStyle}
-                    updateEdgeData={updateEdgeData}
-                    deleteNode={onDelete}
-                    deleteEdge={deleteEdge}
-                    onClose={() => {
-                      setSelectedNodeId(null);
-                      setSelectedEdgeId(null);
-                    }}
-                  />
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Workspace Settings Dialog */}
