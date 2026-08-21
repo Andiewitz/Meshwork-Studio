@@ -95,7 +95,8 @@ function ProtectedRoute({
   }
 
   if (!user && !isLoading) {
-    return <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />;
+    window.location.href = `/login?reason=session_expired&redirect=${encodeURIComponent(location)}`;
+    return <RedirectingScreen />;
   }
 
   if (isMobile) {

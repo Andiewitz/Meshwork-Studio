@@ -186,6 +186,7 @@ function LoginForm() {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormErrors({});
+    setOauthError(null);
 
     if (step === "email") {
       setTouched((prev) => ({ ...prev, email: true }));

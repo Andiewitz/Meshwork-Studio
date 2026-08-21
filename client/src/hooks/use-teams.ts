@@ -40,9 +40,12 @@ export function useTeams() {
   return useQuery<TeamWithCount[]>({
     queryKey: ["/api/v1/teams"],
     queryFn: async () => {
-      const res = await fetch(getApiUrl("/api/v1/teams"), {
+      const res = await secureFetch(getApiUrl("/api/v1/teams"), {
         credentials: "include",
       });
+      if (res.status === 401) {
+        window.dispatchEvent(new CustomEvent("session-expired"));
+      }
       if (!res.ok) throw new Error("Failed to fetch teams");
       return res.json() as Promise<TeamWithCount[]>;
     },
@@ -57,9 +60,12 @@ export function useTeam(teamId: string | null) {
   return useQuery<TeamDetail>({
     queryKey: ["/api/v1/teams", teamId],
     queryFn: async () => {
-      const res = await fetch(getApiUrl(`/api/v1/teams/${teamId}`), {
+      const res = await secureFetch(getApiUrl(`/api/v1/teams/${teamId}`), {
         credentials: "include",
       });
+      if (res.status === 401) {
+        window.dispatchEvent(new CustomEvent("session-expired"));
+      }
       if (!res.ok) throw new Error("Failed to fetch team");
       return res.json() as Promise<TeamDetail>;
     },
@@ -74,9 +80,15 @@ export function useTeamWorkspaces(teamId: string | null) {
   return useQuery<Workspace[]>({
     queryKey: ["/api/v1/teams", teamId, "workspaces"],
     queryFn: async () => {
-      const res = await fetch(getApiUrl(`/api/v1/teams/${teamId}/workspaces`), {
-        credentials: "include",
-      });
+      const res = await secureFetch(
+        getApiUrl(`/api/v1/teams/${teamId}/workspaces`),
+        {
+          credentials: "include",
+        },
+      );
+      if (res.status === 401) {
+        window.dispatchEvent(new CustomEvent("session-expired"));
+      }
       if (!res.ok) throw new Error("Failed to fetch team workspaces");
       return res.json() as Promise<Workspace[]>;
     },

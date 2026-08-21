@@ -37,7 +37,7 @@ export function useWorkspaces() {
   return useQuery({
     queryKey: [api.workspaces.list.path],
     queryFn: async () => {
-      const res = await fetch(getApiUrl(api.workspaces.list.path), {
+      const res = await secureFetch(getApiUrl(api.workspaces.list.path), {
         credentials: "include",
       });
       if (!res.ok) {
@@ -46,8 +46,10 @@ export function useWorkspaces() {
           `[useWorkspaces] Failed with status ${res.status}:`,
           errorText,
         );
-        if (res.status === 401)
+        if (res.status === 401) {
+          window.dispatchEvent(new CustomEvent("session-expired"));
           throw new Error(`Unauthorized (401) - Session expired or invalid`);
+        }
         throw new Error(
           `Failed to fetch workspaces (${res.status}): ${errorText}`,
         );
@@ -66,7 +68,10 @@ export function useWorkspace(id: number) {
     queryKey: [api.workspaces.get.path, id],
     queryFn: async () => {
       const url = buildUrl(api.workspaces.get.path, { id });
-      const res = await fetch(getApiUrl(url), { credentials: "include" });
+      const res = await secureFetch(getApiUrl(url), { credentials: "include" });
+      if (res.status === 401) {
+        window.dispatchEvent(new CustomEvent("session-expired"));
+      }
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to fetch workspace");
       return api.workspaces.get.responses[200].parse(await res.json());

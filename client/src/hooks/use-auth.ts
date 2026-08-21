@@ -70,7 +70,8 @@ export function useAuth() {
     queryKey: ["/api/v1/auth/me"],
     queryFn: fetchUser,
     retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 30, // 30 seconds
+    refetchOnWindowFocus: true,
   });
 
   // Listen for session-expired events (triggered by 401s, failed token refreshes, or WS Unauthorized)

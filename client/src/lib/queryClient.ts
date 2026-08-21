@@ -1,4 +1,9 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryFunction,
+  QueryCache,
+  MutationCache,
+} from "@tanstack/react-query";
 import { secureFetch } from "./secure-fetch";
 import { ApiError } from "./error-utils";
 
@@ -85,7 +90,25 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+function handleGlobal401(error: unknown) {
+  const err = error as any;
+  if (
+    err?.status === 401 ||
+    err?.statusCode === 401 ||
+    err?.message?.includes("401") ||
+    err?.message?.toLowerCase().includes("unauthorized")
+  ) {
+    window.dispatchEvent(new CustomEvent("session-expired"));
+  }
+}
+
 export const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: handleGlobal401,
+  }),
+  mutationCache: new MutationCache({
+    onError: handleGlobal401,
+  }),
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
