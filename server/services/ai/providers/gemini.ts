@@ -34,17 +34,60 @@ function buildGeminiPayload(request: ChatCompletionRequest) {
   const systemMsg = request.messages.find((m) => m.role === "system");
   const contents = request.messages
     .filter((m) => m.role !== "system")
-    .map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [
-        {
+    .map((m) => {
+      const parts: any[] = [];
+
+      if (m.role === "tool") {
+        let responseObj: any = { output: m.content };
+        try {
+          if (m.content) responseObj = JSON.parse(m.content);
+        } catch {
+          // Keep responseObj as { output: m.content }
+        }
+        parts.push({
+          functionResponse: {
+            name: m.name || "tool_result",
+            response: responseObj,
+          },
+        });
+        return { role: "user", parts };
+      }
+
+      if (m.tool_calls && Array.isArray(m.tool_calls)) {
+        for (const tc of m.tool_calls) {
+          let args = {};
+          try {
+            args = JSON.parse(tc.function.arguments || "{}");
+          } catch {
+            args = {};
+          }
+          parts.push({
+            functionCall: {
+              name: tc.function.name,
+              args,
+            },
+          });
+        }
+      }
+
+      if (m.content) {
+        parts.push({
           text:
             typeof m.content === "string"
               ? m.content
               : JSON.stringify(m.content),
-        },
-      ],
-    }));
+        });
+      }
+
+      if (parts.length === 0) {
+        parts.push({ text: "" });
+      }
+
+      return {
+        role: m.role === "assistant" ? "model" : "user",
+        parts,
+      };
+    });
 
   const payload: Record<string, any> = {
     contents:
@@ -64,6 +107,22 @@ function buildGeminiPayload(request: ChatCompletionRequest) {
         },
       ],
     };
+  }
+
+  if (
+    request.tools &&
+    Array.isArray(request.tools) &&
+    request.tools.length > 0
+  ) {
+    payload.tools = [
+      {
+        function_declarations: request.tools.map((t) => ({
+          name: t.function.name,
+          description: t.function.description,
+          parameters: t.function.parameters,
+        })),
+      },
+    ];
   }
 
   const generationConfig: Record<string, any> = {};
@@ -139,7 +198,31 @@ export async function createGeminiChatCompletion(
         const data: any = await response.json();
         const candidate = data.candidates?.[0];
         const parts = candidate?.content?.parts || [];
-        const text = parts.map((p: any) => p.text || "").join("");
+        const text = parts
+          .filter((p: any) => p.text)
+          .map((p: any) => p.text || "")
+          .join("");
+
+        const functionCallParts = parts.filter((p: any) => p.functionCall);
+        const toolCalls = functionCallParts.map((p: any, idx: number) => ({
+          id: `call_${Date.now()}_${idx}`,
+          type: "function",
+          function: {
+            name: p.functionCall.name,
+            arguments:
+              typeof p.functionCall.args === "string"
+                ? p.functionCall.args
+                : JSON.stringify(p.functionCall.args || {}),
+          },
+        }));
+
+        const message: Record<string, any> = {
+          role: "assistant",
+          content: text || (toolCalls.length > 0 ? null : ""),
+        };
+        if (toolCalls.length > 0) {
+          message.tool_calls = toolCalls;
+        }
 
         return {
           id: `gemini-${Date.now()}`,
@@ -148,11 +231,11 @@ export async function createGeminiChatCompletion(
           choices: [
             {
               index: 0,
-              message: {
-                role: "assistant",
-                content: text,
-              },
-              finish_reason: candidate?.finishReason || "stop",
+              message,
+              finish_reason:
+                toolCalls.length > 0
+                  ? "tool_calls"
+                  : candidate?.finishReason || "stop",
             },
           ],
           usage: {
@@ -180,7 +263,7 @@ export async function createGeminiChatCompletion(
 export async function* streamGeminiChatCompletion(
   apiKey: string,
   request: ChatCompletionRequest,
-): AsyncGenerator<string, void, unknown> {
+): AsyncGenerator<string | object, void, unknown> {
   const initialModel = sanitizeModelName(request.model);
   const modelsToTry = [
     initialModel,
@@ -246,9 +329,27 @@ export async function* streamGeminiChatCompletion(
             const parsed = JSON.parse(jsonStr);
             const candidate = parsed.candidates?.[0];
             const parts = candidate?.content?.parts || [];
-            const text = parts.map((p: any) => p.text || "").join("");
-            if (text) {
-              yield text;
+            for (const p of parts) {
+              if (p.text) {
+                yield { content: p.text };
+              }
+              if (p.functionCall) {
+                yield {
+                  tool_calls: [
+                    {
+                      id: `call_${Date.now()}`,
+                      type: "function",
+                      function: {
+                        name: p.functionCall.name,
+                        arguments:
+                          typeof p.functionCall.args === "string"
+                            ? p.functionCall.args
+                            : JSON.stringify(p.functionCall.args || {}),
+                      },
+                    },
+                  ],
+                };
+              }
             }
           } catch {
             // Ignore partial SSE JSON parse errors

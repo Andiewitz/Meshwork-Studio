@@ -14,68 +14,16 @@ import { LuHistory, LuPlus } from "react-icons/lu";
 import { useReactFlow, useNodes, useEdges } from "@xyflow/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { validateAndRepairCanvas } from "@/lib/ai-canvas-utils";
-
-const SYSTEM_PROMPT = `You are Meshwork AI — an expert cloud architecture co-pilot embedded inside Meshwork Studio, a professional infrastructure diagramming tool.
-
-BEHAVIOR RULES:
-1. Always reply in clear, natural language. Explain what you designed or changed (2-4 sentences) like a senior architect briefing their team.
-2. When generating or modifying a diagram, ALWAYS output the FULL canvas JSON in a single \`\`\`json block AFTER your explanation.
-3. When modifying an existing diagram, emit the COMPLETE updated nodes+edges (not just a diff).
-4. Never show raw IDs, schema fields, or technical boilerplate in your conversational reply.
-5. If the user asks a general question with no diagram change needed, reply normally with no JSON.
-
-VALID NODE TYPES:
-Compute:     server | microservice | worker | logic
-Data:        database | cache | storage | search | influxdb | snowflake | clickhouse
-Networking:  gateway | loadBalancer | cdn | bus | queue | route53 | nats | socketio
-Security:    vault | auth0 | waf
-Monitoring:  prometheus | grafana | datadog
-Infra:       vpc | region | k8s-namespace
-External:    user | app | api | stripe | twilio | shopify
-CI/CD:       github_actions | jenkins | gitlab | argocd
-K8s:         k8s-pod | k8s-deployment | k8s-replicaset | k8s-statefulset | k8s-daemonset
-             k8s-service | k8s-ingress | k8s-configmap | k8s-secret | k8s-pvc
-             k8s-job | k8s-cronjob | k8s-hpa
-Text/Labels: annotation | note
-
-REQUIRED JSON OUTPUT FORMAT:
-\`\`\`json
-{
-  "nodes": [
-    {
-      "id": "unique-string",
-      "type": "database",
-      "position": { "x": 100, "y": 200 },
-      "data": { "label": "Display Name", "category": "Core" },
-      "style": { "width": 144, "height": 120 }
-    }
-  ],
-  "edges": [
-    {
-      "id": "e-1",
-      "source": "node-1",
-      "target": "node-2",
-      "type": "smoothstep",
-      "style": { "stroke": "#3B82F6", "strokeWidth": 1.5 }
-    }
-  ]
-}
-\`\`\`
-`;
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  appliedToCanvas?: boolean;
-}
+import {
+  runMoshAgent,
+  MoshAgentMessage,
+} from "@/features/workspace/agent/moshAgent";
 
 const DEFAULT_SUGGESTIONS = [
-  "Design a scalable Kubernetes microservices architecture",
-  "Set up a high-availability PostgreSQL cluster with Redis",
-  "Build an event-driven data pipeline with Kafka & Workers",
-  "Create a secure AWS VPC with public & private subnets",
+  "Add a Redis caching layer to the backend",
+  "Design a secure AWS VPC with public & private subnets",
+  "Set up a high-availability PostgreSQL cluster",
+  "Build an event-driven Kafka stream processing pipeline",
 ];
 
 const AVAILABLE_MODELS = [
@@ -103,9 +51,10 @@ export function WorkspaceLeftSidebar({
   isOpen,
   onClose,
 }: WorkspaceLeftSidebarProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<MoshAgentMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [agentStatus, setAgentStatus] = useState("Consulting Mosh...");
   const [isDesigning, setIsDesigning] = useState(false);
   const [selectedModel, setSelectedModel] = useState("gemini-3.5-flash");
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
@@ -141,7 +90,7 @@ export function WorkspaceLeftSidebar({
       } finally {
         setIsLoadingSuggestions(false);
       }
-    }, 1200);
+    }, 400);
     return () => clearTimeout(timer);
   }, [isOpen, nodes.length, edges.length]);
 
@@ -162,23 +111,17 @@ export function WorkspaceLeftSidebar({
     }
   }, [messages, isOpen]);
 
-  const parseAIResponse = useCallback((content: string) => {
-    const jsonMatch = /```(?:json)?\n([\s\S]*?)\n```/.exec(content);
-    const display = content.replace(/```(?:json)?\n[\s\S]*?\n```/g, "").trim();
-    return { display, jsonBlock: jsonMatch ? jsonMatch[1].trim() : null };
-  }, []);
-
   const executePrompt = useCallback(
     async (userPrompt: string, modelOverride?: string) => {
       if (!userPrompt.trim()) return;
 
       const modelToUse = modelOverride || selectedModel;
       const isArchitectureTask =
-        /design|create|build|add|connect|attach|draw|architecture|system|app|generate|make|put/i.test(
+        /design|create|build|add|connect|attach|draw|architecture|system|app|generate|make|put|update|delete|remove/i.test(
           userPrompt,
         );
 
-      const userMsg: Message = {
+      const userMsg: MoshAgentMessage = {
         id: Date.now().toString(),
         role: "user",
         content: userPrompt,
@@ -195,6 +138,8 @@ export function WorkspaceLeftSidebar({
 
       setIsLoading(true);
       setIsDesigning(isArchitectureTask);
+      setAgentStatus("Consulting Mosh...");
+
       if (isArchitectureTask) {
         window.dispatchEvent(
           new CustomEvent("mosh:designing", {
@@ -204,111 +149,26 @@ export function WorkspaceLeftSidebar({
       }
 
       try {
-        const { secureFetch } = await import("@/lib/secure-fetch");
         const currentNodes = getNodes();
         const currentEdges = getEdges();
 
-        const canvasContext =
-          currentNodes.length > 0
-            ? `\n\nCURRENT CANVAS (${currentNodes.length} nodes, ${currentEdges.length} edges):\n\`\`\`json\n${JSON.stringify({ nodes: currentNodes, edges: currentEdges })}\n\`\`\`\nVIEWPORT CENTER: approximately x=${centerX}, y=${centerY}. Place new nodes near this center.\nWhen modifying, emit the COMPLETE updated nodes+edges.`
-            : `\n\nThe canvas is empty. VIEWPORT CENTER: x=${centerX}, y=${centerY}. Start your diagram near this point.`;
+        const agentResult = await runMoshAgent({
+          userPrompt,
+          history: messages,
+          currentNodes,
+          currentEdges,
+          viewportCenter: { x: centerX, y: centerY },
+          model: modelToUse,
+          onStatusUpdate: (status) => setAgentStatus(status),
+        });
 
-        const fullSystemPrompt = SYSTEM_PROMPT + canvasContext;
-
-        const payloadMessages = [
-          { role: "system", content: fullSystemPrompt },
-          ...messages
-            .filter((m) => m.id !== "init")
-            .map((m) => ({ role: m.role, content: m.content })),
-          { role: "user", content: userMsg.content },
-        ];
-
-        let response: Response | null = null;
-        let attempt = 0;
-        const maxAttempts = 5;
-        const baseDelay = 1200;
-
-        while (attempt < maxAttempts) {
-          try {
-            response = await secureFetch("/api/v1/ai/chat", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({
-                provider: "gemini",
-                model: modelToUse,
-                messages: payloadMessages,
-                stream: false,
-              }),
-            });
-            if (response.ok) break;
-            if (response.status === 429 || response.status >= 500) {
-              attempt++;
-              if (attempt >= maxAttempts) break;
-              await new Promise((res) =>
-                setTimeout(res, baseDelay * Math.pow(1.5, attempt - 1)),
-              );
-            } else {
-              break;
-            }
-          } catch (err) {
-            attempt++;
-            if (attempt >= maxAttempts) throw err;
-            await new Promise((res) =>
-              setTimeout(res, baseDelay * Math.pow(1.5, attempt - 1)),
-            );
-          }
+        if (agentResult.canvasResult?.applied) {
+          setNodes(agentResult.canvasResult.nodes);
+          setEdges(agentResult.canvasResult.edges);
+          setTimeout(() => fitView({ duration: 700, padding: 0.2 }), 100);
         }
 
-        if (!response?.ok) {
-          const errBody = (await response?.json().catch(() => ({}))) as {
-            error?: string;
-            message?: string;
-          };
-          throw new Error(
-            errBody?.error ??
-              errBody?.message ??
-              `Error ${response?.status ?? "Unknown after retries"}`,
-          );
-        }
-
-        const aiResponse = (await response.json()) as {
-          choices?: { message?: { content?: string } }[];
-        };
-
-        if (!aiResponse.choices?.[0]) {
-          throw new Error("Invalid AI response format received.");
-        }
-
-        const rawContent =
-          aiResponse.choices[0]?.message?.content ?? "No response generated.";
-        const { display, jsonBlock } = parseAIResponse(rawContent);
-
-        let appliedToCanvas = false;
-        if (jsonBlock) {
-          try {
-            const parsed = JSON.parse(jsonBlock);
-            const repaired = validateAndRepairCanvas(parsed);
-            if (repaired) {
-              setNodes(repaired.nodes);
-              setEdges(repaired.edges);
-              setTimeout(() => fitView({ duration: 700, padding: 0.2 }), 100);
-              appliedToCanvas = true;
-            }
-          } catch (err) {
-            console.warn("[MeshworkAI] JSON parse failed:", err);
-          }
-        }
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: (Date.now() + 1).toString(),
-            role: "assistant",
-            content: display || rawContent,
-            appliedToCanvas,
-          },
-        ]);
+        setMessages((prev) => [...prev, agentResult.message]);
       } catch (error: unknown) {
         const errMsg = error instanceof Error ? error.message : "";
         let errorMessage = "An unexpected error occurred.";
@@ -346,7 +206,6 @@ export function WorkspaceLeftSidebar({
       getEdges,
       getViewport,
       messages,
-      parseAIResponse,
       selectedModel,
       setEdges,
       setNodes,
@@ -482,7 +341,33 @@ export function WorkspaceLeftSidebar({
                         {msg.content}
                       </ReactMarkdown>
                     </div>
-                    {msg.appliedToCanvas && (
+
+                    {msg.toolCalls && msg.toolCalls.length > 0 && (
+                      <div className="space-y-1.5 mt-2 pt-2 border-t border-white/[0.08]">
+                        {msg.toolCalls.map((tc) => (
+                          <div
+                            key={tc.id}
+                            className="flex items-start gap-2 p-2 rounded-lg bg-[#00E5A0]/10 border border-[#00E5A0]/20 text-[10px] text-[#00E5A0] font-mono"
+                          >
+                            <SparklesIcon className="w-3.5 h-3.5 mt-0.5 text-[#00E5A0] shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-[#00E5A0]">
+                                {tc.name === "edit_canvas"
+                                  ? "🛠️ Canvas Action: edit_canvas"
+                                  : `🛠️ ${tc.name}`}
+                              </div>
+                              <div className="text-white/80 text-[10px] mt-0.5 whitespace-normal">
+                                {tc.result?.summary ||
+                                  tc.args.explanation ||
+                                  "Modified architecture components."}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {msg.appliedToCanvas && !msg.toolCalls && (
                       <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-white/[0.06] text-[9px] text-emerald-400 font-medium">
                         <CheckIcon className="w-2.5 h-2.5" />
                         Applied to canvas
@@ -500,7 +385,7 @@ export function WorkspaceLeftSidebar({
             <div className="flex items-center gap-2 text-[11px] text-white/50 py-1.5">
               <ArrowPathIcon className="w-3.5 h-3.5 text-[#00E5A0] animate-spin" />
               <span className="font-mono text-[10px] text-[#00E5A0]">
-                {isDesigning ? "Synthesizing architecture..." : "Thinking..."}
+                {agentStatus}
               </span>
             </div>
           )}

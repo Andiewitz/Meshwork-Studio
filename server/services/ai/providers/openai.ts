@@ -9,10 +9,11 @@ export async function createOpenAIChatCompletion(
 
   const response = await openai.chat.completions.create({
     model: request.model,
-    messages: request.messages,
+    messages: request.messages as any,
     temperature: request.temperature ?? 0.7,
     max_tokens: request.maxTokens,
     stream: request.stream ?? false,
+    ...(request.tools ? { tools: request.tools } : {}),
   });
 
   return response;
@@ -26,10 +27,11 @@ export async function* streamOpenAIChatCompletion(
 
   const stream = await openai.chat.completions.create({
     model: request.model,
-    messages: request.messages,
+    messages: request.messages as any,
     temperature: request.temperature ?? 0.7,
     max_tokens: request.maxTokens,
     stream: true,
+    ...(request.tools ? { tools: request.tools } : {}),
   });
 
   for await (const chunk of stream) {

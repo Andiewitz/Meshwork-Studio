@@ -234,18 +234,29 @@ export function createAIRoutes(context: AppContext) {
     async (req: Request, res: Response) => {
       try {
         const userId = req.user!.id;
-        const { provider, model, messages, temperature, maxTokens, stream } =
-          req.body as {
-            provider?: string;
-            model?: string;
-            messages: {
-              role: "user" | "assistant" | "system";
-              content: string;
-            }[];
-            temperature?: number;
-            maxTokens?: number;
-            stream?: boolean;
-          };
+        const {
+          provider,
+          model,
+          messages,
+          temperature,
+          maxTokens,
+          stream,
+          tools,
+        } = req.body as {
+          provider?: string;
+          model?: string;
+          messages: {
+            role: "user" | "assistant" | "system" | "tool";
+            content?: string | null;
+            name?: string;
+            tool_call_id?: string;
+            tool_calls?: any[];
+          }[];
+          temperature?: number;
+          maxTokens?: number;
+          stream?: boolean;
+          tools?: any[];
+        };
 
         if (!messages || !Array.isArray(messages)) {
           return res
@@ -320,10 +331,15 @@ export function createAIRoutes(context: AppContext) {
               temperature,
               maxTokens,
               stream: true,
+              tools,
             });
 
             for await (const chunk of sseStream) {
-              res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+              if (typeof chunk === "string") {
+                res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+              } else {
+                res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+              }
             }
 
             res.write("data: [DONE]\n\n");
@@ -335,6 +351,7 @@ export function createAIRoutes(context: AppContext) {
               temperature,
               maxTokens,
               stream: false,
+              tools,
             });
             res.json(response);
           }
