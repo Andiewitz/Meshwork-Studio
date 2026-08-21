@@ -1,15 +1,9 @@
-import { useQueryClient } from "@tanstack/react-query";
+const rawApiUrl = (import.meta.env.VITE_API_URL as string) || "";
+const API_BASE_URL = rawApiUrl.includes("railway") ? "" : rawApiUrl;
 
-/**
- * Helper to get CSRF token from query cache
- */
-function getCsrfTokenFromCache(): string {
-  try {
-    const queryClient = useQueryClient();
-    return queryClient.getQueryData(["csrf-token"])! || "";
-  } catch {
-    return "";
-  }
+function getApiUrl(path: string): string {
+  if (path.startsWith("http")) return path;
+  return `${API_BASE_URL}${path}`;
 }
 
 /**
@@ -17,11 +11,11 @@ function getCsrfTokenFromCache(): string {
  *
  * This wraps the native fetch API to automatically add:
  * - X-CSRF-Token header for state-changing requests
- * - Proper error handling
+ * - Automatic CSRF token refresh and retry on 403
  *
  * Usage is identical to fetch():
  * ```tsx
- * const response = await secureFetch('/api/v1/auth/register', {
+ * const response = await secureFetch('/api/v1/workspaces', {
  *   method: 'POST',
  *   body: JSON.stringify(data),
  * });
@@ -32,51 +26,47 @@ export async function secureFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const method = (init?.method || "GET").toUpperCase();
+  const requestUrl =
+    typeof input === "string"
+      ? input
+      : input instanceof URL
+        ? input.href
+        : input.url;
+
+  const requestInit: RequestInit = { ...init, credentials: "include" };
 
   // Only add CSRF token for state-changing requests
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+    const headers = new Headers(requestInit.headers);
     const csrfToken = getCsrfToken();
-
-    // Initialize headers if not present
-    if (!init) {
-      init = {};
-    }
-    if (!init.headers) {
-      init.headers = {};
-    }
-
-    // Ensure headers is a plain object (can be HeadersInit)
-    const headers = new Headers(init.headers);
-
-    // Add CSRF token
     if (csrfToken) {
       headers.set("X-CSRF-Token", csrfToken);
     }
-
-    init.headers = headers;
+    requestInit.headers = headers;
   }
 
-  let response = await fetch(input, init);
+  let response = await fetch(input, requestInit);
 
   // Automatic CSRF Token Refresh
   // If the request fails with 403 (CSRF validation failure after server restart),
   // fetch a fresh CSRF token and retry the original request once.
   if (
     response.status === 403 &&
-    !urlString.includes("/api/v1/csrf-token") &&
+    !requestUrl.includes("/api/v1/csrf-token") &&
     !["GET", "HEAD", "OPTIONS"].includes(method)
   ) {
     try {
-      const csrfResponse = await fetch("/api/v1/csrf-token", {
+      const csrfEndpoint = getApiUrl("/api/v1/csrf-token");
+      const csrfResponse = await fetch(csrfEndpoint, {
         credentials: "include",
       });
       if (csrfResponse.ok) {
-        const data = await csrfResponse.json();
+        const data = (await csrfResponse.json()) as { csrfToken?: string };
         if (data.csrfToken) {
           storeCsrfToken(data.csrfToken);
-          // Rebuild headers with the new token
-          const retryInit = { ...init };
-          const retryHeaders = new Headers(init?.headers);
+          // Rebuild headers with the new token and retry
+          const retryInit = { ...requestInit };
+          const retryHeaders = new Headers(retryInit.headers);
           retryHeaders.set("X-CSRF-Token", data.csrfToken);
           retryInit.headers = retryHeaders;
           response = await fetch(input, retryInit);

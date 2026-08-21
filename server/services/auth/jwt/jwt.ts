@@ -9,19 +9,23 @@ export const ACCESS_TOKEN_EXPIRATION = "15m";
 // Refresh token TTL: 7 days
 export const REFRESH_TOKEN_EXPIRATION = "7d";
 
-const JWT_SECRET =
-  process.env.JWT_SECRET || "dev_insecure_jwt_secret_1234567890";
-
-if (!process.env.JWT_SECRET) {
-  log.warn(
-    "JWT_SECRET environment variable is missing! Using insecure default for development.",
-  );
-  if (process.env.NODE_ENV === "production") {
-    log.error(
-      "CRITICAL: JWT_SECRET MUST be set in production to secure tokens!",
+function requireJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.length < 32) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "FATAL: JWT_SECRET environment variable must be set and at least 32 characters in production!",
+      );
+    }
+    log.warn(
+      "JWT_SECRET environment variable is missing or short! Using local development key.",
     );
+    return secret || "dev_insecure_jwt_secret_1234567890_min_32_chars";
   }
+  return secret;
 }
+
+const JWT_SECRET = requireJwtSecret();
 
 export interface JwtPayload {
   userId: string;

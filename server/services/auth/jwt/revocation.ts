@@ -49,7 +49,7 @@ export async function revokeAccessToken(jti: string): Promise<void> {
 /**
  * Checks if a specific token (by its JTI) has been revoked.
  */
-export async function isRefreshTokenRevoked(jti: string): Promise<boolean> {
+export async function isTokenRevoked(jti: string): Promise<boolean> {
   const redis = getRedis();
   if (!redis) {
     log.warn("Redis is not available, cannot verify token revocation status");
@@ -64,3 +64,6 @@ export async function isRefreshTokenRevoked(jti: string): Promise<boolean> {
     return false;
   }
 }
+
+export const isAccessTokenRevoked = isTokenRevoked;
+export const isRefreshTokenRevoked = isTokenRevoked;

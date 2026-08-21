@@ -2,6 +2,15 @@ import "dotenv/config";
 import { logger, createChildLogger } from "./lib/logger";
 const log = createChildLogger("server");
 log.info("Starting initialization phase 0...");
+
+if (
+  process.env.NODE_ENV === "production" &&
+  process.env.E2E_BYPASS_AUTH === "true"
+) {
+  throw new Error(
+    "FATAL SECURITY ERROR: E2E_BYPASS_AUTH must never be enabled in production!",
+  );
+}
 import express, { type Request, Response, NextFunction } from "express";
 import { db } from "./lib/db";
 import { sql } from "drizzle-orm";

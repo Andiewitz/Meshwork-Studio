@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
-import { registerAuthRoutes } from "@server/modules/auth/routes";
+import { registerAuthRoutes } from "@services/auth/routes";
 
 // --- Shared mutable state (hoisted so vi.mock factories can access them) ---
 const { mockUsers, mockRedisStore, state, dbProxy, resetDbChain } = vi.hoisted(

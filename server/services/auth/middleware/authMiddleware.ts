@@ -7,37 +7,57 @@ import memorystore from "memorystore";
 import { getRedis } from "@server/lib/redis";
 import { createGoogleStrategy } from "../strategies/google";
 import { createLocalStrategy } from "../strategies/local";
-import { verifyToken, isRefreshTokenRevoked } from "../jwt";
+import { verifyToken, isAccessTokenRevoked } from "../jwt";
+import { authStorage } from "../db/storage";
 
 const log = createChildLogger("auth-middleware");
 
-const getSession = () => {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-
-  if (!process.env.SESSION_SECRET) {
-    log.error("CRITICAL: SESSION_SECRET environment variable is missing!");
+function requireSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32) {
     if (process.env.NODE_ENV === "production") {
-      log.error(
-        "Using emergency fallback secret. SESSIONS WILL NOT BE SECURE UNTIL FIXED.",
+      throw new Error(
+        "FATAL: SESSION_SECRET environment variable must be set and at least 32 characters in production!",
       );
     }
+    log.warn(
+      "SESSION_SECRET environment variable is missing or short! Using local development key.",
+    );
+    return secret || "dev_only_insecure_dev_key_12345_min_32_chars";
   }
+  return secret;
+}
 
+const getSession = () => {
+  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const isProduction = process.env.NODE_ENV === "production";
+  const sessionSecret = requireSessionSecret();
   const redisClient = getRedis();
 
   if (!redisClient) {
-    log.warn(
-      "Redis client not available, falling back to in-memory session store (development only)",
-    );
+    if (isProduction) {
+      log.warn(
+        "Redis client not available in production — falling back to memory store with secure cookie.",
+      );
+    } else {
+      log.warn(
+        "Redis client not available, falling back to in-memory session store (development only)",
+      );
+    }
     const MemoryStore = memorystore(session);
     return session({
-      secret: process.env.SESSION_SECRET || "dev_only_insecure_dev_key_12345",
+      secret: sessionSecret,
       resave: false,
       saveUninitialized: false,
       store: new MemoryStore({
         checkPeriod: 86400000,
       }),
-      cookie: { secure: false },
+      cookie: {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: "lax",
+        maxAge: sessionTtl,
+      },
     });
   }
 
@@ -48,15 +68,13 @@ const getSession = () => {
   });
 
   return session({
-    secret:
-      process.env.SESSION_SECRET ||
-      "emergency_fallback_secret_not_real_production_key_12345",
+    secret: sessionSecret,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction,
       sameSite: "lax",
       maxAge: sessionTtl,
     },
@@ -69,8 +87,15 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  passport.serializeUser((user: Express.User, cb) => cb(null, user));
-  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+  passport.serializeUser((user: any, cb) => cb(null, user.id));
+  passport.deserializeUser(async (id: string, cb) => {
+    try {
+      const user = await authStorage.getUser(id);
+      cb(null, user || false);
+    } catch (err) {
+      cb(err, null);
+    }
+  });
 
   // Register Google strategy if configured
   const googleStrategy = createGoogleStrategy();
@@ -85,6 +110,9 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   // E2E Test Auth Bypass — allow mock dashboard/canvas testing without active session cookie
   if (process.env.E2E_BYPASS_AUTH === "true") {
+    if (process.env.NODE_ENV === "production") {
+      return res.status(500).json({ message: "Authentication misconfigured" });
+    }
     req.user = {
       id: "mock-id-1",
       email: "architect@meshwork.dev",
@@ -99,8 +127,13 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return next();
   }
 
-  // First check if the user is authenticated via Passport session (useful during transition/OAuth)
-  if (req.isAuthenticated && req.isAuthenticated()) {
+  // First check if the user is authenticated via Passport session (useful during OAuth)
+  if (req.isAuthenticated && req.isAuthenticated() && req.user) {
+    const user = await authStorage.getUser((req.user as any).id);
+    if (!user) {
+      return res.status(401).json({ message: "User account no longer exists" });
+    }
+    req.user = user;
     return next();
   }
 
@@ -117,12 +150,18 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
   // Check if this specific access token has been explicitly revoked
   if (payload.jti) {
-    const revoked = await isRefreshTokenRevoked(payload.jti);
+    const revoked = await isAccessTokenRevoked(payload.jti);
     if (revoked) {
       return res.status(401).json({ message: "Token has been revoked" });
     }
   }
 
-  req.user = { id: payload.userId } as Express.User;
+  // Rehydrate full user object from DB
+  const user = await authStorage.getUser(payload.userId);
+  if (!user) {
+    return res.status(401).json({ message: "User account no longer exists" });
+  }
+
+  req.user = user;
   next();
 };

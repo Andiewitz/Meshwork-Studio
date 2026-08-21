@@ -95,6 +95,7 @@ export function registerAuthRoutes(app: Express, context: AppContext): void {
 
       passport.authenticate("google", {
         scope: ["profile", "email"],
+        state: true,
       })(req, res, next);
     },
   );
@@ -162,12 +163,16 @@ export function registerAuthRoutes(app: Express, context: AppContext): void {
     async (req: Request, res: Response) => {
       log.info({ email: req.body?.email }, "Register attempt received");
       try {
-        const { email, password, firstName, lastName } = req.body as {
+        const rawBody = req.body as {
           email: string;
           password: string;
           firstName?: string;
           lastName?: string;
         };
+        const email = rawBody.email.trim().toLowerCase();
+        const password = rawBody.password;
+        const firstName = rawBody.firstName;
+        const lastName = rawBody.lastName;
 
         const validation = validatePasswordStrength(password);
         if (!validation.valid) {
@@ -267,7 +272,14 @@ export function registerAuthRoutes(app: Express, context: AppContext): void {
     authLimiter,
     validate({ body: loginSchema }),
     (req: Request, res: Response, next: NextFunction) => {
-      const { email } = (req.body ?? {}) as { email?: string };
+      const rawEmail = (req.body ?? {}).email;
+      const email =
+        typeof rawEmail === "string"
+          ? rawEmail.trim().toLowerCase()
+          : undefined;
+      if (req.body && email) {
+        req.body.email = email;
+      }
       log.info({ email }, "Login attempt received");
 
       passport.authenticate(
@@ -293,15 +305,9 @@ export function registerAuthRoutes(app: Express, context: AppContext): void {
               },
               "Login: authentication rejected by strategy",
             );
-            const response: { message: string; locked_until?: Date } = {
-              message:
-                info?.message ??
-                "Authentication failed - please check your credentials",
-            };
-            if (info?.lockedUntil) {
-              response.locked_until = info.lockedUntil;
-            }
-            return res.status(401).json(response);
+            return res.status(401).json({
+              message: "Invalid email or password",
+            });
           }
 
           log.info(
@@ -420,13 +426,28 @@ export function registerAuthRoutes(app: Express, context: AppContext): void {
           .json({ message: "Service temporarily unavailable" });
       }
 
-      const { accessToken } = generateTokens({ id: payload.userId });
+      const { accessToken, refreshToken: newRefreshToken } = generateTokens({
+        id: payload.userId,
+      });
 
+      // Revoke the old refresh token JTI to prevent token reuse/replay
+      if (payload.jti) {
+        await revokeRefreshToken(payload.jti);
+      }
+
+      const isProd = process.env.NODE_ENV === "production";
       res.cookie("access_token", accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: isProd,
         sameSite: "lax",
         maxAge: 15 * 60 * 1000,
+      });
+
+      res.cookie("refresh_token", newRefreshToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
       const accessTokenExpiresAt = new Date(
@@ -440,40 +461,44 @@ export function registerAuthRoutes(app: Express, context: AppContext): void {
   );
 
   // Logout
-  app.post("/api/v1/auth/logout", async (req: Request, res: Response) => {
-    const refreshToken = req.cookies?.refresh_token as string | undefined;
-    if (refreshToken) {
-      const payload = verifyToken(refreshToken, "refresh");
-      if (payload?.jti) {
-        await revokeRefreshToken(payload.jti);
+  app.post(
+    "/api/v1/auth/logout",
+    csrfProtection,
+    async (req: Request, res: Response) => {
+      const refreshToken = req.cookies?.refresh_token as string | undefined;
+      if (refreshToken) {
+        const payload = verifyToken(refreshToken, "refresh");
+        if (payload?.jti) {
+          await revokeRefreshToken(payload.jti);
+        }
       }
-    }
 
-    const accessToken = req.cookies?.access_token as string | undefined;
-    if (accessToken) {
-      const payload = verifyToken(accessToken, "access");
-      if (payload?.jti) {
-        await revokeAccessToken(payload.jti);
+      const accessToken = req.cookies?.access_token as string | undefined;
+      if (accessToken) {
+        const payload = verifyToken(accessToken, "access");
+        if (payload?.jti) {
+          await revokeAccessToken(payload.jti);
+        }
       }
-    }
 
-    res.clearCookie("access_token");
-    res.clearCookie("refresh_token");
+      res.clearCookie("access_token");
+      res.clearCookie("refresh_token");
 
-    req.logout((logoutErr: Error | null) => {
-      if (logoutErr) {
-        log.error(
-          {
-            err: logoutErr,
-            userId: (req.user as AuthenticatedUser | undefined)?.id,
-          },
-          "Logout error",
-        );
-        return res.status(500).json({ message: "Logout failed" });
-      }
-      res.json({ message: "Logged out successfully" });
-    });
-  });
+      req.logout((logoutErr: Error | null) => {
+        if (logoutErr) {
+          log.error(
+            {
+              err: logoutErr,
+              userId: (req.user as AuthenticatedUser | undefined)?.id,
+            },
+            "Logout error",
+          );
+          return res.status(500).json({ message: "Logout failed" });
+        }
+        res.json({ message: "Logged out successfully" });
+      });
+    },
+  );
 
   // Get current authenticated user
   app.get(
@@ -551,6 +576,7 @@ export function registerAuthRoutes(app: Express, context: AppContext): void {
   // Update user preferences
   app.patch(
     "/api/v1/user/preferences",
+    csrfProtection,
     isAuthenticated,
     async (req: Request, res: Response) => {
       const authenticatedReq = req as AuthenticatedRequest;
@@ -596,6 +622,7 @@ export function registerAuthRoutes(app: Express, context: AppContext): void {
   // Update user profile
   app.patch(
     "/api/v1/user/profile",
+    csrfProtection,
     isAuthenticated,
     async (req: Request, res: Response) => {
       const authenticatedReq = req as AuthenticatedRequest;

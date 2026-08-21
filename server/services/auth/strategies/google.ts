@@ -26,6 +26,7 @@ export function createGoogleStrategy(): GoogleStrategy | null {
       clientSecret,
       callbackURL,
       scope: ["profile", "email"],
+      state: true,
     },
     async (_accessToken, _refreshToken, profile, done) => {
       try {

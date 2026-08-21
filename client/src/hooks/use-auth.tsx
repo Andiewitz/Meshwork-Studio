@@ -112,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isRefreshingRef = useRef(false);
+  const refreshRetryCountRef = useRef(0);
 
   // ── Schedule the next silent refresh ──────────────────────────────────────
 
@@ -133,16 +134,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         if (res.ok) {
+          refreshRetryCountRef.current = 0;
           const data = (await res.json()) as { accessTokenExpiresAt: string };
           setAccessTokenExpiresAt(data.accessTokenExpiresAt);
           scheduleRefresh(data.accessTokenExpiresAt);
         } else {
-          // Refresh token is expired or revoked → boot the user
+          // Explicit 401/403: Refresh token is expired or revoked → boot the user
           bootToLogin();
         }
       } catch {
-        // Network failure — try again in 30s before giving up
-        bootToLogin();
+        // Transient network failure — retry up to 3 times before giving up
+        const retries = refreshRetryCountRef.current;
+        if (retries < 3) {
+          refreshRetryCountRef.current += 1;
+          const backoffDelay = Math.min(10_000 * 2 ** retries, 60_000);
+          refreshTimerRef.current = setTimeout(() => {
+            scheduleRefresh(new Date(Date.now()).toISOString());
+          }, backoffDelay);
+        } else {
+          bootToLogin();
+        }
       } finally {
         isRefreshingRef.current = false;
       }
