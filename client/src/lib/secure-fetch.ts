@@ -61,13 +61,18 @@ export async function secureFetch(
   // Automatic JWT Token Refresh
   // If the request fails with 401 and it's not the refresh endpoint itself,
   // we try to use the refresh_token cookie to get a new access_token cookie.
+  // NOTE: /auth/me is also excluded — fetchUser() returns null on 401 from that
+  // endpoint and ProtectedRoute does a clean Wouter redirect. Attempting a refresh
+  // for /auth/me fires session-expired before useAuth's useEffect listener mounts,
+  // causing the redirect to fire into a void and leaving the user on a broken state.
   const urlString = input.toString();
   if (
     response.status === 401 &&
     !urlString.includes("/api/v1/auth/refresh") &&
     !urlString.includes("/api/v1/auth/login") &&
     !urlString.includes("/api/v1/auth/logout") &&
-    !urlString.includes("/api/v1/auth/register")
+    !urlString.includes("/api/v1/auth/register") &&
+    !urlString.includes("/api/v1/auth/me")
   ) {
     try {
       const refreshResponse = await fetch("/api/v1/auth/refresh", {
@@ -92,13 +97,14 @@ export async function secureFetch(
       console.warn("Token refresh failed:", refreshErr);
       window.dispatchEvent(new CustomEvent("session-expired"));
     }
-  } else if (
-    response.status === 401 &&
-    (urlString.includes("/api/v1/auth/refresh") ||
-      urlString.includes("/api/v1/auth/me"))
-  ) {
-    window.dispatchEvent(new CustomEvent("session-expired"));
   }
+  // NOTE: We intentionally do NOT fire session-expired for /auth/me 401 here.
+  // fetchUser() in use-auth.ts already handles that case by returning null,
+  // which causes ProtectedRoute to do a clean Wouter redirect. Firing
+  // session-expired for /auth/me creates a race where the handler runs before
+  // useAuth's useEffect listener is mounted (initial page load), so the redirect
+  // fires into a void. The WebSocket Unauthorized and the refresh-failure paths
+  // are the correct triggers for session-expired on an active session.
 
   // Automatic CSRF Token Refresh
   // If the request fails with 403 (CSRF validation failure after server restart),

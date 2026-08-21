@@ -82,6 +82,12 @@ export function useAuth() {
       queryClient.setQueryData(["/api/v1/auth/me"], null);
       queryClient.clear();
 
+      // Always do a hard redirect to login with the session_expired reason.
+      // We cannot bail out based on isPublicRoute here because Wouter's client-side
+      // <Redirect> (triggered by user becoming null) may have already called
+      // history.pushState("/login") BEFORE this handler evaluates window.location.pathname.
+      // That makes isPublicRoute = true and silently swallows the redirect, leaving
+      // the user on a broken state without the "session expired" banner.
       const path = window.location.pathname;
       const isPublicRoute =
         path.startsWith("/login") ||
@@ -91,9 +97,11 @@ export function useAuth() {
         path.startsWith("/terms") ||
         path.startsWith("/privacy");
 
-      if (!isPublicRoute) {
-        window.location.href = `/login?reason=session_expired&redirect=${encodeURIComponent(path)}`;
-      }
+      // If we're on a private route, redirect and carry the path as the post-login destination.
+      // If we're already on a public route (e.g. Wouter already pushed /login), still do a
+      // full page reload to /login?reason=session_expired so the banner appears.
+      const redirectTarget = isPublicRoute ? "/home" : path;
+      window.location.href = `/login?reason=session_expired&redirect=${encodeURIComponent(redirectTarget)}`;
     };
 
     window.addEventListener("session-expired", handleSessionExpired);

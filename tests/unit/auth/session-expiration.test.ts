@@ -90,7 +90,12 @@ describe("Session Expiration & Auto-Logout Flow", () => {
       expect(sessionExpiredEvents.length).toBeGreaterThanOrEqual(1);
     });
 
-    it("should dispatch 'session-expired' when /api/v1/auth/me returns 401", async () => {
+    it("should NOT dispatch 'session-expired' when /api/v1/auth/me returns 401 (handled by fetchUser returning null)", async () => {
+      // Bug fix: We removed the else-if in secureFetch that fired session-expired for
+      // /auth/me 401. fetchUser() already handles this gracefully by returning null,
+      // which lets ProtectedRoute do a clean Wouter redirect. Firing session-expired
+      // from secureFetch for /auth/me created a race condition where the event was
+      // dispatched before useAuth's useEffect listener had mounted.
       const mockFetch = vi.fn().mockImplementation((url: string) => {
         if (url.includes("/api/v1/auth/me")) {
           return Promise.resolve(
@@ -111,7 +116,9 @@ describe("Session Expiration & Auto-Logout Flow", () => {
       const sessionExpiredEvents = dispatchedEvents.filter(
         (e) => e.type === "session-expired",
       );
-      expect(sessionExpiredEvents.length).toBeGreaterThanOrEqual(1);
+      // secureFetch must NOT fire session-expired for /auth/me — that case is
+      // handled upstream by fetchUser() returning null and ProtectedRoute redirecting.
+      expect(sessionExpiredEvents.length).toBe(0);
     });
 
     it("should NOT dispatch 'session-expired' when token refresh successfully recovers", async () => {
@@ -183,28 +190,32 @@ describe("Session Expiration & Auto-Logout Flow", () => {
   });
 
   describe("Auto-Logout Reaction and Redirection Logic", () => {
+    // Shared simulation of the FIXED useAuth session-expired handler
+    const simulateSessionExpiredHandler = () => {
+      queryClient.setQueryData(["/api/v1/auth/me"], null);
+      queryClient.clear();
+
+      const path = window.location.pathname;
+      const isPublicRoute =
+        path.startsWith("/login") ||
+        path.startsWith("/register") ||
+        path === "/" ||
+        path.startsWith("/docs") ||
+        path.startsWith("/terms") ||
+        path.startsWith("/privacy");
+
+      // FIX: Always redirect — even if already on a public route.
+      // Wouter's <Redirect> may have already pushed /login via history.pushState
+      // before this handler fires, making isPublicRoute=true and previously
+      // silently swallowing the redirect. Now we always redirect so the
+      // ?reason=session_expired param lands correctly and the banner appears.
+      const redirectTarget = isPublicRoute ? "/home" : path;
+      window.location.href = `/login?reason=session_expired&redirect=${encodeURIComponent(redirectTarget)}`;
+    };
+
     it("should clear query cache and redirect to /login with reason=session_expired when on a protected route", () => {
       const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
       const clearSpy = vi.spyOn(queryClient, "clear");
-
-      // Simulate the useAuth session-expired handler logic
-      const simulateSessionExpiredHandler = () => {
-        queryClient.setQueryData(["/api/v1/auth/me"], null);
-        queryClient.clear();
-
-        const path = window.location.pathname;
-        const isPublicRoute =
-          path.startsWith("/login") ||
-          path.startsWith("/register") ||
-          path === "/" ||
-          path.startsWith("/docs") ||
-          path.startsWith("/terms") ||
-          path.startsWith("/privacy");
-
-        if (!isPublicRoute) {
-          window.location.href = `/login?reason=session_expired&redirect=${encodeURIComponent(path)}`;
-        }
-      };
 
       // Set user on a protected workspace page
       window.location.pathname = "/workspace/42";
@@ -218,32 +229,22 @@ describe("Session Expiration & Auto-Logout Flow", () => {
       );
     });
 
-    it("should NOT trigger redirect if user is already on public login page", () => {
-      const initialHref = "http://localhost:5000/login";
+    it("should STILL redirect with reason=session_expired even when Wouter has already pushed /login (the race-condition fix)", () => {
+      // This tests the core bug: Wouter's <Redirect> changes window.location.pathname
+      // to /login (via history.pushState) BEFORE our handler fires. Old code bailed
+      // out because isPublicRoute=true, meaning no redirect and no banner. New code
+      // always redirects with redirect=/home so the session_expired banner always shows.
       window.location.pathname = "/login";
-      window.location.href = initialHref;
-
-      const simulateSessionExpiredHandler = () => {
-        queryClient.setQueryData(["/api/v1/auth/me"], null);
-        queryClient.clear();
-
-        const path = window.location.pathname;
-        const isPublicRoute =
-          path.startsWith("/login") ||
-          path.startsWith("/register") ||
-          path === "/" ||
-          path.startsWith("/docs") ||
-          path.startsWith("/terms") ||
-          path.startsWith("/privacy");
-
-        if (!isPublicRoute) {
-          window.location.href = `/login?reason=session_expired&redirect=${encodeURIComponent(path)}`;
-        }
-      };
+      window.location.href =
+        "http://localhost:5000/login?redirect=%2Fworkspace%2F42";
 
       simulateSessionExpiredHandler();
 
-      expect(window.location.href).toBe(initialHref);
+      // Must ALWAYS redirect to /login?reason=session_expired — even from /login
+      expect(window.location.href).toContain("reason=session_expired");
+      expect(window.location.href).toContain("/login");
+      // redirect target should be /home when already on a public route
+      expect(window.location.href).toContain("redirect=%2Fhome");
     });
   });
 
