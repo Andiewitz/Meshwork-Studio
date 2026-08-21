@@ -74,16 +74,35 @@ export function useAuth() {
     refetchOnWindowFocus: true,
   });
 
-  // Fallback listener for session-expired events.
-  // The authoritative handler is registered at module level in main.tsx — it
-  // runs before React even renders, so it will always catch the event first.
-  // This useEffect listener is kept only as a defensive backup.
+  // Listen for session-expired events (triggered by 401s, failed token refreshes, or WS Unauthorized)
   useEffect(() => {
+    let isHandling = false;
     const handleSessionExpired = () => {
-      // The main.tsx module-level handler fires first and does window.location.href.
-      // If we somehow reach here after that, the page is already navigating away —
-      // nothing more to do. Just clear local query cache as a safety measure.
+      if (isHandling) return;
+      isHandling = true;
       queryClient.setQueryData(["/api/v1/auth/me"], null);
+      queryClient.clear();
+
+      // Always do a hard redirect to login with the session_expired reason.
+      // We cannot bail out based on isPublicRoute here because Wouter's client-side
+      // <Redirect> (triggered by user becoming null) may have already called
+      // history.pushState("/login") BEFORE this handler evaluates window.location.pathname.
+      // That makes isPublicRoute = true and silently swallows the redirect, leaving
+      // the user on a broken state without the "session expired" banner.
+      const path = window.location.pathname;
+      const isPublicRoute =
+        path.startsWith("/login") ||
+        path.startsWith("/register") ||
+        path === "/" ||
+        path.startsWith("/docs") ||
+        path.startsWith("/terms") ||
+        path.startsWith("/privacy");
+
+      // If we're on a private route, redirect and carry the path as the post-login destination.
+      // If we're already on a public route (e.g. Wouter already pushed /login), still do a
+      // full page reload to /login?reason=session_expired so the banner appears.
+      const redirectTarget = isPublicRoute ? "/home" : path;
+      window.location.href = `/login?reason=session_expired&redirect=${encodeURIComponent(redirectTarget)}`;
     };
 
     window.addEventListener("session-expired", handleSessionExpired);
