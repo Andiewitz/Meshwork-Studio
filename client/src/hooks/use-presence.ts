@@ -152,6 +152,13 @@ export function usePresence(
 
           case "error": {
             console.warn("[Presence] Server error:", msg.message);
+            if (
+              msg.message === "Unauthorized" ||
+              msg.message?.toLowerCase().includes("unauthorized") ||
+              msg.message?.toLowerCase().includes("expired")
+            ) {
+              window.dispatchEvent(new CustomEvent("session-expired"));
+            }
             break;
           }
 

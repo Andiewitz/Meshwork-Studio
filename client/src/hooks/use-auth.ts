@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { secureFetch } from "../lib/secure-fetch";
 import type { User } from "@shared/schema";
 
@@ -13,7 +13,7 @@ function getApiUrl(path: string): string {
 
 async function fetchUser(): Promise<User | null> {
   try {
-    const response = await fetch(getApiUrl("/api/v1/auth/me"), {
+    const response = await secureFetch(getApiUrl("/api/v1/auth/me"), {
       credentials: "include",
     });
 
@@ -72,6 +72,35 @@ export function useAuth() {
     retry: false,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  // Listen for session-expired events (triggered by 401s, failed token refreshes, or WS Unauthorized)
+  useEffect(() => {
+    let isHandling = false;
+    const handleSessionExpired = () => {
+      if (isHandling) return;
+      isHandling = true;
+      queryClient.setQueryData(["/api/v1/auth/me"], null);
+      queryClient.clear();
+
+      const path = window.location.pathname;
+      const isPublicRoute =
+        path.startsWith("/login") ||
+        path.startsWith("/register") ||
+        path === "/" ||
+        path.startsWith("/docs") ||
+        path.startsWith("/terms") ||
+        path.startsWith("/privacy");
+
+      if (!isPublicRoute) {
+        window.location.href = `/login?reason=session_expired&redirect=${encodeURIComponent(path)}`;
+      }
+    };
+
+    window.addEventListener("session-expired", handleSessionExpired);
+    return () => {
+      window.removeEventListener("session-expired", handleSessionExpired);
+    };
+  }, [queryClient]);
 
   const logoutMutation = useMutation({
     mutationFn: logout,

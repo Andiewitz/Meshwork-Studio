@@ -66,7 +66,8 @@ export async function secureFetch(
     response.status === 401 &&
     !urlString.includes("/api/v1/auth/refresh") &&
     !urlString.includes("/api/v1/auth/login") &&
-    !urlString.includes("/api/v1/auth/logout")
+    !urlString.includes("/api/v1/auth/logout") &&
+    !urlString.includes("/api/v1/auth/register")
   ) {
     try {
       const refreshResponse = await fetch("/api/v1/auth/refresh", {
@@ -80,10 +81,23 @@ export async function secureFetch(
         // Refresh succeeded, the new access_token cookie is now set.
         // Retry the original request!
         response = await fetch(input, init);
+        if (response.status === 401) {
+          window.dispatchEvent(new CustomEvent("session-expired"));
+        }
+      } else {
+        // Refresh failed (expired or invalid refresh token) -> boot user
+        window.dispatchEvent(new CustomEvent("session-expired"));
       }
     } catch (refreshErr) {
       console.warn("Token refresh failed:", refreshErr);
+      window.dispatchEvent(new CustomEvent("session-expired"));
     }
+  } else if (
+    response.status === 401 &&
+    (urlString.includes("/api/v1/auth/refresh") ||
+      urlString.includes("/api/v1/auth/me"))
+  ) {
+    window.dispatchEvent(new CustomEvent("session-expired"));
   }
 
   // Automatic CSRF Token Refresh

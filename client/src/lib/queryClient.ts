@@ -70,12 +70,15 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(getApiUrl(queryKey.join("/")), {
+    const res = await secureFetch(getApiUrl(queryKey.join("/")), {
       credentials: "include",
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    if (res.status === 401) {
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      }
+      window.dispatchEvent(new CustomEvent("session-expired"));
     }
 
     await throwIfResNotOk(res);

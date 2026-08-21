@@ -135,8 +135,21 @@ function LoginForm() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const reason = params.get("reason");
     const err = params.get("error");
-    if (err === "google") {
+
+    if (reason === "session_expired") {
+      setOauthError(
+        "Your session has expired. Please sign in again to continue.",
+      );
+      toast({
+        title: "Session Expired",
+        description:
+          "Your security session has expired. Please sign in again to continue.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (err === "google") {
       setOauthError(
         "Google sign-in failed. Your account may not be linked, or access was denied.",
       );
@@ -157,7 +170,7 @@ function LoginForm() {
       );
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (step === "password") {
