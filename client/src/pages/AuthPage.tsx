@@ -9,7 +9,7 @@ import {
   ExclamationTriangleIcon as AlertCircle,
 } from "@heroicons/react/24/outline";
 import { MeshworkLogo } from "@/components/MeshworkLogo";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { formatUserErrorMessage } from "@/lib/error-utils";
 import { refreshCsrfToken } from "@/lib/csrf-init";
 import { PASSWORD_POLICY, validatePasswordStrength } from "@shared/auth";
@@ -17,8 +17,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
 import ReCAPTCHA from "react-google-recaptcha";
 
+import { useAuth } from "@/hooks/use-auth";
+import type { User } from "@shared/schema";
+
 interface ApiLoginResponse {
-  user: { email: string };
+  user: User;
+  accessTokenExpiresAt: string;
 }
 
 async function handlePendingPromptAndRedirect(
@@ -119,6 +123,7 @@ function SocialButton({
 function LoginForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { notifyLoginSuccess } = useAuth();
   const [step, setStep] = useState<"email" | "password">("email");
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -212,7 +217,8 @@ function LoginForm() {
         title: "Welcome back!",
         description: `Logged in as ${data.user.email}`,
       });
-      queryClient.setQueryData(["/api/v1/auth/me"], data.user);
+      // Notify the AuthProvider: sets user + starts the proactive refresh timer
+      notifyLoginSuccess(data.user, data.accessTokenExpiresAt);
       await handlePendingPromptAndRedirect(setLocation);
     } catch (err: unknown) {
       const userMessage = formatUserErrorMessage(
@@ -382,6 +388,7 @@ function LoginForm() {
 function RegisterForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { notifyLoginSuccess } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const recaptchaRef = useRef<ReCAPTCHA>(null);
@@ -455,7 +462,8 @@ function RegisterForm() {
       });
       const data = (await res.json()) as ApiLoginResponse;
       toast({ title: "Account created!", description: "Welcome to Meshwork." });
-      queryClient.setQueryData(["/api/v1/auth/me"], data.user);
+      // Notify the AuthProvider: sets user + starts the proactive refresh timer
+      notifyLoginSuccess(data.user, data.accessTokenExpiresAt);
       await handlePendingPromptAndRedirect(setLocation);
     } catch (err: unknown) {
       const userMessage = formatUserErrorMessage(

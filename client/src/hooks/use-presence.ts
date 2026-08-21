@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { NodeChange, EdgeChange } from "@xyflow/react";
+import { bootToLogin } from "./use-auth";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -157,7 +158,7 @@ export function usePresence(
               msg.message?.toLowerCase().includes("unauthorized") ||
               msg.message?.toLowerCase().includes("expired")
             ) {
-              window.dispatchEvent(new CustomEvent("session-expired"));
+              bootToLogin();
             }
             break;
           }

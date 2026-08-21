@@ -235,7 +235,12 @@ export function registerAuthRoutes(app: Express, context: AppContext): void {
               { userId: newUser.id, email },
               "Register: tokens set, response sent",
             );
-            return res.status(201).json({ user: newUser });
+            const accessTokenExpiresAt = new Date(
+              Date.now() + 15 * 60 * 1000,
+            ).toISOString();
+            return res
+              .status(201)
+              .json({ user: newUser, accessTokenExpiresAt });
           } catch (tokenErr: unknown) {
             log.error(
               { err: tokenErr, userId: newUser.id, email },
@@ -340,7 +345,10 @@ export function registerAuthRoutes(app: Express, context: AppContext): void {
                 { userId: user.id, email },
                 "Login: tokens set, response sent",
               );
-              return res.json({ user });
+              const accessTokenExpiresAt = new Date(
+                Date.now() + 15 * 60 * 1000,
+              ).toISOString();
+              return res.json({ user, accessTokenExpiresAt });
             } catch (tokenErr: unknown) {
               log.error(
                 { err: tokenErr, userId: user.id, email },
@@ -421,7 +429,13 @@ export function registerAuthRoutes(app: Express, context: AppContext): void {
         maxAge: 15 * 60 * 1000,
       });
 
-      res.json({ message: "Token refreshed successfully" });
+      const accessTokenExpiresAt = new Date(
+        Date.now() + 15 * 60 * 1000,
+      ).toISOString();
+      res.json({
+        message: "Token refreshed successfully",
+        accessTokenExpiresAt,
+      });
     },
   );
 

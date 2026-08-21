@@ -1,9 +1,4 @@
-import {
-  QueryClient,
-  QueryFunction,
-  QueryCache,
-  MutationCache,
-} from "@tanstack/react-query";
+import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { secureFetch } from "./secure-fetch";
 import { ApiError } from "./error-utils";
 
@@ -83,32 +78,16 @@ export const getQueryFn: <T>(options: {
       if (unauthorizedBehavior === "returnNull") {
         return null;
       }
-      window.dispatchEvent(new CustomEvent("session-expired"));
+      // The AuthProvider's proactive refresh timer should prevent 401s during
+      // an active session. If we somehow hit one anyway, just throw so React
+      // Query surfaces it normally — no event-bus or redirect logic here.
     }
 
     await throwIfResNotOk(res);
     return await res.json();
   };
 
-function handleGlobal401(error: unknown) {
-  const err = error as any;
-  if (
-    err?.status === 401 ||
-    err?.statusCode === 401 ||
-    err?.message?.includes("401") ||
-    err?.message?.toLowerCase().includes("unauthorized")
-  ) {
-    window.dispatchEvent(new CustomEvent("session-expired"));
-  }
-}
-
 export const queryClient = new QueryClient({
-  queryCache: new QueryCache({
-    onError: handleGlobal401,
-  }),
-  mutationCache: new MutationCache({
-    onError: handleGlobal401,
-  }),
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
