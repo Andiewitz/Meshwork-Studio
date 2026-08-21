@@ -86,6 +86,35 @@ export async function secureFetch(
     }
   }
 
+  // Automatic CSRF Token Refresh
+  // If the request fails with 403 (CSRF validation failure after server restart),
+  // fetch a fresh CSRF token and retry the original request once.
+  if (
+    response.status === 403 &&
+    !urlString.includes("/api/v1/csrf-token") &&
+    !["GET", "HEAD", "OPTIONS"].includes(method)
+  ) {
+    try {
+      const csrfResponse = await fetch("/api/v1/csrf-token", {
+        credentials: "include",
+      });
+      if (csrfResponse.ok) {
+        const data = await csrfResponse.json();
+        if (data.csrfToken) {
+          storeCsrfToken(data.csrfToken);
+          // Rebuild headers with the new token
+          const retryInit = { ...init };
+          const retryHeaders = new Headers(init?.headers);
+          retryHeaders.set("X-CSRF-Token", data.csrfToken);
+          retryInit.headers = retryHeaders;
+          response = await fetch(input, retryInit);
+        }
+      }
+    } catch (csrfErr) {
+      console.warn("[CSRF] Token refresh failed:", csrfErr);
+    }
+  }
+
   return response;
 }
 

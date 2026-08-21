@@ -14,6 +14,7 @@ import {
 import { MeshworkLogo } from "@/components/MeshworkLogo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuthModal } from "./AuthModalContext";
+import { refreshCsrfToken } from "@/lib/csrf-init";
 import { PASSWORD_POLICY, validatePasswordStrength } from "@shared/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -110,6 +111,9 @@ function LoginForm() {
         (await res.json()) as ApiLoginResponse & ApiErrorResponse;
 
       if (res.ok) {
+        // Sync a fresh CSRF token with the new server session to prevent
+        // stale-token 403s (e.g. after server restart wipes the CSRF secret)
+        await refreshCsrfToken();
         toast({
           title: "Welcome back!",
           description: `Logged in as ${data.user.email}`,

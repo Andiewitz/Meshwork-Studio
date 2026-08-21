@@ -11,6 +11,7 @@ import {
 import { MeshworkLogo } from "@/components/MeshworkLogo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatUserErrorMessage } from "@/lib/error-utils";
+import { refreshCsrfToken } from "@/lib/csrf-init";
 import { PASSWORD_POLICY, validatePasswordStrength } from "@shared/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
@@ -190,6 +191,9 @@ function LoginForm() {
         password,
       });
       const data = (await res.json()) as ApiLoginResponse;
+      // Sync a fresh CSRF token with the new server session to prevent
+      // stale-token 403s (e.g. after server restart wipes the CSRF secret)
+      await refreshCsrfToken();
       toast({
         title: "Welcome back!",
         description: `Logged in as ${data.user.email}`,
