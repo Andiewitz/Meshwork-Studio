@@ -4,7 +4,10 @@ const log = createChildLogger("server");
 log.info("Starting initialization phase 0...");
 
 import express, { type Request, Response, NextFunction } from "express";
-import { db as workspaceDb } from "./services/workspace/db/connection";
+import {
+  db as workspaceDb,
+  pool as workspacePool,
+} from "./services/workspace/db/connection";
 import { sql } from "drizzle-orm";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -14,7 +17,7 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { apiLimiter } from "./middleware/rateLimit";
-import { isRedisAvailable } from "./lib/redis";
+import { disconnectRedis, isRedisAvailable } from "./lib/redis";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import { metricsRegistry } from "./lib/metrics";
 import path from "path";
@@ -29,9 +32,51 @@ const moduleDir =
 import fs from "fs";
 
 let isAppReady = false;
+let isShuttingDown = false;
 
 const app = express();
 const httpServer = createServer(app);
+
+async function closeHttpServer(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    httpServer.close((err) => {
+      if (
+        err &&
+        (err as NodeJS.ErrnoException).code !== "ERR_SERVER_NOT_RUNNING"
+      ) {
+        log.warn({ err }, "HTTP server did not close cleanly");
+      }
+      resolve();
+    });
+  });
+}
+
+async function shutdown(reason: string, exitCode: number): Promise<void> {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  isAppReady = false;
+  log.info({ reason }, "Starting graceful shutdown");
+  const forceTimer = setTimeout(() => {
+    log.error({ reason }, "Graceful shutdown timed out");
+    process.exit(exitCode || 1);
+  }, 15_000);
+  forceTimer.unref();
+  await closeHttpServer();
+  await Promise.allSettled([disconnectRedis(), workspacePool.end()]);
+  log.info({ reason }, "Graceful shutdown complete");
+  process.exit(exitCode);
+}
+
+process.once("SIGTERM", () => void shutdown("SIGTERM", 0));
+process.once("SIGINT", () => void shutdown("SIGINT", 0));
+process.once("uncaughtException", (err) => {
+  log.fatal({ err }, "Uncaught exception");
+  void shutdown("uncaughtException", 1);
+});
+process.once("unhandledRejection", (reason) => {
+  log.fatal({ err: reason }, "Unhandled rejection");
+  void shutdown("unhandledRejection", 1);
+});
 
 // SECURITY: Trust the NGINX reverse proxy so rate limiting works per user IP, not proxy IP
 app.set("trust proxy", 1);
@@ -199,24 +244,27 @@ app.use(cookieParser());
 // not globally, because it needs session middleware to be initialized first.
 // Session middleware is initialized by setupAuth() in registerRoutes()
 
+async function dependencyChecks() {
+  const checks = { postgres: false, redis: false };
+  try {
+    await workspaceDb.execute(sql`SELECT 1`);
+    checks.postgres = true;
+  } catch (err) {
+    log.error({ err }, "Postgres health check failed");
+  }
+  checks.redis = await isRedisAvailable();
+  return checks;
+}
+
+// Liveness intentionally makes no downstream call; readiness is below.
+app.get("/live", (_req, res) => {
+  res.status(200).json({ status: "live" });
+});
+
 // Real Health Check endpoint
 app.get(["/health", "/healthz"], async (_req, res) => {
   try {
-    const checks = {
-      postgres: false,
-      redis: false,
-    };
-
-    // Check Postgres (workspace is the primary monolith database)
-    try {
-      await workspaceDb.execute(sql`SELECT 1`);
-      checks.postgres = true;
-    } catch (err) {
-      log.error({ err }, "Postgres health check failed");
-    }
-
-    // Check Redis
-    checks.redis = await isRedisAvailable();
+    const checks = await dependencyChecks();
 
     const isHealthy =
       checks.postgres && (!process.env.REDIS_URL || checks.redis);
@@ -239,13 +287,16 @@ app.get(["/health", "/healthz"], async (_req, res) => {
 });
 
 // Readiness Probe
-app.get("/ready", (_req, res) => {
-  if (isAppReady) {
+app.get("/ready", async (_req, res) => {
+  const checks = await dependencyChecks();
+  const ready =
+    isAppReady && checks.postgres && (!process.env.REDIS_URL || checks.redis);
+  if (ready) {
     res
       .status(200)
-      .json({ status: "ready", timestamp: new Date().toISOString() });
+      .json({ status: "ready", timestamp: new Date().toISOString(), checks });
   } else {
-    res.status(503).json({ status: "not_ready" });
+    res.status(503).json({ status: "not_ready", checks });
   }
 });
 
@@ -292,14 +343,6 @@ app.get("/admin", requireAuth, (_req, res) => {
 
 (async () => {
   const port = parseInt(process.env.PORT || "5000", 10);
-
-  // Start listening BEFORE expensive initialization to pass healthchecks early.
-  // Port 0.0.0.0 is required for EC2/Docker.
-  httpServer.listen(port, "0.0.0.0", () => {
-    log.info(
-      `Server started listening on port ${port} (initializing modules...)`,
-    );
-  });
 
   try {
     // Database schema is owned per-service: server/services/<svc>/db/migrations
@@ -367,20 +410,23 @@ app.get("/admin", requireAuth, (_req, res) => {
       },
     );
 
+    // Serve static files LAST so the SPA catch-all doesn't swallow API routes.
+    if (process.env.NODE_ENV === "production") {
+      log.info("Serving static frontend files from /public");
+      serveStatic(app);
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      httpServer.once("error", reject);
+      httpServer.listen(port, "0.0.0.0", () => {
+        httpServer.off("error", reject);
+        resolve();
+      });
+    });
     isAppReady = true;
     log.info(`Server fully ready and serving on port ${port}`);
   } catch (error) {
-    console.error("CRITICAL FAILURE:", error);
     log.fatal({ err: error }, "CRITICAL FAILURE DURING SERVER INITIALIZATION");
-    log.error(
-      "The server is still listening on /health but other routes may be broken.",
-    );
-  }
-
-  // Serve static files LAST so the SPA catch-all doesn't swallow API routes.
-  // Runs outside the try/catch so frontend always loads even if modules fail.
-  if (process.env.NODE_ENV === "production") {
-    log.info("Serving static frontend files from /public");
-    serveStatic(app);
+    await shutdown("initialization failure", 1);
   }
 })();
