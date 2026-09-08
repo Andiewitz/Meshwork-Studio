@@ -122,6 +122,30 @@ interface Item {
   body: Record<string, unknown>;
 }
 
+interface BatchWriteRequest {
+  PutRequest?: { Item: Item };
+  DeleteRequest?: { Key: Record<string, unknown> };
+}
+
+const MAX_BATCH_WRITE_ATTEMPTS = 6;
+const BATCH_WRITE_RETRY_BASE_MS = 25;
+
+/** A successful DynamoDB response can still contain writes that were skipped. */
+export class CanvasWriteIncompleteError extends Error {
+  readonly code = "CANVAS_WRITE_INCOMPLETE";
+  readonly retryable = true;
+
+  constructor(
+    readonly remainingItems: number,
+    readonly attempts: number,
+  ) {
+    super(
+      `DynamoDB did not process ${remainingItems} canvas write${remainingItems === 1 ? "" : "s"} after ${attempts} attempts`,
+    );
+    this.name = "CanvasWriteIncompleteError";
+  }
+}
+
 function nodeItem(workspaceId: string, n: CanvasNode): Item {
   const body = { ...n } as Record<string, unknown>;
   const id = n.id;
@@ -142,17 +166,30 @@ function edgeItem(workspaceId: string, e: CanvasEdge): Item {
   return { pk: partitionKey(workspaceId), sk: `edge#${id}`, body };
 }
 
-async function queryPartition(workspaceId: string): Promise<Item[]> {
+async function queryPartition(
+  workspaceId: string,
+  prefix?: "node#" | "edge#",
+): Promise<Item[]> {
   const { doc } = clients();
   const out: Item[] = [];
   let lastKey: Record<string, unknown> | undefined;
   do {
+    const expressionAttributeNames: Record<string, string> = { "#pk": "pk" };
+    const expressionAttributeValues: Record<string, unknown> = {
+      ":pk": partitionKey(workspaceId),
+    };
+    if (prefix) {
+      expressionAttributeNames["#sk"] = "sk";
+      expressionAttributeValues[":prefix"] = prefix;
+    }
     const res = await doc.send(
       new QueryCommand({
         TableName: TABLE,
-        KeyConditionExpression: "#pk = :pk",
-        ExpressionAttributeNames: { "#pk": "pk" },
-        ExpressionAttributeValues: { ":pk": partitionKey(workspaceId) },
+        KeyConditionExpression: prefix
+          ? "#pk = :pk AND begins_with(#sk, :prefix)"
+          : "#pk = :pk",
+        ExpressionAttributeNames: expressionAttributeNames,
+        ExpressionAttributeValues: expressionAttributeValues,
         ExclusiveStartKey: lastKey,
       }),
     );
@@ -162,60 +199,59 @@ async function queryPartition(workspaceId: string): Promise<Item[]> {
   return out;
 }
 
-async function batchWrite(
-  requests: {
-    PutRequest?: { Item: Item };
-    DeleteRequest?: { Key: Record<string, unknown> };
-  }[],
-): Promise<void> {
+async function batchWrite(requests: BatchWriteRequest[]): Promise<void> {
   const { doc } = clients();
   for (let i = 0; i < requests.length; i += 25) {
-    const chunk = requests.slice(i, i + 25);
-    await doc.send(
-      new BatchWriteCommand({
-        RequestItems: { [TABLE]: chunk },
-      }),
-    );
+    let pending = requests.slice(i, i + 25);
+    let attempts = 0;
+
+    while (pending.length > 0 && attempts < MAX_BATCH_WRITE_ATTEMPTS) {
+      attempts += 1;
+      const response = await doc.send(
+        new BatchWriteCommand({
+          RequestItems: { [TABLE]: pending },
+        }),
+      );
+      pending = (response.UnprocessedItems?.[TABLE] ??
+        []) as BatchWriteRequest[];
+
+      if (pending.length > 0 && attempts < MAX_BATCH_WRITE_ATTEMPTS) {
+        const cappedDelay = Math.min(
+          BATCH_WRITE_RETRY_BASE_MS * 2 ** (attempts - 1),
+          1_000,
+        );
+        const jitter = Math.floor(Math.random() * BATCH_WRITE_RETRY_BASE_MS);
+        await new Promise<void>((resolve) =>
+          setTimeout(resolve, cappedDelay + jitter),
+        );
+      }
+    }
+
+    if (pending.length > 0) {
+      log.error(
+        { attempts, remainingItems: pending.length, table: TABLE },
+        "Canvas batch write incomplete after retries",
+      );
+      throw new CanvasWriteIncompleteError(pending.length, attempts);
+    }
   }
 }
 
 export class DynamoCanvasStorage implements ICanvasStorage {
   async getNodes(workspaceId: string): Promise<CanvasNode[]> {
-    const { doc } = clients();
-    const res = await doc.send(
-      new QueryCommand({
-        TableName: TABLE,
-        KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :prefix)",
-        ExpressionAttributeNames: { "#pk": "pk", "#sk": "sk" },
-        ExpressionAttributeValues: {
-          ":pk": partitionKey(workspaceId),
-          ":prefix": "node#",
-        },
-      }),
+    const items = await queryPartition(workspaceId, "node#");
+    return items.map(
+      (raw) =>
+        ({ ...raw.body, id: raw.sk.slice("node#".length) }) as CanvasNode,
     );
-    return (res.Items ?? []).map((i) => {
-      const raw = i as unknown as { sk: string; body: Omit<CanvasNode, "id"> };
-      return { ...raw.body, id: raw.sk.slice("node#".length) };
-    });
   }
 
   async getEdges(workspaceId: string): Promise<CanvasEdge[]> {
-    const { doc } = clients();
-    const res = await doc.send(
-      new QueryCommand({
-        TableName: TABLE,
-        KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :prefix)",
-        ExpressionAttributeNames: { "#pk": "pk", "#sk": "sk" },
-        ExpressionAttributeValues: {
-          ":pk": partitionKey(workspaceId),
-          ":prefix": "edge#",
-        },
-      }),
+    const items = await queryPartition(workspaceId, "edge#");
+    return items.map(
+      (raw) =>
+        ({ ...raw.body, id: raw.sk.slice("edge#".length) }) as CanvasEdge,
     );
-    return (res.Items ?? []).map((i) => {
-      const raw = i as unknown as { sk: string; body: Omit<CanvasEdge, "id"> };
-      return { ...raw.body, id: raw.sk.slice("edge#".length) };
-    });
   }
 
   async syncCanvas(
@@ -232,7 +268,7 @@ export class DynamoCanvasStorage implements ICanvasStorage {
     const existing = await queryPartition(workspaceId);
     const existingByKey = new Map(existing.map((i) => [i.sk, i]));
 
-    const requests: Parameters<typeof batchWrite>[0] = [];
+    const requests: BatchWriteRequest[] = [];
 
     // deletions: existed but no longer desired
     for (const [sk] of existingByKey) {
