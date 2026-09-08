@@ -241,9 +241,10 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
         });
       }
 
-      eventBus.emit("workspace.deleted", { id });
-
       await workspaceStorage.deleteWorkspace(id);
+      // Only announce the cross-store cleanup after this service's deletion
+      // succeeded. The durable outbox worker will replace this transient path.
+      eventBus.emit("workspace.deleted", { id });
       res.status(204).send();
     },
   );
