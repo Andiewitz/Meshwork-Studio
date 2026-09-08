@@ -758,6 +758,7 @@ function WorkspaceView() {
   type SaveStatus = "saved" | "saving" | "unsaved" | "offline_saved";
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveGenerationRef = useRef(0);
   const isInitialLoad = useRef(true);
 
   const takeSnapshot = useCallback(() => {
@@ -872,10 +873,12 @@ function WorkspaceView() {
     });
 
     // Slow persist to DB (3s debounce)
+    const cacheGeneration = ++saveGenerationRef.current;
     saveCanvasToLocalCache(
       workspaceId,
       persistedCanvas.nodes,
       persistedCanvas.edges,
+      cacheGeneration,
     );
     setSaveStatus("unsaved");
 
@@ -886,7 +889,11 @@ function WorkspaceView() {
     saveTimeoutRef.current = setTimeout(() => {
       setSaveStatus("saving");
       sync(
-        { nodes: persistedCanvas.nodes, edges: persistedCanvas.edges },
+        {
+          nodes: persistedCanvas.nodes,
+          edges: persistedCanvas.edges,
+          cacheGeneration,
+        },
         {
           onSuccess: () => {
             setSaveStatus("saved");
@@ -1138,9 +1145,20 @@ function WorkspaceView() {
       nodes,
       edges,
     });
+    const cacheGeneration = ++saveGenerationRef.current;
+    saveCanvasToLocalCache(
+      workspaceId,
+      persistedCanvas.nodes,
+      persistedCanvas.edges,
+      cacheGeneration,
+    );
     setSaveStatus("saving");
     sync(
-      { nodes: persistedCanvas.nodes, edges: persistedCanvas.edges },
+      {
+        nodes: persistedCanvas.nodes,
+        edges: persistedCanvas.edges,
+        cacheGeneration,
+      },
       {
         onSuccess: () => {
           setSaveStatus("saved");

@@ -25,7 +25,14 @@ export function useCanvas(workspaceId: string | number | null | undefined) {
   });
 
   const syncMutation = useMutation({
-    mutationFn: async ({ nodes, edges }: { nodes: Node[]; edges: Edge[] }) => {
+    mutationFn: async ({
+      nodes,
+      edges,
+    }: {
+      nodes: Node[];
+      edges: Edge[];
+      cacheGeneration?: number;
+    }) => {
       if (!url) throw new Error("Workspace ID is required to sync canvas");
       // Normalize animated property for Postgres compatibility
       const normalizedEdges = edges.map((edge) => ({
@@ -38,8 +45,9 @@ export function useCanvas(workspaceId: string | number | null | undefined) {
       });
       return res.json();
     },
-    onSuccess: () => {
-      if (workspaceId) clearCanvasLocalCache(workspaceId);
+    onSuccess: (_data, variables) => {
+      if (workspaceId)
+        clearCanvasLocalCache(workspaceId, variables.cacheGeneration);
       queryClient.invalidateQueries({ queryKey: [url] });
     },
   });
