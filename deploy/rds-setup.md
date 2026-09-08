@@ -37,10 +37,16 @@ aws rds create-db-instance \
 --master-user-password "your-secure-password" \
 --vpc-security-group-ids sg-rds-xxx \
 --db-subnet-group-name meshwork-db-subnet \
---backup-retention-period 0 \
+--backup-retention-period 7 \
 --no-multi-az \
 --no-publicly-accessible \
---deletion-protection false
+--deletion-protection
+
+> These settings are intentionally non-zero/non-destructive: snapshots on the
+> same account are not a substitute for the verified off-host application
+> archive, but zero retention and no deletion protection provide no recovery
+> window at all. Use the [backup and recovery plan](../plans/Q5-BACKUP-AND-RECOVERY.md)
+> before creating or modifying the production instance.
 
 # 4. Wait for available, then create second database
 

@@ -61,7 +61,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
-          source: "dist,package.json,package-lock.json,.npmrc,client/package.json,server/services/ai/package.json,server/services/canvas/package.json,server/services/metrics/package.json,server/services/team/package.json,server/services/workspace/package.json,scripts/deploy-remote.sh,deploy/nginx.conf,server/services/auth/meshwork-auth"
+          source: "dist,package.json,package-lock.json,.npmrc,client/package.json,server/services/ai/package.json,server/services/canvas/package.json,server/services/metrics/package.json,server/services/team/package.json,server/services/workspace/package.json,scripts/deploy-remote.sh,scripts/install-backup-timer.sh,deploy/nginx.conf,deploy/systemd/meshwork-backup.service,deploy/systemd/meshwork-backup.timer,server/services/auth/meshwork-auth"
           target: "/home/${{ secrets.EC2_USER }}/meshwork-studiov2"
           rm: false
 

@@ -40,6 +40,12 @@ successful completion message.
 
 ### Q5.3 — AWS and host controls
 
+The repository now persists DynamoDB Local to a named Docker volume, bundles
+the verified backup runner with the production artifact, and ships an explicit
+low-priority systemd timer template. Installing it, creating the isolated S3
+bucket/IAM role, and enabling PITR remain operator actions; no AWS resource is
+created by application code.
+
 - Create a separate versioned S3 backup bucket with Block Public Access, KMS,
   lifecycle retention, least-privilege backup/restore roles, and deletion
   isolation.

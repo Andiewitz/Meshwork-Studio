@@ -125,6 +125,27 @@ sudo docker ps
 sudo docker restart emnesh-postgres-workspace emnesh-postgres-auth emnesh-redis
 ```
 
+### Verified backup timer
+
+The deployment bundles the recovery runner in `dist/recovery/backup.cjs`. After
+creating the S3 destination, granting the least-privilege role, enabling canvas
+PITR, and setting the `BACKUP_*` values in the protected `.env`, install the
+reviewed timer once:
+
+```bash
+cd ~/meshwork-studiov2
+chmod +x scripts/install-backup-timer.sh
+./scripts/install-backup-timer.sh
+sudo systemctl start meshwork-backup.service
+journalctl -u meshwork-backup.service -n 100 --no-pager
+```
+
+The service runs nightly with a randomized delay, a 384 MiB memory ceiling, and
+low CPU/I/O priority. A failed service is deliberately visible through systemd;
+do not treat a local Docker volume as a disaster-recovery backup. See
+[`../../plans/Q5-BACKUP-AND-RECOVERY.md`](../../plans/Q5-BACKUP-AND-RECOVERY.md)
+for restore-drill and AWS prerequisites.
+
 ### Nginx (Reverse Proxy & SSL)
 
 ```bash

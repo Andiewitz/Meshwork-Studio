@@ -50,6 +50,21 @@ async function buildAll() {
     logLevel: "info",
   });
 
+  console.log("building recovery runner...");
+  await esbuild({
+    entryPoints: ["scripts/backup-db.ts"],
+    platform: "node",
+    bundle: true,
+    format: "cjs",
+    outfile: "dist/recovery/backup.cjs",
+    define: {
+      "process.env.NODE_ENV": '"production"',
+    },
+    minify: true,
+    external: externals,
+    logLevel: "info",
+  });
+
   console.log("copying admin dashboard...");
   await cp("server/public/admin/index.html", "dist/admin.html");
 }

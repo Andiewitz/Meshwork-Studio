@@ -51,9 +51,10 @@ To deploy updates cleanly:
 
 This project implements two layers of data safety:
 
-### Application-Level Backup (JSON)
+### Application-Level Recovery Archive
 
-Run this before manual schema changes to capture table data as human-readable JSON.
+Run this before manual schema changes to capture the complete service databases
+and canvas snapshot as a verified archive.
 
 ```bash
 BACKUP_S3_URI=s3://meshwork-backups/prod npm run db:backup

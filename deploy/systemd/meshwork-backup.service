@@ -1,0 +1,18 @@
+[Unit]
+Description=Meshwork Studio verified backup archive
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/meshwork-studiov2
+EnvironmentFile=/home/ubuntu/meshwork-studiov2/.env
+ExecStart=/usr/bin/node /home/ubuntu/meshwork-studiov2/dist/recovery/backup.cjs
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+MemoryMax=384M
+TimeoutStartSec=1h

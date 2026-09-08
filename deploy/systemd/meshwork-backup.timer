@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Meshwork Studio backup archive each night
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+RandomizedDelaySec=15m
+Persistent=true
+Unit=meshwork-backup.service
+
+[Install]
+WantedBy=timers.target
