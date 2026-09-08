@@ -759,6 +759,7 @@ function WorkspaceView() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const saveGenerationRef = useRef(0);
+  const canvasRevisionRef = useRef(0);
   const isInitialLoad = useRef(true);
 
   const takeSnapshot = useCallback(() => {
@@ -837,6 +838,7 @@ function WorkspaceView() {
 
   useEffect(() => {
     if (canvasData && lastLoadedId.current !== workspaceId) {
+      canvasRevisionRef.current = canvasData.revision;
       const localCache = getCanvasFromLocalCache(workspaceId);
 
       if (localCache && localCache.nodes && localCache.edges) {
@@ -892,16 +894,22 @@ function WorkspaceView() {
         {
           nodes: persistedCanvas.nodes,
           edges: persistedCanvas.edges,
+          baseRevision: canvasRevisionRef.current,
           cacheGeneration,
         },
         {
-          onSuccess: () => {
+          onSuccess: ({ revision }) => {
+            canvasRevisionRef.current = revision;
             setSaveStatus("saved");
           },
           onError: (err: Error) => {
+            const isConflict =
+              (err as Error & { status?: number }).status === 409;
             toast({
-              title: "Offline Save",
-              description: "Could not reach the server. Changes saved locally.",
+              title: isConflict ? "Canvas changed elsewhere" : "Offline Save",
+              description: isConflict
+                ? "Reload to get the latest canvas; your local changes remain saved."
+                : "Could not reach the server. Changes saved locally.",
               variant: "destructive",
             });
           },
@@ -1157,10 +1165,12 @@ function WorkspaceView() {
       {
         nodes: persistedCanvas.nodes,
         edges: persistedCanvas.edges,
+        baseRevision: canvasRevisionRef.current,
         cacheGeneration,
       },
       {
-        onSuccess: () => {
+        onSuccess: ({ revision }) => {
+          canvasRevisionRef.current = revision;
           setSaveStatus("saved");
           toast({
             title: "Workspace changes saved",

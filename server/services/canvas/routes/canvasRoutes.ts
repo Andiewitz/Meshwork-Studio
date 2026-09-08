@@ -1,5 +1,10 @@
 import type { Express, RequestHandler } from "express";
 import { canvasStorage } from "../db/storage";
+import {
+  CanvasRevisionConflictError,
+  CanvasWriteIncompleteError,
+  CanvasWriteLockedError,
+} from "../db/dynamo";
 import { api } from "@shared/routes";
 import { csrfProtect } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
@@ -39,9 +44,12 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
         .status(403)
         .json({ message: "You do not have access to this workspace" });
 
-    const nodes = await canvasStorage.getNodes(id);
-    const edges = await canvasStorage.getEdges(id);
-    res.json({ nodes, edges });
+    const [nodes, edges, revision] = await Promise.all([
+      canvasStorage.getNodes(id),
+      canvasStorage.getEdges(id),
+      canvasStorage.getCanvasRevision(id),
+    ]);
+    res.json({ nodes, edges, revision });
   });
 
   app.post(
@@ -62,9 +70,38 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
         });
       }
 
-      const { nodes, edges } = api.workspaces.syncCanvas.input.parse(req.body);
-      await canvasStorage.syncCanvas(id, nodes, edges);
-      res.json({ success: true });
+      const { nodes, edges, baseRevision } =
+        api.workspaces.syncCanvas.input.parse(req.body);
+      try {
+        const revision = await canvasStorage.syncCanvas(
+          id,
+          nodes,
+          edges,
+          baseRevision,
+        );
+        res.json({ success: true, revision });
+      } catch (err) {
+        if (err instanceof CanvasRevisionConflictError) {
+          return res.status(409).json({
+            code: err.code,
+            message: "Canvas changed elsewhere. Reload before saving again.",
+            revision: err.currentRevision,
+          });
+        }
+        if (err instanceof CanvasWriteLockedError) {
+          return res.status(503).json({
+            code: err.code,
+            message: "Another canvas save is in progress. Retry shortly.",
+          });
+        }
+        if (err instanceof CanvasWriteIncompleteError) {
+          return res.status(503).json({
+            code: err.code,
+            message: "Canvas save was not fully written. Retry shortly.",
+          });
+        }
+        throw err;
+      }
     },
   );
 

@@ -204,7 +204,7 @@ describe.skipIf(!shouldRun)("canvas + websocket e2e", () => {
           Cookie: `meshwork_assertion=${aliceAssertion}; meshwork_csrf=tok123`,
           "X-CSRF-Token": "tok123",
         },
-        body: JSON.stringify({ nodes, edges }),
+        body: JSON.stringify({ nodes, edges, baseRevision: 0 }),
       },
     );
     expect(syncRes.status, await syncRes.text()).toBe(200);

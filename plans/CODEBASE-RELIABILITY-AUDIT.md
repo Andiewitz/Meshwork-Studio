@@ -10,6 +10,16 @@ are already complete. It supersedes broad reliability statements in the older
 root plan where the current code is more specific. The dedicated
 [CI/CD audit](CI-CD-AUDIT.md) remains the deeper pipeline reference.
 
+## Execution status
+
+The following code repairs have been completed after this audit and are covered
+by regression tests: paginated DynamoDB reads and retried/failing batch writes
+(D01/D02), root-canvas serialization during nested navigation (D03),
+generation-safe browser recovery cache clearing (C01), and revision-checked,
+per-workspace serialized saves with conflict responses (D04). DynamoDB PITR,
+off-host backups, and an exercised restore remain release blockers; the next
+implementation unit is B01.
+
 ## Executive decision
 
 Do not optimize infrastructure or add another platform layer before protecting
@@ -632,17 +642,12 @@ results do not prove the Go HTTP flows.
 
 ### Phase 0 — freeze unsafe behavior (0–2 days)
 
-- D01: retry/fail incomplete batches and retain local recovery.
-- D02: paginate all reads and add multi-page parity tests.
-- D03: stop root autosave while nested until canonical serialization is fixed.
-- Disable or explicitly gate destructive snapshot deletion without a revision.
+- D01/D02/D03/C01/D04: **completed in code**; keep the regression suite required.
 - Enable/verify DynamoDB PITR and take a pre-repair recovery point.
 - Disable automatic AI suggestions or put them behind the existing limits.
 
 ### Phase 1 — make saves and recovery trustworthy (3–7 days)
 
-- D04/C01: revision manifest, conditional writes, serialized generations, 409 UX.
-- Canonical nested serialization and browser regression suite.
 - Replace the backup utility, upload off-host, and complete the first restore drill.
 - Add data-safety counters and alerts.
 

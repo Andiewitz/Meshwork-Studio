@@ -17,9 +17,13 @@ export function useCanvas(workspaceId: string | number | null | undefined) {
   const query = useQuery({
     queryKey: [url],
     queryFn: async () => {
-      if (!url) return { nodes: [], edges: [] };
+      if (!url) return { nodes: [], edges: [], revision: 0 };
       const res = await apiRequest("GET", url);
-      return res.json() as Promise<{ nodes: Node[]; edges: Edge[] }>;
+      return res.json() as Promise<{
+        nodes: Node[];
+        edges: Edge[];
+        revision: number;
+      }>;
     },
     enabled: isAuthenticated && !!workspaceId,
   });
@@ -28,9 +32,11 @@ export function useCanvas(workspaceId: string | number | null | undefined) {
     mutationFn: async ({
       nodes,
       edges,
+      baseRevision,
     }: {
       nodes: Node[];
       edges: Edge[];
+      baseRevision: number;
       cacheGeneration?: number;
     }) => {
       if (!url) throw new Error("Workspace ID is required to sync canvas");
@@ -42,8 +48,9 @@ export function useCanvas(workspaceId: string | number | null | undefined) {
       const res = await apiRequest("POST", url, {
         nodes,
         edges: normalizedEdges,
+        baseRevision,
       });
-      return res.json();
+      return res.json() as Promise<{ success: boolean; revision: number }>;
     },
     onSuccess: (_data, variables) => {
       if (workspaceId)

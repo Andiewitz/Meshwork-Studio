@@ -84,6 +84,7 @@ export const api = {
         200: z.object({
           nodes: z.array(z.any()),
           edges: z.array(z.any()),
+          revision: z.number().int().nonnegative(),
         }),
         404: errorSchemas.notFound,
         401: errorSchemas.unauthorized,
@@ -95,9 +96,11 @@ export const api = {
       input: z.object({
         nodes: z.array(z.any()),
         edges: z.array(z.any()),
+        baseRevision: z.number().int().nonnegative(),
       }),
       responses: {
-        200: z.object({ success: z.boolean() }),
+        200: z.object({ success: z.boolean(), revision: z.number().int() }),
+        409: errorSchemas.validation,
         404: errorSchemas.notFound,
         401: errorSchemas.unauthorized,
       },

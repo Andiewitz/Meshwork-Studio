@@ -74,6 +74,7 @@ vi.mock("@services/canvas/db/storage", () => ({
   canvasStorage: {
     getNodes: vi.fn(async () => []),
     getEdges: vi.fn(async () => []),
+    getCanvasRevision: vi.fn(async () => 0),
     syncCanvas: vi.fn(
       async (id: string, nodes: unknown[], edges: unknown[]) => {
         canvasState[id] = { nodes, edges };
@@ -232,14 +233,14 @@ describe("authorization matrix — no 403 on your own data", () => {
     const viewerSync = await request(app)
       .post(`/api/v1/workspaces/${WS_ID}/canvas`)
       .set("x-test-user-id", VIEWER)
-      .send({ nodes: [], edges: [] });
+      .send({ nodes: [], edges: [], baseRevision: 0 });
     expect(viewerSync.status).toBe(403);
     expect(canvasState[WS_ID]).toBeUndefined();
 
     const editorSync = await request(app)
       .post(`/api/v1/workspaces/${WS_ID}/canvas`)
       .set("x-test-user-id", EDITOR)
-      .send({ nodes: [{ id: "n1" }], edges: [] });
+      .send({ nodes: [{ id: "n1" }], edges: [], baseRevision: 0 });
     expect(editorSync.status).toBe(200);
     expect(canvasState[WS_ID]?.nodes).toHaveLength(1);
   });
@@ -249,7 +250,7 @@ describe("authorization matrix — no 403 on your own data", () => {
     const read = await request(app).get(`/api/v1/workspaces/${WS_ID}`);
     const write = await request(app)
       .post(`/api/v1/workspaces/${WS_ID}/canvas`)
-      .send({ nodes: [], edges: [] });
+      .send({ nodes: [], edges: [], baseRevision: 0 });
     expect(read.status).toBe(401);
     expect(write.status).toBe(401);
   });

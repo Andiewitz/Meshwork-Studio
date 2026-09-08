@@ -60,6 +60,7 @@ export default function Home() {
             body: JSON.stringify({
               nodes: template.nodes,
               edges: normalizedEdges,
+              baseRevision: 0,
             }),
           });
           localStorage.removeItem("meshwork_pending_template");

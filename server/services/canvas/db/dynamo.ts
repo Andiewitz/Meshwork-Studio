@@ -18,8 +18,12 @@ import {
 import {
   DynamoDBDocumentClient,
   BatchWriteCommand,
+  DeleteCommand,
+  GetCommand,
+  PutCommand,
   QueryCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { randomUUID } from "node:crypto";
 import type { CanvasEdge, CanvasNode, ICanvasStorage } from "./model";
 import { createChildLogger } from "@server/lib/logger";
 
@@ -129,6 +133,9 @@ interface BatchWriteRequest {
 
 const MAX_BATCH_WRITE_ATTEMPTS = 6;
 const BATCH_WRITE_RETRY_BASE_MS = 25;
+const REVISION_KEY = "meta";
+const LOCK_KEY = "meta#lock";
+const LOCK_TTL_SECONDS = 120;
 
 /** A successful DynamoDB response can still contain writes that were skipped. */
 export class CanvasWriteIncompleteError extends Error {
@@ -143,6 +150,32 @@ export class CanvasWriteIncompleteError extends Error {
       `DynamoDB did not process ${remainingItems} canvas write${remainingItems === 1 ? "" : "s"} after ${attempts} attempts`,
     );
     this.name = "CanvasWriteIncompleteError";
+  }
+}
+
+/** The submitted canvas was based on an older, already-committed revision. */
+export class CanvasRevisionConflictError extends Error {
+  readonly code = "CANVAS_REVISION_CONFLICT";
+
+  constructor(
+    readonly expectedRevision: number,
+    readonly currentRevision: number,
+  ) {
+    super(
+      `Canvas revision ${expectedRevision} is stale; current revision is ${currentRevision}`,
+    );
+    this.name = "CanvasRevisionConflictError";
+  }
+}
+
+/** A different request is currently applying a canvas snapshot. */
+export class CanvasWriteLockedError extends Error {
+  readonly code = "CANVAS_WRITE_IN_PROGRESS";
+  readonly retryable = true;
+
+  constructor() {
+    super("Another canvas save is in progress");
+    this.name = "CanvasWriteLockedError";
   }
 }
 
@@ -191,12 +224,79 @@ async function queryPartition(
         ExpressionAttributeNames: expressionAttributeNames,
         ExpressionAttributeValues: expressionAttributeValues,
         ExclusiveStartKey: lastKey,
+        ConsistentRead: true,
       }),
     );
     for (const item of res.Items ?? []) out.push(item as unknown as Item);
     lastKey = res.LastEvaluatedKey;
   } while (lastKey);
   return out;
+}
+
+function isCanvasItem(item: Item): boolean {
+  return item.sk.startsWith("node#") || item.sk.startsWith("edge#");
+}
+
+async function getCanvasRevision(workspaceId: string): Promise<number> {
+  const { doc } = clients();
+  const response = await doc.send(
+    new GetCommand({
+      TableName: TABLE,
+      Key: { pk: partitionKey(workspaceId), sk: REVISION_KEY },
+      ConsistentRead: true,
+    }),
+  );
+  const revision = response.Item?.revision;
+  return typeof revision === "number" && revision >= 0 ? revision : 0;
+}
+
+async function acquireCanvasLock(workspaceId: string): Promise<string> {
+  const { doc } = clients();
+  const owner = randomUUID();
+  const now = Math.floor(Date.now() / 1000);
+  try {
+    await doc.send(
+      new PutCommand({
+        TableName: TABLE,
+        Item: {
+          pk: partitionKey(workspaceId),
+          sk: LOCK_KEY,
+          owner,
+          expiresAt: now + LOCK_TTL_SECONDS,
+        },
+        ConditionExpression: "attribute_not_exists(#pk) OR #expiresAt < :now",
+        ExpressionAttributeNames: { "#pk": "pk", "#expiresAt": "expiresAt" },
+        ExpressionAttributeValues: { ":now": now },
+      }),
+    );
+    return owner;
+  } catch (err) {
+    if ((err as Error).name === "ConditionalCheckFailedException") {
+      throw new CanvasWriteLockedError();
+    }
+    throw err;
+  }
+}
+
+async function releaseCanvasLock(
+  workspaceId: string,
+  owner: string,
+): Promise<void> {
+  const { doc } = clients();
+  try {
+    await doc.send(
+      new DeleteCommand({
+        TableName: TABLE,
+        Key: { pk: partitionKey(workspaceId), sk: LOCK_KEY },
+        ConditionExpression: "#owner = :owner",
+        ExpressionAttributeNames: { "#owner": "owner" },
+        ExpressionAttributeValues: { ":owner": owner },
+      }),
+    );
+  } catch (err) {
+    // A timed-out lock may have been replaced; never delete its replacement.
+    log.warn({ err, workspaceId }, "Failed to release canvas write lock");
+  }
 }
 
 async function batchWrite(requests: BatchWriteRequest[]): Promise<void> {
@@ -254,48 +354,84 @@ export class DynamoCanvasStorage implements ICanvasStorage {
     );
   }
 
+  async getCanvasRevision(workspaceId: string): Promise<number> {
+    return getCanvasRevision(workspaceId);
+  }
+
   async syncCanvas(
     workspaceId: string,
     nodes: CanvasNode[],
     edges: CanvasEdge[],
-  ): Promise<void> {
-    const desired = new Map<string, Item>();
-    for (const n of nodes)
-      desired.set(`node#${n.id}`, nodeItem(workspaceId, n));
-    for (const e of edges)
-      desired.set(`edge#${e.id}`, edgeItem(workspaceId, e));
-
-    const existing = await queryPartition(workspaceId);
-    const existingByKey = new Map(existing.map((i) => [i.sk, i]));
-
-    const requests: BatchWriteRequest[] = [];
-
-    // deletions: existed but no longer desired
-    for (const [sk] of existingByKey) {
-      if (!desired.has(sk)) {
-        requests.push({
-          DeleteRequest: { Key: { pk: partitionKey(workspaceId), sk } },
-        });
+    expectedRevision?: number,
+  ): Promise<number> {
+    const lockOwner = await acquireCanvasLock(workspaceId);
+    try {
+      const currentRevision = await getCanvasRevision(workspaceId);
+      // The optional value maintains safe compatibility for internal callers;
+      // the public API always supplies the revision returned by GET /canvas.
+      const revisionToWrite = expectedRevision ?? currentRevision;
+      if (revisionToWrite !== currentRevision) {
+        throw new CanvasRevisionConflictError(revisionToWrite, currentRevision);
       }
-    }
 
-    // puts: new or materially changed
-    for (const [sk, item] of desired) {
-      const prev = existingByKey.get(sk);
-      if (prev && JSON.stringify(prev.body) === JSON.stringify(item.body)) {
-        continue; // unchanged — skip write
+      const desired = new Map<string, Item>();
+      for (const n of nodes)
+        desired.set(`node#${n.id}`, nodeItem(workspaceId, n));
+      for (const e of edges)
+        desired.set(`edge#${e.id}`, edgeItem(workspaceId, e));
+
+      const existing = (await queryPartition(workspaceId)).filter(isCanvasItem);
+      const existingByKey = new Map(existing.map((i) => [i.sk, i]));
+
+      const requests: BatchWriteRequest[] = [];
+
+      // deletions: existed but no longer desired
+      for (const [sk] of existingByKey) {
+        if (!desired.has(sk)) {
+          requests.push({
+            DeleteRequest: { Key: { pk: partitionKey(workspaceId), sk } },
+          });
+        }
       }
-      requests.push({ PutRequest: { Item: item } });
-    }
 
-    if (requests.length > 0) await batchWrite(requests);
+      // puts: new or materially changed
+      for (const [sk, item] of desired) {
+        const prev = existingByKey.get(sk);
+        if (prev && JSON.stringify(prev.body) === JSON.stringify(item.body)) {
+          continue; // unchanged — skip write
+        }
+        requests.push({ PutRequest: { Item: item } });
+      }
+
+      if (requests.length > 0) await batchWrite(requests);
+
+      const nextRevision = currentRevision + 1;
+      const { doc } = clients();
+      await doc.send(
+        new PutCommand({
+          TableName: TABLE,
+          Item: {
+            pk: partitionKey(workspaceId),
+            sk: REVISION_KEY,
+            revision: nextRevision,
+          },
+          ConditionExpression:
+            "attribute_not_exists(#revision) OR #revision = :expectedRevision",
+          ExpressionAttributeNames: { "#revision": "revision" },
+          ExpressionAttributeValues: { ":expectedRevision": currentRevision },
+        }),
+      );
+      return nextRevision;
+    } finally {
+      await releaseCanvasLock(workspaceId, lockOwner);
+    }
   }
 
   async duplicateCanvas(
     fromWorkspaceId: string,
     toWorkspaceId: string,
   ): Promise<void> {
-    const source = await queryPartition(fromWorkspaceId);
+    const source = (await queryPartition(fromWorkspaceId)).filter(isCanvasItem);
     const requests = source.map((item) => ({
       PutRequest: {
         Item: { ...item, pk: partitionKey(toWorkspaceId) },

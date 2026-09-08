@@ -32,12 +32,14 @@ export interface CanvasEdge {
 export interface ICanvasStorage {
   getNodes(workspaceId: string): Promise<CanvasNode[]>;
   getEdges(workspaceId: string): Promise<CanvasEdge[]>;
+  getCanvasRevision(workspaceId: string): Promise<number>;
   /** Replace-set semantics: items missing from the payload are deleted. */
   syncCanvas(
     workspaceId: string,
     nodes: CanvasNode[],
     edges: CanvasEdge[],
-  ): Promise<void>;
+    expectedRevision?: number,
+  ): Promise<number>;
   duplicateCanvas(
     fromWorkspaceId: string,
     toWorkspaceId: string,

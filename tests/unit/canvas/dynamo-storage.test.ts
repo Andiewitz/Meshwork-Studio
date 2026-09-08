@@ -19,21 +19,42 @@ vi.mock("@aws-sdk/lib-dynamodb", () => ({
   BatchWriteCommand: class BatchWriteCommand {
     constructor(readonly input: Record<string, unknown>) {}
   },
+  DeleteCommand: class DeleteCommand {
+    constructor(readonly input: Record<string, unknown>) {}
+  },
+  GetCommand: class GetCommand {
+    constructor(readonly input: Record<string, unknown>) {}
+  },
+  PutCommand: class PutCommand {
+    constructor(readonly input: Record<string, unknown>) {}
+  },
   QueryCommand: class QueryCommand {
     constructor(readonly input: Record<string, unknown>) {}
   },
 }));
 
 import {
+  CanvasRevisionConflictError,
   CanvasWriteIncompleteError,
   DynamoCanvasStorage,
 } from "@services/canvas/db/dynamo";
-import { BatchWriteCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  BatchWriteCommand,
+  DeleteCommand,
+  GetCommand,
+  PutCommand,
+  QueryCommand,
+} from "@aws-sdk/lib-dynamodb";
 
 describe("DynamoCanvasStorage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.documentFrom.mockReturnValue({ send: mocks.send });
+    mocks.send.mockImplementation(async (command: unknown) => {
+      if (command instanceof QueryCommand) return { Items: [] };
+      if (command instanceof GetCommand) return {};
+      return {};
+    });
   });
 
   it("follows LastEvaluatedKey until every node page is read", async () => {
@@ -78,12 +99,18 @@ describe("DynamoCanvasStorage", () => {
         },
       },
     };
-    mocks.send
-      .mockResolvedValueOnce({ Items: [] })
-      .mockResolvedValueOnce({
-        UnprocessedItems: { "meshwork-canvas": [unprocessed] },
-      })
-      .mockResolvedValueOnce({ UnprocessedItems: {} });
+    let writeAttempts = 0;
+    mocks.send.mockImplementation(async (command: unknown) => {
+      if (command instanceof QueryCommand) return { Items: [] };
+      if (command instanceof GetCommand) return {};
+      if (command instanceof BatchWriteCommand) {
+        writeAttempts += 1;
+        return writeAttempts === 1
+          ? { UnprocessedItems: { "meshwork-canvas": [unprocessed] } }
+          : { UnprocessedItems: {} };
+      }
+      return {};
+    });
 
     await new DynamoCanvasStorage().syncCanvas(
       "canvas-2",
@@ -97,9 +124,11 @@ describe("DynamoCanvasStorage", () => {
       [],
     );
 
-    expect(mocks.send).toHaveBeenCalledTimes(3);
-    expect(mocks.send.mock.calls[1][0]).toBeInstanceOf(BatchWriteCommand);
-    expect(mocks.send.mock.calls[2][0].input).toMatchObject({
+    const batchCalls = mocks.send.mock.calls
+      .map(([command]) => command)
+      .filter((command) => command instanceof BatchWriteCommand);
+    expect(batchCalls).toHaveLength(2);
+    expect(batchCalls[1].input).toMatchObject({
       RequestItems: { "meshwork-canvas": [unprocessed] },
     });
   });
@@ -116,6 +145,9 @@ describe("DynamoCanvasStorage", () => {
     };
     mocks.send.mockImplementation(async (command: unknown) => {
       if (command instanceof QueryCommand) return { Items: [] };
+      if (command instanceof GetCommand) return {};
+      if (command instanceof BatchWriteCommand)
+        return { UnprocessedItems: { "meshwork-canvas": [unprocessed] } };
       return { UnprocessedItems: { "meshwork-canvas": [unprocessed] } };
     });
 
@@ -132,5 +164,29 @@ describe("DynamoCanvasStorage", () => {
         [],
       ),
     ).rejects.toEqual(expect.any(CanvasWriteIncompleteError));
+  });
+
+  it("rejects a stale revision before it changes canvas items", async () => {
+    mocks.send.mockImplementation(async (command: unknown) => {
+      if (command instanceof GetCommand) return { Item: { revision: 2 } };
+      if (command instanceof QueryCommand)
+        throw new Error("stale writes must not query canvas items");
+      return {};
+    });
+
+    await expect(
+      new DynamoCanvasStorage().syncCanvas("canvas-4", [], [], 1),
+    ).rejects.toEqual(expect.any(CanvasRevisionConflictError));
+
+    const commands = mocks.send.mock.calls.map(([command]) => command);
+    expect(
+      commands.some((command) => command instanceof BatchWriteCommand),
+    ).toBe(false);
+    expect(commands.some((command) => command instanceof PutCommand)).toBe(
+      true,
+    );
+    expect(commands.some((command) => command instanceof DeleteCommand)).toBe(
+      true,
+    );
   });
 });
