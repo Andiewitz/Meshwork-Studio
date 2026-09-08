@@ -3,6 +3,10 @@
 **Audit date:** 2026-09-06
 **Target:** one Linux t3.small EC2 instance in us-east-1
 
+> **Current implementation backlog:** the evidence was refreshed on 2026-09-08 in
+> [`plans/CODEBASE-RELIABILITY-AUDIT.md`](plans/CODEBASE-RELIABILITY-AUDIT.md).
+> Its P0 data-safety and recovery work takes precedence over older priorities here.
+
 ## Executive summary
 
 Meshwork Studio is a React/Vite client, a Node monolith, a Go identity service,
