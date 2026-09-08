@@ -70,6 +70,10 @@ const userCols = `id, email, email_normalized, first_name, last_name, profile_im
 	password_hash, auth_provider, is_active, has_notified_team, read_notification_ids,
 	created_at, updated_at, email_verified_at, is_admin, mfa_secret, mfa_enabled, password_algo`
 
+const userTableCols = `u.id, u.email, u.email_normalized, u.first_name, u.last_name, u.profile_image_url,
+	u.password_hash, u.auth_provider, u.is_active, u.has_notified_team, u.read_notification_ids,
+	u.created_at, u.updated_at, u.email_verified_at, u.is_admin, u.mfa_secret, u.mfa_enabled, u.password_algo`
+
 func scanUser(row pgx.Row) (*User, error) {
 	var u User
 	err := row.Scan(&u.ID, &u.Email, &u.EmailNormalized, &u.FirstName, &u.LastName,
@@ -116,7 +120,7 @@ var ErrConflict = errors.New("identity conflicts with an existing account")
 func (d *DB) CreateUser(ctx context.Context, in CreateUserInput) (*User, error) {
 	algo := in.PasswordAlgo
 	if in.PasswordHash == nil {
-		algo = ""
+		algo = "none"
 	} else if algo == "" {
 		algo = "argon2id"
 	}
@@ -126,7 +130,7 @@ func (d *DB) CreateUser(ctx context.Context, in CreateUserInput) (*User, error) 
 		VALUES (trim($1), LOWER(TRIM($1)), $2, $3, $4, $5, $6, $7)
 		RETURNING `+userCols,
 		in.Email, in.FirstName, in.LastName, in.ProfileImageURL,
-		in.PasswordHash, in.AuthProvider, nullIfEmpty(algo))
+		in.PasswordHash, in.AuthProvider, algo)
 	u, err := scanUser(row)
 	if err != nil && isUniqueViolation(err) {
 		return nil, ErrDuplicateEmail
@@ -277,7 +281,7 @@ func isUniqueViolation(err error) bool {
 // FindIdentity resolves the user behind a (provider, providerAccountId).
 func (d *DB) FindIdentity(ctx context.Context, provider, providerAccountID string) (*User, error) {
 	row := d.Pool.QueryRow(ctx, `
-		SELECT `+userCols+`
+		SELECT `+userTableCols+`
 		FROM auth_identities i
 		JOIN users u ON u.id = i.user_id
 		WHERE i.provider = $1 AND i.provider_account_id = $2 AND u.is_active = true`,

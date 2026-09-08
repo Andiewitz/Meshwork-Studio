@@ -133,9 +133,10 @@ func Load() (*Config, error) {
 		SMTPPort:        587,
 		SMTPUser:        str("SMTP_USER"),
 		SMTPPass:        os.Getenv("SMTP_PASS"),
-		EmailFrom:       str("EMAIL_FROM"),
-		GoogleClientID:  str("GOOGLE_CLIENT_ID"),
-		CaptchaSecret:   os.Getenv("CAPTCHA_SECRET"),
+		EmailFrom:          str("EMAIL_FROM"),
+		GoogleClientID:     str("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		CaptchaSecret:      os.Getenv("CAPTCHA_SECRET"),
 		CaptchaMinScore: 0.5,
 	}
 

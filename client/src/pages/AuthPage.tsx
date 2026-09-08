@@ -478,8 +478,6 @@ function RegisterForm() {
     email: "",
     password: "",
     confirmPassword: "",
-    firstName: "",
-    lastName: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -538,8 +536,6 @@ function RegisterForm() {
       const res = await apiRequest("POST", "/api/v1/auth/register", {
         email: formData.email,
         password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
         captchaToken: captchaToken || "dev_bypass_token",
       });
       const data = (await res.json()) as ApiLoginResponse;
@@ -606,44 +602,6 @@ function RegisterForm() {
         </span>
       </div>
       <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="reg-firstName"
-              className="text-[11px] font-medium text-white/50"
-            >
-              First name
-            </Label>
-            <input
-              id="reg-firstName"
-              type="text"
-              placeholder="John"
-              value={formData.firstName}
-              onChange={(e) =>
-                setFormData({ ...formData, firstName: e.target.value })
-              }
-              className={inputBase}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="reg-lastName"
-              className="text-[11px] font-medium text-white/50"
-            >
-              Last name
-            </Label>
-            <input
-              id="reg-lastName"
-              type="text"
-              placeholder="Doe"
-              value={formData.lastName}
-              onChange={(e) =>
-                setFormData({ ...formData, lastName: e.target.value })
-              }
-              className={inputBase}
-            />
-          </div>
-        </div>
         <div className="space-y-1.5">
           <Label
             htmlFor="reg-email"

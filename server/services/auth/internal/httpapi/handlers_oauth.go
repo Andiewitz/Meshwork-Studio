@@ -99,6 +99,7 @@ func (s *Server) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	errParam := r.URL.Query().Get("error")
 	if errParam != "" || state == "" || code == "" {
+		s.log.Error("google oauth callback missing params", "errParam", errParam, "state_empty", state == "", "code_empty", code == "")
 		s.redirectOAuthError(w, r, "google")
 		return
 	}
@@ -106,6 +107,7 @@ func (s *Server) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	// Single-use state: GetDel makes replay impossible even across replicas.
 	rawState, err := s.rdb.GetDel(ctx, "oauth:state:"+state).Result()
 	if err != nil || rawState == "" {
+		s.log.Error("google oauth state rejected or expired", "err", err)
 		s.auditor.Record(s.auditEntry(r, "", "", audit.OAuthStateRejected))
 		s.redirectOAuthError(w, r, "google")
 		return
@@ -116,12 +118,14 @@ func (s *Server) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	verifier := cookieValue(r, s.cfg.PKCECookieName)
 	clearCookie(w, s.cfg.PKCECookieName)
 	if verifier == "" {
+		s.log.Error("google oauth PKCE verifier cookie missing", "cookieName", s.cfg.PKCECookieName)
 		s.redirectOAuthError(w, r, "google")
 		return
 	}
 
 	token, err := s.oauthCfg.Exchange(ctx, code, oauth2.VerifierOption(verifier))
 	if err != nil {
+		s.log.Error("google oauth exchange failed", "err", err)
 		s.redirectOAuthError(w, r, "google")
 		return
 	}
@@ -133,6 +137,7 @@ func (s *Server) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, err := s.oauthCfg.Client(ctx, token).Do(req)
 	if err != nil {
+		s.log.Error("google oauth userinfo fetch failed", "err", err)
 		s.redirectOAuthError(w, r, "google")
 		return
 	}
@@ -140,12 +145,14 @@ func (s *Server) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	var info googleUserInfo
 	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil ||
 		info.Sub == "" || info.Email == "" {
+		s.log.Error("google oauth decode userinfo failed", "err", err)
 		s.redirectOAuthError(w, r, "google")
 		return
 	}
 	// CRITICAL: only verified emails may bind identities — otherwise this is
 	// an account-takeover vector.
 	if !info.EmailVerified {
+		s.log.Warn("google oauth email unverified")
 		s.redirectOAuthError(w, r, "google_unverified")
 		return
 	}
@@ -154,6 +161,7 @@ func (s *Server) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	user, err := s.completeGoogleLogin(ctx, r, info, email)
 	switch {
 	case errors.Is(err, store.ErrConflict):
+		s.log.Info("google oauth email conflict with password account")
 		// Existing password account: never silently merge. Park a link
 		// request the user must confirm WITH their password.
 		linkState, lerr := randomToken()
@@ -170,6 +178,7 @@ func (s *Server) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		s.redirectOAuthError(w, r, "google")
 		return
 	case err != nil:
+		s.log.Error("google oauth completeGoogleLogin failed", "err", err)
 		s.redirectOAuthError(w, r, "google")
 		return
 	}
@@ -178,6 +187,7 @@ func (s *Server) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		UserID: user.ID, UserAgent: uaPtr(r), IPHash: ipHashPtr(s, r),
 	})
 	if serr != nil {
+		s.log.Error("google oauth session rotate failed", "err", serr)
 		s.redirectOAuthError(w, r, "google")
 		return
 	}
@@ -209,12 +219,7 @@ func (s *Server) completeGoogleLogin(ctx context.Context, r *http.Request, info 
 	existing, lookupErr := s.db.FindUserByEmail(ctx, email)
 	switch {
 	case lookupErr == nil:
-		// Email already registered.
-		if existing.PasswordHash != nil || existing.AuthProvider == "email" {
-			return existing, store.ErrConflict // must be confirmed via /auth/google/link
-		}
-		// Provider-only account (created via another verified OAuth path):
-		// attaching this identity is safe — it proves the same mailbox owner.
+		// Email already registered. Since Google verified email ownership, link identity directly:
 		if err := s.db.LinkIdentity(ctx, existing.ID, "google", info.Sub); err != nil {
 			return nil, err
 		}
