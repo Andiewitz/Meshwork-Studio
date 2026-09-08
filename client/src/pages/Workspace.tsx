@@ -209,6 +209,10 @@ import {
   type EdgeStyle,
   type BgVariant,
 } from "@/features/workspace/utils/canvasSettings";
+import {
+  materializeRootCanvas,
+  type NestedCanvasLevel,
+} from "@/features/workspace/utils/nestedCanvas";
 
 function WorkspaceView() {
   const { id } = useParams<{ id?: string }>();
@@ -583,11 +587,8 @@ function WorkspaceView() {
   );
 
   // ── Nested canvas navigation stack ──
-  interface CanvasLevel {
-    nodeId: string;
+  interface CanvasLevel extends NestedCanvasLevel {
     label: string;
-    nodes: Node[];
-    edges: Edge[];
     viewport: { x: number; y: number; zoom: number };
   }
   const [canvasStack, setCanvasStack] = useState<CanvasLevel[]>([]);
@@ -851,6 +852,8 @@ function WorkspaceView() {
         setEdges(canvasData.edges || []);
       }
       lastLoadedId.current = workspaceId;
+      setCanvasStack([]);
+      setCanvasTransition("idle");
 
       setTimeout(() => {
         isInitialLoad.current = false;
@@ -861,9 +864,19 @@ function WorkspaceView() {
   useEffect(() => {
     if (isInitialLoad.current) return;
     if (isRemoteUpdate.current) return;
+    if (canvasTransition !== "idle") return;
+
+    const persistedCanvas = materializeRootCanvas(canvasStack, {
+      nodes,
+      edges,
+    });
 
     // Slow persist to DB (3s debounce)
-    saveCanvasToLocalCache(workspaceId, nodes, edges);
+    saveCanvasToLocalCache(
+      workspaceId,
+      persistedCanvas.nodes,
+      persistedCanvas.edges,
+    );
     setSaveStatus("unsaved");
 
     if (saveTimeoutRef.current) {
@@ -873,7 +886,7 @@ function WorkspaceView() {
     saveTimeoutRef.current = setTimeout(() => {
       setSaveStatus("saving");
       sync(
-        { nodes, edges },
+        { nodes: persistedCanvas.nodes, edges: persistedCanvas.edges },
         {
           onSuccess: () => {
             setSaveStatus("saved");
@@ -892,7 +905,7 @@ function WorkspaceView() {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [nodes, edges, workspaceId, sync, toast]);
+  }, [nodes, edges, canvasStack, canvasTransition, workspaceId, sync, toast]);
 
   useEffect(() => {
     setEdges((eds) =>
@@ -1113,10 +1126,21 @@ function WorkspaceView() {
   );
 
   const handleSave = () => {
+    if (canvasTransition !== "idle") {
+      toast({
+        title: "Canvas is still changing views",
+        description: "Wait for the canvas transition to finish before saving.",
+      });
+      return;
+    }
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    const persistedCanvas = materializeRootCanvas(canvasStack, {
+      nodes,
+      edges,
+    });
     setSaveStatus("saving");
     sync(
-      { nodes, edges },
+      { nodes: persistedCanvas.nodes, edges: persistedCanvas.edges },
       {
         onSuccess: () => {
           setSaveStatus("saved");
