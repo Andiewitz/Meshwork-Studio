@@ -40,6 +40,8 @@ import {
 import type { AppContext } from "@server/lib/registry";
 
 const log = createChildLogger("ai-routes");
+const MAX_CHAT_TOKENS = 1_024;
+const DEFAULT_CHAT_TOKENS = 512;
 
 interface CanvasNode {
   id: string;
@@ -278,6 +280,15 @@ export function createAIRoutes(context: AppContext) {
             .status(400)
             .json({ message: "messages array is required" });
         }
+        const boundedMaxTokens = Math.min(
+          MAX_CHAT_TOKENS,
+          Math.max(
+            1,
+            Number.isFinite(maxTokens)
+              ? Math.floor(maxTokens!)
+              : DEFAULT_CHAT_TOKENS,
+          ),
+        );
 
         const start = process.hrtime();
 
@@ -344,7 +355,7 @@ export function createAIRoutes(context: AppContext) {
               model: resolvedModel,
               messages,
               temperature,
-              maxTokens,
+              maxTokens: boundedMaxTokens,
               stream: true,
               tools,
             });
@@ -364,7 +375,7 @@ export function createAIRoutes(context: AppContext) {
               model: resolvedModel,
               messages,
               temperature,
-              maxTokens,
+              maxTokens: boundedMaxTokens,
               stream: false,
               tools,
             });
@@ -385,7 +396,7 @@ export function createAIRoutes(context: AppContext) {
               model: resolvedModel,
               messages,
               temperature,
-              maxTokens,
+              maxTokens: boundedMaxTokens,
               stream: true,
             });
 
@@ -400,7 +411,7 @@ export function createAIRoutes(context: AppContext) {
               model: resolvedModel,
               messages,
               temperature,
-              maxTokens,
+              maxTokens: boundedMaxTokens,
               stream: false,
             });
             res.json(response);
@@ -420,7 +431,7 @@ export function createAIRoutes(context: AppContext) {
               model: resolvedModel,
               messages,
               temperature,
-              maxTokens,
+              maxTokens: boundedMaxTokens,
               stream: true,
             });
 
@@ -435,7 +446,7 @@ export function createAIRoutes(context: AppContext) {
               model: resolvedModel,
               messages,
               temperature,
-              maxTokens,
+              maxTokens: boundedMaxTokens,
               stream: false,
             });
 
@@ -457,7 +468,7 @@ export function createAIRoutes(context: AppContext) {
               model: resolvedModel,
               messages,
               temperature,
-              maxTokens,
+              maxTokens: boundedMaxTokens,
               stream: true,
             });
 
@@ -472,7 +483,7 @@ export function createAIRoutes(context: AppContext) {
               model: resolvedModel,
               messages,
               temperature,
-              maxTokens,
+              maxTokens: boundedMaxTokens,
               stream: false,
             });
             res.json(response);

@@ -6,6 +6,22 @@ const log = createChildLogger("ai-resolver");
 export const DEFAULT_PROVIDER = "gemini";
 export const DEFAULT_FREE_MODEL = "gemini-3.5-flash";
 
+const ALLOWED_MODELS: Record<string, readonly string[]> = {
+  gemini: ["gemini-3.5-flash", "gemini-3.5-flash-lite"],
+  openai: ["gpt-4o-mini", "gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"],
+  anthropic: [
+    "claude-3-5-haiku-20241022",
+    "claude-3-5-sonnet",
+    "claude-3-opus",
+  ],
+  openrouter: ["meta-llama/llama-3-8b-instruct:free"],
+};
+
+function allowedModel(provider: string, requested?: string): string {
+  const models = ALLOWED_MODELS[provider] ?? ALLOWED_MODELS.gemini;
+  return requested && models.includes(requested) ? requested : models[0];
+}
+
 export interface ResolvedProvider {
   provider: string; // "gemini" | "anthropic" | "openai" | "openrouter"
   model: string;
@@ -60,7 +76,7 @@ export async function resolveProviderForRequest(
 
       return {
         provider: requestedProvider,
-        model: requestedModel ?? DEFAULT_FREE_MODEL,
+        model: allowedModel(requestedProvider, requestedModel),
         apiKey: decrypted.plaintextKey,
         source: "byok",
       };
@@ -90,12 +106,7 @@ export async function resolveProviderForRequest(
     "Resolved to Gemini free-tier fallback",
   );
 
-  const resolvedModel =
-    requestedModel &&
-    !requestedModel.includes("gpt-oss") &&
-    !requestedModel.includes("/")
-      ? requestedModel
-      : DEFAULT_FREE_MODEL;
+  const resolvedModel = allowedModel("gemini", requestedModel);
 
   return {
     provider: "gemini",

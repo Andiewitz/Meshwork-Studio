@@ -89,7 +89,7 @@ describe("resolveProviderForRequest", () => {
         "google/gemma-4-31b-it:free",
       );
 
-      expect(result.model).toBe(DEFAULT_FREE_MODEL);
+      expect(result.model).toBe("claude-3-5-haiku-20241022");
       expect(result.source).toBe("fallback");
     });
 
