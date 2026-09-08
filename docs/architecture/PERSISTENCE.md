@@ -33,7 +33,10 @@ table (default `meshwork-canvas`):
 
 `syncCanvas()` first queries the workspace partition, then deletes absent
 items and writes only new or changed items. DynamoDB batch writes are limited
-to 25 requests per request, as required by the API.
+to 25 requests per request, retried when DynamoDB returns unprocessed items,
+and never acknowledged if retries are exhausted. A per-workspace revision and
+short write lease reject stale snapshots with a visible conflict instead of a
+silent last-writer-wins overwrite.
 
 ## Operational configuration
 
@@ -67,6 +70,7 @@ npm run test:run -- tests/unit/workspace/canvas-cache.test.ts \
   tests/integration/canvas/ddb-parity.test.ts
 ```
 
-For production, alarm on DynamoDB throttling/errors and periodically restore a
-sample canvas from backup. See [`../../PLAN.md`](../../PLAN.md) for the
-remaining operational hardening work.
+For production, alarm on DynamoDB throttling/errors, enable point-in-time
+recovery, and periodically restore a sample canvas from backup. The archive
+and restore requirements are in
+[`../../plans/Q5-BACKUP-AND-RECOVERY.md`](../../plans/Q5-BACKUP-AND-RECOVERY.md).

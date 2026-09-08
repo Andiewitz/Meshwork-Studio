@@ -56,18 +56,23 @@ This project implements two layers of data safety:
 Run this before manual schema changes to capture table data as human-readable JSON.
 
 ```bash
-DATABASE_URL=postgres://... npm run db:backup
+BACKUP_S3_URI=s3://meshwork-backups/prod npm run db:backup
 ```
 
-- Creates a timestamped folder in `./backups/` containing `users.json`, `workspaces.json`, `nodes.json`, etc.
-- Safe to run anywhere. `./backups/` is gitignored.
+- Requires explicit DSNs for auth, workspace, team, Jenkos/AI, and metrics; it
+  creates custom PostgreSQL dumps plus a `canvas.ndjson` snapshot and
+  checksum manifest.
+- Uploads artifacts to the configured S3 prefix and uploads `manifest.json`
+  last, so an archive without that manifest is incomplete.
+- In production it also requires PostgreSQL globals and managed DynamoDB PITR.
+  See [`../../plans/Q5-BACKUP-AND-RECOVERY.md`](../../plans/Q5-BACKUP-AND-RECOVERY.md)
+  for restore and operational prerequisites.
 
 ### Infrastructure Backup (PostgreSQL Binary)
 
 If using Docker, run the provided scripts to create full binary `.dump` files.
 
-- Windows: `.\scripts\backup-db.ps1`
-- Mac/Linux: `./scripts/backup-db.sh`
+- Any supported host: `npm run db:backup` (requires Node, `pg_dump`, and AWS CLI)
 
 ### Safe Schema Migrations (Idempotent)
 

@@ -145,7 +145,7 @@ npm run build            # Bundle client + server
 npm run start            # Start production server
 
 # Database
-npm run db:backup        # JSON dump of critical tables to ./backups/
+npm run db:backup        # verified Postgres + canvas archive; requires BACKUP_S3_URI
 npm run diagnose         # Verify required config is present and valid
 
 # Docker
