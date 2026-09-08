@@ -257,6 +257,23 @@ Return ONLY valid JSON within a \`\`\`json markdown block with 'nodes' and 'edge
   });
 
   describe("POST /api/ai/suggestions", () => {
+    it("rejects oversized canvases before invoking an AI provider", async () => {
+      const res = await request(app)
+        .post("/api/v1/ai/suggestions")
+        .set("x-test-user-id", "1")
+        .send({
+          canvas: {
+            nodes: Array.from({ length: 101 }, (_, index) => ({
+              id: `node-${index}`,
+            })),
+            edges: [],
+          },
+        });
+
+      expect(res.status).toBe(413);
+      expect(res.body.message).toBe("Canvas is too large for AI suggestions");
+    });
+
     it("should return fallback suggestions if resolver cannot resolve", async () => {
       // Remove ENV variable so fallback is not configured
       delete process.env.GEMINI_API_KEY;

@@ -95,7 +95,9 @@ export function WorkspaceLeftSidebar({
       }
     }, 400);
     return () => clearTimeout(timer);
-  }, [isOpen, nodes.length, edges.length]);
+    // Suggestions are advisory and provider-backed. Request them when the panel
+    // opens, not for every canvas edit; users can reopen the panel for a refresh.
+  }, [isOpen]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);

@@ -515,12 +515,26 @@ export function createAIRoutes(context: AppContext) {
     "/suggestions",
     isAuthenticated,
     conditionalCsrf,
+    aiChatLimiter,
     async (req: Request, res: Response) => {
       try {
         const userId = req.user!.id;
         const { canvas } = req.body as {
           canvas?: { nodes?: CanvasNode[]; edges?: CanvasEdge[] };
         };
+        const canvasNodes: CanvasNode[] = Array.isArray(canvas?.nodes)
+          ? canvas.nodes
+          : [];
+        const canvasEdges: CanvasEdge[] = Array.isArray(canvas?.edges)
+          ? canvas.edges
+          : [];
+        // Suggestions should be cheap hints, never a way to turn a large
+        // document into an unbounded provider prompt.
+        if (canvasNodes.length > 100 || canvasEdges.length > 150) {
+          return res.status(413).json({
+            message: "Canvas is too large for AI suggestions",
+          });
+        }
 
         let resolved;
         try {
@@ -558,9 +572,6 @@ export function createAIRoutes(context: AppContext) {
           });
         }
 
-        const canvasNodes: CanvasNode[] = canvas?.nodes ?? [];
-        const canvasEdges: CanvasEdge[] = canvas?.edges ?? [];
-
         const prompt = `You are Jenkos, the expert cloud architecture co-pilot for Meshwork Studio. 
 Based on the current canvas state, generate 4 short, highly relevant, and actionable next-step suggestions or starter layout ideas for the user.
 
@@ -586,7 +597,7 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
             model: suggestionsModel,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.5,
-            maxTokens: 1000,
+            maxTokens: 80,
             stream: false,
           })) as ChatCompletionResponse;
           responseText = response.choices?.[0]?.message?.content ?? "";
@@ -597,7 +608,7 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
             model: suggestionsModel,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.5,
-            maxTokens: 1000,
+            maxTokens: 80,
             stream: false,
           })) as ChatCompletionResponse;
           responseText = response.choices?.[0]?.message?.content ?? "";
@@ -608,7 +619,7 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
             model: suggestionsModel,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.5,
-            maxTokens: 1000,
+            maxTokens: 80,
             stream: false,
           })) as ChatCompletionResponse;
           responseText = response.choices?.[0]?.message?.content ?? "";
@@ -619,7 +630,7 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
             model: suggestionsModel,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.5,
-            maxTokens: 1000,
+            maxTokens: 80,
             stream: false,
           });
           const data = await response.json();
