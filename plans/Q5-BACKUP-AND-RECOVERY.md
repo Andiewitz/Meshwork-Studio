@@ -27,10 +27,12 @@ databases plus canvas), SHA-256 checksums, and an off-host location. A failed
 dump, canvas scan, checksum, or upload exits non-zero and never prints a
 successful completion message.
 
-### Q5.2 — restore automation and drill
+### Q5.2 — restore automation and drill (implemented; operator drill pending)
 
-- Add an isolated restore command that requires an empty, explicitly named
-  target and validates row counts plus a sampled canvas before cutover.
+- `npm run db:restore:drill` accepts only a version-2 checksum-verified archive,
+  empty, explicitly named drill targets, and `RESTORE_MODE=drill`. It restores
+  and validates every table count and canvas-item count, but refuses
+  `NODE_ENV=production` and the active canvas table.
 - Restore Postgres roles before database dumps where needed; restore canvas to a
   newly named DynamoDB table and use a controlled application config cutover.
 - Run a quarterly, timed restore drill and record RPO/RTO, checksum results, and

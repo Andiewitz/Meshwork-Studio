@@ -18,6 +18,7 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "db:backup": "tsx scripts/backup-db.ts",
+    "db:restore:drill": "tsx scripts/restore-drill.ts",
     "diagnose": "tsx scripts/diagnose-config.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",

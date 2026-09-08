@@ -15,6 +15,7 @@ import {
   DynamoDBClient,
 } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import pg from "pg";
 import { requiredDatabaseTargets, requiredS3Uri } from "./backup-lib";
 
 interface ArchiveFile {
@@ -24,12 +25,19 @@ interface ArchiveFile {
 }
 
 interface ArchiveManifest {
-  version: 1;
+  version: 2;
   createdAt: string;
-  databaseArtifacts: string[];
+  databaseArtifacts: DatabaseArtifact[];
   canvasTable: string;
+  canvasItemCount: number;
   files: ArchiveFile[];
   offsitePrefix: string;
+}
+
+interface DatabaseArtifact {
+  name: string;
+  file: string;
+  tableRows: Record<string, string>;
 }
 
 const production = process.env.NODE_ENV === "production";
@@ -40,9 +48,17 @@ const stagingDirectory = path.join(outputRoot, `.${timestamp}.partial`);
 const tableName = process.env.CANVAS_DDB_TABLE;
 const awsRegion = process.env.AWS_REGION || "us-east-1";
 
-function run(command: string, args: string[]): Promise<void> {
+function run(
+  command: string,
+  args: string[],
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { shell: false, stdio: "inherit" });
+    const child = spawn(command, args, {
+      shell: false,
+      stdio: "inherit",
+      env,
+    });
     child.on("error", (err) =>
       reject(new Error(`Could not start ${command}: ${err.message}`)),
     );
@@ -55,6 +71,44 @@ function run(command: string, args: string[]): Promise<void> {
       );
     });
   });
+}
+
+function postgresEnvironment(urlValue: string): NodeJS.ProcessEnv {
+  const url = new URL(urlValue);
+  return {
+    ...process.env,
+    PGHOST: url.hostname,
+    PGPORT: url.port || "5432",
+    PGDATABASE: decodeURIComponent(url.pathname.slice(1)),
+    PGUSER: decodeURIComponent(url.username),
+    PGPASSWORD: decodeURIComponent(url.password),
+    ...(url.searchParams.get("sslmode")
+      ? { PGSSLMODE: url.searchParams.get("sslmode")! }
+      : {}),
+  };
+}
+
+function quoteIdentifier(identifier: string): string {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+async function countTableRows(
+  client: pg.Client,
+): Promise<Record<string, string>> {
+  const tables = await client.query<{
+    table_schema: string;
+    table_name: string;
+  }>(
+    "SELECT table_schema, table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog', 'information_schema') ORDER BY table_schema, table_name",
+  );
+  const counts: Record<string, string> = {};
+  for (const table of tables.rows) {
+    const result = await client.query<{ count: string }>(
+      `SELECT count(*)::text AS count FROM ${quoteIdentifier(table.table_schema)}.${quoteIdentifier(table.table_name)}`,
+    );
+    counts[`${table.table_schema}.${table.table_name}`] = result.rows[0].count;
+  }
+  return counts;
 }
 
 async function sha256(filePath: string): Promise<string> {
@@ -71,42 +125,73 @@ async function describeFile(filePath: string): Promise<ArchiveFile> {
   };
 }
 
-async function dumpPostgres(staging: string): Promise<string[]> {
+async function dumpPostgres(staging: string): Promise<{
+  files: string[];
+  artifacts: DatabaseArtifact[];
+}> {
   const targets = requiredDatabaseTargets(process.env);
   const pgDump = process.env.PG_DUMP_BIN || "pg_dump";
-  const output: string[] = [];
+  const files: string[] = [];
+  const artifacts: DatabaseArtifact[] = [];
   for (const target of targets) {
     const filePath = path.join(staging, `${target.name}.dump`);
     console.log(`[Backup] Dumping ${target.name} database`);
-    await run(pgDump, [
-      "--format=custom",
-      "--no-owner",
-      "--no-privileges",
-      `--file=${filePath}`,
-      target.url,
-    ]);
-    output.push(filePath);
+    const client = new pg.Client({ connectionString: target.url });
+    await client.connect();
+    try {
+      await client.query(
+        "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY",
+      );
+      const snapshot = await client.query<{ snapshot: string }>(
+        "SELECT pg_export_snapshot() AS snapshot",
+      );
+      await run(
+        pgDump,
+        [
+          "--format=custom",
+          "--no-owner",
+          "--no-privileges",
+          `--snapshot=${snapshot.rows[0].snapshot}`,
+          `--file=${filePath}`,
+        ],
+        postgresEnvironment(target.url),
+      );
+      artifacts.push({
+        name: target.name,
+        file: path.basename(filePath),
+        tableRows: await countTableRows(client),
+      });
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw err;
+    } finally {
+      await client.end();
+    }
+    files.push(filePath);
   }
 
   const globalsUrl = process.env.BACKUP_POSTGRES_SUPERUSER_URL;
   if (globalsUrl) {
     const globalsPath = path.join(staging, "postgres-globals.sql");
     console.log("[Backup] Dumping PostgreSQL globals");
-    await run(process.env.PG_DUMPALL_BIN || "pg_dumpall", [
-      "--globals-only",
-      `--file=${globalsPath}`,
-      `--database=${globalsUrl}`,
-    ]);
-    output.push(globalsPath);
+    await run(
+      process.env.PG_DUMPALL_BIN || "pg_dumpall",
+      ["--globals-only", `--file=${globalsPath}`],
+      postgresEnvironment(globalsUrl),
+    );
+    files.push(globalsPath);
   } else if (production) {
     throw new Error(
       "BACKUP_POSTGRES_SUPERUSER_URL is required in production to preserve PostgreSQL roles",
     );
   }
-  return output;
+  return { files, artifacts };
 }
 
-async function writeCanvasSnapshot(staging: string): Promise<string> {
+async function writeCanvasSnapshot(
+  staging: string,
+): Promise<{ filePath: string; itemCount: number }> {
   if (!tableName) throw new Error("CANVAS_DDB_TABLE is required for a backup");
   if (production && process.env.DYNAMODB_ENDPOINT) {
     throw new Error(
@@ -173,7 +258,7 @@ async function writeCanvasSnapshot(staging: string): Promise<string> {
     client.destroy();
   }
   console.log(`[Backup] Captured ${itemCount} canvas items`);
-  return filePath;
+  return { filePath, itemCount };
 }
 
 function s3Destination(prefix: string, archiveName: string, fileName: string) {
@@ -209,15 +294,16 @@ async function backup(): Promise<void> {
   await mkdir(stagingDirectory, { recursive: false });
   console.log(`[Backup] Writing staged archive ${stagingDirectory}`);
 
-  const postgresFiles = await dumpPostgres(stagingDirectory);
-  const canvasFile = await writeCanvasSnapshot(stagingDirectory);
-  const files = [...postgresFiles, canvasFile];
+  const postgres = await dumpPostgres(stagingDirectory);
+  const canvas = await writeCanvasSnapshot(stagingDirectory);
+  const files = [...postgres.files, canvas.filePath];
   const archiveFiles = await Promise.all(files.map(describeFile));
   const manifest: ArchiveManifest = {
-    version: 1,
+    version: 2,
     createdAt: new Date().toISOString(),
-    databaseArtifacts: postgresFiles.map((file) => path.basename(file)),
+    databaseArtifacts: postgres.artifacts,
     canvasTable: tableName!,
+    canvasItemCount: canvas.itemCount,
     files: archiveFiles,
     offsitePrefix,
   };

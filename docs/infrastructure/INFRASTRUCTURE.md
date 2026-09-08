@@ -74,6 +74,22 @@ If using Docker, run the provided scripts to create full binary `.dump` files.
 
 - Any supported host: `npm run db:backup` (requires Node, `pg_dump`, and AWS CLI)
 
+Restore drills use only newly provisioned, empty targets whose names contain
+`restore-$RESTORE_DRILL_ID`; the tool rejects production mode and the active
+canvas table. Download a complete archive (including `manifest.json`) to an
+isolated host, set the `RESTORE_*_DATABASE_URL` values and
+`RESTORE_CANVAS_DDB_TABLE`, then run:
+
+```bash
+RESTORE_MODE=drill RESTORE_DRILL_ID=20260908 \
+  RESTORE_ARCHIVE_DIR=/secure/archive/2026-09-08T00-00-00-000Z \
+  npm run db:restore:drill
+```
+
+Do not use this drill command for a production cutover. That procedure needs an
+approved maintenance plan, a new DynamoDB table, and explicit service config
+changes after validation.
+
 ### Safe Schema Migrations (Idempotent)
 
 To prevent production data loss, all internal initialization scripts use `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. This ensures new columns are safely injected into existing tables without dropping existing data.

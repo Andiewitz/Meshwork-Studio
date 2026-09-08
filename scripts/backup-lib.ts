@@ -3,6 +3,8 @@ export interface DatabaseBackupTarget {
   url: string;
 }
 
+export interface DatabaseRestoreTarget extends DatabaseBackupTarget {}
+
 const requiredDatabaseEnvironment = [
   ["auth", "AUTH_DATABASE_URL"],
   ["workspace", "WORKSPACE_DATABASE_URL"],
@@ -59,4 +61,51 @@ export function requiredS3Uri(env: NodeJS.ProcessEnv): string {
     throw new Error("BACKUP_S3_URI must be an s3://bucket/optional-prefix URI");
   }
   return uri.replace(/\/$/, "");
+}
+
+/** Restore targets must be visibly isolated from active service databases. */
+export function requiredRestoreDatabaseTargets(
+  env: NodeJS.ProcessEnv,
+): DatabaseRestoreTarget[] {
+  const drillId = env.RESTORE_DRILL_ID;
+  if (!drillId || !/^[a-z0-9][a-z0-9_-]{2,30}$/.test(drillId)) {
+    throw new Error(
+      "RESTORE_DRILL_ID must be 3-31 lowercase letters, digits, underscores, or hyphens",
+    );
+  }
+  const restoreJenkosUrl =
+    env.RESTORE_JENKOS_DATABASE_URL || env.RESTORE_AI_DATABASE_URL;
+  const sourceTargets = requiredDatabaseTargets(
+    Object.fromEntries(
+      requiredDatabaseEnvironment
+        .map(([name, key]) => [key, env[`RESTORE_${key}`]])
+        .concat([["AI_DATABASE_URL", restoreJenkosUrl]]),
+    ),
+  );
+  const requiredMarker = `restore-${drillId}`;
+  for (const target of sourceTargets) {
+    const database = new URL(target.url).pathname.slice(1).toLowerCase();
+    if (!database.includes(requiredMarker)) {
+      throw new Error(
+        `RESTORE_${target.name.toUpperCase()}_DATABASE_URL must target a database containing ${requiredMarker}`,
+      );
+    }
+  }
+  return sourceTargets;
+}
+
+export function requiredRestoreCanvasTable(env: NodeJS.ProcessEnv): string {
+  const drillId = env.RESTORE_DRILL_ID;
+  const table = env.RESTORE_CANVAS_DDB_TABLE;
+  if (!table || !drillId || !table.includes(`restore-${drillId}`)) {
+    throw new Error(
+      "RESTORE_CANVAS_DDB_TABLE must contain restore-RESTORE_DRILL_ID",
+    );
+  }
+  if (table === env.CANVAS_DDB_TABLE) {
+    throw new Error(
+      "RESTORE_CANVAS_DDB_TABLE must not be the active canvas table",
+    );
+  }
+  return table;
 }
