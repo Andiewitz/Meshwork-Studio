@@ -34,4 +34,6 @@ export interface ChatCompletionRequest {
   stream?: boolean;
   tools?: ToolDeclaration[];
   tool_choice?: string | object;
+  /** Cancels the upstream request when the caller disconnects or times out. */
+  signal?: AbortSignal;
 }

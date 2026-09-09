@@ -38,6 +38,13 @@ import {
   DEFAULT_PROVIDER,
 } from "../resolver";
 import type { AppContext } from "@server/lib/registry";
+import {
+  abortReason,
+  ClientDisconnectedError,
+  createProviderAbortScope,
+  ProviderTimeoutError,
+  type ProviderAbortScope,
+} from "../providers/runtime";
 
 const log = createChildLogger("ai-routes");
 const MAX_CHAT_TOKENS = 1_024;
@@ -74,6 +81,17 @@ function handleResolutionError(error: ProviderResolutionError, res: Response) {
     default:
       return res.status(500).json({ message: error.message });
   }
+}
+
+function writeSse(
+  res: Response,
+  payload: unknown,
+  eventName?: "error",
+): boolean {
+  if (res.destroyed || res.writableEnded) return false;
+  const eventPrefix = eventName ? `event: ${eventName}\n` : "";
+  res.write(`${eventPrefix}data: ${JSON.stringify(payload)}\n\n`);
+  return !res.destroyed && !res.writableEnded;
 }
 
 export function createAIRoutes(context: AppContext) {
@@ -249,6 +267,7 @@ export function createAIRoutes(context: AppContext) {
     conditionalCsrf,
     aiChatLimiter,
     async (req: Request, res: Response) => {
+      let providerAbortScope: ProviderAbortScope | undefined;
       try {
         const userId = req.user!.id;
         const {
@@ -342,6 +361,16 @@ export function createAIRoutes(context: AppContext) {
           "Chat request resolved",
         );
 
+        providerAbortScope = createProviderAbortScope(req, res);
+        const providerRequest = {
+          model: resolvedModel,
+          messages,
+          temperature,
+          maxTokens: boundedMaxTokens,
+          tools,
+          signal: providerAbortScope.signal,
+        };
+
         if (resolvedProvider === "gemini") {
           const { createGeminiChatCompletion, streamGeminiChatCompletion } =
             await import("../providers/gemini");
@@ -352,32 +381,26 @@ export function createAIRoutes(context: AppContext) {
             res.setHeader("Connection", "keep-alive");
 
             const sseStream = streamGeminiChatCompletion(apiKey, {
-              model: resolvedModel,
-              messages,
-              temperature,
-              maxTokens: boundedMaxTokens,
+              ...providerRequest,
               stream: true,
-              tools,
             });
 
             for await (const chunk of sseStream) {
               if (typeof chunk === "string") {
-                res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+                if (!writeSse(res, { content: chunk })) break;
               } else {
-                res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+                if (!writeSse(res, chunk)) break;
               }
             }
 
-            res.write("data: [DONE]\n\n");
-            res.end();
+            if (!providerAbortScope.signal.aborted && !res.writableEnded) {
+              res.write("data: [DONE]\n\n");
+              res.end();
+            }
           } else {
             const response = await createGeminiChatCompletion(apiKey, {
-              model: resolvedModel,
-              messages,
-              temperature,
-              maxTokens: boundedMaxTokens,
+              ...providerRequest,
               stream: false,
-              tools,
             });
             res.json(response);
           }
@@ -393,25 +416,21 @@ export function createAIRoutes(context: AppContext) {
             const { streamOpenAIChatCompletion } =
               await import("../providers/openai");
             const sseStream = streamOpenAIChatCompletion(apiKey, {
-              model: resolvedModel,
-              messages,
-              temperature,
-              maxTokens: boundedMaxTokens,
+              ...providerRequest,
               stream: true,
             });
 
             for await (const chunk of sseStream) {
-              res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+              if (!writeSse(res, { content: chunk })) break;
             }
 
-            res.write("data: [DONE]\n\n");
-            res.end();
+            if (!providerAbortScope.signal.aborted && !res.writableEnded) {
+              res.write("data: [DONE]\n\n");
+              res.end();
+            }
           } else {
             const response = await createOpenAIChatCompletion(apiKey, {
-              model: resolvedModel,
-              messages,
-              temperature,
-              maxTokens: boundedMaxTokens,
+              ...providerRequest,
               stream: false,
             });
             res.json(response);
@@ -428,25 +447,21 @@ export function createAIRoutes(context: AppContext) {
             res.setHeader("Connection", "keep-alive");
 
             const sseStream = streamAnthropicChatCompletion(apiKey, {
-              model: resolvedModel,
-              messages,
-              temperature,
-              maxTokens: boundedMaxTokens,
+              ...providerRequest,
               stream: true,
             });
 
             for await (const chunk of sseStream) {
-              res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+              if (!writeSse(res, { content: chunk })) break;
             }
 
-            res.write("data: [DONE]\n\n");
-            res.end();
+            if (!providerAbortScope.signal.aborted && !res.writableEnded) {
+              res.write("data: [DONE]\n\n");
+              res.end();
+            }
           } else {
             const response = await createAnthropicChatCompletion(apiKey, {
-              model: resolvedModel,
-              messages,
-              temperature,
-              maxTokens: boundedMaxTokens,
+              ...providerRequest,
               stream: false,
             });
 
@@ -465,25 +480,21 @@ export function createAIRoutes(context: AppContext) {
             res.setHeader("Connection", "keep-alive");
 
             const sseStream = streamOpenRouterChatCompletion(apiKey, {
-              model: resolvedModel,
-              messages,
-              temperature,
-              maxTokens: boundedMaxTokens,
+              ...providerRequest,
               stream: true,
             });
 
             for await (const chunk of sseStream) {
-              res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+              if (!writeSse(res, { content: chunk })) break;
             }
 
-            res.write("data: [DONE]\n\n");
-            res.end();
+            if (!providerAbortScope.signal.aborted && !res.writableEnded) {
+              res.write("data: [DONE]\n\n");
+              res.end();
+            }
           } else {
             const response = await createOpenRouterChatCompletion(apiKey, {
-              model: resolvedModel,
-              messages,
-              temperature,
-              maxTokens: boundedMaxTokens,
+              ...providerRequest,
               stream: false,
             });
             res.json(response);
@@ -494,6 +505,12 @@ export function createAIRoutes(context: AppContext) {
             .json({ message: `Unsupported provider: ${resolvedProvider}` });
         }
       } catch (error: unknown) {
+        const reason = abortReason(providerAbortScope?.signal);
+        if (reason instanceof ClientDisconnectedError) {
+          log.info({ userId: req.user?.id }, "AI request cancelled by client");
+          return;
+        }
+
         log.error(
           {
             err: error,
@@ -508,15 +525,28 @@ export function createAIRoutes(context: AppContext) {
           message?: string;
         };
         const statusCode =
-          providerError.status ?? providerError.statusCode ?? 502;
+          reason instanceof ProviderTimeoutError
+            ? reason.status
+            : (providerError.status ?? providerError.statusCode ?? 502);
         const message =
-          providerError.message ?? "AI provider returned an error";
+          reason instanceof ProviderTimeoutError
+            ? reason.message
+            : (providerError.message ?? "AI provider returned an error");
+        if (res.headersSent) {
+          if (!res.writableEnded && !res.destroyed) {
+            writeSse(res, { code: "PROVIDER_ERROR", message }, "error");
+            res.end();
+          }
+          return;
+        }
         res
           .status(statusCode >= 400 && statusCode < 600 ? statusCode : 502)
           .json({
             code: "PROVIDER_ERROR",
             message,
           });
+      } finally {
+        providerAbortScope?.dispose();
       }
     },
   );
@@ -528,6 +558,7 @@ export function createAIRoutes(context: AppContext) {
     conditionalCsrf,
     aiChatLimiter,
     async (req: Request, res: Response) => {
+      let providerAbortScope: ProviderAbortScope | undefined;
       try {
         const userId = req.user!.id;
         const { canvas } = req.body as {
@@ -600,50 +631,47 @@ You MUST return ONLY a valid JSON array of strings, e.g.:
 Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the raw JSON.`;
 
         let responseText = "";
+        providerAbortScope = createProviderAbortScope(req, res);
+        const suggestionRequest = {
+          model: suggestionsModel,
+          messages: [{ role: "user" as const, content: prompt }],
+          temperature: 0.5,
+          maxTokens: 80,
+          stream: false,
+          signal: providerAbortScope.signal,
+        };
 
         if (provider === "gemini") {
           const { createGeminiChatCompletion } =
             await import("../providers/gemini");
-          const response = (await createGeminiChatCompletion(apiKey, {
-            model: suggestionsModel,
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.5,
-            maxTokens: 80,
-            stream: false,
-          })) as ChatCompletionResponse;
+          const response = (await createGeminiChatCompletion(
+            apiKey,
+            suggestionRequest,
+          )) as ChatCompletionResponse;
           responseText = response.choices?.[0]?.message?.content ?? "";
         } else if (provider === "openrouter") {
           const { createOpenRouterChatCompletion } =
             await import("../providers/openrouter");
-          const response = (await createOpenRouterChatCompletion(apiKey, {
-            model: suggestionsModel,
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.5,
-            maxTokens: 80,
-            stream: false,
-          })) as ChatCompletionResponse;
+          const response = (await createOpenRouterChatCompletion(
+            apiKey,
+            suggestionRequest,
+          )) as ChatCompletionResponse;
           responseText = response.choices?.[0]?.message?.content ?? "";
         } else if (provider === "openai") {
           const { createOpenAIChatCompletion } =
             await import("../providers/openai");
-          const response = (await createOpenAIChatCompletion(apiKey, {
-            model: suggestionsModel,
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.5,
-            maxTokens: 80,
-            stream: false,
-          })) as ChatCompletionResponse;
+          const response = (await createOpenAIChatCompletion(
+            apiKey,
+            suggestionRequest,
+          )) as ChatCompletionResponse;
           responseText = response.choices?.[0]?.message?.content ?? "";
         } else if (provider === "anthropic") {
           const { createAnthropicChatCompletion } =
             await import("../providers/anthropic");
-          const response = await createAnthropicChatCompletion(apiKey, {
-            model: suggestionsModel,
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.5,
-            maxTokens: 80,
-            stream: false,
-          });
+          const response = await createAnthropicChatCompletion(
+            apiKey,
+            suggestionRequest,
+          );
           const data = await response.json();
           responseText = data.content?.[0]?.text || "";
         }
@@ -676,6 +704,12 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
           ]);
         }
       } catch (error: unknown) {
+        if (
+          abortReason(providerAbortScope?.signal) instanceof
+          ClientDisconnectedError
+        ) {
+          return;
+        }
         log.error({ err: error, userId: req.user?.id }, "Suggestions failed");
         return res.json([
           "Design a scalable Kubernetes microservices architecture",
@@ -683,6 +717,8 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
           "Build a serverless event-driven data pipeline",
           "Create a secure AWS VPC with public/private subnets",
         ]);
+      } finally {
+        providerAbortScope?.dispose();
       }
     },
   );

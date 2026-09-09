@@ -370,23 +370,23 @@ versioned canvas snapshot before enqueuing the copy.
 
 ### I01–I03 — AI has correctness, failure, and spend leaks
 
-- [`aiRoutes.ts`](../server/services/ai/routes/aiRoutes.ts) lines 513–518 mounts
-  `/suggestions` without `aiChatLimiter` or `aiFreeTierLimiter`; the client effect
-  in [`WorkspaceLeftSidebar.tsx`](../client/src/features/workspace/components/WorkspaceLeftSidebar.tsx)
-  lines 74–98 calls it whenever node/edge count changes. It invokes a model with
-  up to 1,000 output tokens even though four six-word strings are requested.
-- The free resolver accepts arbitrary simple model names at
-  [`resolver.ts`](../server/services/ai/resolver/resolver.ts) lines 93–104, and
-  route-supplied `maxTokens` reaches providers without a server cap. This affects
-  cost and creates unbounded `model` metric labels.
-- Provider fetches generally have no overall/connect/idle deadline and do not
-  abort when the browser disconnects.
-- Anthropic non-2xx responses can be reserialized as HTTP 200. After SSE headers
-  are sent, the catch block at `aiRoutes.ts` lines 485–508 tries to send JSON,
-  which can cause `ERR_HTTP_HEADERS_SENT` instead of an SSE error and clean end.
-- [`anthropic.ts`](../server/services/ai/providers/anthropic.ts) lines 51–74 splits
-  each network chunk independently and discards incomplete JSON lines. A valid
-  event split over two reads produced empty output in the isolated probe.
+Suggestions now run behind the chat limiter, only when the sidebar opens, and
+have a small input/output cap. Provider/model allowlists and a 1,024-token chat
+ceiling bound direct spend and metric labels.
+
+Chat and suggestion requests now use one request-scoped abort signal: it ends
+upstream work when the browser disconnects and enforces a configurable deadline
+(`AI_PROVIDER_TIMEOUT_MS`, default 45 seconds, clamped to 5–90 seconds).
+OpenAI-compatible clients and native Gemini/Anthropic fetches receive that
+signal. Anthropic now turns non-2xx responses into errors and parses SSE with a
+carry buffer. Once SSE headers have been sent, the route writes a terminal SSE
+error payload rather than attempting a second JSON response.
+
+Remaining gaps:
+
+- No daily global/provider spend budget, bounded canvas-fingerprint cache, or
+  cancellation/timeout/cost counters yet.
+- Stream output has safe termination but no request ID in its terminal error.
 - [`jenkosAgent.ts`](../client/src/features/workspace/agent/jenkosAgent.ts) lines
   312–332 executes every edit tool against the same original nodes/edges; a
   two-tool probe retained only the second edit.

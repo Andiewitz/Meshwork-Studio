@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { ChatCompletionRequest } from "./types";
+import { providerTimeoutMs } from "./runtime";
 
 function getAppUrl(): string {
   return (
@@ -13,6 +14,7 @@ export async function createOpenRouterChatCompletion(
 ): Promise<ReadableStream | object> {
   const openai = new OpenAI({
     apiKey,
+    timeout: providerTimeoutMs(),
     baseURL: "https://openrouter.ai/api/v1",
     defaultHeaders: {
       "HTTP-Referer": getAppUrl(),
@@ -20,14 +22,17 @@ export async function createOpenRouterChatCompletion(
     },
   });
 
-  const response = await openai.chat.completions.create({
-    model: request.model,
-    messages: request.messages as any,
-    temperature: request.temperature ?? 0.7,
-    max_tokens: request.maxTokens,
-    stream: request.stream ?? false,
-    ...(request.tools ? { tools: request.tools } : {}),
-  });
+  const response = await openai.chat.completions.create(
+    {
+      model: request.model,
+      messages: request.messages as any,
+      temperature: request.temperature ?? 0.7,
+      max_tokens: request.maxTokens,
+      stream: request.stream ?? false,
+      ...(request.tools ? { tools: request.tools } : {}),
+    },
+    { signal: request.signal },
+  );
 
   return response;
 }
@@ -38,6 +43,7 @@ export async function* streamOpenRouterChatCompletion(
 ): AsyncGenerator<string, void, unknown> {
   const openai = new OpenAI({
     apiKey,
+    timeout: providerTimeoutMs(),
     baseURL: "https://openrouter.ai/api/v1",
     defaultHeaders: {
       "HTTP-Referer": getAppUrl(),
@@ -45,14 +51,17 @@ export async function* streamOpenRouterChatCompletion(
     },
   });
 
-  const stream = await openai.chat.completions.create({
-    model: request.model,
-    messages: request.messages as any,
-    temperature: request.temperature ?? 0.7,
-    max_tokens: request.maxTokens,
-    stream: true,
-    ...(request.tools ? { tools: request.tools } : {}),
-  });
+  const stream = await openai.chat.completions.create(
+    {
+      model: request.model,
+      messages: request.messages as any,
+      temperature: request.temperature ?? 0.7,
+      max_tokens: request.maxTokens,
+      stream: true,
+      ...(request.tools ? { tools: request.tools } : {}),
+    },
+    { signal: request.signal },
+  );
 
   for await (const chunk of stream) {
     const content = chunk.choices[0]?.delta?.content;

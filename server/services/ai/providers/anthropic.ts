@@ -19,7 +19,17 @@ export async function createAnthropicChatCompletion(
       max_tokens: request.maxTokens ?? 4096,
       stream: request.stream ?? false,
     }),
+    signal: request.signal,
   });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    const error = new Error(
+      body?.error?.message || `Anthropic returned HTTP ${response.status}`,
+    );
+    (error as Error & { status?: number }).status = response.status;
+    throw error;
+  }
 
   return response;
 }
@@ -43,35 +53,52 @@ export async function* streamAnthropicChatCompletion(
       max_tokens: request.maxTokens ?? 4096,
       stream: true,
     }),
+    signal: request.signal,
   });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    const error = new Error(
+      body?.error?.message || `Anthropic returned HTTP ${response.status}`,
+    );
+    (error as Error & { status?: number }).status = response.status;
+    throw error;
+  }
 
   const reader = response.body?.getReader();
   if (!reader) return;
 
   const decoder = new TextDecoder();
+  let buffer = "";
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    const chunk = decoder.decode(value);
-    const lines = chunk.split("\n");
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
 
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        const data = line.slice(6);
-        if (data === "[DONE]") return;
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = line.slice(6);
+          if (data === "[DONE]") return;
 
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.type === "content_block_delta") {
-            yield parsed.delta?.text || "";
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === "content_block_delta") {
+              yield parsed.delta?.text || "";
+            }
+          } catch {
+            // Ignore parse errors for empty lines
           }
-        } catch {
-          // Ignore parse errors for empty lines
         }
       }
     }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+    reader.releaseLock();
   }
 }
 

@@ -164,6 +164,7 @@ export async function createGeminiChatCompletion(
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          signal: request.signal,
         });
 
         if (!response.ok) {
@@ -282,6 +283,7 @@ export async function* streamGeminiChatCompletion(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        signal: request.signal,
       });
 
       if (response.ok && response.body) {
@@ -358,6 +360,7 @@ export async function* streamGeminiChatCompletion(
       }
     }
   } finally {
+    await reader.cancel().catch(() => undefined);
     reader.releaseLock();
   }
 }
