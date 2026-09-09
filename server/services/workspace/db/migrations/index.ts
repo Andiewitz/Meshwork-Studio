@@ -90,4 +90,20 @@ export const MIGRATIONS: Migration[] = [
         WHERE processed_at IS NULL AND dead_lettered_at IS NULL;
     `,
   },
+  {
+    version: "0021_durable_canvas_copy",
+    up: `
+      ALTER TABLE workspaces
+        ADD COLUMN IF NOT EXISTS canvas_copy_status TEXT NOT NULL DEFAULT 'ready'
+          CHECK (canvas_copy_status IN ('ready', 'copying', 'failed'));
+      ALTER TABLE workspaces
+        ADD COLUMN IF NOT EXISTS canvas_copy_source_id VARCHAR(128);
+
+      ALTER TABLE workspace_outbox_events
+        DROP CONSTRAINT IF EXISTS workspace_outbox_events_event_type_check;
+      ALTER TABLE workspace_outbox_events
+        ADD CONSTRAINT workspace_outbox_events_event_type_check
+          CHECK (event_type IN ('workspace.deleted', 'workspaces.deleted', 'workspace.duplicated'));
+    `,
+  },
 ];

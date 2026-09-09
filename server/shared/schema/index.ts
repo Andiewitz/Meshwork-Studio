@@ -51,6 +51,8 @@ export interface Workspace {
   aiContext: string | null;
   groups: string[] | null;
   tags: string[] | null;
+  canvasCopyStatus: "ready" | "copying" | "failed";
+  canvasCopySourceId: string | null;
 }
 
 export {

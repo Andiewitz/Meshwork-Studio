@@ -33,6 +33,19 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
     const workspace = await workspaceStorage.getWorkspace(id);
     if (!workspace)
       return res.status(404).json({ message: "Workspace not found" });
+    if (workspace.canvasCopyStatus === "copying") {
+      return res.status(409).json({
+        code: "CANVAS_COPY_IN_PROGRESS",
+        message: "This workspace canvas is still being copied.",
+      });
+    }
+    if (workspace.canvasCopyStatus === "failed") {
+      return res.status(503).json({
+        code: "CANVAS_COPY_FAILED",
+        message:
+          "This workspace canvas copy failed. Retry it from the dashboard.",
+      });
+    }
 
     const userId = req.user!.id;
     const hasAccess = await teamStorage.canAccessWorkspace(
@@ -61,6 +74,19 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
       const workspace = await workspaceStorage.getWorkspace(id);
       if (!workspace)
         return res.status(404).json({ message: "Workspace not found" });
+      if (workspace.canvasCopyStatus === "copying") {
+        return res.status(409).json({
+          code: "CANVAS_COPY_IN_PROGRESS",
+          message: "This workspace canvas is still being copied.",
+        });
+      }
+      if (workspace.canvasCopyStatus === "failed") {
+        return res.status(503).json({
+          code: "CANVAS_COPY_FAILED",
+          message:
+            "This workspace canvas copy failed. Retry it from the dashboard.",
+        });
+      }
 
       const userId = req.user!.id;
       const role = await teamStorage.getWorkspaceRole(workspace.id, userId);

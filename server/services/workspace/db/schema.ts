@@ -43,6 +43,11 @@ export const workspaces = pgTable("workspaces", {
   tags: jsonb("tags")
     .$type<string[]>()
     .default(sql`'[]'::jsonb`),
+  canvasCopyStatus: text("canvas_copy_status")
+    .$type<"ready" | "copying" | "failed">()
+    .notNull()
+    .default("ready"),
+  canvasCopySourceId: text("canvas_copy_source_id"),
 });
 
 /**
@@ -101,7 +106,12 @@ export const insertWorkspaceSchema = createInsertSchema(workspaces, {
     .default("Untitled"),
   groups: z.array(z.string()).default([]),
   tags: z.array(z.string()).default([]),
-}).omit({ id: true, createdAt: true });
+}).omit({
+  id: true,
+  createdAt: true,
+  canvasCopyStatus: true,
+  canvasCopySourceId: true,
+});
 
 export type Collection = typeof collections.$inferSelect;
 export type InsertCollection = z.infer<typeof insertCollectionSchema>;

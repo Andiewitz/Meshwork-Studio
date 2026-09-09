@@ -22,7 +22,6 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
   const isAuthenticated =
     context.registry.get<RequestHandler>("isAuthenticated");
   const teamStorage = context.registry.get<ITeamStorage>("teamStorage");
-  const { eventBus } = context;
   // Collections (Subcollections)
   app.get("/api/v1/collections", isAuthenticated, async (req, res) => {
     const userId = getUserId(req);
@@ -266,14 +265,42 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
       }
 
       const { title } = req.body;
-      const duplicated = await workspaceStorage.duplicateWorkspace(id, title);
-
-      eventBus.emit("workspace.duplicated", {
-        originalId: id,
-        newId: duplicated.id,
-      });
+      const duplicated =
+        await workspaceStorage.duplicateWorkspaceAndEnqueueCanvasCopy(
+          id,
+          title,
+        );
+      workspaceOutbox.wake();
 
       res.status(201).json(duplicated);
+    },
+  );
+
+  app.post(
+    "/api/v1/workspaces/:id/retry-canvas-copy",
+    csrfProtect,
+    isAuthenticated,
+    async (req, res) => {
+      const id = getParamId(req);
+      const workspace = await workspaceStorage.getWorkspace(id);
+      if (!workspace) return res.status(404).json({ message: "Not found" });
+
+      const userId = getUserId(req);
+      const role = await teamStorage.getWorkspaceRole(id, userId);
+      if (!canDeleteWorkspace(role)) {
+        return res.status(403).json({
+          message: "Forbidden: Only admins and owners can retry a canvas copy",
+        });
+      }
+
+      try {
+        const retrying = await workspaceStorage.retryCanvasCopy(id);
+        workspaceOutbox.wake();
+        res.json(retrying);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Retry failed";
+        res.status(409).json({ message });
+      }
     },
   );
 }

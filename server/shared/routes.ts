@@ -77,6 +77,17 @@ export const api = {
         401: errorSchemas.unauthorized,
       },
     },
+    retryCanvasCopy: {
+      method: "POST" as const,
+      path: "/api/v1/workspaces/:id/retry-canvas-copy" as const,
+      input: z.object({}),
+      responses: {
+        200: z.custom<Workspace>(),
+        401: errorSchemas.unauthorized,
+        404: errorSchemas.notFound,
+        409: errorSchemas.validation,
+      },
+    },
     getCanvas: {
       method: "GET" as const,
       path: "/api/v1/workspaces/:id/canvas" as const,

@@ -47,6 +47,13 @@ export interface IWorkspaceStorage {
   /** Atomically deletes a workspace and queues its canvas cleanup. */
   deleteWorkspaceAndEnqueueCleanup(id: string): Promise<void>;
   duplicateWorkspace(id: string, newTitle?: string): Promise<Workspace>;
+  /** Creates a copy in `copying` state and atomically queues its canvas clone. */
+  duplicateWorkspaceAndEnqueueCanvasCopy(
+    id: string,
+    newTitle?: string,
+  ): Promise<Workspace>;
+  /** Requeues a canvas clone which exhausted its previous retry budget. */
+  retryCanvasCopy(id: string): Promise<Workspace>;
   deleteAllUserData(userId: string, tx?: DrizzleTx): Promise<void>;
   /** Atomically deletes a user's workspaces and queues their canvas cleanup. */
   deleteAllUserDataAndEnqueueCleanup(userId: string): Promise<string[]>;
@@ -207,6 +214,70 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
     return duplicated;
   }
 
+  async duplicateWorkspaceAndEnqueueCanvasCopy(
+    id: string,
+    newTitle?: string,
+  ): Promise<Workspace> {
+    return db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(workspaces)
+        .where(eq(workspaces.id, id));
+      if (!existing) throw new Error("Workspace not found");
+
+      const [duplicated] = await tx
+        .insert(workspaces)
+        .values({
+          title: newTitle || `${existing.title} (Copy)`,
+          type: existing.type,
+          icon: existing.icon,
+          userId: existing.userId,
+          collectionId: existing.collectionId,
+          description: existing.description,
+          author: existing.author,
+          aiContext: existing.aiContext,
+          groups: existing.groups || [],
+          tags: existing.tags || [],
+          canvasCopyStatus: "copying",
+          canvasCopySourceId: id,
+        })
+        .returning();
+
+      await tx.insert(workspaceOutboxEvents).values({
+        eventType: "workspace.duplicated",
+        payload: { originalId: id, newId: duplicated.id },
+      });
+      return duplicated;
+    });
+  }
+
+  async retryCanvasCopy(id: string): Promise<Workspace> {
+    return db.transaction(async (tx) => {
+      const [workspace] = await tx
+        .select()
+        .from(workspaces)
+        .where(eq(workspaces.id, id));
+      if (!workspace) throw new Error("Workspace not found");
+      if (workspace.canvasCopyStatus !== "failed") {
+        throw new Error("Canvas copy is not eligible for retry");
+      }
+      if (!workspace.canvasCopySourceId) {
+        throw new Error("Canvas copy source is unavailable");
+      }
+
+      const [retrying] = await tx
+        .update(workspaces)
+        .set({ canvasCopyStatus: "copying", updatedAt: new Date() })
+        .where(eq(workspaces.id, id))
+        .returning();
+      await tx.insert(workspaceOutboxEvents).values({
+        eventType: "workspace.duplicated",
+        payload: { originalId: workspace.canvasCopySourceId, newId: id },
+      });
+      return retrying;
+    });
+  }
+
   async deleteAllUserData(
     userId: string,
     providedTx?: DrizzleTx,
@@ -322,6 +393,8 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
       aiContext: insertWorkspace.aiContext ?? null,
       groups: insertWorkspace.groups ?? [],
       tags: insertWorkspace.tags ?? [],
+      canvasCopyStatus: "ready",
+      canvasCopySourceId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -367,6 +440,52 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
       groups: existing.groups ?? [],
       tags: existing.tags ?? [],
     });
+  }
+
+  async duplicateWorkspaceAndEnqueueCanvasCopy(
+    id: string,
+    newTitle?: string,
+  ): Promise<Workspace> {
+    const existing = await this.getWorkspace(id);
+    if (!existing) throw new Error("Workspace not found");
+    const copied = await this.createWorkspace({
+      title: newTitle || `${existing.title} (Copy)`,
+      type: existing.type,
+      icon: existing.icon,
+      userId: existing.userId,
+      collectionId: existing.collectionId,
+      description: existing.description,
+      author: existing.author,
+      aiContext: existing.aiContext,
+      groups: existing.groups ?? [],
+      tags: existing.tags ?? [],
+    });
+    const copiedIndex = this.workspaces.findIndex(
+      (workspace) => workspace.id === copied.id,
+    );
+    const copying = {
+      ...copied,
+      canvasCopyStatus: "copying" as const,
+      canvasCopySourceId: id,
+    };
+    this.workspaces[copiedIndex] = copying;
+    return copying;
+  }
+
+  async retryCanvasCopy(id: string): Promise<Workspace> {
+    const workspace = await this.getWorkspace(id);
+    if (!workspace) throw new Error("Workspace not found");
+    if (workspace.canvasCopyStatus !== "failed") {
+      throw new Error("Canvas copy is not eligible for retry");
+    }
+    const index = this.workspaces.findIndex((candidate) => candidate.id === id);
+    const updated = {
+      ...workspace,
+      canvasCopyStatus: "copying" as const,
+      updatedAt: new Date(),
+    };
+    this.workspaces[index] = updated;
+    return updated;
   }
 
   async deleteAllUserData(userId: string): Promise<void> {

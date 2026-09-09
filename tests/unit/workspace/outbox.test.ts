@@ -63,6 +63,32 @@ describe("workspace outbox delivery", () => {
     expect(markFailed).toHaveBeenCalledWith(event, failure);
   });
 
+  it("delivers a duplicate through the durable event channel", async () => {
+    const emitAsync = vi.fn().mockResolvedValue(undefined);
+    const markProcessed = vi.fn().mockResolvedValue(undefined);
+    const markFailed = vi.fn().mockResolvedValue(undefined);
+    const event = {
+      id: "event-copy",
+      eventType: "workspace.duplicated" as const,
+      payload: { originalId: "workspace-source", newId: "workspace-copy" },
+      attempts: 1,
+    };
+
+    await deliverWorkspaceOutboxEvents(
+      [event],
+      { emitAsync },
+      markProcessed,
+      markFailed,
+    );
+
+    expect(emitAsync).toHaveBeenCalledWith("workspace.duplicated", {
+      originalId: "workspace-source",
+      newId: "workspace-copy",
+    });
+    expect(markProcessed).toHaveBeenCalledWith(event);
+    expect(markFailed).not.toHaveBeenCalled();
+  });
+
   it("uses bounded exponential retries", () => {
     expect(outboxRetryDelayMs(1)).toBe(1_000);
     expect(outboxRetryDelayMs(3)).toBe(4_000);

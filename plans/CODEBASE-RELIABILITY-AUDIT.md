@@ -357,13 +357,16 @@ Canvas deletion failures are rethrown so the dispatcher can retry instead of
 mistaking a log message for success.
 
 This closes the data-retention risk for workspace and account deletion, including
-a process crash after the workspace transaction commits. Duplicate canvas copying
-is still a non-durable in-memory event and can leave a blank or stale duplicate
-after a failure or restart.
+a process crash after the workspace transaction commits. Duplicate canvas copies
+also use the outbox: copied workspaces remain visibly `copying` until canvas
+data is copied, become `failed` after the retry budget is exhausted, and owners
+can explicitly requeue a failed copy. The copy itself is idempotent per target
+workspace, though it still reflects the source at dispatch time rather than a
+point-in-time source snapshot.
 
-Next, put duplicate/copy operations in the outbox with a visible `copying` /
-`failed` state and an idempotent snapshot-copy contract. Deletion should also
-gain a recoverable tombstone/grace period if product requirements permit it.
+Deletion should gain a recoverable tombstone/grace period if product requirements
+permit it. If point-in-time duplication becomes a product requirement, capture a
+versioned canvas snapshot before enqueuing the copy.
 
 ### I01–I03 — AI has correctness, failure, and spend leaks
 

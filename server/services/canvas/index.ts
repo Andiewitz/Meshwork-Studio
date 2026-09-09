@@ -4,6 +4,7 @@ import { ensureCanvasTable } from "./db/dynamo";
 import { registerCanvasRoutes } from "./routes/canvasRoutes";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
+import type { IWorkspaceStorage } from "@services/workspace/db/storage";
 
 const log = createChildLogger("canvas-service");
 
@@ -27,6 +28,16 @@ export class CanvasService {
       "workspace.duplicated",
       async ({ originalId, newId }) => {
         try {
+          const workspaceStorage =
+            context.registry.get<IWorkspaceStorage>("workspaceStorage");
+          const target = await workspaceStorage.getWorkspace(newId);
+          if (!target || target.canvasCopyStatus !== "copying") {
+            log.info(
+              { originalId, newId },
+              "Skipped obsolete canvas copy event",
+            );
+            return;
+          }
           await canvasStorage.duplicateCanvas(originalId, newId);
           log.info({ originalId, newId }, "Canvas data duplicated via event");
         } catch (err) {
@@ -34,6 +45,7 @@ export class CanvasService {
             { err, originalId, newId },
             "Failed to duplicate canvas data",
           );
+          throw err;
         }
       },
     );

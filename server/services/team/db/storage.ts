@@ -323,6 +323,8 @@ export class TeamDatabaseStorage implements ITeamStorage {
       aiContext: null,
       groups: [],
       tags: [],
+      canvasCopyStatus: "ready",
+      canvasCopySourceId: null,
     };
   }
 

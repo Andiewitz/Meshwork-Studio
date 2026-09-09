@@ -23,6 +23,8 @@ import {
   CodeBracketIcon,
   WifiIcon,
   UserGroupIcon,
+  ArrowPathIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
 import {
@@ -42,6 +44,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   useUpdateWorkspace,
   useDuplicateWorkspace,
+  useRetryCanvasCopy,
 } from "@/hooks/use-workspaces";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -93,6 +96,7 @@ export function WorkspaceCard({
   const { user } = useAuth();
   const updateWorkspace = useUpdateWorkspace();
   const duplicateWorkspace = useDuplicateWorkspace();
+  const retryCanvasCopy = useRetryCanvasCopy();
   const isShared =
     workspace.userId !== null &&
     user?.id !== undefined &&
@@ -147,6 +151,19 @@ export function WorkspaceCard({
     }
   };
 
+  const handleRetryCanvasCopy = async () => {
+    try {
+      await retryCanvasCopy.mutateAsync(workspace.id);
+      toast({ title: "Canvas copy retrying" });
+    } catch {
+      toast({
+        title: "Retry failed",
+        description: "The canvas copy could not be queued.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -170,11 +187,28 @@ export function WorkspaceCard({
       ? new Date(workspace.createdAt)
       : new Date();
   const updatedText = formatDistanceToNow(displayDate, { addSuffix: true });
+  const canvasCopyPending = workspace.canvasCopyStatus === "copying";
+  const canvasCopyFailed = workspace.canvasCopyStatus === "failed";
+  const openWorkspace = () => {
+    if (canvasCopyPending || canvasCopyFailed) {
+      toast({
+        title: canvasCopyPending
+          ? "Canvas copy in progress"
+          : "Canvas copy failed",
+        description: canvasCopyPending
+          ? "This workspace will open when its canvas is ready."
+          : "Retry the canvas copy from this workspace's menu.",
+        variant: canvasCopyFailed ? "destructive" : undefined,
+      });
+      return;
+    }
+    setLocation(`/workspace/${workspace.id}`);
+  };
 
   const MenuItems = () => (
     <>
       <DropdownMenuItem
-        onClick={() => setLocation(`/workspace/${workspace.id}`)}
+        onClick={openWorkspace}
         className="cursor-figma-pointer focus:bg-surface-container-high focus:text-primary"
       >
         <ArrowTopRightOnSquareIcon className="w-4 h-4 mr-2" /> Open
@@ -199,6 +233,17 @@ export function WorkspaceCard({
       >
         <DocumentDuplicateIcon className="w-4 h-4 mr-2" /> Duplicate
       </DropdownMenuItem>
+      {canvasCopyFailed && (
+        <DropdownMenuItem
+          onClick={(event) => {
+            event.stopPropagation();
+            void handleRetryCanvasCopy();
+          }}
+          className="cursor-figma-pointer focus:bg-surface-container-high focus:text-white"
+        >
+          <ArrowPathIcon className="w-4 h-4 mr-2" /> Retry canvas copy
+        </DropdownMenuItem>
+      )}
       {!isShared && (
         <>
           <DropdownMenuSeparator className="bg-outline-variant/20" />
@@ -231,9 +276,7 @@ export function WorkspaceCard({
             isDeleting && "opacity-50 pointer-events-none grayscale",
           )}
           onClick={() =>
-            isMultiSelectMode
-              ? onToggleSelect?.(workspace.id)
-              : setLocation(`/workspace/${workspace.id}`)
+            isMultiSelectMode ? onToggleSelect?.(workspace.id) : openWorkspace()
           }
         >
           {isSelected && (
@@ -260,6 +303,26 @@ export function WorkspaceCard({
                 <UserGroupIcon className="w-3 h-3 text-blue-400" />
                 <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">
                   Shared
+                </span>
+              </div>
+            )}
+
+            {(canvasCopyPending || canvasCopyFailed) && (
+              <div
+                className={cn(
+                  "absolute bottom-3 left-3 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full border backdrop-blur-sm",
+                  canvasCopyFailed
+                    ? "bg-red-500/20 border-red-400/30 text-red-300"
+                    : "bg-amber-500/20 border-amber-300/30 text-amber-200",
+                )}
+              >
+                {canvasCopyFailed ? (
+                  <ExclamationTriangleIcon className="w-3 h-3" />
+                ) : (
+                  <ArrowPathIcon className="w-3 h-3 animate-spin" />
+                )}
+                <span className="text-[9px] font-bold uppercase tracking-widest">
+                  {canvasCopyFailed ? "Copy failed" : "Copying"}
                 </span>
               </div>
             )}

@@ -53,6 +53,14 @@ export function useWorkspaces() {
       return api.workspaces.list.responses[200].parse(await res.json());
     },
     enabled: isAuthenticated, // Only fetch if authenticated
+    // Only poll while a durable canvas clone is still pending; once all copies
+    // are ready this remains a normal cache-backed list query.
+    refetchInterval: (query) =>
+      query.state.data?.some(
+        (workspace) => workspace.canvasCopyStatus === "copying",
+      )
+        ? 3_000
+        : false,
   });
 }
 
@@ -226,6 +234,31 @@ export function useDuplicateWorkspace() {
 
       if (!res.ok) throw new Error("Failed to duplicate workspace");
       return api.workspaces.duplicate.responses[201].parse(await res.json());
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: [api.workspaces.list.path],
+      });
+    },
+  });
+}
+
+export function useRetryCanvasCopy() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const url = buildUrl(api.workspaces.retryCanvasCopy.path, { id });
+      const res = await secureFetch(getApiUrl(url), {
+        method: api.workspaces.retryCanvasCopy.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+        credentials: "include",
+      });
+      if (!res.ok) await extractError(res, "Failed to retry canvas copy");
+      return api.workspaces.retryCanvasCopy.responses[200].parse(
+        await res.json(),
+      );
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({

@@ -8,7 +8,8 @@ const BATCH_SIZE = 25;
 const MAX_ATTEMPTS = 12;
 const LEASE_SECONDS = 60;
 
-type WorkspaceOutboxEventType = "workspace.deleted" | "workspaces.deleted";
+type WorkspaceOutboxEventType =
+  "workspace.deleted" | "workspaces.deleted" | "workspace.duplicated";
 
 export interface ClaimedWorkspaceOutboxEvent {
   id: string;
@@ -20,7 +21,8 @@ export interface ClaimedWorkspaceOutboxEvent {
 function assertPayload(
   event: ClaimedWorkspaceOutboxEvent,
 ): asserts event is ClaimedWorkspaceOutboxEvent & {
-  payload: { id: string } | { ids: string[] };
+  payload:
+    { id: string } | { ids: string[] } | { originalId: string; newId: string };
 } {
   if (
     event.eventType === "workspace.deleted" &&
@@ -37,6 +39,14 @@ function assertPayload(
   ) {
     return;
   }
+  if (
+    event.eventType === "workspace.duplicated" &&
+    typeof (event.payload as { originalId?: unknown })?.originalId ===
+      "string" &&
+    typeof (event.payload as { newId?: unknown })?.newId === "string"
+  ) {
+    return;
+  }
   throw new Error(`Invalid payload for outbox event ${event.eventType}`);
 }
 
@@ -48,7 +58,7 @@ export function outboxRetryDelayMs(attempt: number): number {
 export async function deliverWorkspaceOutboxEvents(
   events: ClaimedWorkspaceOutboxEvent[],
   eventBus: Pick<EventBus, "emitAsync">,
-  markProcessed: (id: string) => Promise<void>,
+  markProcessed: (event: ClaimedWorkspaceOutboxEvent) => Promise<void>,
   markFailed: (
     event: ClaimedWorkspaceOutboxEvent,
     error: unknown,
@@ -60,11 +70,14 @@ export async function deliverWorkspaceOutboxEvents(
       if (event.eventType === "workspace.deleted") {
         const payload = event.payload as { id: string };
         await eventBus.emitAsync("workspace.deleted", { id: payload.id });
-      } else {
+      } else if (event.eventType === "workspaces.deleted") {
         const payload = event.payload as { ids: string[] };
         await eventBus.emitAsync("workspaces.deleted", { ids: payload.ids });
+      } else {
+        const payload = event.payload as { originalId: string; newId: string };
+        await eventBus.emitAsync("workspace.duplicated", payload);
       }
-      await markProcessed(event.id);
+      await markProcessed(event);
     } catch (error) {
       await markFailed(event, error);
     }
@@ -132,12 +145,31 @@ export class WorkspaceOutboxDispatcher {
     }));
   }
 
-  private async markProcessed(id: string): Promise<void> {
+  private async markProcessed(
+    event: ClaimedWorkspaceOutboxEvent,
+  ): Promise<void> {
+    if (event.eventType === "workspace.duplicated") {
+      const { newId } = event.payload as { newId: string };
+      await this.pool.query(
+        `WITH marked_event AS (
+           UPDATE workspace_outbox_events
+           SET processed_at = NOW(), locked_until = NULL, last_error = NULL
+           WHERE id = $1
+           RETURNING id
+         )
+         UPDATE workspaces
+         SET canvas_copy_status = 'ready', updated_at = NOW()
+         FROM marked_event
+         WHERE workspaces.id = $2 AND workspaces.canvas_copy_status = 'copying'`,
+        [event.id, newId],
+      );
+      return;
+    }
     await this.pool.query(
       `UPDATE workspace_outbox_events
        SET processed_at = NOW(), locked_until = NULL, last_error = NULL
        WHERE id = $1`,
-      [id],
+      [event.id],
     );
   }
 
@@ -147,8 +179,26 @@ export class WorkspaceOutboxDispatcher {
   ): Promise<void> {
     const message = error instanceof Error ? error.message : String(error);
     const deadLetter = event.attempts >= MAX_ATTEMPTS;
-    await this.pool.query(
-      `UPDATE workspace_outbox_events
+    if (deadLetter && event.eventType === "workspace.duplicated") {
+      const { newId } = event.payload as { newId: string };
+      await this.pool.query(
+        `WITH marked_event AS (
+           UPDATE workspace_outbox_events
+           SET locked_until = NULL,
+               last_error = $2,
+               dead_lettered_at = NOW()
+           WHERE id = $1
+           RETURNING id
+         )
+         UPDATE workspaces
+         SET canvas_copy_status = 'failed', updated_at = NOW()
+         FROM marked_event
+         WHERE workspaces.id = $3 AND workspaces.canvas_copy_status = 'copying'`,
+        [event.id, message.slice(0, 1_000), newId],
+      );
+    } else {
+      await this.pool.query(
+        `UPDATE workspace_outbox_events
        SET locked_until = NULL,
            last_error = $2,
            dead_lettered_at = CASE WHEN $3 THEN NOW() ELSE NULL END,
@@ -157,13 +207,14 @@ export class WorkspaceOutboxDispatcher {
              ELSE NOW() + ($4 * INTERVAL '1 millisecond')
            END
        WHERE id = $1`,
-      [
-        event.id,
-        message.slice(0, 1_000),
-        deadLetter,
-        outboxRetryDelayMs(event.attempts),
-      ],
-    );
+        [
+          event.id,
+          message.slice(0, 1_000),
+          deadLetter,
+          outboxRetryDelayMs(event.attempts),
+        ],
+      );
+    }
     log.error(
       {
         err: error,
@@ -188,7 +239,7 @@ export class WorkspaceOutboxDispatcher {
         await deliverWorkspaceOutboxEvents(
           events,
           this.eventBus,
-          (id) => this.markProcessed(id),
+          (event) => this.markProcessed(event),
           (event, error) => this.markFailed(event, error),
         );
       }
