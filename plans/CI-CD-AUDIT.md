@@ -254,11 +254,11 @@ but CI expects `coverage-summary.json` and explicitly exits successfully when it
 is absent. No built-in threshold is configured. The 80% threshold is therefore
 not enforced through the configured reporting path.
 
-The [DynamoDB parity suite](../tests/integration/canvas/ddb-parity.test.ts),
-lines 33–45, initializes `reachable` to false and evaluates `describe.skipIf`
-while collecting tests, before beforeAll can set it. This skips the suite even
-when a service is available; CI also lacks its promised DynamoDB container.
-Vitest's own DSNs point to port 5434, whereas CI's PostgreSQL service uses 5432.
+The former DynamoDB parity suite skipped itself during collection before its
+reachability check could run. It is now an explicit system test at
+[`tests/system/canvas/dynamodb-parity.test.ts`](../tests/system/canvas/dynamodb-parity.test.ts)
+and CI runs it against its DynamoDB Local service. Vitest's own DSNs point to
+port 5434, whereas CI's PostgreSQL service uses 5432.
 Many integration suites mock storage, so a passing run is not proof of real DB IO.
 
 Fix: enforce coverage in Vitest, define intended source include patterns, generate

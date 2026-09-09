@@ -22,7 +22,9 @@ export default defineConfig({
     },
     globals: true,
     environment: "node",
-    include: ["tests/**/*.test.ts"],
+    // Fast, hermetic checks run by default. Tests that require DynamoDB Local
+    // or a socket server live under tests/system and run explicitly in CI.
+    include: ["tests/{unit,integration}/**/*.test.ts"],
     exclude: ["node_modules", "dist"],
     coverage: {
       provider: "v8",

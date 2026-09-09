@@ -158,13 +158,13 @@ These tests verify the brute-force protection math — lockout durations, attemp
 
 ---
 
-## Integration Tests
+## Route Handler Tests
 
-Integration tests spin up a real Express server (with mocked database calls) and fire actual HTTP requests using [Supertest](https://github.com/ladislav-zezula/supertest). They verify that the security boundaries actually work.
+These unit tests spin up an Express server with mocked storage and fire HTTP requests using [Supertest](https://github.com/ladislav-zezula/supertest). They verify route authorization and input validation without requiring a database.
 
 ### Workspace Route Protection
 
-**File:** `tests/integration/workspace/routes.test.ts`
+**File:** `tests/unit/workspace/routes.test.ts`
 
 | Test                                            | What It Proves                                                                                                     |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |

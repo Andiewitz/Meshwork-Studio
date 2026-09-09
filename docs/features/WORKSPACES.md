@@ -268,7 +268,7 @@ if (workspace.userId !== userId)
 await workspaceStorage.updateWorkspace(id, input);
 ```
 
-This pattern is tested in `tests/integration/workspace/routes.test.ts`.
+This pattern is tested in `tests/unit/workspace/routes.test.ts`.
 
 ---
 
@@ -298,4 +298,4 @@ All mutation hooks use `secureFetch` (not raw `fetch`) to automatically include 
 | `server/services/canvas/db/dynamo.ts`                 | Canvas duplication logic                          |
 | `client/src/hooks/use-workspaces.ts`                  | TanStack Query hooks for all workspace operations |
 | `server/services/workspace/db/schema.ts`              | Workspace and collection table schema             |
-| `tests/integration/workspace/routes.test.ts`          | IDOR + validation integration tests               |
+| `tests/unit/workspace/routes.test.ts`                 | IDOR + validation route-handler tests             |

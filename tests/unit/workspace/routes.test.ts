@@ -87,7 +87,7 @@ const setupTestApp = () => {
   return app;
 };
 
-describe("Workspace Routes Integration Tests (IDOR & Zod)", () => {
+describe("Workspace route handlers (IDOR & Zod)", () => {
   let app: express.Express;
 
   beforeEach(() => {

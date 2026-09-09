@@ -66,8 +66,8 @@ local development but should not be a production permission.
 Run the canvas-focused unit and integration suites after changing this flow:
 
 ```bash
-npm run test:run -- tests/unit/workspace/canvas-cache.test.ts \
-  tests/integration/canvas/ddb-parity.test.ts
+npm run test:run -- tests/unit/workspace/canvas-cache.test.ts
+npm run test:system
 ```
 
 For production, alarm on DynamoDB throttling/errors, enable point-in-time

@@ -50,7 +50,9 @@ describe("WorkspaceDatabaseStorage (Unit)", () => {
       const setMock = vi.fn().mockReturnValue({ where: whereMock });
       (db.update as any).mockReturnValue({ set: setMock });
 
-      const result = await storage.updateWorkspace("ws-1", { isFavorite: true });
+      const result = await storage.updateWorkspace("ws-1", {
+        isFavorite: true,
+      });
 
       expect(db.update).toHaveBeenCalled();
       expect(setMock).toHaveBeenCalledWith({
@@ -78,7 +80,9 @@ describe("WorkspaceDatabaseStorage (Unit)", () => {
       const setMock = vi.fn().mockReturnValue({ where: whereMock });
       (db.update as any).mockReturnValue({ set: setMock });
 
-      const result = await storage.updateWorkspace("ws-2", { isFavorite: false });
+      const result = await storage.updateWorkspace("ws-2", {
+        isFavorite: false,
+      });
 
       expect(setMock).toHaveBeenCalledWith({
         isFavorite: false,
@@ -104,7 +108,9 @@ describe("WorkspaceDatabaseStorage (Unit)", () => {
       const setMock = vi.fn().mockReturnValue({ where: whereMock });
       (db.update as any).mockReturnValue({ set: setMock });
 
-      const result = await storage.updateWorkspace("ws-3", { title: "New Name" });
+      const result = await storage.updateWorkspace("ws-3", {
+        title: "New Name",
+      });
 
       expect(setMock).toHaveBeenCalledWith({
         title: "New Name",
@@ -146,7 +152,10 @@ describe("WorkspaceDatabaseStorage (Unit)", () => {
         .mockReturnValue({ returning: insertReturning });
       (db.insert as any).mockReturnValue({ values: insertValues });
 
-      const result = await storage.duplicateWorkspace("ws-1", "Original (Copy)");
+      const result = await storage.duplicateWorkspace(
+        "ws-1",
+        "Original (Copy)",
+      );
 
       expect(result.title).toBe("Original (Copy)");
       expect(result.id).not.toBe(original.id);

@@ -93,10 +93,7 @@ function pkcs8(seed: Buffer): Buffer {
   return Buffer.concat([Buffer.from([0x30, body.length]), body]);
 }
 
-const shouldRun =
-  process.env.CI === "true" || process.env.RUN_DDB_PARITY === "true";
-
-describe.skipIf(!shouldRun)("canvas + websocket e2e", () => {
+describe("canvas + websocket e2e", () => {
   let server: http.Server;
   let baseUrl: string;
   let origin: string;

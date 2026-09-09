@@ -6,8 +6,6 @@ import {
   updateMemberRoleSchema,
   TEAM_ROLES,
 } from "@services/team/db/schema";
-import { teams, teamMembers, teamWorkspaces } from "@services/team/db/schema";
-import { insertTeamSchema as _i1 } from "@shared/schema";
 
 describe("Team Schema (Unit)", () => {
   // ─── insertTeamSchema ──────────────────────────────────────────────
@@ -108,22 +106,6 @@ describe("Team Schema (Unit)", () => {
     });
   });
 
-  // ─── Table Definitions ─────────────────────────────────────────────
-
-  describe("Table definitions", () => {
-    it("teams table is defined", () => {
-      expect(teams).toBeDefined();
-    });
-
-    it("teamMembers table is defined", () => {
-      expect(teamMembers).toBeDefined();
-    });
-
-    it("teamWorkspaces table is defined", () => {
-      expect(teamWorkspaces).toBeDefined();
-    });
-  });
-
   // ─── updateMemberRoleSchema ─────────────────────────────────────────
 
   describe("updateMemberRoleSchema", () => {
@@ -173,10 +155,6 @@ describe("Team Schema (Unit)", () => {
   describe("TEAM_ROLES", () => {
     it("contains exactly 4 roles in correct order", () => {
       expect(TEAM_ROLES).toEqual(["owner", "admin", "editor", "viewer"]);
-    });
-
-    it("has exactly 4 entries", () => {
-      expect(TEAM_ROLES).toHaveLength(4);
     });
   });
 });

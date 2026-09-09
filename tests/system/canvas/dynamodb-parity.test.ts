@@ -17,8 +17,8 @@ vi.hoisted(() => {
  * Canvas persistence PARITY suite.
  *
  * Runs against real DynamoDB semantics via dynamo-local (compose service
- * emnesh-dynamodb-local). Skipped when it is not reachable so contributors
- * without Docker can still run unit tests — CI includes the container.
+ * emnesh-dynamodb-local). It is in the explicit system-test tier, so ordinary
+ * unit/integration runs never silently skip this coverage.
  *
  * These tests pin the exact contract the old Postgres implementation
  * provided, so the DynamoDB cutover cannot silently change behavior:
@@ -36,10 +36,7 @@ const ddb = new DynamoDBClient({
   credentials: { accessKeyId: "local", secretAccessKey: "local" },
 });
 
-const shouldRunParity =
-  process.env.CI === "true" || process.env.RUN_DDB_PARITY === "true";
-
-describe.skipIf(!shouldRunParity)("canvas dynamodb parity", () => {
+describe("canvas dynamodb parity", () => {
   let storage: InstanceType<typeof DynamoCanvasStorage>;
   let tableCreated = false;
 

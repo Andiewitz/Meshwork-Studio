@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EventBus } from "@server/lib/events";
 
 /**
- * Integration Tests for EventBus & Decoupled Module Communication
+ * Unit tests for EventBus message contracts and decoupled module communication.
  *
  * Verifies the event choreography required by database-per-service:
  * each service cleans ONLY its own store; cross-service deletion is
@@ -39,7 +39,7 @@ vi.mock("@services/team/db/storage", () => ({
   teamStorage: mockTeamStorage,
 }));
 
-describe("EventBus & Decoupling Integration Tests", () => {
+describe("EventBus message contracts", () => {
   let eventBus: EventBus;
 
   beforeEach(() => {
