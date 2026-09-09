@@ -69,4 +69,25 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS IDX_edges_workspace_id ON edges (workspace_id);
     `,
   },
+  {
+    version: "0020_workspace_outbox",
+    up: `
+      CREATE TABLE IF NOT EXISTS workspace_outbox_events (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        event_type TEXT NOT NULL CHECK (event_type IN ('workspace.deleted', 'workspaces.deleted')),
+        payload JSONB NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+        available_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        locked_until TIMESTAMPTZ,
+        processed_at TIMESTAMPTZ,
+        dead_lettered_at TIMESTAMPTZ,
+        last_error TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS IDX_workspace_outbox_pending
+        ON workspace_outbox_events (available_at, created_at)
+        WHERE processed_at IS NULL AND dead_lettered_at IS NULL;
+    `,
+  },
 ];

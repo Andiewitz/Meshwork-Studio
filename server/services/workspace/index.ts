@@ -5,6 +5,7 @@ import { registerWorkspaceInternalRoutes } from "./db/internal-routes";
 import { pool } from "./db/connection";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
+import { workspaceOutbox } from "./outbox-service";
 
 const log = createChildLogger("workspace-service");
 
@@ -12,12 +13,13 @@ export class WorkspaceService {
   static initialize(app: Express, context: AppContext) {
     registerWorkspaceRoutes(app, context);
     registerWorkspaceInternalRoutes(app as any);
+    workspaceOutbox.start(context.eventBus);
 
     context.eventBus.on("user.deleted", async ({ id }) => {
       try {
-        const ownedIds = await workspaceStorage.listWorkspaceIdsByOwner(id);
-        context.eventBus.emit("workspaces.deleted", { ids: ownedIds });
-        await workspaceStorage.deleteAllUserData(id);
+        const ownedIds =
+          await workspaceStorage.deleteAllUserDataAndEnqueueCleanup(id);
+        workspaceOutbox.wake();
         log.info(
           { userId: id, workspaces: ownedIds.length },
           "User workspaces and collections deleted via event",
@@ -31,6 +33,10 @@ export class WorkspaceService {
   }
 
   static storage = workspaceStorage;
+
+  static shutdown() {
+    workspaceOutbox.stop();
+  }
 }
 
 // Backward compatibility alias

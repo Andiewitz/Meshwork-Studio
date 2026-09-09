@@ -2,6 +2,7 @@ import { db } from "./connection";
 import {
   workspaces,
   collections,
+  workspaceOutboxEvents,
   type InsertWorkspace,
   type Workspace,
   type Collection,
@@ -43,8 +44,12 @@ export interface IWorkspaceStorage {
     updates: Partial<InsertWorkspace>,
   ): Promise<Workspace>;
   deleteWorkspace(id: string): Promise<void>;
+  /** Atomically deletes a workspace and queues its canvas cleanup. */
+  deleteWorkspaceAndEnqueueCleanup(id: string): Promise<void>;
   duplicateWorkspace(id: string, newTitle?: string): Promise<Workspace>;
   deleteAllUserData(userId: string, tx?: DrizzleTx): Promise<void>;
+  /** Atomically deletes a user's workspaces and queues their canvas cleanup. */
+  deleteAllUserDataAndEnqueueCleanup(userId: string): Promise<string[]>;
 }
 
 export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
@@ -169,6 +174,16 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
     await db.delete(workspaces).where(eq(workspaces.id, id));
   }
 
+  async deleteWorkspaceAndEnqueueCleanup(id: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.delete(workspaces).where(eq(workspaces.id, id));
+      await tx.insert(workspaceOutboxEvents).values({
+        eventType: "workspace.deleted",
+        payload: { id },
+      });
+    });
+  }
+
   async duplicateWorkspace(id: string, newTitle?: string): Promise<Workspace> {
     const existing = await this.getWorkspace(id);
     if (!existing) throw new Error("Workspace not found");
@@ -206,6 +221,24 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
     } else {
       await db.transaction(execute);
     }
+  }
+
+  async deleteAllUserDataAndEnqueueCleanup(userId: string): Promise<string[]> {
+    return db.transaction(async (tx) => {
+      const rows = await tx
+        .select({ id: workspaces.id })
+        .from(workspaces)
+        .where(eq(workspaces.userId, userId));
+      const ids = rows.map((row) => row.id);
+
+      await tx.delete(workspaces).where(eq(workspaces.userId, userId));
+      await tx.delete(collections).where(eq(collections.userId, userId));
+      await tx.insert(workspaceOutboxEvents).values({
+        eventType: "workspaces.deleted",
+        payload: { ids },
+      });
+      return ids;
+    });
   }
 }
 
@@ -315,6 +348,10 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
     this.workspaces = this.workspaces.filter((w) => w.id !== id);
   }
 
+  async deleteWorkspaceAndEnqueueCleanup(id: string): Promise<void> {
+    await this.deleteWorkspace(id);
+  }
+
   async duplicateWorkspace(id: string, newTitle?: string): Promise<Workspace> {
     const existing = await this.getWorkspace(id);
     if (!existing) throw new Error("Workspace not found");
@@ -335,6 +372,12 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
   async deleteAllUserData(userId: string): Promise<void> {
     this.workspaces = this.workspaces.filter((w) => w.userId !== userId);
     this.collections = this.collections.filter((c) => c.userId !== userId);
+  }
+
+  async deleteAllUserDataAndEnqueueCleanup(userId: string): Promise<string[]> {
+    const ids = await this.listWorkspaceIdsByOwner(userId);
+    await this.deleteAllUserData(userId);
+    return ids;
   }
 
   async listWorkspaceIdsByOwner(userId: string): Promise<string[]> {

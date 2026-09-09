@@ -13,6 +13,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer, request as httpRequest } from "http";
 import { requireAuth } from "./auth";
+import { WorkspaceService } from "@services/workspace";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
@@ -62,6 +63,7 @@ async function shutdown(reason: string, exitCode: number): Promise<void> {
   }, 15_000);
   forceTimer.unref();
   await closeHttpServer();
+  WorkspaceService.shutdown();
   await Promise.allSettled([disconnectRedis(), workspacePool.end()]);
   log.info({ reason }, "Graceful shutdown complete");
   process.exit(exitCode);

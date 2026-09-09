@@ -347,24 +347,23 @@ Implement one idempotent shutdown coordinator:
 Configure PM2's kill timeout above the application drain deadline and test
 `SIGTERM` during HTTP, SSE, WebSocket, and canvas save operations.
 
-### R03 — cross-store side effects are not durable
+### R03 — cross-store side effects are only partially durable
 
-[`workspaceRoutes.ts`](../server/services/workspace/routes/workspaceRoutes.ts)
-emits `workspace.deleted` before the PostgreSQL delete at lines 244–247. The
-canvas listener catches DynamoDB failures and only logs them at
-[`canvas/index.ts`](../server/services/canvas/index.ts) lines 15–47. Duplicate
-canvas copying also happens after the new PostgreSQL workspace is returned by a
-non-durable in-memory event.
+The delete paths now write `workspace.deleted` / `workspaces.deleted` to a
+PostgreSQL transactional outbox in the same transaction as the workspace
+deletion. A dispatcher leases events, retries DynamoDB cleanup with bounded
+exponential backoff, and retains repeatedly failing events as dead letters.
+Canvas deletion failures are rethrown so the dispatcher can retry instead of
+mistaking a log message for success.
 
-This permits both directions of inconsistency: canvas deleted while the workspace
-delete later fails, or workspace committed while its canvas delete/copy is lost
-on an error or process crash.
+This closes the data-retention risk for workspace and account deletion, including
+a process crash after the workspace transaction commits. Duplicate canvas copying
+is still a non-durable in-memory event and can leave a blank or stale duplicate
+after a failure or restart.
 
-Use a PostgreSQL transactional outbox written in the same transaction as the
-workspace mutation. A retrying worker performs idempotent DynamoDB operations,
-records attempts/dead letters, and marks completion. Deletion should use a
-recoverable tombstone/grace period. Duplicate should not become visible as ready
-until its copy completes, or should expose a visible `copying/failed` state.
+Next, put duplicate/copy operations in the outbox with a visible `copying` /
+`failed` state and an idempotent snapshot-copy contract. Deletion should also
+gain a recoverable tombstone/grace period if product requirements permit it.
 
 ### I01–I03 — AI has correctness, failure, and spend leaks
 
@@ -660,7 +659,7 @@ results do not prove the Go HTTP flows.
 
 ### Phase 3 — durable operations and deploys (4–8 days)
 
-- R03 transactional outbox/reconciliation.
+- Finish R03 duplicate reconciliation and dead-letter alerting.
 - P01 immutable release directories, checksum/manifest, pair health, rollback.
 - Run deployment failure matrix on staging; make smoke blocking.
 

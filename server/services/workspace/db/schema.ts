@@ -45,6 +45,31 @@ export const workspaces = pgTable("workspaces", {
     .default(sql`'[]'::jsonb`),
 });
 
+/**
+ * Events which have been committed alongside a workspace mutation but have
+ * not yet been applied to a dependent service (currently the canvas store).
+ * Keeping this in workspace_db makes the originating mutation and its cleanup
+ * request atomic without attempting an unsafe cross-database transaction.
+ */
+export const workspaceOutboxEvents = pgTable("workspace_outbox_events", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  eventType: text("event_type").notNull(),
+  payload: jsonb("payload").notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  availableAt: timestamp("available_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  processedAt: timestamp("processed_at", { withTimezone: true }),
+  deadLetteredAt: timestamp("dead_lettered_at", { withTimezone: true }),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const insertCollectionSchema = createInsertSchema(collections).omit({
   id: true,
   createdAt: true,

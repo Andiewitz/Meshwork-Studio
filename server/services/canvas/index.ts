@@ -19,6 +19,7 @@ export class CanvasService {
         log.info({ workspaceId: id }, "Canvas data deleted via event");
       } catch (err) {
         log.error({ err, workspaceId: id }, "Failed to delete canvas data");
+        throw err;
       }
     });
 
@@ -44,6 +45,7 @@ export class CanvasService {
         log.info({ count: ids.length }, "User canvas data deleted via event");
       } catch (err) {
         log.error({ err }, "Failed to delete user canvas data");
+        throw err;
       }
     });
 

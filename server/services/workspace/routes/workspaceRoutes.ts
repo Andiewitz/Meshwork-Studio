@@ -7,6 +7,7 @@ import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
 import { canEditWorkspace, canDeleteWorkspace } from "@server/lib/permissions";
 import type { ITeamStorage } from "@services/team/db/storage";
+import { workspaceOutbox } from "../outbox-service";
 
 const log = createChildLogger("workspace-routes");
 
@@ -22,7 +23,6 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     context.registry.get<RequestHandler>("isAuthenticated");
   const teamStorage = context.registry.get<ITeamStorage>("teamStorage");
   const { eventBus } = context;
-
   // Collections (Subcollections)
   app.get("/api/v1/collections", isAuthenticated, async (req, res) => {
     const userId = getUserId(req);
@@ -241,10 +241,8 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
         });
       }
 
-      await workspaceStorage.deleteWorkspace(id);
-      // Only announce the cross-store cleanup after this service's deletion
-      // succeeded. The durable outbox worker will replace this transient path.
-      eventBus.emit("workspace.deleted", { id });
+      await workspaceStorage.deleteWorkspaceAndEnqueueCleanup(id);
+      workspaceOutbox.wake();
       res.status(204).send();
     },
   );
