@@ -96,8 +96,18 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
         });
       }
 
-      const { nodes, edges, baseRevision } =
-        api.workspaces.syncCanvas.input.parse(req.body);
+      const input = api.workspaces.syncCanvas.input.safeParse(req.body);
+      if (!input.success) {
+        return res.status(400).json({
+          code: "INVALID_CANVAS",
+          message: "Canvas contains invalid nodes or connections.",
+          issues: input.error.issues.slice(0, 10).map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })),
+        });
+      }
+      const { nodes, edges, baseRevision } = input.data;
       try {
         const revision = await canvasStorage.syncCanvas(
           id,

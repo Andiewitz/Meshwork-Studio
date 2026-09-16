@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { insertWorkspaceSchema } from "./schema";
+import { canvasSyncSchema } from "./canvas";
 import type { Collection, Workspace } from "./schema";
 
 export const errorSchemas = {
@@ -104,11 +105,7 @@ export const api = {
     syncCanvas: {
       method: "POST" as const,
       path: "/api/v1/workspaces/:id/canvas" as const,
-      input: z.object({
-        nodes: z.array(z.any()),
-        edges: z.array(z.any()),
-        baseRevision: z.number().int().nonnegative(),
-      }),
+      input: canvasSyncSchema,
       responses: {
         200: z.object({ success: z.boolean(), revision: z.number().int() }),
         409: errorSchemas.validation,
