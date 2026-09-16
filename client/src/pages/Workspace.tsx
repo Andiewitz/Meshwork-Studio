@@ -189,6 +189,7 @@ import { WorkspaceToolbar } from "@/features/workspace/components/WorkspaceToolb
 import {
   calculateContainment,
   calculateGlobalPosition,
+  orderNodesByHierarchy,
 } from "@/features/workspace/utils/containment";
 import { usePresence } from "@/hooks/use-presence";
 import {
@@ -358,7 +359,11 @@ function WorkspaceView() {
       try {
         const { nodes: importedNodes, edges: importedEdges } =
           await importFromJson(file);
-        setNodes(normalizeNodeDimensions(importedNodes as Node[]));
+        setNodes(
+          orderNodesByHierarchy(
+            normalizeNodeDimensions(importedNodes as Node[]),
+          ),
+        );
         setEdges(importedEdges as Edge[]);
         toast({ title: `Imported ${importedNodes.length} nodes` });
       } catch (err: unknown) {
@@ -848,7 +853,9 @@ function WorkspaceView() {
       const localCache = getCanvasFromLocalCache(workspaceId);
 
       if (localCache && localCache.nodes && localCache.edges) {
-        setNodes(normalizeNodeDimensions(localCache.nodes));
+        setNodes(
+          orderNodesByHierarchy(normalizeNodeDimensions(localCache.nodes)),
+        );
         setEdges(localCache.edges);
         setSaveStatus("offline_saved");
         toast({
@@ -857,7 +864,11 @@ function WorkspaceView() {
             "We found unsaved changes locally and restored them. They will sync automatically soon.",
         });
       } else {
-        setNodes(normalizeNodeDimensions(canvasData.nodes || []));
+        setNodes(
+          orderNodesByHierarchy(
+            normalizeNodeDimensions(canvasData.nodes || []),
+          ),
+        );
         setEdges(canvasData.edges || []);
       }
       lastLoadedId.current = workspaceId;
@@ -1497,38 +1508,23 @@ function WorkspaceView() {
     (_: React.MouseEvent, node: Node) => {
       const { parentId, localPosition } = calculateContainment(node, nodes);
 
-      if (parentId) {
+      if (parentId && localPosition) {
         setNodes((nds) =>
           nds.map((n) => {
             if (n.id === node.id) {
-              return { ...n, parentId, position: localPosition! };
+              return {
+                ...n,
+                parentId,
+                extent: "parent",
+                position: localPosition,
+              };
             }
             return n;
           }),
         );
-        sendNodeMove(node.id, localPosition!.x, localPosition!.y, parentId);
+        sendNodeMove(node.id, localPosition.x, localPosition.y, parentId);
       } else {
-        // Check if we dragged out of a parent
-        const containers = nodes.filter(
-          (n) =>
-            ["vpc", "region", "k8s-namespace"].includes(n.type!) &&
-            n.id !== node.id,
-        );
-        const { width: w, height: h } = getNodeDimensions(node);
-        const centerX = node.position.x + w / 2;
-        const centerY = node.position.y + h / 2;
-
-        const isStillInParent = containers.some((c) => {
-          const { width: cw, height: ch } = getNodeDimensions(c);
-          return (
-            centerX >= c.position.x &&
-            centerX <= c.position.x + cw &&
-            centerY >= c.position.y &&
-            centerY <= c.position.y + ch
-          );
-        });
-
-        if (!isStillInParent && node.parentId) {
+        if (node.parentId) {
           const globalPos = calculateGlobalPosition(node, nodes);
           if (globalPos) {
             setNodes((nds) =>

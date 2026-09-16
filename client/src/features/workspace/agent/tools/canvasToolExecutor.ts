@@ -382,7 +382,11 @@ export function executeEditCanvas(
       const tNode = existingNodeMap.get(target);
       const handles =
         sNode && tNode
-          ? getSmartHandleIds(sNode, tNode)
+          ? getSmartHandleIds(
+              sNode,
+              tNode,
+              Array.from(existingNodeMap.values()),
+            )
           : { sourceHandle: undefined, targetHandle: undefined };
 
       workingEdges.push({

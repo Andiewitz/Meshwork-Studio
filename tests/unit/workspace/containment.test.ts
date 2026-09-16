@@ -1,87 +1,70 @@
-import { describe, it, expect } from 'vitest';
-import { calculateContainment, calculateGlobalPosition } from '@/features/workspace/utils/containment';
-import type { Node } from '@xyflow/react';
+import { describe, expect, it } from "vitest";
+import type { Node } from "@xyflow/react";
+import {
+  calculateContainment,
+  calculateGlobalPosition,
+  getAbsoluteNodePosition,
+  orderNodesByHierarchy,
+} from "@/features/workspace/utils/containment";
 
-describe('Workspace Containment Math (Unit)', () => {
-
-  const createContainer = (id: string, x: number, y: number, w: number, h: number): Node => ({
+function node(
+  id: string,
+  type: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  parentId?: string,
+): Node {
+  return {
     id,
-    type: 'vpc',
+    type,
     position: { x, y },
-    style: { width: w, height: h },
-    data: { label: 'Container' }
-  });
+    width,
+    height,
+    ...(parentId ? { parentId } : {}),
+    data: { label: id },
+  };
+}
 
-  const createNode = (id: string, x: number, y: number, parentId?: string): Node => ({
-    id,
-    type: 'ec2',
-    position: { x, y },
-    measured: { width: 100, height: 100 },
-    parentId,
-    data: { label: 'Instance' }
-  });
+describe("workspace containment", () => {
+  it("uses absolute coordinates and chooses the deepest eligible container", () => {
+    const region = node("region", "region", 100, 100, 900, 700);
+    const vpc = node("vpc", "vpc", 80, 80, 700, 500, "region");
+    const zone = node("zone", "availability-zone", 40, 60, 600, 380, "vpc");
+    const service = node("service", "server", 120, 100, 168, 96, "zone");
+    const nodes = [region, vpc, zone, service];
 
-  describe('calculateContainment', () => {
-    it('should snap a node inside a valid container', () => {
-      // Container from (0,0) to (500,500)
-      const container = createContainer('vpc-1', 0, 0, 500, 500);
-      
-      // Node dragged to (100, 100). Center is (150, 150) which is inside container
-      const node = createNode('node-1', 100, 100);
-      
-      const result = calculateContainment(node, [container, node]);
-      
-      expect(result.parentId).toBe('vpc-1');
-      expect(result.localPosition).toEqual({ x: 100, y: 100 });
-    });
-
-    it('should return undefined when node is dropped outside any container', () => {
-      // Container from (0,0) to (500,500)
-      const container = createContainer('vpc-1', 0, 0, 500, 500);
-      
-      // Node dragged to (600, 600). Not in container.
-      const node = createNode('node-1', 600, 600);
-      
-      const result = calculateContainment(node, [container, node]);
-      
-      expect(result.parentId).toBeUndefined();
-      expect(result.localPosition).toBeUndefined();
-    });
-
-    it('should not reparent a node if it is already in that exact parent', () => {
-      const container = createContainer('vpc-1', 0, 0, 500, 500);
-      // Node already parented
-      const node = createNode('node-1', 100, 100, 'vpc-1');
-      
-      const result = calculateContainment(node, [container, node]);
-      
-      // Should return undefined to prevent unnecessary state updates in ReactFlow
-      expect(result.parentId).toBeUndefined();
+    expect(getAbsoluteNodePosition(service, nodes)).toEqual({ x: 340, y: 340 });
+    expect(calculateContainment(service, nodes)).toEqual({
+      parentId: "zone",
+      localPosition: { x: 120, y: 100 },
     });
   });
 
-  describe('calculateGlobalPosition', () => {
-    it('should calculate global position correctly when removing from parent', () => {
-      // Container at (200, 200)
-      const container = createContainer('vpc-1', 200, 200, 500, 500);
-      
-      // Node local position is (50, 50) inside the container
-      const node = createNode('node-1', 50, 50, 'vpc-1');
-      
-      const result = calculateGlobalPosition(node, [container, node]);
-      
-      // Global = Parent(x,y) + Local(x,y)
-      expect(result).toEqual({ x: 250, y: 250 });
-    });
+  it("does not contain a node whose frame would cross a container boundary", () => {
+    const vpc = node("vpc", "vpc", 100, 100, 600, 408);
+    const tooWide = node("db", "database", 600, 160, 144, 120);
 
-    it('should return undefined if the node has no parent', () => {
-      const container = createContainer('vpc-1', 200, 200, 500, 500);
-      // Node has no parentId
-      const node = createNode('node-1', 250, 250);
-      
-      const result = calculateGlobalPosition(node, [container, node]);
-      
-      expect(result).toBeUndefined();
-    });
+    expect(calculateContainment(tooWide, [vpc, tooWide])).toEqual({});
+  });
+
+  it("calculates a global position through every parent when detaching", () => {
+    const region = node("region", "region", 100, 100, 900, 700);
+    const vpc = node("vpc", "vpc", 50, 50, 700, 500, "region");
+    const service = node("service", "server", 20, 20, 168, 96, "vpc");
+    const nodes = [region, vpc, service];
+
+    expect(calculateGlobalPosition(service, nodes)).toEqual({ x: 170, y: 170 });
+  });
+
+  it("orders parents before children without dropping invalid records", () => {
+    const parent = node("vpc", "vpc", 0, 0, 600, 408);
+    const child = node("service", "server", 50, 60, 168, 96, "vpc");
+    const orphan = node("orphan", "server", 0, 0, 168, 96, "missing");
+
+    expect(
+      orderNodesByHierarchy([child, orphan, parent]).map((item) => item.id),
+    ).toEqual(["vpc", "service", "orphan"]);
   });
 });

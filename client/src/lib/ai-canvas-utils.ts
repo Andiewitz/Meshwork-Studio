@@ -7,6 +7,7 @@ import {
   VALID_TYPES,
 } from "@/features/workspace/utils/nodeRegistry";
 import { getNodeDimensions } from "@/features/workspace/utils/nodeGeometry";
+import { getAbsoluteNodePosition } from "@/features/workspace/utils/containment";
 
 export { NODE_SIZES, TYPE_ALIASES, VALID_TYPES };
 
@@ -77,14 +78,17 @@ interface RawCanvas {
 export function getSmartHandleIds(
   sourceNode: Node,
   targetNode: Node,
+  allNodes: Node[] = [sourceNode, targetNode],
 ): { sourceHandle: string; targetHandle: string } {
   const { width: sW, height: sH } = getNodeDimensions(sourceNode);
   const { width: tW, height: tH } = getNodeDimensions(targetNode);
 
-  const sCenterX = sourceNode.position.x + sW / 2;
-  const sCenterY = sourceNode.position.y + sH / 2;
-  const tCenterX = targetNode.position.x + tW / 2;
-  const tCenterY = targetNode.position.y + tH / 2;
+  const sourcePosition = getAbsoluteNodePosition(sourceNode, allNodes);
+  const targetPosition = getAbsoluteNodePosition(targetNode, allNodes);
+  const sCenterX = sourcePosition.x + sW / 2;
+  const sCenterY = sourcePosition.y + sH / 2;
+  const tCenterX = targetPosition.x + tW / 2;
+  const tCenterY = targetPosition.y + tH / 2;
 
   const dx = tCenterX - sCenterX;
   const dy = tCenterY - sCenterY;
@@ -185,6 +189,7 @@ export function validateAndRepairCanvas(
       const { sourceHandle, targetHandle } = getSmartHandleIds(
         sourceNode,
         targetNode,
+        nodes,
       );
       const hasDash = e.style?.strokeDasharray;
       const hasArrow = e.markerEnd != null;
