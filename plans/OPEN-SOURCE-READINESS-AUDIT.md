@@ -21,19 +21,20 @@ the ignored `dist/` output before failing; regenerate it after fixing the build.
 
 The following repository changes were implemented after the audit:
 
-| Finding   | Status                                              | Change                                                                                                                          |
-| --------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| OSS-02    | Complete                                            | Removed invalid relative SEO URLs; production build passes locally.                                                             |
-| OSS-03    | Complete in code; infrastructure validation pending | Added an explicit system-test config. The command now discovers both system suites and fails if DynamoDB Local is unavailable.  |
-| OSS-04–06 | Complete in code; Docker validation pending         | Rebuilt the root local setup generator, aligned Compose, loopback-bound data ports, and shipped frontend assets from the image. |
-| OSS-07    | Complete in code                                    | Node verifies assertions with a raw Ed25519 public key only; focused tests cover valid and untrusted signatures.                |
-| OSS-09    | Partially complete                                  | Corrected the main contributor path, public docs, stale policy links, and added the historical credential response runbook.     |
-| OSS-13    | Partially complete                                  | Removed the CI-reported unused Go helper. The remaining Go formatting diagnostics require CI or a Go toolchain to verify.       |
+| Finding   | Status                                              | Change                                                                                                                                                         |
+| --------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OSS-02    | Complete                                            | Removed invalid relative SEO URLs; production build passes locally.                                                                                            |
+| OSS-03    | Complete in code; infrastructure validation pending | Added an explicit system-test config. The command now discovers both system suites and fails if DynamoDB Local is unavailable.                                 |
+| OSS-04–06 | Complete in code; Docker validation pending         | Rebuilt the root local setup generator, aligned Compose, loopback-bound data ports, and shipped frontend assets from the image.                                |
+| OSS-07    | Complete in code                                    | Node verifies assertions with a raw Ed25519 public key only; focused tests cover valid and untrusted signatures.                                               |
+| OSS-08    | Partially complete                                  | CI now generates a disposable matching auth keypair and proves real registration → workspace creation → nested canvas save, API reload, and browser rendering. |
+| OSS-09    | Partially complete                                  | Corrected the main contributor path, public docs, stale policy links, and added the historical credential response runbook.                                    |
+| OSS-13    | Partially complete                                  | Removed the CI-reported unused Go helper. The remaining Go formatting diagnostics require CI or a Go toolchain to verify.                                      |
 
 OSS-01 remains an operational blocker: historical credentials still need private
-rotation or retirement evidence from the services that issued them. Authenticated
-browser persistence testing, a clean Docker run, provenance inventory, release
-policy separation, and workflow hardening also remain open.
+rotation or retirement evidence from the services that issued them. Interactive
+canvas editing coverage, a clean Docker run, provenance inventory, release policy
+separation, and workflow hardening also remain open.
 
 ## Evidence and limits
 
