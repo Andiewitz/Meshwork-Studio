@@ -401,7 +401,7 @@ app.put("/api/workspaces/:id", async (req, res) => {
 | File                             | Purpose                                                          |
 | -------------------------------- | ---------------------------------------------------------------- |
 | `server/services/auth/`          | Go identity service: sessions, MFA, OAuth, audit (see its tests) |
-| `server/services/auth/`          | Monolith session bridge: middleware + CSRF only                  |
+| `server/auth/`                   | Monolith assertion verifier, session bridge, and CSRF middleware |
 | `server/middleware/rateLimit.ts` | API and auth rate limiters (monolith side)                       |
 | `server/types/express.d.ts`      | Express `Request.user` augmentation                              |
 | `server/index.ts`                | Helmet headers, CORS, metrics gate, admin route                  |

@@ -17,6 +17,7 @@ Developer documentation, organized by domain.
 - [**Canvas Schema**](./architecture/CANVAS_SCHEMA.md) — ReactFlow node/edge structures and canvas data model.
 - [**The Engine**](./architecture/ENGINE.md) — Internal drawing engine and canvas state management.
 - [**Persistence**](./architecture/PERSISTENCE.md) — Browser recovery and DynamoDB canvas persistence.
+- [**Service Boundaries**](./architecture/SERVICE_BOUNDARIES.md) — Domain ownership, internal calls, API contracts, and migrations.
 
 ## Features
 

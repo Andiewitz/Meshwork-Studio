@@ -17,6 +17,9 @@ export const errorSchemas = {
   unauthorized: z.object({
     message: z.string(),
   }),
+  forbidden: z.object({
+    message: z.string(),
+  }),
 };
 
 export const api = {
@@ -46,6 +49,7 @@ export const api = {
         200: z.custom<Workspace>(),
         404: errorSchemas.notFound,
         401: errorSchemas.unauthorized,
+        403: errorSchemas.forbidden,
       },
     },
     update: {
@@ -57,6 +61,7 @@ export const api = {
         400: errorSchemas.validation,
         404: errorSchemas.notFound,
         401: errorSchemas.unauthorized,
+        403: errorSchemas.forbidden,
       },
     },
     delete: {
@@ -66,6 +71,7 @@ export const api = {
         204: z.void(),
         404: errorSchemas.notFound,
         401: errorSchemas.unauthorized,
+        403: errorSchemas.forbidden,
       },
     },
     duplicate: {
@@ -76,6 +82,7 @@ export const api = {
         201: z.custom<Workspace>(),
         404: errorSchemas.notFound,
         401: errorSchemas.unauthorized,
+        403: errorSchemas.forbidden,
       },
     },
     retryCanvasCopy: {
@@ -87,6 +94,7 @@ export const api = {
         401: errorSchemas.unauthorized,
         404: errorSchemas.notFound,
         409: errorSchemas.validation,
+        403: errorSchemas.forbidden,
       },
     },
     getCanvas: {
@@ -100,6 +108,9 @@ export const api = {
         }),
         404: errorSchemas.notFound,
         401: errorSchemas.unauthorized,
+        403: errorSchemas.forbidden,
+        409: errorSchemas.validation,
+        503: errorSchemas.internal,
       },
     },
     syncCanvas: {
@@ -111,6 +122,9 @@ export const api = {
         409: errorSchemas.validation,
         404: errorSchemas.notFound,
         401: errorSchemas.unauthorized,
+        400: errorSchemas.validation,
+        403: errorSchemas.forbidden,
+        503: errorSchemas.internal,
       },
     },
   },
