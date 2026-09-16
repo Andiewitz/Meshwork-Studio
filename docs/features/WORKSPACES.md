@@ -1,301 +1,112 @@
-# Workspace & Collections API
+# Workspaces, Teams, and Canvas Access
 
-> Complete reference for workspace and collection management — CRUD endpoints, ownership checking, and the duplicate canvas flow.
+Workspaces hold canvas metadata in PostgreSQL and canvas documents in DynamoDB.
+Collections are private folders owned by one user. Teams can share a workspace
+with members according to their team role.
 
-## Table of Contents
+This page describes runtime HTTP behaviour. The typed workspace contract is
+[`server/shared/routes.ts`](../../server/shared/routes.ts); route handlers are
+the authority when a contract and runtime response differ.
 
-1. [Overview](#overview)
-2. [Workspaces API](#workspaces-api)
-3. [Collections API](#collections-api)
-4. [Canvas Duplication](#canvas-duplication)
-5. [IDOR Protection Pattern](#idor-protection-pattern)
-6. [Client-Side Hooks](#client-side-hooks)
-7. [Key Files](#key-files)
+## Authentication and error conventions
 
----
+All endpoints require an authenticated session. Mutating endpoints also require
+the CSRF token supplied by the application.
 
-## Overview
+| Status | Meaning                                                                    |
+| ------ | -------------------------------------------------------------------------- |
+| `401`  | Missing or invalid session.                                                |
+| `403`  | Authenticated caller does not have the required access.                    |
+| `404`  | Workspace or collection does not exist.                                    |
+| `400`  | Request body fails validation.                                             |
+| `409`  | Canvas revision conflict, copy still running, or an ineligible copy retry. |
+| `503`  | Canvas copy failed or the durable write is temporarily unavailable.        |
 
-Workspaces are the top-level containers for canvas diagrams. Collections are optional folder-like groupings for organizing workspaces. Both are fully user-scoped — every endpoint verifies ownership before executing.
+## Workspace permissions
 
-```
-User
- └─ Collections (optional folders)
-     └─ Workspaces
-         └─ Canvas (nodes + edges)
-```
+The workspace row's `userId` is authoritative for its direct owner. Team roles
+add shared access without replacing that relationship. This direct-owner check
+deliberately lets an owner continue to work if the team ownership mirror is
+unavailable.
 
----
+| Effective role         | View | Edit canvas / metadata | Duplicate, delete, retry copy |                                Manage team membership |
+| ---------------------- | ---: | ---------------------: | ----------------------------: | ----------------------------------------------------: |
+| `workspace-owner`      |  Yes |                    Yes |                           Yes | Owns the workspace; team actions still use team role. |
+| team `owner` / `admin` |  Yes |                    Yes |                           Yes |                           Yes, subject to team rules. |
+| team `editor`          |  Yes |                    Yes |                            No |                                                    No |
+| team `viewer`          |  Yes |                     No |                            No |                                                    No |
+| `none`                 |   No |                     No |                            No |                                                    No |
 
-## Workspaces API
+Do not use a failed lookup as permission to write. The direct owner check is
+only valid when `workspace.userId === req.user.id`; all other access is decided
+by the team service.
 
-All workspace endpoints require an active session (`isAuthenticated` middleware). State-changing endpoints additionally require a valid CSRF token (`csrfProtection` middleware).
+## Workspace API
 
-### List Workspaces
+All paths are rooted at `/api/v1`.
 
-```http
-GET /api/workspaces
-Authorization: Session cookie
+| Method and path                          | Required access  | Notes                                                                                            |
+| ---------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------ |
+| `GET /workspaces?collectionId=`          | Session          | Lists the caller's owned workspaces, optionally in one collection.                               |
+| `POST /workspaces`                       | Session + CSRF   | Creates a workspace owned by the caller. Title is 1–16 allowed characters.                       |
+| `GET /workspaces/:id`                    | Viewer or owner  | Returns metadata.                                                                                |
+| `PUT /workspaces/:id`                    | Editor or higher | Updates validated metadata.                                                                      |
+| `DELETE /workspaces/:id`                 | Admin or owner   | Atomically removes metadata and queues durable canvas cleanup.                                   |
+| `POST /workspaces/:id/duplicate`         | Admin or owner   | Creates a destination workspace in `copying` state and queues canvas copy.                       |
+| `POST /workspaces/:id/retry-canvas-copy` | Admin or owner   | Requeues only a workspace in `failed` copy state.                                                |
+| `GET /workspaces/:id/role`               | Session          | Returns the team resolver's role or `none`; route guards remain authoritative for direct owners. |
+| `GET /workspaces/:id/members`            | Viewer or owner  | Returns the first sharing team and its members, or an empty list.                                |
 
-Query params:
-  collectionId: number (optional) — filter by collection
+`DELETE` returning `204` means the cleanup event was committed. It does not
+mean DynamoDB deletion completed synchronously.
 
-Response 200:
-[
-  {
-    "id": 1,
-    "title": "My Architecture",
-    "type": "system",
-    "icon": "box",
-    "userId": "user-uuid",
-    "collectionId": null,
-    "createdAt": "2026-04-01T00:00:00Z"
-  }
-]
-```
+## Canvas API and copy lifecycle
 
-### Get Single Workspace
+| Method and path                         | Required access                                      | Response / failure behaviour                                                                          |
+| --------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `GET /workspaces/:id/canvas`            | Viewer or owner                                      | Returns `{ nodes, edges, revision }`. A copying workspace returns `409`; a failed copy returns `503`. |
+| `POST /workspaces/:id/canvas`           | Editor or higher + CSRF                              | Saves `{ nodes, edges, baseRevision }`; responds with `{ success, revision }`.                        |
+| `POST /workspaces/:id/duplicate-canvas` | Editor on source, direct owner of destination + CSRF | Internal-style copy endpoint for a specified destination.                                             |
 
-```http
-GET /api/workspaces/:id
-Authorization: Session cookie
+Canvas writes are optimistic. A stale `baseRevision` returns `409` with the
+current revision; reload before retrying. Concurrent-write leases and incomplete
+DynamoDB writes return `503`; preserve the browser cache and retry later.
 
-Response 200: Workspace object
-Response 401: { "message": "Unauthorized" }  — not the owner
-Response 404: { "message": "Workspace not found" }
-```
-
-### Create Workspace
-
-```http
-POST /api/workspaces
-Authorization: Session cookie
-X-CSRF-Token: <token>
-Content-Type: application/json
-
-{
-  "title": "New System",       // Required. 1-16 chars, no emojis
-  "type": "system",            // "system" | "architecture" | "app" | "presentation"
-  "icon": "box",               // Icon identifier
-  "collectionId": null         // Optional collection
-}
-
-Response 201: Created workspace object
-Response 400: { "message": "Zod validation error" }
-```
-
-**Title validation rules (enforced by Zod + client-side):**
-
-- Minimum 1 character, maximum **16 characters**
-- No emojis
-- Letters, numbers, spaces, hyphens, and underscores only
-
-### Update Workspace
-
-```http
-PUT /api/workspaces/:id
-Authorization: Session cookie
-X-CSRF-Token: <token>
-Content-Type: application/json
-
-{
-  "title": "Updated Title",
-  "type": "architecture",
-  "icon": "server"
-}
-
-Response 200: Updated workspace object
-Response 400: Validation error
-Response 401: Not the owner
-Response 404: Workspace not found
-```
-
-### Delete Workspace
-
-```http
-DELETE /api/workspaces/:id
-Authorization: Session cookie
-X-CSRF-Token: <token>
-
-Response 204: No content
-Response 401: Not the owner
-Response 404: Workspace not found
-```
-
-**Important:** Deletion is a two-step operation server-side. The canvas data (nodes and edges) is deleted first via `syncCanvas(id, [], [])`, then the workspace row is removed. This ensures no orphaned data remains in the `nodes` and `edges` tables.
-
-### Duplicate Workspace
-
-```http
-POST /api/workspaces/:id/duplicate
-Authorization: Session cookie
-X-CSRF-Token: <token>
-Content-Type: application/json
-
-{
-  "title": "Copy of My Architecture"  // Optional
-}
-
-Response 201: New (duplicate) workspace object
-Response 401: Not the owner
-Response 404: Source workspace not found
-```
-
-**How duplication works:**
-
-1. A new workspace row is created with the provided (or auto-generated) title
-2. All canvas data from the source workspace is copied to the new workspace
-3. The response is the new workspace object — the original is untouched
-
----
+A duplicate begins as `copying`, becomes `ready` when the outbox worker
+finishes, and becomes `failed` if that job cannot complete. The retry endpoint
+moves only `failed` copies back to `copying`.
 
 ## Collections API
 
-Collections group workspaces into folders. They support nesting via `parentId`.
+Collections are never team-shared. They are strictly scoped to `collection.userId`.
 
-### List Collections
+| Method and path              | Notes                                                                                       |
+| ---------------------------- | ------------------------------------------------------------------------------------------- |
+| `GET /collections?parentId=` | Lists the caller's root or child collections.                                               |
+| `POST /collections`          | Creates a collection; accepts optional `parentId`.                                          |
+| `GET /collections/:id`       | Returns the collection only to its owner.                                                   |
+| `PUT /collections/:id`       | Updates the owned collection.                                                               |
+| `DELETE /collections/:id`    | Removes the collection but intentionally leaves its workspaces in place with no collection. |
 
-```http
-GET /api/collections
-Authorization: Session cookie
+## Team sharing API
 
-Query params:
-  parentId: number (optional) — get child collections of a parent
+| Method and path                                        | Notes                                                               |
+| ------------------------------------------------------ | ------------------------------------------------------------------- |
+| `POST /teams`, `GET /teams`, `GET /teams/:id`          | Create, list, or inspect a team and members.                        |
+| `POST /teams/join`                                     | Join with an invite code.                                           |
+| `DELETE /teams/:id/members/:userId`                    | A member may leave; an owner may remove others; owner cannot leave. |
+| `POST /teams/:id/workspaces`                           | Only the direct workspace owner may share a workspace.              |
+| `GET /teams/:id/workspaces`                            | Lists workspaces shared to a team.                                  |
+| `DELETE /teams/:id/workspaces/:workspaceId`            | Workspace owner or team owner may unshare.                          |
+| `PATCH /teams/:id/members/:userId/role`                | Team owner/admin changes roles; only owner may promote an admin.    |
+| `POST /teams/:id/regenerate-code`, `DELETE /teams/:id` | Team-owner-only operations.                                         |
 
-Response 200: Collection[]
-```
+## Implementation map
 
-### Get Collection
-
-```http
-GET /api/collections/:id
-Authorization: Session cookie
-
-Response 200: Collection object
-Response 401: Not the owner
-Response 404: Not found
-```
-
-### Create Collection
-
-```http
-POST /api/collections
-Authorization: Session cookie
-X-CSRF-Token: <token>
-Content-Type: application/json
-
-{
-  "title": "Frontend Systems",
-  "parentId": null              // Optional — for nested collections
-}
-
-Response 201: Created collection
-Response 400: Error message
-```
-
-### Update Collection
-
-```http
-PUT /api/collections/:id
-Authorization: Session cookie
-X-CSRF-Token: <token>
-Content-Type: application/json
-
-{ "title": "Updated Name" }
-
-Response 200: Updated collection
-Response 401: Not the owner
-Response 404: Not found
-```
-
-### Delete Collection
-
-```http
-DELETE /api/collections/:id
-Authorization: Session cookie
-X-CSRF-Token: <token>
-
-Response 204: No content
-Response 401: Not the owner
-Response 404: Not found
-```
-
-> [!WARNING]
-> Deleting a collection does **not** cascade-delete its workspaces. Workspaces in a deleted collection become orphaned (no `collectionId`). This is intentional — prevents accidental mass deletion.
-
----
-
-## Canvas Duplication
-
-An internal endpoint used by the workspace duplicate flow to copy canvas data between workspaces.
-
-```http
-POST /api/workspaces/:id/duplicate-canvas
-Authorization: Session cookie
-X-CSRF-Token: <token>
-Content-Type: application/json
-
-{
-  "toWorkspaceId": 99
-}
-
-Response 200: { "success": true }
-Response 401: Not the owner of source workspace
-Response 404: Source workspace not found
-```
-
-This endpoint copies all nodes and edges from workspace `:id` to `toWorkspaceId`. Node and edge IDs are preserved as-is in the new workspace.
-
----
-
-## IDOR Protection Pattern
-
-Every data-modification endpoint follows the same ownership check pattern:
-
-```typescript
-// 1. Fetch the resource
-const workspace = await workspaceStorage.getWorkspace(id);
-
-// 2. Check existence (404 before ownership — prevents ID enumeration)
-if (!workspace) return res.status(404).json({ message: "Not found" });
-
-// 3. Verify ownership
-const userId = req.user!.id;
-if (workspace.userId !== userId)
-  return res.status(401).json({ message: "Unauthorized" });
-
-// 4. Now safe to operate
-await workspaceStorage.updateWorkspace(id, input);
-```
-
-This pattern is tested in `tests/unit/workspace/routes.test.ts`.
-
----
-
-## Client-Side Hooks
-
-All workspace operations are wrapped in TanStack Query hooks in `client/src/hooks/use-workspaces.ts`:
-
-| Hook                      | Purpose                | Invalidates    |
-| ------------------------- | ---------------------- | -------------- |
-| `useWorkspaces()`         | List all workspaces    | —              |
-| `useWorkspace(id)`        | Single workspace by ID | —              |
-| `useCreateWorkspace()`    | Create mutation        | workspace list |
-| `useUpdateWorkspace()`    | Update mutation        | workspace list |
-| `useDeleteWorkspace()`    | Delete mutation        | workspace list |
-| `useDuplicateWorkspace()` | Duplicate mutation     | workspace list |
-
-All mutation hooks use `secureFetch` (not raw `fetch`) to automatically include the CSRF token. Read-only hooks use plain `fetch` with `credentials: "include"`.
-
----
-
-## Key Files
-
-| File                                                  | Purpose                                           |
-| ----------------------------------------------------- | ------------------------------------------------- |
-| `server/services/workspace/routes/workspaceRoutes.ts` | Workspace + collection route handlers             |
-| `server/services/workspace/db/storage.ts`             | Database operations for workspaces + collections  |
-| `server/services/canvas/db/dynamo.ts`                 | Canvas duplication logic                          |
-| `client/src/hooks/use-workspaces.ts`                  | TanStack Query hooks for all workspace operations |
-| `server/services/workspace/db/schema.ts`              | Workspace and collection table schema             |
-| `tests/unit/workspace/routes.test.ts`                 | IDOR + validation route-handler tests             |
+| File                                                                              | Responsibility                                      |
+| --------------------------------------------------------------------------------- | --------------------------------------------------- |
+| [`workspaceRoutes.ts`](../../server/services/workspace/routes/workspaceRoutes.ts) | Workspace and collection HTTP handlers.             |
+| [`canvasRoutes.ts`](../../server/services/canvas/routes/canvasRoutes.ts)          | Canvas reads, writes, revisions, and copy failures. |
+| [`teamRoutes.ts`](../../server/services/team/routes/teamRoutes.ts)                | Team membership and sharing endpoints.              |
+| [`permissions.ts`](../../server/shared/permissions.ts)                            | Role rank and capability rules.                     |
+| [`PERSISTENCE.md`](../architecture/PERSISTENCE.md)                                | DynamoDB and browser-cache persistence details.     |
