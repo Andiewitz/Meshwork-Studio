@@ -46,6 +46,16 @@ export interface CanvasExecutionResult {
   applied: boolean;
 }
 
+function uniqueNodeId(id: string, usedIds: Set<string>): string {
+  let suffix = 2;
+  let candidate = `${id}-ai-${suffix}`;
+  while (usedIds.has(candidate)) {
+    suffix += 1;
+    candidate = `${id}-ai-${suffix}`;
+  }
+  return candidate;
+}
+
 /**
  * Categorizes a node type into a horizontal pipeline tier (0: Entry -> 1: Routing -> 2: Compute -> 3: Data/Queues)
  */
@@ -238,7 +248,23 @@ export function executeEditCanvas(
 
   // B. Process Updates to existing nodes
   const existingNodeMap = new Map(workingNodes.map((n) => [n.id, n]));
-  const addedNodes: Node[] = [];
+  const idRemap = new Map<string, string>();
+  const usedIds = new Set(existingNodeMap.keys());
+
+  // `add` must never silently turn into an overwrite. Preserve the existing
+  // node and remap references in this AI operation to a deterministic new ID.
+  if (action === "add") {
+    for (const incoming of rawNodes) {
+      if (!incoming.id || !usedIds.has(incoming.id)) {
+        if (incoming.id) usedIds.add(incoming.id);
+        continue;
+      }
+
+      const remappedId = uniqueNodeId(incoming.id, usedIds);
+      idRemap.set(incoming.id, remappedId);
+      usedIds.add(remappedId);
+    }
+  }
 
   // Calculate placement baseline for newly added nodes avoiding collision
   const maxX = workingNodes.reduce(
@@ -248,7 +274,10 @@ export function executeEditCanvas(
   );
 
   rawNodes.forEach((incoming, index) => {
-    const existing = incoming.id ? existingNodeMap.get(incoming.id) : undefined;
+    const id = incoming.id
+      ? (idRemap.get(incoming.id) ?? incoming.id)
+      : undefined;
+    const existing = id ? existingNodeMap.get(id) : undefined;
     const resolvedType =
       TYPE_ALIASES[incoming.type?.toLowerCase()] || incoming.type || "server";
 
@@ -278,7 +307,7 @@ export function executeEditCanvas(
       existingNodeMap.set(existing.id, updated);
     } else {
       // Create new node
-      const id = incoming.id || `node-${Date.now()}-${index}`;
+      const newId = id || `node-${Date.now()}-${index}`;
       const type = VALID_TYPES.has(resolvedType) ? resolvedType : "server";
       const dim = NODE_SIZES[type] || { w: 168, h: 72 };
 
@@ -288,7 +317,7 @@ export function executeEditCanvas(
         incoming.position?.y ?? viewportCenter.y + index * (dim.h + 30) - 50;
 
       const newNode: Node = {
-        id,
+        id: newId,
         type,
         position: { x: posX, y: posY },
         data: {
@@ -313,12 +342,14 @@ export function executeEditCanvas(
           fontSize: 13,
         },
         ...(incoming.parentId
-          ? { parentId: incoming.parentId, extent: "parent" as const }
+          ? {
+              parentId: idRemap.get(incoming.parentId) ?? incoming.parentId,
+              extent: "parent" as const,
+            }
           : {}),
       };
 
-      existingNodeMap.set(id, newNode);
-      addedNodes.push(newNode);
+      existingNodeMap.set(newId, newNode);
     }
   });
 
@@ -331,19 +362,18 @@ export function executeEditCanvas(
   );
 
   rawEdges.forEach((incoming, idx) => {
-    if (
-      !validNodeIds.has(incoming.source) ||
-      !validNodeIds.has(incoming.target)
-    ) {
+    const source = idRemap.get(incoming.source) ?? incoming.source;
+    const target = idRemap.get(incoming.target) ?? incoming.target;
+    if (!validNodeIds.has(source) || !validNodeIds.has(target)) {
       return;
     }
 
-    const key = `${incoming.source}->${incoming.target}`;
+    const key = `${source}->${target}`;
     if (!existingEdgeKeys.has(key)) {
       existingEdgeKeys.add(key);
       const edgeId = incoming.id || `edge-${Date.now()}-${idx}`;
-      const sNode = existingNodeMap.get(incoming.source);
-      const tNode = existingNodeMap.get(incoming.target);
+      const sNode = existingNodeMap.get(source);
+      const tNode = existingNodeMap.get(target);
       const handles =
         sNode && tNode
           ? getSmartHandleIds(sNode, tNode)
@@ -351,8 +381,8 @@ export function executeEditCanvas(
 
       workingEdges.push({
         id: edgeId,
-        source: incoming.source,
-        target: incoming.target,
+        source,
+        target,
         sourceHandle: handles.sourceHandle,
         targetHandle: handles.targetHandle,
         type: "smoothstep",

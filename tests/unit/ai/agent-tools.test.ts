@@ -82,6 +82,35 @@ describe("Jenkos AI Agent Tool Calling & Execution Unit Tests", () => {
       expect(result.summary).toContain("Added PostgreSQL database");
     });
 
+    it("remaps an AI add that reuses an existing node ID", () => {
+      const result = executeEditCanvas(initialNodes, initialEdges, {
+        action: "add",
+        nodes: [
+          {
+            id: "api-gw",
+            type: "database",
+            label: "New database",
+          },
+        ],
+        edges: [
+          {
+            source: "api-gw",
+            target: "backend-svc",
+          },
+        ],
+      });
+
+      const originalGateway = result.nodes.find((node) => node.id === "api-gw");
+      const addedDatabase = result.nodes.find(
+        (node) => node.id === "api-gw-ai-2",
+      );
+      expect(originalGateway?.type).toBe("gateway");
+      expect(addedDatabase?.type).toBe("database");
+      expect(result.edges.some((edge) => edge.source === "api-gw-ai-2")).toBe(
+        true,
+      );
+    });
+
     it("should update existing nodes while preserving unchanged properties and coordinates", () => {
       const result = executeEditCanvas(initialNodes, initialEdges, {
         action: "update",

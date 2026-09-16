@@ -222,6 +222,77 @@ describe("Jenkos Agent & Architecture Generation Pipeline", () => {
       expect(runResponse.canvasResult?.nodes[0].id).toBe("cache-1");
     });
 
+    it("accumulates multiple tool calls into one canvas result", async () => {
+      mockedSecureFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                tool_calls: [
+                  {
+                    id: "call_add_gateway",
+                    type: "function",
+                    function: {
+                      name: "edit_canvas",
+                      arguments: JSON.stringify({
+                        action: "add",
+                        nodes: [
+                          {
+                            id: "gateway-1",
+                            type: "gateway",
+                            label: "Gateway",
+                          },
+                        ],
+                      }),
+                    },
+                  },
+                  {
+                    id: "call_add_database",
+                    type: "function",
+                    function: {
+                      name: "edit_canvas",
+                      arguments: JSON.stringify({
+                        action: "add",
+                        nodes: [
+                          {
+                            id: "database-1",
+                            type: "database",
+                            label: "Database",
+                          },
+                        ],
+                        edges: [
+                          {
+                            source: "gateway-1",
+                            target: "database-1",
+                          },
+                        ],
+                      }),
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      } as Response);
+
+      const response = await runJenkosAgent({
+        userPrompt: "Add a gateway and database",
+        history: [],
+        currentNodes: [],
+        currentEdges: [],
+        viewportCenter,
+      });
+
+      expect(response.canvasResult?.nodes.map((node) => node.id)).toEqual([
+        "gateway-1",
+        "database-1",
+      ]);
+      expect(response.canvasResult?.edges).toHaveLength(1);
+      expect(response.message.toolCalls).toHaveLength(2);
+    });
+
     it("parses fallback markdown JSON codeblocks gracefully if LLM omits native tool_calls", async () => {
       mockedSecureFetch.mockResolvedValueOnce({
         ok: true,

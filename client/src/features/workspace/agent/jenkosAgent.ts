@@ -311,6 +311,8 @@ export async function runJenkosAgent({
 
   if (toolCalls.length > 0) {
     onStatusUpdate?.("Applying architecture modifications...");
+    let workingNodes = currentNodes;
+    let workingEdges = currentEdges;
     for (const tc of toolCalls) {
       if (tc.function.name === "edit_canvas") {
         let args: EditCanvasToolArgs = {};
@@ -324,11 +326,15 @@ export async function runJenkosAgent({
         }
 
         const result = executeEditCanvas(
-          currentNodes,
-          currentEdges,
+          workingNodes,
+          workingEdges,
           args,
           viewportCenter,
         );
+        if (result.applied) {
+          workingNodes = result.nodes;
+          workingEdges = result.edges;
+        }
         canvasResult = result;
         executedToolCalls.push({
           id: tc.id,
