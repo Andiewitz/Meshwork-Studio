@@ -13,6 +13,7 @@ import {
   getNodeDimensions,
   withNodeDimensions,
 } from "@/features/workspace/utils/nodeGeometry";
+import { expandNodeSubtreeIds } from "@/features/workspace/utils/containment";
 
 export interface EditCanvasNodeInput {
   id?: string;
@@ -253,7 +254,10 @@ export function executeEditCanvas(
     args.action || (currentNodes.length === 0 ? "replace_all" : "add");
   const rawNodes = args.nodes || [];
   const rawEdges = args.edges || [];
-  const deleteNodeIds = new Set(args.deleteNodeIds || []);
+  const deleteNodeIds = expandNodeSubtreeIds(
+    currentNodes,
+    args.deleteNodeIds || [],
+  );
   const deleteEdgeIds = new Set(args.deleteEdgeIds || []);
 
   // 1. Full Replacement Action

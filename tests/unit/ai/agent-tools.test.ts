@@ -149,6 +149,30 @@ describe("Jenkos AI Agent Tool Calling & Execution Unit Tests", () => {
       expect(result.edges).toHaveLength(0); // Edge connected to backend-svc was removed
     });
 
+    it("deletes descendants when an AI removes a container", () => {
+      const container: Node = {
+        id: "vpc",
+        type: "vpc",
+        position: { x: 0, y: 0 },
+        data: { label: "VPC" },
+      };
+      const child: Node = {
+        id: "inside-vpc",
+        type: "server",
+        parentId: "vpc",
+        position: { x: 40, y: 60 },
+        data: { label: "Service" },
+      };
+      const result = executeEditCanvas(
+        [container, child],
+        [{ id: "edge", source: "vpc", target: "inside-vpc" }],
+        { action: "delete", deleteNodeIds: ["vpc"] },
+      );
+
+      expect(result.nodes).toEqual([]);
+      expect(result.edges).toEqual([]);
+    });
+
     it("should handle full canvas replace_all when explicitly requested", () => {
       const result = executeEditCanvas(
         initialNodes,

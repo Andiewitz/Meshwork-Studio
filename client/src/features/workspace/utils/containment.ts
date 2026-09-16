@@ -1,4 +1,4 @@
-import type { Node } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
 import { CONTAINER_TYPES } from "./nodeRegistry";
 import { getNodeDimensions } from "./nodeGeometry";
 
@@ -135,4 +135,68 @@ export function orderNodesByHierarchy(nodes: Node[]): Node[] {
   }
 
   return ordered;
+}
+
+/** Includes every nested child so a container cannot be deleted into orphans. */
+export function expandNodeSubtreeIds(
+  nodes: Node[],
+  rootIds: Iterable<string>,
+): Set<string> {
+  const ids = new Set(rootIds);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const node of nodes) {
+      if (node.parentId && ids.has(node.parentId) && !ids.has(node.id)) {
+        ids.add(node.id);
+        changed = true;
+      }
+    }
+  }
+  return ids;
+}
+
+/** Copies selected roots with their descendants and remaps copied parents. */
+export function duplicateCanvasSubtrees(
+  nodes: Node[],
+  edges: Edge[],
+  selectedIds: string[],
+  createId: (node: Node, index: number) => string,
+  createEdgeId: (edge: Edge, index: number) => string,
+): { nodes: Node[]; edges: Edge[] } {
+  const idsToCopy = expandNodeSubtreeIds(nodes, selectedIds);
+  const originals = nodes.filter((node) => idsToCopy.has(node.id));
+  const copiedIds = new Map(
+    originals.map((node, index) => [node.id, createId(node, index)]),
+  );
+
+  const copiedNodes = originals.map((node) => {
+    const copiedParentId = node.parentId
+      ? (copiedIds.get(node.parentId) ?? node.parentId)
+      : undefined;
+    const isCopiedRoot = !node.parentId || !copiedIds.has(node.parentId);
+    return {
+      ...node,
+      id: copiedIds.get(node.id)!,
+      ...(copiedParentId
+        ? { parentId: copiedParentId, extent: "parent" as const }
+        : { parentId: undefined, extent: undefined }),
+      position: isCopiedRoot
+        ? { x: node.position.x + 20, y: node.position.y + 20 }
+        : node.position,
+      selected: true,
+    };
+  });
+
+  const copiedEdges = edges
+    .filter((edge) => copiedIds.has(edge.source) && copiedIds.has(edge.target))
+    .map((edge, index) => ({
+      ...edge,
+      id: createEdgeId(edge, index),
+      source: copiedIds.get(edge.source)!,
+      target: copiedIds.get(edge.target)!,
+      selected: true,
+    }));
+
+  return { nodes: copiedNodes, edges: copiedEdges };
 }

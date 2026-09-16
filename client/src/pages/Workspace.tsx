@@ -189,6 +189,8 @@ import { WorkspaceToolbar } from "@/features/workspace/components/WorkspaceToolb
 import {
   calculateContainment,
   calculateGlobalPosition,
+  duplicateCanvasSubtrees,
+  expandNodeSubtreeIds,
   orderNodesByHierarchy,
 } from "@/features/workspace/utils/containment";
 import { usePresence } from "@/hooks/use-presence";
@@ -1023,16 +1025,18 @@ function WorkspaceView() {
   const deleteNodes = useCallback(
     (ids: string[]) => {
       takeSnapshot();
-      setNodes((nds) => nds.filter((node) => !ids.includes(node.id)));
+      const idsToDelete = expandNodeSubtreeIds(nodes, ids);
+      setNodes((nds) => nds.filter((node) => !idsToDelete.has(node.id)));
       setEdges((eds) =>
         eds.filter(
-          (edge) => !ids.includes(edge.source) && !ids.includes(edge.target),
+          (edge) =>
+            !idsToDelete.has(edge.source) && !idsToDelete.has(edge.target),
         ),
       );
-      if (selectedNodeId && ids.includes(selectedNodeId))
+      if (selectedNodeId && idsToDelete.has(selectedNodeId))
         setSelectedNodeId(null);
     },
-    [takeSnapshot, setNodes, setEdges, selectedNodeId],
+    [takeSnapshot, nodes, setNodes, setEdges, selectedNodeId],
   );
 
   const deleteNode = useCallback(
@@ -1421,18 +1425,22 @@ function WorkspaceView() {
   const duplicateNode = useCallback(
     (id: string) => {
       takeSnapshot();
-      const node = nodes.find((n) => n.id === id);
-      if (node) {
-        const newNode = {
-          ...node,
-          id: `${node.id}-copy-${Date.now()}`,
-          position: { x: node.position.x + 20, y: node.position.y + 20 },
-          selected: false,
-        };
-        setNodes((nds) => nds.concat(newNode));
-      }
+      const timestamp = Date.now();
+      const copies = duplicateCanvasSubtrees(
+        nodes,
+        edges,
+        [id],
+        (node, index) => `${node.id}-copy-${timestamp}-${index}`,
+        (edge, index) => `${edge.id}-copy-${timestamp}-${index}`,
+      );
+      setNodes((nds) =>
+        nds.concat(copies.nodes.map((node) => ({ ...node, selected: false }))),
+      );
+      setEdges((eds) =>
+        eds.concat(copies.edges.map((edge) => ({ ...edge, selected: false }))),
+      );
     },
-    [nodes, setNodes, takeSnapshot],
+    [nodes, edges, setNodes, setEdges, takeSnapshot],
   );
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -1484,24 +1492,21 @@ function WorkspaceView() {
     (ids: string[]) => {
       if (ids.length === 0) return;
       takeSnapshot();
-      const newNodes: Node[] = [];
-      ids.forEach((id) => {
-        const node = nodes.find((n) => n.id === id);
-        if (node) {
-          newNodes.push({
-            ...node,
-            id: `${node.id}-copy-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-            position: { x: node.position.x + 20, y: node.position.y + 20 },
-            selected: true,
-          });
-        }
-      });
+      const timestamp = Date.now();
+      const copies = duplicateCanvasSubtrees(
+        nodes,
+        edges,
+        ids,
+        (node, index) => `${node.id}-copy-${timestamp}-${index}`,
+        (edge, index) => `${edge.id}-copy-${timestamp}-${index}`,
+      );
       setNodes((nds) => [
         ...nds.map((n) => ({ ...n, selected: false })),
-        ...newNodes,
+        ...copies.nodes,
       ]);
+      setEdges((eds) => [...eds, ...copies.edges]);
     },
-    [nodes, setNodes, takeSnapshot],
+    [nodes, edges, setNodes, setEdges, takeSnapshot],
   );
 
   const onNodeDragStop = useCallback(
