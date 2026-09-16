@@ -8,13 +8,13 @@
 
 ## Production facts
 
-| Resource       | Value                                                  |
-| -------------- | ------------------------------------------------------ |
-| Instance       | `<YOUR_EC2_INSTANCE_ID>` — Ubuntu 22.04 LTS, us-east-1 |
-| SSH            | `ssh -i <YOUR_SSH_KEY> ubuntu@<YOUR_DOMAIN>`           |
-| Public URL     | `https://<YOUR_DOMAIN>` (NGINX + TLS)                  |
-| Remote app dir | `/home/ubuntu/meshwork-studiov2`                       |
-| Env file       | `/home/ubuntu/meshwork-studiov2/.env` (chmod 600)      |
+| Resource       | Value                                                              |
+| -------------- | ------------------------------------------------------------------ |
+| Instance       | `<YOUR_EC2_INSTANCE_ID>` — Ubuntu 22.04 LTS, `t3.small`, us-east-1 |
+| SSH            | `ssh -i <YOUR_SSH_KEY> ubuntu@<YOUR_DOMAIN>`                       |
+| Public URL     | `https://<YOUR_DOMAIN>` (NGINX + TLS)                              |
+| Remote app dir | `/home/ubuntu/meshwork-studiov2`                                   |
+| Env file       | `/home/ubuntu/meshwork-studiov2/.env` (chmod 600)                  |
 
 ### Runtime topology on the box
 
@@ -24,8 +24,7 @@ NGINX :80/:443 ── TLS termination, static frontend
  ├─ /api/* , /health , /ready        → Node monolith    (PM2 meshwork,     :5000)
  └─ /ws                              → Node monolith (WebSocket upgrade)
 
-Docker: emnesh-postgres-workspace (:5434), emnesh-postgres-auth (:5433),
-        emnesh-redis (:6379)
+PostgreSQL domain databases, Redis, and DynamoDB remain private dependencies.
 ```
 
 The **Go auth service** (`server/services/auth`) owns users, sessions, MFA, OAuth and
@@ -36,7 +35,8 @@ Architecture details: [`../AUTH_ARCHITECTURE.md`](../AUTH_ARCHITECTURE.md).
 
 ## Deploy path A — GitHub Actions (preferred)
 
-`.github/workflows/deploy-production.yml` triggers on push to `main`:
+`.github/workflows/deploy-production.yml` runs after a successful CI run for
+`main`, using the exact SHA verified by CI:
 
 1. Builds the client+monolith bundle (`npm run build`)
 2. Cross-compiles the Go auth binary (`linux/amd64`, migrations embedded)
@@ -106,7 +106,7 @@ on-instance containers. After first boot:
 1. Clone the repo to `~/meshwork-studiov2`
 2. Create `.env` from the inventory in [`SECRETS.md`](./SECRETS.md)
    ⚠️ Database cutover note: the consolidated Postgres starts EMPTY.
-   Run `npx tsx scripts/provision-dynamodb.ts` for the canvas table.
+   Run `npx tsx scripts/provision-dynamodb.mjs` for the canvas table.
    Existing canvas/team/ai rows are NOT migrated (fresh start).
    (generate every key listed there — no defaults exist). The auth
    service's `AUTH_ASSERTION_PRIVATE_KEY` and the monolith's

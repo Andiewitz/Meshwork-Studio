@@ -17,3 +17,7 @@ Quick links:
 - Deploy: `./scripts/deploy.sh` (local dist-swap) or push to `main` (GitHub Actions)
 - Start/stop instance: `~/start-ec2.sh`
 - Architecture of the auth split: [`docs/AUTH_ARCHITECTURE.md`](../docs/AUTH_ARCHITECTURE.md)
+
+`nginx.conf` contains an application-root path that must match the target host
+before installation. Validate with `sudo nginx -t`; the canonical deployment
+directory is documented in [`DEPLOYMENT.md`](../docs/operations/DEPLOYMENT.md).

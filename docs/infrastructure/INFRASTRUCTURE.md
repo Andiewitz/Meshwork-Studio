@@ -1,96 +1,76 @@
-# Infrastructure & Deployment Guide
+# Infrastructure Topology
 
-This document covers the complete infrastructure setup for Meshwork Studio, including AWS EC2 deployment, NGINX architecture, database backup procedures, and deployment strategy.
+This is the current architecture reference. For a deploy or incident, use the
+operational runbooks rather than treating this page as a command manual.
 
----
+## Supported production shape
 
-## 1. NGINX Architecture (EC2 / Docker)
+Meshwork Studio currently targets one Ubuntu 22.04 EC2 `t3.small` instance in
+`us-east-1`. It is intentionally a single-host deployment; the archived
+Terraform material is not a supported ECS/Fargate deployment path.
 
-When running the full stack, NGINX acts as the **"Front Door"** to the application.
-
-### Core Responsibilities
-
-- **High-Speed Static File Serving:** NGINX handles the delivery of our compiled React frontend (`dist/public`). Optimized for static delivery, it can serve thousands of concurrent requests rapidly.
-- **Reverse Proxy:** NGINX routes traffic intelligently:
-  - `/api/` or `/ws` requests are securely forwarded to the Node.js backend on port 5000.
-  - All other traffic serves static assets.
-- **SPA Routing:** Our `nginx.conf` solves React Router fallback automatically using `try_files $uri $uri/ @node;`.
-- **Performance:** NGINX applies GZIP compression to plain-text responses and aggressive caching headers (`expires 1y;`) for static assets.
-
----
-
-## 2. Cloud Deployment (AWS EC2)
-
-The application is deployed on AWS EC2 (`t3.micro`) running Amazon Linux 2023 / Ubuntu.
-
-### Production Environment Variables:
-
-| Variable         | Example Value              | Why?                                                             |
-| ---------------- | -------------------------- | ---------------------------------------------------------------- |
-| `FRONTEND_URL`   | `https://your-domain.com`  | Tells the backend to allow requests from your production domain. |
-| `SESSION_SECRET` | `openssl rand -base64 32`  | Encrypts user sessions.                                          |
-| `ENCRYPTION_KEY` | `node -e "..."` (32 bytes) | Encrypts AI API keys (BYOK).                                     |
-| `DATABASE_URL`   | `postgresql://...`         | Connection to your Postgres instance.                            |
-| `GEMINI_API_KEY` | `your-gemini-api-key`      | App-owned Gemini API key for free-tier users.                    |
-| `NODE_ENV`       | `production`               | Enables security headers (Helmet) and optimizations.             |
-
----
-
-## 3. Deployment Strategy
-
-To deploy updates cleanly:
-
-1. **Build Locally / CI**: Run `npm run build` to generate production artifacts.
-2. **Deploy to EC2**: Sync built `dist` files to EC2 `/home/ubuntu/meshwork-studiov2/`.
-3. **Restart Service**: Execute `pm2 restart meshwork --update-env` to reload environment variables and apply code updates without downtime.
-4. **Verification**: Run `curl http://localhost:5000/health` to confirm Postgres and Redis connectivity.
-
----
-
-## 4. Backups and Data Safety
-
-This project implements two layers of data safety:
-
-### Application-Level Recovery Archive
-
-Run this before manual schema changes to capture the complete service databases
-and canvas snapshot as a verified archive.
-
-```bash
-BACKUP_S3_URI=s3://meshwork-backups/prod npm run db:backup
+```text
+Internet
+  -> NGINX (:80/:443, TLS and static assets)
+      -> Go auth service (:8081)
+      -> Node monolith (:5000)
+          -> PostgreSQL domain databases
+          -> Redis
+          -> DynamoDB canvas table
 ```
 
-- Requires explicit DSNs for auth, workspace, team, Jenkos/AI, and metrics; it
-  creates custom PostgreSQL dumps plus a `canvas.ndjson` snapshot and
-  checksum manifest.
-- Uploads artifacts to the configured S3 prefix and uploads `manifest.json`
-  last, so an archive without that manifest is incomplete.
-- In production it also requires PostgreSQL globals and managed DynamoDB PITR.
-  See [`../../plans/Q5-BACKUP-AND-RECOVERY.md`](../../plans/Q5-BACKUP-AND-RECOVERY.md)
-  for restore and operational prerequisites.
+NGINX proxies `/api/v1/auth/*` and `/api/v1/user/*` to the Go service. Other
+`/api/*`, WebSocket, health, and readiness requests go to the Node monolith.
+The exact NGINX root path is host-specific; validate it against the deployed
+application directory before reloading NGINX.
 
-### Infrastructure Backup (PostgreSQL Binary)
+## Data stores
 
-If using Docker, run the provided scripts to create full binary `.dump` files.
+| Store      | Purpose                                                   | Production boundary                                  |
+| ---------- | --------------------------------------------------------- | ---------------------------------------------------- |
+| PostgreSQL | Separate auth, workspace, team, AI, and metrics databases | Not publicly exposed; each service uses its own DSN. |
+| Redis      | Auth/session support, rate limits, and WebSocket pub/sub  | Not publicly exposed.                                |
+| DynamoDB   | Durable canvas nodes, edges, revision, and write lease    | App IAM is limited to the canvas table.              |
 
-- Any supported host: `npm run db:backup` (requires Node, `pg_dump`, and AWS CLI)
+The repository's Docker Compose setup is the supported local stack. It is not
+a production disaster-recovery plan. Production uses managed DynamoDB with
+point-in-time recovery and an off-host backup archive.
 
-Restore drills use only newly provisioned, empty targets whose names contain
-`restore-$RESTORE_DRILL_ID`; the tool rejects production mode and the active
-canvas table. Download a complete archive (including `manifest.json`) to an
-isolated host, set the `RESTORE_*_DATABASE_URL` values and
-`RESTORE_CANVAS_DDB_TABLE`, then run:
+## Runtime processes
 
-```bash
-RESTORE_MODE=drill RESTORE_DRILL_ID=20260908 \
-  RESTORE_ARCHIVE_DIR=/secure/archive/2026-09-08T00-00-00-000Z \
-  npm run db:restore:drill
-```
+| Process                     | Owner           | Health endpoint                 |
+| --------------------------- | --------------- | ------------------------------- |
+| `meshwork` PM2 process      | Node monolith   | `http://127.0.0.1:5000/ready`   |
+| `meshwork-auth` PM2 process | Go auth service | `http://127.0.0.1:8081/healthz` |
+| NGINX                       | System service  | `sudo nginx -t` before a reload |
 
-Do not use this drill command for a production cutover. That procedure needs an
-approved maintenance plan, a new DynamoDB table, and explicit service config
-changes after validation.
+Use `docker compose ps` on a repository-managed host instead of relying on
+historical individual container names. A host that still has a split or legacy
+container layout needs an explicit migration record before it is changed.
 
-### Safe Schema Migrations (Idempotent)
+## Configuration and access
 
-To prevent production data loss, all internal initialization scripts use `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. This ensures new columns are safely injected into existing tables without dropping existing data.
+The authoritative variable inventory and rotation impact are in
+[`SECRETS.md`](../operations/SECRETS.md). Keep the protected server `.env` at
+the deployed application directory with mode `600`; do not copy local
+development values to production.
+
+The deployment user needs only the OS, Docker/PM2, and application-directory
+permissions documented in [`DEPLOYMENT.md`](../operations/DEPLOYMENT.md). AWS
+credentials and IAM setup are separate operator responsibilities and are never
+stored in this repository.
+
+## Growth boundaries
+
+Move away from this topology only when observed limits justify it:
+
+| Signal                                                             | Next design decision                                                     |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Sustained CPU or memory pressure                                   | Resize the instance before introducing distributed coordination.         |
+| Database storage, backup, or recovery requirements exceed one host | Move PostgreSQL to managed RDS with a rehearsed migration.               |
+| DynamoDB throttling or large-canvas latency                        | Revisit capacity, item model, and write batching using measured traffic. |
+| Multiple app instances required                                    | Externalize session/pub-sub dependencies and introduce a load balancer.  |
+
+See [`PLAN.md`](../../PLAN.md) for the cost/reliability assumptions behind these
+triggers. The historical Terraform files under `docs/archive/` are reference
+material only.

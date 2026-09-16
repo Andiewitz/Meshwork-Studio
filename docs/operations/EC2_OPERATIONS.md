@@ -33,7 +33,7 @@ To save AWS costs, the EC2 instance can be kept stopped when not in use. When yo
 1. Checks AWS to ensure the EC2 instance is started (if AWS CLI is configured).
 2. Waits for network and SSH port 22 to become available.
 3. Automatically connects via SSH using `ssh-keys/Mesh-EC2.pem`.
-4. Starts the Docker daemon and containers (`emnesh-postgres-workspace`, `emnesh-postgres-auth`, `emnesh-redis`).
+4. Starts the Docker daemon. Validate the actual host layout with `docker compose ps`; do not assume historical split-container names.
 5. Starts the Nginx web server.
 6. Starts/Restarts the Node.js backend under PM2 (`pm2 resurrect` / `pm2 restart meshwork`).
 7. Checks the `/health` endpoint and prints a readiness summary.
@@ -115,14 +115,15 @@ pm2 restart meshwork
 pm2 save
 ```
 
-### Docker Containers (Database & Redis)
+### Docker dependencies
 
 ```bash
-# Check running containers
-sudo docker ps
+# From the deployed repository directory, inspect the compose-managed stack.
+docker compose ps
+docker compose logs --tail=100
 
-# Restart containers manually if needed
-sudo docker restart emnesh-postgres-workspace emnesh-postgres-auth emnesh-redis
+# Restart only after identifying the failing dependency.
+docker compose restart <service>
 ```
 
 ### Verified backup timer
@@ -143,8 +144,8 @@ journalctl -u meshwork-backup.service -n 100 --no-pager
 The service runs nightly with a randomized delay, a 384 MiB memory ceiling, and
 low CPU/I/O priority. A failed service is deliberately visible through systemd;
 do not treat a local Docker volume as a disaster-recovery backup. See
-[`../../plans/Q5-BACKUP-AND-RECOVERY.md`](../../plans/Q5-BACKUP-AND-RECOVERY.md)
-for restore-drill and AWS prerequisites.
+[`RECOVERY.md`](./RECOVERY.md) for the policy, restore drill, and AWS
+prerequisites.
 
 ### Nginx (Reverse Proxy & SSL)
 

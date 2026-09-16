@@ -185,8 +185,9 @@ Every major system has its own deep-dive guide:
 | **[Theming & Design System](./docs/features/THEMING.md)**                                 | Dark/light/system modes, CSS variables, brand identity                                                    |
 | **[Settings & Privacy](./docs/features/SETTINGS.md)**                                     | User profile management, security settings, account controls                                              |
 | **[Testing Strategy](./docs/development/TESTING.md)**                                     | The testing pyramid, how to run tests, how to write new ones                                              |
-| **[AWS Infrastructure (ECS/Terraform)](./docs/infrastructure/INFRASTRUCTURE.md)**         | ECS/Fargate + ALB + RDS architecture via Terraform (with EC2 single-node path)                            |
-| **[Deployment Runbook](./docs/operations/DEPLOYMENT.md)**                                 | Production deploy paths, verification checklist, rollback table                                           |
+| **[Infrastructure Topology](./docs/infrastructure/INFRASTRUCTURE.md)**                    | Current single-EC2 topology, private dependencies, and measured growth triggers                           |
+| **[Deployment Runbook](./docs/operations/DEPLOYMENT.md)**                                 | Production deploy paths, verification checklist, and rollback                                             |
+| **[CI/CD Operations](./docs/operations/CI_CD.md)**                                        | Required CI gates, promotion, releases, and failure triage                                                |
 | **[Secrets Inventory](./docs/operations/SECRETS.md)**                                     | Every secret: generation, consumers, rotation & blast radius                                              |
 | **[Historical Credential Response](./docs/operations/HISTORICAL-CREDENTIAL-RESPONSE.md)** | Private rotation and verification procedure for an exposed historical secret                              |
 | **[Post-Mortem Log](./docs/archive/process/post-mortem.md)**                              | Production bugs found and fixed, with root cause analysis                                                 |
