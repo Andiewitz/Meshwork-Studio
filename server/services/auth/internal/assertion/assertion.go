@@ -111,12 +111,6 @@ func NewEphemeralSigner(ttl time.Duration) (*Signer, ed25519.PublicKey, error) {
 	return NewSigner(base64.StdEncoding.EncodeToString(seed), ttl, nil)
 }
 
-// PublicKeySeed returns the base64 seed of the current private key's public
-// half for handing to the monolith via env in dev setups.
-func (s *Signer) PublicKeySeed() string {
-	return base64.StdEncoding.EncodeToString(s.priv.Seed())
-}
-
 func (s *Signer) KeyID() string { return s.kid }
 
 // Sign mints an assertion for an identity.
