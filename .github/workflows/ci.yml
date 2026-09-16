@@ -206,6 +206,8 @@ jobs:
           restore-keys: |
             playwright-${{ runner.os }}-
       - run: npm ci
+      - name: Generate isolated auth keys for browser tests
+        run: node scripts/ci/write-e2e-auth-env.mjs >> "$GITHUB_ENV"
       - name: Create isolated service databases
         run: node scripts/ci/create-test-databases.mjs
       - name: Start real auth service
@@ -221,7 +223,7 @@ jobs:
           cat "$RUNNER_TEMP/identity.log"
           exit 1
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e -- --grep "@smoke"
+      - run: npm run test:e2e -- --grep "@smoke|@authenticated"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
