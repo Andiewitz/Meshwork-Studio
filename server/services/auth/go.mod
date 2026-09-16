@@ -1,6 +1,6 @@
 module github.com/meshwork-studio/auth
 
-go 1.26
+go 1.26.0
 
 require (
 	github.com/go-chi/chi/v5 v5.2.2
@@ -9,7 +9,7 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/redis/go-redis/v9 v9.11.0
 	golang.org/x/crypto v0.40.0
-	golang.org/x/oauth2 v0.30.0
+	golang.org/x/oauth2 v0.37.0
 )
 
 require (
