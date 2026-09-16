@@ -166,12 +166,12 @@ These unit tests spin up an Express server with mocked storage and fire HTTP req
 
 **File:** `tests/unit/workspace/routes.test.ts`
 
-| Test                                            | What It Proves                                                                                                     |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| _IDOR: User A cannot modify User B's workspace_ | `PUT /api/workspaces/1` with `userId: "user_A"` against a workspace owned by `"user_B"` returns `401 Unauthorized` |
-| _404 for missing workspaces_                    | Requesting a workspace that doesn't exist returns `404` instead of crashing                                        |
-| _Zod validation rejects bad input_              | Sending a title longer than 16 characters returns `400 Bad Request` with a human-readable error                    |
-| _Valid update succeeds_                         | Owner sending a valid title gets `200 OK` with the updated workspace                                               |
+| Test                                            | What It Proves                                                                                   |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| _IDOR: User A cannot modify User B's workspace_ | `PUT /api/v1/workspaces/1` as User A against a workspace owned by User B returns `403 Forbidden` |
+| _404 for missing workspaces_                    | Requesting a workspace that doesn't exist returns `404` instead of crashing                      |
+| _Zod validation rejects bad input_              | Sending a title longer than 16 characters returns `400 Bad Request` with a human-readable error  |
+| _Valid update succeeds_                         | Owner sending a valid title gets `200 OK` with the updated workspace                             |
 
 **How Mocking Works:**
 

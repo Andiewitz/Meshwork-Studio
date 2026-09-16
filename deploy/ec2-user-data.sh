@@ -1,5 +1,5 @@
 #!/bin/bash
-# EC2 User Data — runs on first boot of t3.micro Amazon Linux 2023
+# Historical EC2 user-data example — Amazon Linux 2023, small-instance profile.
 # Installs: Node 22, Redis 7, Nginx, PM2, psql client, certbot
 # Region: ap-southeast-1 (adjust as needed)
 
@@ -45,7 +45,7 @@ dnf install -y certbot python3-certbot-nginx
 # ─── Git (for pulling code) ─────────────────────────────────────────
 dnf install -y git
 
-# ─── Swap space (t3.micro only has 1GB RAM — npm install needs more) ─
+# ─── Swap space for constrained instances — npm install needs headroom ─
 if [ ! -f /swapfile ]; then
   dd if=/dev/zero of=/swapfile bs=128M count=8  # 1GB swap
   chmod 600 /swapfile

@@ -9,6 +9,10 @@ Meshwork Studio currently targets one Ubuntu 22.04 EC2 `t3.small` instance in
 `us-east-1`. It is intentionally a single-host deployment; the archived
 Terraform material is not a supported ECS/Fargate deployment path.
 
+[`deploy/ec2-user-data.sh`](../../deploy/ec2-user-data.sh) is a historical
+Amazon Linux bootstrap example, not a bootstrap script for this Ubuntu profile.
+Do not apply it to the production host without a reviewed OS-specific update.
+
 ```text
 Internet
   -> NGINX (:80/:443, TLS and static assets)

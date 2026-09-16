@@ -72,16 +72,19 @@ monolith only validates sessions through a thin bridge. Full design:
 
 ### IDOR Protection (Insecure Direct Object Reference)
 
-Every data-modifying endpoint verifies that the authenticated user actually **owns** the resource they're trying to access. This prevents User A from modifying User B's workspaces by guessing IDs.
+Every data-modifying endpoint verifies that the authenticated user has the
+required access to the resource. A direct workspace owner is authoritative;
+team-shared access is role-based. This prevents User A from modifying User B's
+workspaces by guessing IDs.
 
 **How it works in practice:**
 
 ```
-User A sends: PUT /api/workspaces/42  { title: "Hacked" }
+User A sends: PUT /api/v1/workspaces/42  { title: "Hacked" }
 
 Server checks:
   1. Does workspace 42 exist?              → No?  Return 404
-  2. Does workspace 42 belong to User A?   → No?  Return 401
+  2. Does User A have owner/editor access? → No?  Return 403
   3. Is the payload valid (Zod)?           → No?  Return 400
   4. All good?                             → Update and return 200
 ```
@@ -90,7 +93,10 @@ This pattern is enforced on **every** workspace, collection, and canvas endpoint
 
 ### CSRF Protection
 
-State-changing requests (POST, PUT, DELETE) require a valid CSRF token in the `X-CSRF-Token` header. The token is fetched from `/api/csrf-token` and automatically included by the `secureFetch()` client utility.
+State-changing requests (POST, PUT, PATCH, DELETE) require a valid CSRF token
+in the `X-CSRF-Token` header. The token is fetched from
+`/api/v1/auth/csrf-token` and automatically included by the `secureFetch()`
+client utility.
 
 **Protected endpoints:** 15 routes across auth, workspace, and canvas modules.
 
@@ -102,7 +108,7 @@ All state-changing fetch calls in the app go through `secureFetch` instead of th
 
 ```typescript
 // Usage is identical to fetch()
-const res = await secureFetch("/api/workspaces", {
+const res = await secureFetch("/api/v1/workspaces", {
   method: "POST",
   body: JSON.stringify(data),
 });
@@ -357,7 +363,7 @@ logs/
 ```typescript
 // Use secureFetch for all state-changing requests
 import { secureFetch } from "@/lib/secure-fetch";
-const res = await secureFetch("/api/workspaces", {
+const res = await secureFetch("/api/v1/workspaces", {
   method: "POST",
   body: JSON.stringify(data),
 });
@@ -370,7 +376,7 @@ const input = api.workspaces.create.input.parse(req.body);
 
 // Check ownership on every data-modifying route
 if (workspace.userId !== userId)
-  return res.status(401).json({ message: "Unauthorized" });
+  return res.status(403).json({ message: "Forbidden" });
 ```
 
 ### Don't Do This ❌
@@ -389,7 +395,7 @@ const userId = (req.user as any).id; // ❌ No type safety
 const userId = req.user!.id; // ✅ Backed by express.d.ts declaration
 
 // Don't skip IDOR checks
-app.put("/api/workspaces/:id", async (req, res) => {
+app.put("/api/v1/workspaces/:id", async (req, res) => {
   await storage.updateWorkspace(id, req.body); // ❌ Anyone can update anything
 });
 ```

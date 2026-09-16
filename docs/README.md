@@ -40,6 +40,7 @@ Developer documentation, organized by domain.
 ## Development
 
 - [**Testing**](./development/TESTING.md) — Test pyramid, commands, conventions.
+- [**Documentation Maintenance**](./development/DOCUMENTATION.md) — Source ownership and documentation review rules.
 
 ## Archive
 

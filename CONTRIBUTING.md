@@ -129,6 +129,14 @@ npm run lint
 npm run test:run
 ```
 
+## Documentation changes
+
+Update the relevant documentation in the same pull request whenever a change
+affects an API contract, authorization, persisted data, node registry,
+environment variable, deployment, recovery, or user-visible capability. See
+the [documentation maintenance guide](./docs/development/DOCUMENTATION.md) for
+the source-of-truth map and review checklist.
+
 ---
 
 ## Branch Strategy & Commit Conventions
