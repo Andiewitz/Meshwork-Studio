@@ -17,6 +17,7 @@ import {
   ArrowRightIcon as ArrowRight,
 } from "@heroicons/react/24/outline";
 import { nodeTypesList } from "@/features/workspace/utils/nodeTypes";
+import { getNodeDimensions } from "@/features/workspace/utils/nodeGeometry";
 import type { NodeData, EdgeData, NodeStyle } from "@/types/canvas";
 
 interface PropertiesSidebarProps {
@@ -64,6 +65,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
 
   // --- NODE PROPERTIES SIDEBAR MODE ---
   if (selectedNode) {
+    const dimensions = getNodeDimensions(selectedNode);
     const nodeInfo = nodeTypesList.find((n) => n.type === selectedNode.type);
     const NodeIcon = nodeInfo?.icon || Box;
     const currentAccent = selectedNode.data?.accentColor;
@@ -279,13 +281,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               <Input
                 type="number"
                 min={24}
-                value={Math.round(
-                  Number(
-                    selectedNode.style?.width ??
-                      (selectedNode as any).measured?.width ??
-                      0,
-                  ),
-                )}
+                value={Math.round(dimensions.width)}
                 onChange={(e) => {
                   const val = parseInt(e.target.value);
                   if (!isNaN(val) && val > 0) {
@@ -302,13 +298,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               <Input
                 type="number"
                 min={24}
-                value={Math.round(
-                  Number(
-                    selectedNode.style?.height ??
-                      (selectedNode as any).measured?.height ??
-                      0,
-                  ),
-                )}
+                value={Math.round(dimensions.height)}
                 onChange={(e) => {
                   const val = parseInt(e.target.value);
                   if (!isNaN(val) && val > 0) {

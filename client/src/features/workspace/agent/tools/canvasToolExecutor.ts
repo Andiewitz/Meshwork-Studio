@@ -8,6 +8,7 @@ import {
   getNodeSize,
   resolveNodeType,
 } from "@/features/workspace/utils/nodeRegistry";
+import { getNodeDimensions } from "@/features/workspace/utils/nodeGeometry";
 
 export interface EditCanvasNodeInput {
   id?: string;
@@ -270,8 +271,7 @@ export function executeEditCanvas(
 
   // Calculate placement baseline for newly added nodes avoiding collision
   const maxX = workingNodes.reduce(
-    (max, n) =>
-      Math.max(max, n.position.x + ((n.style?.width as number) || 168)),
+    (max, n) => Math.max(max, n.position.x + getNodeDimensions(n).width),
     viewportCenter.x - 200,
   );
 
@@ -325,6 +325,8 @@ export function executeEditCanvas(
         id: newId,
         type,
         position: { x: posX, y: posY },
+        width: dim.w,
+        height: dim.h,
         data: {
           label: incoming.label || type,
           category: "Core",
@@ -339,8 +341,6 @@ export function executeEditCanvas(
           ...(originalType ? { originalType } : {}),
         },
         style: {
-          width: dim.w,
-          height: dim.h,
           backgroundColor: incoming.accentColor || "#1a1a2e",
           borderColor: "#555",
           borderRadius: 8,

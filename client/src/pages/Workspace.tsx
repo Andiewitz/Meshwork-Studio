@@ -176,6 +176,11 @@ import {
   unregisterEnterNodeHandler,
 } from "@/features/workspace/utils/canvasEvents";
 import { nodeDimensions } from "@/features/workspace/utils/dimensions";
+import {
+  getNodeDimensions,
+  normalizeNodeDimensions,
+  withNodeDimensions,
+} from "@/features/workspace/utils/nodeGeometry";
 import { generateTemplate } from "@/features/workspace/utils/templates";
 import { PropertiesSidebar } from "@/features/workspace/components/PropertiesSidebar";
 import { WorkspaceHeader } from "@/features/workspace/components/WorkspaceHeader";
@@ -353,7 +358,7 @@ function WorkspaceView() {
       try {
         const { nodes: importedNodes, edges: importedEdges } =
           await importFromJson(file);
-        setNodes(importedNodes as Node[]);
+        setNodes(normalizeNodeDimensions(importedNodes as Node[]));
         setEdges(importedEdges as Edge[]);
         toast({ title: `Imported ${importedNodes.length} nodes` });
       } catch (err: unknown) {
@@ -509,7 +514,9 @@ function WorkspaceView() {
   const handleRemoteNodesChange = useCallback(
     (changes: NodeChange[]) => {
       isRemoteUpdate.current = true;
-      setNodes((nds) => applyNodeChanges(changes, nds));
+      setNodes((nds) =>
+        normalizeNodeDimensions(applyNodeChanges(changes, nds)),
+      );
       requestAnimationFrame(() => {
         isRemoteUpdate.current = false;
       });
@@ -548,7 +555,9 @@ function WorkspaceView() {
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      setNodes((nds) => applyNodeChanges(changes, nds));
+      setNodes((nds) =>
+        normalizeNodeDimensions(applyNodeChanges(changes, nds)),
+      );
       // Prevent broadcasting updates caused by remote changes
       if (!isRemoteUpdate.current) {
         sendNodesChange(changes);
@@ -617,10 +626,7 @@ function WorkspaceView() {
       ]);
 
       // Phase 1: zoom into the node (200ms)
-      const nodeW =
-        (node.style?.width as number) || node.measured?.width || 200;
-      const nodeH =
-        (node.style?.height as number) || node.measured?.height || 100;
+      const { width: nodeW, height: nodeH } = getNodeDimensions(node);
       const targetZoom =
         Math.min(4, window.innerWidth / nodeW, window.innerHeight / nodeH) *
         0.6;
@@ -842,7 +848,7 @@ function WorkspaceView() {
       const localCache = getCanvasFromLocalCache(workspaceId);
 
       if (localCache && localCache.nodes && localCache.edges) {
-        setNodes(localCache.nodes);
+        setNodes(normalizeNodeDimensions(localCache.nodes));
         setEdges(localCache.edges);
         setSaveStatus("offline_saved");
         toast({
@@ -851,7 +857,7 @@ function WorkspaceView() {
             "We found unsaved changes locally and restored them. They will sync automatically soon.",
         });
       } else {
-        setNodes(canvasData.nodes || []);
+        setNodes(normalizeNodeDimensions(canvasData.nodes || []));
         setEdges(canvasData.edges || []);
       }
       lastLoadedId.current = workspaceId;
@@ -972,9 +978,9 @@ function WorkspaceView() {
         id: `${type}-${Date.now()}`,
         type,
         position,
+        width: dim.w,
+        height: dim.h,
         style: {
-          width: dim.w,
-          height: dim.h,
           backgroundColor: brand.color,
           borderColor: brand.borderColor,
           borderRadius: 8,
@@ -1042,16 +1048,24 @@ function WorkspaceView() {
     (id: string, style: Partial<Record<string, unknown>>) => {
       takeSnapshot();
       const snappedStyle: Record<string, unknown> = { ...style };
-
-      if (typeof snappedStyle.width === "number")
-        snappedStyle.width = Math.round(snappedStyle.width / 24) * 24;
-      if (typeof snappedStyle.height === "number")
-        snappedStyle.height = Math.round(snappedStyle.height / 24) * 24;
+      const width =
+        typeof snappedStyle.width === "number"
+          ? Math.round(snappedStyle.width / 24) * 24
+          : undefined;
+      const height =
+        typeof snappedStyle.height === "number"
+          ? Math.round(snappedStyle.height / 24) * 24
+          : undefined;
+      delete snappedStyle.width;
+      delete snappedStyle.height;
 
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === id) {
-            return { ...node, style: { ...node.style, ...snappedStyle } };
+            return withNodeDimensions(
+              { ...node, style: { ...node.style, ...snappedStyle } },
+              { width, height },
+            );
           }
           return node;
         }),
@@ -1500,14 +1514,12 @@ function WorkspaceView() {
             ["vpc", "region", "k8s-namespace"].includes(n.type!) &&
             n.id !== node.id,
         );
-        const w = node.measured?.width || (node.style?.width as number) || 120;
-        const h = node.measured?.height || (node.style?.height as number) || 80;
+        const { width: w, height: h } = getNodeDimensions(node);
         const centerX = node.position.x + w / 2;
         const centerY = node.position.y + h / 2;
 
         const isStillInParent = containers.some((c) => {
-          const cw = (c.style?.width as number) || 0;
-          const ch = (c.style?.height as number) || 0;
+          const { width: cw, height: ch } = getNodeDimensions(c);
           return (
             centerX >= c.position.x &&
             centerX <= c.position.x + cw &&
@@ -1847,26 +1859,21 @@ function WorkspaceView() {
                               setNodes((nds) =>
                                 nds.map((n) => {
                                   if (n.selected || n.id === menu.id) {
-                                    const currentW =
-                                      (n.style?.width as number) ||
-                                      n.measured?.width ||
-                                      120;
-                                    const currentH =
-                                      (n.style?.height as number) ||
-                                      n.measured?.height ||
-                                      80;
-                                    return {
-                                      ...n,
-                                      position: {
-                                        x: Math.round(n.position.x / 12) * 12,
-                                        y: Math.round(n.position.y / 12) * 12,
+                                    const { width, height } =
+                                      getNodeDimensions(n);
+                                    return withNodeDimensions(
+                                      {
+                                        ...n,
+                                        position: {
+                                          x: Math.round(n.position.x / 12) * 12,
+                                          y: Math.round(n.position.y / 12) * 12,
+                                        },
                                       },
-                                      style: {
-                                        ...n.style,
-                                        width: Math.round(currentW / 24) * 24,
-                                        height: Math.round(currentH / 24) * 24,
+                                      {
+                                        width: Math.round(width / 24) * 24,
+                                        height: Math.round(height / 24) * 24,
                                       },
-                                    };
+                                    );
                                   }
                                   return n;
                                 }),
@@ -1886,19 +1893,15 @@ function WorkspaceView() {
                                   if (selectedNodes.length < 2) return;
                                   takeSnapshot();
                                   const anchor = selectedNodes[0];
-                                  const anchorW =
-                                    (anchor.style?.width as number) ||
-                                    anchor.measured?.width ||
-                                    0;
+                                  const { width: anchorW } =
+                                    getNodeDimensions(anchor);
                                   const targetCenterX =
                                     anchor.position.x + anchorW / 2;
                                   setNodes((nds) =>
                                     nds.map((n) => {
                                       if (n.selected || n.id === menu.id) {
-                                        const w =
-                                          (n.style?.width as number) ||
-                                          n.measured?.width ||
-                                          0;
+                                        const { width: w } =
+                                          getNodeDimensions(n);
                                         return {
                                           ...n,
                                           position: {
@@ -1926,19 +1929,15 @@ function WorkspaceView() {
                                   if (selectedNodes.length < 2) return;
                                   takeSnapshot();
                                   const anchor = selectedNodes[0];
-                                  const anchorH =
-                                    (anchor.style?.height as number) ||
-                                    anchor.measured?.height ||
-                                    0;
+                                  const { height: anchorH } =
+                                    getNodeDimensions(anchor);
                                   const targetCenterY =
                                     anchor.position.y + anchorH / 2;
                                   setNodes((nds) =>
                                     nds.map((n) => {
                                       if (n.selected || n.id === menu.id) {
-                                        const h =
-                                          (n.style?.height as number) ||
-                                          n.measured?.height ||
-                                          0;
+                                        const { height: h } =
+                                          getNodeDimensions(n);
                                         return {
                                           ...n,
                                           position: {

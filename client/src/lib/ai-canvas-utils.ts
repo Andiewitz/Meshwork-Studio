@@ -6,6 +6,7 @@ import {
   TYPE_ALIASES,
   VALID_TYPES,
 } from "@/features/workspace/utils/nodeRegistry";
+import { getNodeDimensions } from "@/features/workspace/utils/nodeGeometry";
 
 export { NODE_SIZES, TYPE_ALIASES, VALID_TYPES };
 
@@ -14,6 +15,8 @@ interface RawNode {
   id?: string;
   type?: string;
   position?: { x?: number; y?: number };
+  width?: number;
+  height?: number;
   parentId?: string;
   data?: {
     label?: string;
@@ -75,10 +78,8 @@ export function getSmartHandleIds(
   sourceNode: Node,
   targetNode: Node,
 ): { sourceHandle: string; targetHandle: string } {
-  const sW = (sourceNode.style?.width as number) || 168;
-  const sH = (sourceNode.style?.height as number) || 72;
-  const tW = (targetNode.style?.width as number) || 168;
-  const tH = (targetNode.style?.height as number) || 72;
+  const { width: sW, height: sH } = getNodeDimensions(sourceNode);
+  const { width: tW, height: tH } = getNodeDimensions(targetNode);
 
   const sCenterX = sourceNode.position.x + sW / 2;
   const sCenterY = sourceNode.position.y + sH / 2;
@@ -120,8 +121,8 @@ export function validateAndRepairCanvas(
 
     // Enforce correct size
     const dim = getNodeSize(type);
-    const existingW = n.style?.width;
-    const existingH = n.style?.height;
+    const existingW = n.width ?? n.style?.width;
+    const existingH = n.height ?? n.style?.height;
     const width =
       typeof existingW === "number" && existingW >= 48 ? existingW : dim.w;
     const height =
@@ -140,6 +141,8 @@ export function validateAndRepairCanvas(
       id,
       type,
       position: { x, y },
+      width,
+      height,
       data: {
         label: n.data?.label ?? type,
         category: n.data?.category ?? "Core",
@@ -159,8 +162,6 @@ export function validateAndRepairCanvas(
         ...(n.data?.note ? { note: n.data.note } : {}),
       },
       style: {
-        width,
-        height,
         backgroundColor:
           n.style?.backgroundColor ?? n.data?.accentColor ?? "#1a1a2e",
         borderColor: n.style?.borderColor ?? "#555",

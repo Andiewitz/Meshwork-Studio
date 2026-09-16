@@ -63,20 +63,20 @@ describe("Mosh AI Canvas Node & Edge Generation Unit Tests", () => {
       const dbNode = result!.nodes.find((n) => n.id === "node-db");
       expect(dbNode).toBeDefined();
       expect(dbNode!.type).toBe("database");
-      expect(dbNode!.style?.width).toBe(144);
-      expect(dbNode!.style?.height).toBe(120);
+      expect(dbNode!.width).toBe(144);
+      expect(dbNode!.height).toBe(120);
 
       const cacheNode = result!.nodes.find((n) => n.id === "node-cache");
       expect(cacheNode).toBeDefined();
       expect(cacheNode!.type).toBe("cache");
-      expect(cacheNode!.style?.width).toBe(144);
-      expect(cacheNode!.style?.height).toBe(120);
+      expect(cacheNode!.width).toBe(144);
+      expect(cacheNode!.height).toBe(120);
 
       const gwNode = result!.nodes.find((n) => n.id === "node-gw");
       expect(gwNode).toBeDefined();
       expect(gwNode!.type).toBe("gateway");
-      expect(gwNode!.style?.width).toBe(192);
-      expect(gwNode!.style?.height).toBe(72);
+      expect(gwNode!.width).toBe(192);
+      expect(gwNode!.height).toBe(72);
     });
 
     it("should filter out orphan edges pointing to nonexistent nodes", () => {
