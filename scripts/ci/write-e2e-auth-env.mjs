@@ -21,3 +21,4 @@ process.stdout.write(
   `AUTH_ASSERTION_PUBLIC_KEY=${publicKey.toString("base64")}\n`,
 );
 process.stdout.write(`AUTH_INTERNAL_KEY=${randomBytes(32).toString("hex")}\n`);
+process.stdout.write(`INTERNAL_API_KEY=${randomBytes(32).toString("hex")}\n`);

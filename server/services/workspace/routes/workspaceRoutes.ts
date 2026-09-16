@@ -18,6 +18,13 @@ function getUserId(req: Request): string {
   return req.user.id;
 }
 
+function isWorkspaceOwner(
+  workspace: { userId: string | null },
+  userId: string,
+) {
+  return workspace.userId === userId;
+}
+
 export function registerWorkspaceRoutes(app: Express, context: AppContext) {
   const isAuthenticated =
     context.registry.get<RequestHandler>("isAuthenticated");
@@ -145,10 +152,9 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
       return res.status(404).json({ message: "Workspace not found" });
 
     const userId = getUserId(req);
-    const hasAccess = await teamStorage.canAccessWorkspace(
-      userId,
-      workspace.id,
-    );
+    const hasAccess =
+      isWorkspaceOwner(workspace, userId) ||
+      (await teamStorage.canAccessWorkspace(userId, workspace.id));
     if (!hasAccess)
       return res
         .status(403)
@@ -195,7 +201,9 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
         if (!existing) return res.status(404).json({ message: "Not found" });
 
         const userId = getUserId(req);
-        const role = await teamStorage.getWorkspaceRole(id, userId);
+        const role = isWorkspaceOwner(existing, userId)
+          ? "workspace-owner"
+          : await teamStorage.getWorkspaceRole(id, userId);
         if (!canEditWorkspace(role)) {
           return res.status(403).json({
             message: "Forbidden: Insufficient permissions to modify workspace",
@@ -228,11 +236,15 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
 
       const userId = getUserId(req);
 
-      const hasAccess = await teamStorage.canAccessWorkspace(userId, id);
+      const hasAccess =
+        isWorkspaceOwner(existing, userId) ||
+        (await teamStorage.canAccessWorkspace(userId, id));
       if (!hasAccess)
         return res.status(403).json({ message: "No access to this workspace" });
 
-      const role = await teamStorage.getWorkspaceRole(id, userId);
+      const role = isWorkspaceOwner(existing, userId)
+        ? "workspace-owner"
+        : await teamStorage.getWorkspaceRole(id, userId);
       if (!canDeleteWorkspace(role)) {
         return res.status(403).json({
           message:
@@ -256,7 +268,9 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
       if (!existing) return res.status(404).json({ message: "Not found" });
 
       const userId = getUserId(req);
-      const role = await teamStorage.getWorkspaceRole(id, userId);
+      const role = isWorkspaceOwner(existing, userId)
+        ? "workspace-owner"
+        : await teamStorage.getWorkspaceRole(id, userId);
       if (!canDeleteWorkspace(role)) {
         return res.status(403).json({
           message:
@@ -286,7 +300,9 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
       if (!workspace) return res.status(404).json({ message: "Not found" });
 
       const userId = getUserId(req);
-      const role = await teamStorage.getWorkspaceRole(id, userId);
+      const role = isWorkspaceOwner(workspace, userId)
+        ? "workspace-owner"
+        : await teamStorage.getWorkspaceRole(id, userId);
       if (!canDeleteWorkspace(role)) {
         return res.status(403).json({
           message: "Forbidden: Only admins and owners can retry a canvas copy",

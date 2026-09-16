@@ -20,6 +20,13 @@ function getParamId(req: any, param = "id"): string {
   return Array.isArray(val) ? val[0] : val || "";
 }
 
+function isWorkspaceOwner(
+  workspace: { userId: string | null },
+  userId: string,
+) {
+  return workspace.userId === userId;
+}
+
 export function registerCanvasRoutes(app: Express, context: AppContext) {
   const isAuthenticated =
     context.registry.get<RequestHandler>("isAuthenticated");
@@ -48,10 +55,9 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
     }
 
     const userId = req.user!.id;
-    const hasAccess = await teamStorage.canAccessWorkspace(
-      userId,
-      workspace.id,
-    );
+    const hasAccess =
+      isWorkspaceOwner(workspace, userId) ||
+      (await teamStorage.canAccessWorkspace(userId, workspace.id));
     if (!hasAccess)
       return res
         .status(403)
@@ -89,7 +95,9 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
       }
 
       const userId = req.user!.id;
-      const role = await teamStorage.getWorkspaceRole(workspace.id, userId);
+      const role = isWorkspaceOwner(workspace, userId)
+        ? "workspace-owner"
+        : await teamStorage.getWorkspaceRole(workspace.id, userId);
       if (!canEditWorkspace(role)) {
         return res.status(403).json({
           message: "Forbidden: Insufficient permissions to modify canvas",
@@ -155,7 +163,9 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
         return res.status(404).json({ message: "Source workspace not found" });
 
       const userId = req.user!.id;
-      const role = await teamStorage.getWorkspaceRole(workspace.id, userId);
+      const role = isWorkspaceOwner(workspace, userId)
+        ? "workspace-owner"
+        : await teamStorage.getWorkspaceRole(workspace.id, userId);
       if (!canEditWorkspace(role)) {
         return res.status(403).json({
           message: "Forbidden: Insufficient permissions to duplicate canvas",

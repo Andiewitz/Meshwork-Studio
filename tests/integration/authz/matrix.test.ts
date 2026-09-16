@@ -19,17 +19,19 @@ const WS_ID = "ws-1";
 function makeRoleMock(
   roleByUser: Record<string, string | null>,
   ownerOfWs: string,
+  ownershipMirrorAvailable = true,
 ) {
   return {
     // Signatures per teamStorage interface:
     //   getWorkspaceRole(workspaceId, userId)
     //   canAccessWorkspace(userId, workspaceId)
     getWorkspaceRole: vi.fn(async (_wsId: string, userId: string) => {
-      if (userId === ownerOfWs) return "workspace-owner";
+      if (ownershipMirrorAvailable && userId === ownerOfWs)
+        return "workspace-owner";
       return roleByUser[userId] ?? null;
     }),
     canAccessWorkspace: vi.fn(async (userId: string, _wsId: string) => {
-      if (userId === ownerOfWs) return true;
+      if (ownershipMirrorAvailable && userId === ownerOfWs) return true;
       return Boolean(roleByUser[userId]);
     }),
   };
@@ -118,8 +120,11 @@ vi.mock("@server/middleware/rateLimit", () => ({
 
 // ─── build one app with both services mounted ──────────────────────────────
 
-async function buildApp(roles: Record<string, string | null>) {
-  const teamMock = makeRoleMock(roles, OWNER);
+async function buildApp(
+  roles: Record<string, string | null>,
+  ownershipMirrorAvailable = true,
+) {
+  const teamMock = makeRoleMock(roles, OWNER, ownershipMirrorAvailable);
   const [
     { registerWorkspaceRoutes },
     { registerCanvasRoutes },
@@ -204,6 +209,33 @@ describe("authorization matrix — no 403 on your own data", () => {
       .send({ title: "renamed" });
     expect(res.status).toBe(200);
     expect(updateCalls.length).toBe(1);
+  });
+
+  it("owner_can_save_canvas_when_the_team_ownership_mirror_is_unavailable", async () => {
+    app = await buildApp({}, false);
+    const response = await request(app)
+      .post(`/api/v1/workspaces/${WS_ID}/canvas`)
+      .set("x-test-user-id", OWNER)
+      .send({ nodes: [], edges: [], baseRevision: 0 });
+
+    expect(response.status).toBe(200);
+    expect(canvasState[WS_ID]).toEqual({ nodes: [], edges: [] });
+  });
+
+  it("owner_can_read_and_update_a_workspace_when_the_team_ownership_mirror_is_unavailable", async () => {
+    app = await buildApp({}, false);
+
+    const read = await request(app)
+      .get(`/api/v1/workspaces/${WS_ID}`)
+      .set("x-test-user-id", OWNER);
+    expect(read.status).toBe(200);
+
+    const update = await request(app)
+      .put(`/api/v1/workspaces/${WS_ID}`)
+      .set("x-test-user-id", OWNER)
+      .send({ title: "renamed" });
+    expect(update.status).toBe(200);
+    expect(updateCalls).toHaveLength(1);
   });
 
   it("viewer_can_read_but_cannot_write_shared_workspace", async () => {
