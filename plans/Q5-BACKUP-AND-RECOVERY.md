@@ -1,5 +1,8 @@
 # Q5 — backup and recovery baseline
 
+> Implementation history and acceptance criteria. The current operator runbook
+> is [`docs/operations/RECOVERY.md`](../docs/operations/RECOVERY.md).
+
 ## Objective
 
 Replace the obsolete best-effort JSON backup with a fail-closed, complete

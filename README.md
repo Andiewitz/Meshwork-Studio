@@ -189,6 +189,8 @@ Every major system has its own deep-dive guide:
 | **[Deployment Runbook](./docs/operations/DEPLOYMENT.md)**                                 | Production deploy paths, verification checklist, and rollback                                             |
 | **[CI/CD Operations](./docs/operations/CI_CD.md)**                                        | Required CI gates, promotion, releases, and failure triage                                                |
 | **[Secrets Inventory](./docs/operations/SECRETS.md)**                                     | Every secret: generation, consumers, rotation & blast radius                                              |
+| **[Observability](./docs/operations/OBSERVABILITY.md)**                                   | Health, metrics, logs, alert policy, and first response                                                   |
+| **[Recovery](./docs/operations/RECOVERY.md)**                                             | Off-host archive, restore drills, and production recovery safeguards                                      |
 | **[Historical Credential Response](./docs/operations/HISTORICAL-CREDENTIAL-RESPONSE.md)** | Private rotation and verification procedure for an exposed historical secret                              |
 | **[Post-Mortem Log](./docs/archive/process/post-mortem.md)**                              | Production bugs found and fixed, with root cause analysis                                                 |
 

@@ -73,4 +73,4 @@ npm run test:system
 For production, alarm on DynamoDB throttling/errors, enable point-in-time
 recovery, and periodically restore a sample canvas from backup. The archive
 and restore requirements are in
-[`../../plans/Q5-BACKUP-AND-RECOVERY.md`](../../plans/Q5-BACKUP-AND-RECOVERY.md).
+[`RECOVERY.md`](../operations/RECOVERY.md).

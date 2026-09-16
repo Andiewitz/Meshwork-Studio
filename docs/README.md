@@ -33,6 +33,8 @@ Developer documentation, organized by domain.
 - [**CI/CD Operations**](./operations/CI_CD.md) — Required checks, deployment promotion, releases, and failure triage.
 - [**EC2 Operations**](./operations/EC2_OPERATIONS.md) — Day-to-day instance and service operations.
 - [**Secrets Inventory**](./operations/SECRETS.md) — Every secret: generation, consumers, rotation.
+- [**Observability**](./operations/OBSERVABILITY.md) — Health, metrics, logs, alerts, and incident response.
+- [**Recovery**](./operations/RECOVERY.md) — Backup prerequisites, restore drills, and production recovery boundaries.
 - [**Historical Credential Response**](./operations/HISTORICAL-CREDENTIAL-RESPONSE.md) — Private rotation and verification procedure for historical exposure.
 
 ## Development
