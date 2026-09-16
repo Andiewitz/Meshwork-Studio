@@ -124,20 +124,20 @@ func Load() (*Config, error) {
 	collectedErrors = nil
 
 	cfg := &Config{
-		Port:            str("AUTH_PORT"),
-		AppEnv:          str("NODE_ENV"),
-		PublicURL:       strings.TrimSuffix(str("APP_PUBLIC_URL"), "/"),
-		DatabaseURL:     os.Getenv("AUTH_DATABASE_URL"),
-		RedisURL:        str("AUTH_REDIS_URL"),
-		SMTPHost:        str("SMTP_HOST"),
-		SMTPPort:        587,
-		SMTPUser:        str("SMTP_USER"),
-		SMTPPass:        os.Getenv("SMTP_PASS"),
+		Port:               str("AUTH_PORT"),
+		AppEnv:             str("NODE_ENV"),
+		PublicURL:          strings.TrimSuffix(str("APP_PUBLIC_URL"), "/"),
+		DatabaseURL:        os.Getenv("AUTH_DATABASE_URL"),
+		RedisURL:           str("AUTH_REDIS_URL"),
+		SMTPHost:           str("SMTP_HOST"),
+		SMTPPort:           587,
+		SMTPUser:           str("SMTP_USER"),
+		SMTPPass:           os.Getenv("SMTP_PASS"),
 		EmailFrom:          str("EMAIL_FROM"),
 		GoogleClientID:     str("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		CaptchaSecret:      os.Getenv("CAPTCHA_SECRET"),
-		CaptchaMinScore: 0.5,
+		CaptchaMinScore:    0.5,
 	}
 
 	if cfg.Port == "" {
