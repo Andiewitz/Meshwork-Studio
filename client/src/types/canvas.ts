@@ -16,6 +16,8 @@ export interface NodeData extends Record<string, unknown> {
   label?: string;
   description?: string;
   category?: string;
+  /** Original unregistered component type, rendered through the generic node. */
+  originalType?: string;
   tags?: string[];
   provider?: string;
   accentColor?: string;

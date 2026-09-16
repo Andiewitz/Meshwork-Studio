@@ -2,10 +2,12 @@ import type { Node, Edge } from "@xyflow/react";
 import {
   validateAndRepairCanvas,
   getSmartHandleIds,
-  NODE_SIZES,
   TYPE_ALIASES,
-  VALID_TYPES,
 } from "@/lib/ai-canvas-utils";
+import {
+  getNodeSize,
+  resolveNodeType,
+} from "@/features/workspace/utils/nodeRegistry";
 
 export interface EditCanvasNodeInput {
   id?: string;
@@ -141,7 +143,7 @@ function computeTieredLayout(
         TYPE_ALIASES[nodes[idx].type?.toLowerCase()] ||
         nodes[idx].type ||
         "server";
-      return (NODE_SIZES[type] || { w: 168, h: 72 }).h;
+      return getNodeSize(type).h;
     });
 
     const totalColumnHeight =
@@ -278,8 +280,8 @@ export function executeEditCanvas(
       ? (idRemap.get(incoming.id) ?? incoming.id)
       : undefined;
     const existing = id ? existingNodeMap.get(id) : undefined;
-    const resolvedType =
-      TYPE_ALIASES[incoming.type?.toLowerCase()] || incoming.type || "server";
+    const resolved = resolveNodeType(incoming.type);
+    const resolvedType = resolved.type;
 
     if (existing && action !== "add") {
       // Update existing node
@@ -297,6 +299,9 @@ export function executeEditCanvas(
           tags: incoming.tags || existing.data?.tags,
           accentColor: incoming.accentColor || existing.data?.accentColor,
           note: incoming.note || existing.data?.note,
+          ...(resolved.originalType
+            ? { originalType: resolved.originalType }
+            : { originalType: existing.data?.originalType }),
         },
         position: incoming.position || existing.position,
         parentId:
@@ -308,8 +313,8 @@ export function executeEditCanvas(
     } else {
       // Create new node
       const newId = id || `node-${Date.now()}-${index}`;
-      const type = VALID_TYPES.has(resolvedType) ? resolvedType : "server";
-      const dim = NODE_SIZES[type] || { w: 168, h: 72 };
+      const { type, originalType } = resolved;
+      const dim = getNodeSize(type);
 
       // Calculate position relative to viewport or offset to the right of existing canvas
       const posX = incoming.position?.x ?? maxX + 60;
@@ -331,6 +336,7 @@ export function executeEditCanvas(
           fontColor: "#ffffff",
           theme: "default",
           ai: { summary: "", notes: "", lastAnalyzed: null },
+          ...(originalType ? { originalType } : {}),
         },
         style: {
           width: dim.w,

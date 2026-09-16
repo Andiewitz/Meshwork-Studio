@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Handle, Position, NodeProps, NodeResizer, Node } from "@xyflow/react";
 import { EXPANDABLE_TYPES } from "@/features/workspace/utils/nodeTypes";
+import { CONTAINER_TYPES } from "@/features/workspace/utils/nodeRegistry";
 import { fireEnterNode } from "@/features/workspace/utils/canvasEvents";
 import type { NodeData } from "@/types/canvas";
 import * as HeroIcons from "@heroicons/react/24/outline";
@@ -445,7 +446,8 @@ export function SystemNode({
 }: NodeProps<Node<NodeData>> & { style?: NodeStyle }) {
   const [isHovered, setIsHovered] = useState(false);
   const provider = (data.provider ?? "").toLowerCase();
-  const isInfrastructure = type === "vpc" || type === "region";
+  const isInfrastructure =
+    CONTAINER_TYPES.has(type) && type !== "k8s-namespace";
   const isNote = type === "note";
   const isKubernetes = type.startsWith("k8s-");
   const isK8sNamespace = type === "k8s-namespace";
@@ -467,7 +469,7 @@ export function SystemNode({
         Icon: "",
         color: "#4F46E5",
         borderColor: "#4338CA",
-        label: (type || "NODE").toUpperCase(),
+        label: (data.originalType || type || "NODE").toUpperCase(),
       };
 
   const statusOverrides: Record<
