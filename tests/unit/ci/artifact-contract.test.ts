@@ -18,7 +18,8 @@ describe("dependency installation artifact contract", () => {
   it("provides the lockfile, npm config and workspaces before each Docker install", () => {
     const stages = read("Dockerfile")
       .split(/^FROM /m)
-      .slice(1);
+      .slice(1)
+      .filter((stage) => stage.includes("RUN npm ci"));
     expect(stages).toHaveLength(2);
     for (const stage of stages) {
       const beforeInstall = stage.split("RUN npm ci")[0];
@@ -28,6 +29,16 @@ describe("dependency installation artifact contract", () => {
         );
       }
     }
+  });
+
+  it("ships the compiled frontend from the build stage", () => {
+    const dockerfile = read("Dockerfile");
+    expect(dockerfile).toContain("FROM nginx:1.27-alpine AS frontend");
+    expect(dockerfile).toContain("COPY --from=build /app/dist/public");
+
+    const compose = read("docker-compose.yml");
+    expect(compose).toContain("target: runtime");
+    expect(compose).toContain("target: frontend");
   });
 
   for (const environment of ["production", "staging"]) {

@@ -32,3 +32,8 @@ COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 5000
 CMD ["node", "dist/index.cjs"]
+
+FROM nginx:1.27-alpine AS frontend
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist/public /usr/share/nginx/html
+EXPOSE 80

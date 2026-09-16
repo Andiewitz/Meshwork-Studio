@@ -8,10 +8,9 @@
  *   npx tsx scripts/diagnose-config.ts
  */
 
+import crypto from "node:crypto";
 import { config as loadEnv } from "dotenv";
 loadEnv();
-// Also surface the auth service's own .env when present.
-loadEnv({ path: "server/services/auth/.env", quiet: true });
 
 interface CheckResult {
   name: string;
@@ -37,6 +36,27 @@ function base64Bytes(key: string): number | null {
   } catch {
     return -1;
   }
+}
+
+function publicKeyFromSeed(seedBase64: string): string | null {
+  const seed = Buffer.from(seedBase64, "base64");
+  if (seed.length !== 32) return null;
+  const privateKey = crypto.createPrivateKey({
+    key: Buffer.concat([
+      Buffer.from([
+        0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70,
+        0x04, 0x22, 0x04, 0x20,
+      ]),
+      seed,
+    ]),
+    format: "der",
+    type: "pkcs8",
+  });
+  return crypto
+    .createPublicKey(privateKey)
+    .export({ format: "der", type: "spki" })
+    .subarray(-32)
+    .toString("base64");
 }
 
 const isProd = process.env.NODE_ENV === "production";
@@ -95,6 +115,8 @@ for (const key of [
   "AUTH_IP_HASH_KEY",
   "AUTH_ENCRYPTION_KEY",
   "AUTH_ASSERTION_PRIVATE_KEY",
+  "AUTH_ASSERTION_PUBLIC_KEY",
+  "ENCRYPTION_KEY",
 ]) {
   const bytes = base64Bytes(key);
   check(
@@ -106,27 +128,26 @@ for (const key of [
   );
 }
 
-const pubSeed = process.env.AUTH_ASSERTION_PUBLIC_KEY;
-const privSeed = process.env.AUTH_ASSERTION_PRIVATE_KEY;
-if (pubSeed && privSeed) {
-  const same = Buffer.from(pubSeed.trim(), "base64").equals(
-    Buffer.from(privSeed.trim(), "base64"),
-  );
+const publicKey = process.env.AUTH_ASSERTION_PUBLIC_KEY;
+const privateSeed = process.env.AUTH_ASSERTION_PRIVATE_KEY;
+if (publicKey && privateSeed) {
+  const derivedPublicKey = publicKeyFromSeed(privateSeed.trim());
+  const same = derivedPublicKey === publicKey.trim();
   check(
-    "assertion keypair pairing",
+    "assertion public/private pairing",
     same,
     same
-      ? "monolith public seed matches auth private seed"
+      ? "monolith public key matches auth private signing seed"
       : "MISMATCH — monolith will reject every login",
   );
 } else if (isProd) {
   check(
-    "assertion keypair pairing",
+    "assertion public/private pairing",
     false,
-    "both seeds required in production",
+    "both keys required in production",
   );
 } else {
-  check("assertion keypair pairing", true, "skipped (development)");
+  check("assertion public/private pairing", true, "skipped (development)");
 }
 
 check(
