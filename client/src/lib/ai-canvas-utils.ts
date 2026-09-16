@@ -19,7 +19,7 @@ interface RawNode {
   width?: number;
   height?: number;
   parentId?: string;
-  data?: {
+  data?: Record<string, unknown> & {
     label?: string;
     category?: string;
     description?: string;
@@ -140,6 +140,9 @@ export function validateAndRepairCanvas(
     // Ensure position exists and is on-screen
     const x = typeof n.position?.x === "number" ? n.position.x : i * 220 + 100;
     const y = typeof n.position?.y === "number" ? n.position.y : 100;
+    const style = { ...n.style };
+    delete style.width;
+    delete style.height;
 
     return {
       id,
@@ -148,13 +151,19 @@ export function validateAndRepairCanvas(
       width,
       height,
       data: {
+        ...n.data,
         label: n.data?.label ?? type,
         category: n.data?.category ?? "Core",
         description: n.data?.description ?? "",
         tags: n.data?.tags ?? [],
-        fontColor: n.style?.fontColor ?? "#ffffff",
-        icon: n.style?.icon ?? null,
-        theme: n.style?.theme ?? "default",
+        fontColor:
+          (n.data?.fontColor as string | undefined) ??
+          n.style?.fontColor ??
+          "#ffffff",
+        icon:
+          (n.data?.icon as string | null | undefined) ?? n.style?.icon ?? null,
+        theme:
+          (n.data?.theme as string | undefined) ?? n.style?.theme ?? "default",
         ai: {
           summary: n.data?.ai?.summary ?? "",
           notes: n.data?.ai?.notes ?? "",
@@ -166,6 +175,7 @@ export function validateAndRepairCanvas(
         ...(n.data?.note ? { note: n.data.note } : {}),
       },
       style: {
+        ...style,
         backgroundColor:
           n.style?.backgroundColor ?? n.data?.accentColor ?? "#1a1a2e",
         borderColor: n.style?.borderColor ?? "#555",

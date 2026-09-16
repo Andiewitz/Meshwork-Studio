@@ -203,6 +203,10 @@ describe("Jenkos AI Agent Tool Calling & Execution Unit Tests", () => {
       expect(JENKOS_TOOLS[0].function.parameters.properties).toHaveProperty(
         "edges",
       );
+      const nodeProperties =
+        JENKOS_TOOLS[0].function.parameters.properties.nodes.items.properties;
+      expect(nodeProperties).toHaveProperty("width");
+      expect(nodeProperties).toHaveProperty("height");
     });
   });
 });

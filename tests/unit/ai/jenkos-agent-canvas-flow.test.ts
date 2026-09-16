@@ -73,10 +73,14 @@ describe("Jenkos Agent & Architecture Generation Pipeline", () => {
       const authNode = result.nodes.find((n) => n.id === "svc-auth");
 
       expect(vpcNode).toBeDefined();
+      expect(vpcNode?.width).toBe(500);
+      expect(vpcNode?.height).toBe(350);
       expect(gwNode?.parentId).toBe("vpc-prod");
       expect(gwNode?.extent).toBe("parent");
+      expect(gwNode?.position).toEqual({ x: 24, y: 48 });
       expect(authNode?.parentId).toBe("vpc-prod");
       expect(authNode?.extent).toBe("parent");
+      expect(authNode?.position.y).toBeGreaterThan(gwNode!.position.y);
       expect(result.edges[0].source).toBe("gw-1");
       expect(result.edges[0].target).toBe("svc-auth");
       expect(result.edges[0].label).toBe("HTTPS / REST");
@@ -300,7 +304,7 @@ describe("Jenkos Agent & Architecture Generation Pipeline", () => {
           choices: [
             {
               message: {
-                content: `Here is the architecture:\n\`\`\`json\n{\n  "nodes": [{"id": "db-1", "type": "database", "data": {"label": "PostgreSQL"}}],\n  "edges": []\n}\n\`\`\``,
+                content: `Here is the architecture:\n\`\`\`json\n{\n  "nodes": [{"id": "db-1", "type": "database", "data": {"label": "PostgreSQL", "status": "healthy", "collections": ["users"]}, "style": {"width": 600, "height": 300}}],\n  "edges": []\n}\n\`\`\``,
               },
             },
           ],
@@ -317,6 +321,13 @@ describe("Jenkos Agent & Architecture Generation Pipeline", () => {
 
       expect(runResponse.canvasResult?.applied).toBe(true);
       expect(runResponse.canvasResult?.nodes[0].id).toBe("db-1");
+      expect(runResponse.canvasResult?.nodes[0].data.label).toBe("PostgreSQL");
+      expect(runResponse.canvasResult?.nodes[0].data.status).toBe("healthy");
+      expect(runResponse.canvasResult?.nodes[0].data.collections).toEqual([
+        "users",
+      ]);
+      expect(runResponse.canvasResult?.nodes[0].width).toBe(600);
+      expect(runResponse.canvasResult?.nodes[0].height).toBe(300);
     });
   });
 });

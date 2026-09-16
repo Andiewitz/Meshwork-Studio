@@ -7,8 +7,12 @@ import {
 import {
   getNodeSize,
   resolveNodeType,
+  CONTAINER_TYPES,
 } from "@/features/workspace/utils/nodeRegistry";
-import { getNodeDimensions } from "@/features/workspace/utils/nodeGeometry";
+import {
+  getNodeDimensions,
+  withNodeDimensions,
+} from "@/features/workspace/utils/nodeGeometry";
 
 export interface EditCanvasNodeInput {
   id?: string;
@@ -17,10 +21,16 @@ export interface EditCanvasNodeInput {
   description?: string;
   position?: { x: number; y: number };
   parentId?: string;
+  width?: number;
+  height?: number;
   accentColor?: string;
   tags?: string[];
   provider?: string;
   note?: string;
+  /** Used only by the legacy React Flow JSON adapter. */
+  data?: Record<string, unknown>;
+  /** Used only by the legacy React Flow JSON adapter. */
+  style?: Record<string, unknown>;
 }
 
 export interface EditCanvasEdgeInput {
@@ -57,6 +67,70 @@ function uniqueNodeId(id: string, usedIds: Set<string>): string {
     candidate = `${id}-ai-${suffix}`;
   }
   return candidate;
+}
+
+function requestedDimension(value: unknown, minimum: number): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.max(24, Math.round(value))
+    : minimum;
+}
+
+/**
+ * AI positions are canvas-relative by default. Once a child is attached to a
+ * container it must be parent-local; lay automatic children out vertically
+ * below the container header and grow the container only when needed.
+ */
+function arrangeAutomaticChildren(
+  nodes: Node[],
+  automaticChildIds: Set<string>,
+): Node[] {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const childrenByParent = new Map<string, Node[]>();
+
+  for (const node of nodes) {
+    if (!node.parentId || !automaticChildIds.has(node.id)) continue;
+    const children = childrenByParent.get(node.parentId) ?? [];
+    children.push(node);
+    childrenByParent.set(node.parentId, children);
+  }
+
+  for (const [parentId, children] of childrenByParent) {
+    const parent = byId.get(parentId);
+    if (!parent || !CONTAINER_TYPES.has(parent.type ?? "")) continue;
+
+    const existingChildren = nodes.filter(
+      (node) => node.parentId === parentId && !automaticChildIds.has(node.id),
+    );
+    let nextY = 48;
+    for (const child of existingChildren) {
+      const { height } = getNodeDimensions(child);
+      nextY = Math.max(nextY, child.position.y + height + 24);
+    }
+
+    let requiredWidth = 0;
+    for (const child of children) {
+      const { width, height } = getNodeDimensions(child);
+      const positioned = {
+        ...child,
+        position: { x: 24, y: nextY },
+        extent: "parent" as const,
+      };
+      byId.set(child.id, positioned);
+      nextY += height + 24;
+      requiredWidth = Math.max(requiredWidth, width + 48);
+    }
+
+    const parentSize = getNodeDimensions(parent);
+    byId.set(
+      parentId,
+      withNodeDimensions(parent, {
+        width: Math.max(parentSize.width, requiredWidth),
+        height: Math.max(parentSize.height, nextY),
+      }),
+    );
+  }
+
+  return nodes.map((node) => byId.get(node.id) ?? node);
 }
 
 /**
@@ -196,13 +270,17 @@ export function executeEditCanvas(
             y: viewportCenter.y + Math.floor(idx / 3) * 160 - 80,
           },
         data: {
-          label: n.label || n.type,
-          description: n.description || "",
-          provider: n.provider,
-          tags: n.tags || [],
-          accentColor: n.accentColor,
-          note: n.note,
+          ...n.data,
+          label: n.label || n.data?.label || n.type,
+          description: n.description ?? n.data?.description ?? "",
+          provider: n.provider ?? n.data?.provider,
+          tags: n.tags || n.data?.tags || [],
+          accentColor: n.accentColor ?? n.data?.accentColor,
+          note: n.note ?? n.data?.note,
         },
+        style: n.style,
+        width: n.width,
+        height: n.height,
         parentId: n.parentId,
       })),
       edges: rawEdges.map((e, idx) => ({
@@ -224,12 +302,19 @@ export function executeEditCanvas(
       };
     }
 
+    const automaticChildIds = new Set(
+      rawNodes
+        .filter((node) => node.parentId && !node.position)
+        .map((node, index) => node.id || `node-${index + 1}`),
+    );
+    const nodes = arrangeAutomaticChildren(repaired.nodes, automaticChildIds);
+
     return {
-      nodes: repaired.nodes,
+      nodes,
       edges: repaired.edges,
       summary:
         args.explanation ||
-        `Created new architecture with ${repaired.nodes.length} nodes and ${repaired.edges.length} edges.`,
+        `Created new architecture with ${nodes.length} nodes and ${repaired.edges.length} edges.`,
       applied: true,
     };
   }
@@ -252,6 +337,7 @@ export function executeEditCanvas(
   // B. Process Updates to existing nodes
   const existingNodeMap = new Map(workingNodes.map((n) => [n.id, n]));
   const idRemap = new Map<string, string>();
+  const automaticChildIds = new Set<string>();
   const usedIds = new Set(existingNodeMap.keys());
 
   // `add` must never silently turn into an overwrite. Preserve the existing
@@ -317,6 +403,7 @@ export function executeEditCanvas(
       const dim = getNodeSize(type);
 
       // Calculate position relative to viewport or offset to the right of existing canvas
+      const isAutomaticChild = !incoming.position && Boolean(incoming.parentId);
       const posX = incoming.position?.x ?? maxX + 60;
       const posY =
         incoming.position?.y ?? viewportCenter.y + index * (dim.h + 30) - 50;
@@ -325,8 +412,8 @@ export function executeEditCanvas(
         id: newId,
         type,
         position: { x: posX, y: posY },
-        width: dim.w,
-        height: dim.h,
+        width: requestedDimension(incoming.width, dim.w),
+        height: requestedDimension(incoming.height, dim.h),
         data: {
           label: incoming.label || type,
           category: "Core",
@@ -356,10 +443,15 @@ export function executeEditCanvas(
       };
 
       existingNodeMap.set(newId, newNode);
+      if (isAutomaticChild) automaticChildIds.add(newId);
     }
   });
 
-  workingNodes = Array.from(existingNodeMap.values());
+  workingNodes = arrangeAutomaticChildren(
+    Array.from(existingNodeMap.values()),
+    automaticChildIds,
+  );
+  for (const node of workingNodes) existingNodeMap.set(node.id, node);
   const validNodeIds = new Set(workingNodes.map((n) => n.id));
 
   // C. Process Edges

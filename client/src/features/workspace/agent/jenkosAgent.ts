@@ -99,6 +99,16 @@ export const JENKOS_TOOLS = [
                   type: "string",
                   description: "Optional parent container ID (e.g. VPC ID)",
                 },
+                width: {
+                  type: "number",
+                  description:
+                    "Optional node width in canvas units; use for containers that need a deliberate size.",
+                },
+                height: {
+                  type: "number",
+                  description:
+                    "Optional node height in canvas units; use for containers that need a deliberate size.",
+                },
                 accentColor: { type: "string", description: "Hex color code" },
                 position: {
                   type: "object",
@@ -216,6 +226,92 @@ export interface SendAgentPromptOptions {
 export interface AgentRunResponse {
   message: JenkosAgentMessage;
   canvasResult?: CanvasExecutionResult;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+/** Adapts legacy React Flow JSON into the flat AI tool contract without loss. */
+function adaptLegacyCanvasNodes(value: unknown): EditCanvasToolArgs["nodes"] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((candidate) => {
+    const node = asRecord(candidate);
+    if (!node || typeof node.type !== "string") return [];
+    const data = asRecord(node.data);
+    const style = asRecord(node.style);
+    const position = asRecord(node.position);
+    return [
+      {
+        id: typeof node.id === "string" ? node.id : undefined,
+        type: node.type,
+        label:
+          (typeof data?.label === "string" && data.label) ||
+          (typeof node.label === "string" ? node.label : undefined),
+        description:
+          typeof data?.description === "string" ? data.description : undefined,
+        parentId: typeof node.parentId === "string" ? node.parentId : undefined,
+        position:
+          typeof position?.x === "number" && typeof position.y === "number"
+            ? { x: position.x, y: position.y }
+            : undefined,
+        width:
+          typeof node.width === "number"
+            ? node.width
+            : typeof style?.width === "number"
+              ? style.width
+              : undefined,
+        height:
+          typeof node.height === "number"
+            ? node.height
+            : typeof style?.height === "number"
+              ? style.height
+              : undefined,
+        provider:
+          typeof data?.provider === "string" ? data.provider : undefined,
+        accentColor:
+          typeof data?.accentColor === "string" ? data.accentColor : undefined,
+        note: typeof data?.note === "string" ? data.note : undefined,
+        tags: Array.isArray(data?.tags)
+          ? data.tags.filter((tag): tag is string => typeof tag === "string")
+          : undefined,
+        data,
+        style,
+      },
+    ];
+  });
+}
+
+function adaptLegacyCanvasEdges(value: unknown): EditCanvasToolArgs["edges"] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((candidate) => {
+    const edge = asRecord(candidate);
+    if (
+      !edge ||
+      typeof edge.source !== "string" ||
+      typeof edge.target !== "string"
+    ) {
+      return [];
+    }
+    const data = asRecord(edge.data);
+    const style = asRecord(edge.style);
+    return [
+      {
+        id: typeof edge.id === "string" ? edge.id : undefined,
+        source: edge.source,
+        target: edge.target,
+        label:
+          (typeof data?.label === "string" && data.label) ||
+          (typeof edge.label === "string" ? edge.label : undefined),
+        dashed: typeof style?.strokeDasharray === "string",
+        animated:
+          typeof edge.animated === "boolean" ? edge.animated : undefined,
+        color: typeof style?.stroke === "string" ? style.stroke : undefined,
+      },
+    ];
+  });
 }
 
 /**
@@ -362,8 +458,8 @@ export async function runJenkosAgent({
             currentEdges,
             {
               action: "replace_all",
-              nodes: parsed.nodes,
-              edges: parsed.edges,
+              nodes: adaptLegacyCanvasNodes(parsed.nodes),
+              edges: adaptLegacyCanvasEdges(parsed.edges),
               explanation: "Generated full architecture diagram.",
             },
             viewportCenter,
