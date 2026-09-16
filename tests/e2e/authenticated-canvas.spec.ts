@@ -1,4 +1,10 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type APIResponse,
+  type Page,
+} from "@playwright/test";
 
 interface Workspace {
   id: string;
@@ -11,6 +17,23 @@ async function csrfToken(request: APIRequestContext) {
   const body = (await response.json()) as { csrfToken?: string };
   expect(body.csrfToken).toBeTruthy();
   return body.csrfToken!;
+}
+
+async function copyAuthCookiesToBrowser(page: Page, response: APIResponse) {
+  const cookies = response
+    .headersArray()
+    .filter((header) => header.name.toLowerCase() === "set-cookie")
+    .flatMap((header) => {
+      const match = /^([^=;]+)=([^;]*)/.exec(header.value);
+      return match
+        ? [{ name: match[1], value: match[2], url: "http://localhost:5000" }]
+        : [];
+    });
+
+  expect(cookies.map((cookie) => cookie.name)).toEqual(
+    expect.arrayContaining(["meshwork_session", "meshwork_assertion"]),
+  );
+  await page.context().addCookies(cookies);
 }
 
 test("@authenticated registers, saves a nested canvas, and reloads it", async ({
@@ -34,6 +57,7 @@ test("@authenticated registers, saves a nested canvas, and reloads it", async ({
     },
   });
   expect(registration.status(), await registration.text()).toBe(200);
+  await copyAuthCookiesToBrowser(page, registration);
 
   const title = `Persisted canvas ${suffix}`;
   const workspaceResponse = await request.post("/api/v1/workspaces", {
