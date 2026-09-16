@@ -11,7 +11,7 @@
     "server/services/*"
   ],
   "scripts": {
-    "dev": "NODE_ENV=development tsx server/index.ts",
+    "dev": "tsx scripts/dev.ts",
     "build": "tsx scripts/build.ts",
     "deploy": "./scripts/deploy.sh",
     "start": "node dist/index.cjs",
