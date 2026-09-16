@@ -1,0 +1,56 @@
+name: 💡 Feature Request
+description: Propose a new feature, architecture component, or enhancement
+title: "feat: [short description]"
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an idea! Before submitting, please check open discussions and issues to see if a similar feature has already been proposed.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement / Motivation
+      description: What problem does this solve? Is your feature request related to a specific limitation?
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe your proposed feature or change in detail.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      options:
+        - Canvas Tools & Visual Components
+        - Cloud Provider Icons / Node Types
+        - Collaboration & Multi-User Canvas
+        - Authentication & Security
+        - AI Diagramming & Prompting
+        - Export / Code Generation (Terraform, CloudFormation, etc.)
+        - Developer Experience / CLI / Scripts
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe any alternative solutions or workarounds you considered.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: willingness
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to submit a PR to implement this feature!

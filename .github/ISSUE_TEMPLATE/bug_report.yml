@@ -1,0 +1,70 @@
+name: 🐛 Bug Report
+description: Create a report to help us reproduce and fix a bug
+title: "fix: [short description]"
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Please check existing issues before filing a duplicate.
+        **For security vulnerabilities**, please review our [Security Policy](https://github.com/Andiewitz/Meshwork-Studio/blob/main/SECURITY.md) to report privately.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior.
+      placeholder: |
+        1. Open canvas at '...'
+        2. Drag an EC2 component onto the canvas
+        3. Drop it inside a VPC container
+        4. Observe error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console or Server Logs
+      description: Relevant logs from browser console or server terminal.
+      render: shell
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      options:
+        - Canvas Editor (React Flow / Spatial Containment)
+        - Auth Service (Go / Sessions / MFA / OAuth)
+        - Monolith API (Express / Drizzle)
+        - Database (PostgreSQL / DynamoDB Local / Redis)
+        - AI Diagramming Assistant (Jenkos)
+        - Infrastructure / Docker / Deployments
+        - Documentation
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Browser, Node.js version, Docker version.
+      placeholder: "e.g., Ubuntu 22.04 / Node v22.1.0 / Chrome 128 / Docker 27"
+    validations:
+      required: false

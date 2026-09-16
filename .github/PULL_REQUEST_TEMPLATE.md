@@ -1,34 +1,40 @@
-## Description
+## Summary
 
-<!-- Briefly describe what this PR does -->
+<!-- Briefly describe the purpose of this PR and what problem it addresses. -->
+
+## Changes Proposed
+
+<!-- Provide a bulleted summary of key changes made across the codebase. -->
+
+-
 
 ## Type of Change
 
-- [ ] feat: new feature
-- [ ] fix: bug fix
-- [ ] docs: documentation only
-- [ ] style: formatting, linting
-- [ ] refactor: code restructuring
-- [ ] perf: performance improvement
-- [ ] test: adding/updating tests
-- [ ] build: build system or dependencies
-- [ ] ci: CI/CD configuration
-- [ ] chore: maintenance
+- [ ] `feat`: New feature
+- [ ] `fix`: Bug fix
+- [ ] `docs`: Documentation changes
+- [ ] `refactor`: Code restructuring without behavioral change
+- [ ] `perf`: Performance improvement
+- [ ] `test`: Adding or updating test coverage
+- [ ] `ci` / `build`: Build system, dependencies, or GitHub Actions
+- [ ] `chore`: Repository maintenance
 
-## Testing
+## Testing Performed
 
-- [ ] Unit / integration tests pass
-- [ ] E2E tests pass
-- [ ] Manual testing done
+- [ ] `npm run check` (TypeScript compilation clean)
+- [ ] `npm run lint` (ESLint clean)
+- [ ] `npm run test:run` (Unit and integration tests pass)
+- [ ] Architecture boundaries verified (`tests/unit/arch/boundaries.test.ts`)
+- [ ] Manual testing performed locally
 
-## Checklist
+## Contributor Checklist
 
-- [ ] Code follows project style (lint + prettier)
-- [ ] TypeScript type check passes (`npm run check`)
-- [ ] No new warnings introduced
-- [ ] Tests added/updated for changes
-- [ ] Documentation updated if needed
+- [ ] My commits follow [Conventional Commits](https://www.conventionalcommits.org/) format
+- [ ] I have added/updated tests covering my changes
+- [ ] I have verified that no private secrets, tokens, or environment files are included
+- [ ] My contribution complies with the [Developer Certificate of Origin (DCO)](./CONTRIBUTING.md#developer-certificate-of-origin)
+- [ ] I have read and agree to follow the [Code of Conduct](./CODE_OF_CONDUCT.md)
 
-## Screenshots (if applicable)
+## Screenshots / Video (if UI changes)
 
-<!-- Add screenshots for UI changes -->
+<!-- Please attach before/after screenshots or recordings for visual changes -->

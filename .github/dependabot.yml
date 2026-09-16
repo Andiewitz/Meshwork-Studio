@@ -15,6 +15,37 @@ updates:
       prefix-development: "chore"
       include: scope
 
+  - package-ecosystem: npm
+    directory: "/client"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/New_York
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: scope
+
+  - package-ecosystem: gomod
+    directory: "/server/services/auth"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/New_York
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - auth
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: scope
+
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

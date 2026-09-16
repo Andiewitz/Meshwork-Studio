@@ -10,15 +10,15 @@
 set -euo pipefail
 
 # --- Configuration ---
-INSTANCE_ID="i-0a96823caafbf35b6"
-AWS_REGION="us-east-1"
-DOMAIN="meshwork-studio.duckdns.org"
-SSH_USER="ubuntu"
+INSTANCE_ID="${MESHWORK_EC2_INSTANCE_ID:-}"
+AWS_REGION="${AWS_REGION:-us-east-1}"
+DOMAIN="${MESHWORK_DOMAIN:-}"
+SSH_USER="${MESHWORK_SSH_USER:-ubuntu}"
 SSH_KEY_LOCATIONS=(
-  "$HOME/Desktop/Meshwork-Studio/ssh-keys/Mesh-EC2.pem"
-  "$HOME/ssh-keys/Mesh-EC2.pem"
-  "$HOME/.ssh/Mesh-EC2.pem"
-  "$HOME/Mesh-EC2.pem"
+  "${MESHWORK_SSH_KEY:-}"
+  "$HOME/.ssh/meshwork.pem"
+  "$HOME/.ssh/id_rsa"
+  "$HOME/.ssh/id_ed25519"
 )
 
 # Colors
@@ -34,18 +34,26 @@ echo -e "${BOLD}${CYAN}======================================================${N
 echo -e "${BOLD}${CYAN}   🚀 Meshwork Studio — EC2 & Services Starter   ${NC}"
 echo -e "${BOLD}${CYAN}======================================================${NC}"
 
+# Check configuration
+if [[ -z "$INSTANCE_ID" && -z "$DOMAIN" ]]; then
+  echo -e "${RED}❌ Error: EC2 Instance ID or Domain not configured.${NC}"
+  echo -e "   Please set MESHWORK_EC2_INSTANCE_ID (e.g. export MESHWORK_EC2_INSTANCE_ID=i-xxxx)"
+  echo -e "   or MESHWORK_DOMAIN (e.g. export MESHWORK_DOMAIN=your-server.com)."
+  exit 1
+fi
+
 # Locate SSH Key
 SSH_KEY=""
 for key in "${SSH_KEY_LOCATIONS[@]}"; do
-  if [[ -f "$key" ]]; then
+  if [[ -n "$key" && -f "$key" ]]; then
     SSH_KEY="$key"
     break
   fi
 done
 
 if [[ -z "$SSH_KEY" ]]; then
-  echo -e "${RED}❌ Error: SSH Key (Mesh-EC2.pem) not found in expected paths.${NC}"
-  echo -e "   Please ensure Mesh-EC2.pem exists in ~/Desktop/Meshwork-Studio/ssh-keys/"
+  echo -e "${RED}❌ Error: SSH Key not found.${NC}"
+  echo -e "   Please set MESHWORK_SSH_KEY=/path/to/key.pem or place a key in ~/.ssh/id_rsa"
   exit 1
 fi
 
@@ -55,7 +63,7 @@ echo -e "${GREEN}✓${NC} SSH Key found: ${SSH_KEY}"
 # 1. AWS CLI Start Check (if AWS CLI is configured)
 HOST_TARGET="$DOMAIN"
 
-if command -v aws &>/dev/null; then
+if command -v aws &>/dev/null && [[ -n "$INSTANCE_ID" ]]; then
   echo -e "${BLUE}▶ Checking AWS EC2 instance status via AWS CLI...${NC}"
   INSTANCE_STATE=$(aws ec2 describe-instances \
     --instance-ids "$INSTANCE_ID" \

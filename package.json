@@ -1,6 +1,26 @@
 {
   "name": "meshwork-studio",
-  "version": "1.0.0",
+  "version": "1.12.0",
+  "description": "Visual system architecture design platform with enterprise security, AI-assisted diagramming, and high-performance canvas engine",
+  "author": "Meshwork Studio Contributors",
+  "homepage": "https://github.com/Andiewitz/Meshwork-Studio#readme",
+  "bugs": {
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Andiewitz/Meshwork-Studio.git"
+  },
+  "keywords": [
+    "architecture",
+    "diagram",
+    "react-flow",
+    "canvas",
+    "system-design",
+    "cloud",
+    "infrastructure",
+    "visual-modelling"
+  ],
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -11,6 +31,7 @@
     "server/services/*"
   ],
   "scripts": {
+    "setup": "tsx scripts/setup-dev.ts",
     "dev": "tsx scripts/dev.ts",
     "build": "tsx scripts/build.ts",
     "deploy": "./scripts/deploy.sh",

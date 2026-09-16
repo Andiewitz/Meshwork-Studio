@@ -263,9 +263,23 @@ HCAPTCHA_SECRET=<from hCaptcha dashboard>
 
 ---
 
+## Community & Contributing
+
+- **[Contributing Guide](./CONTRIBUTING.md)** — Setting up local dev, testing standards, and pull request workflow
+- **[Code of Conduct](./CODE_OF_CONDUCT.md)** — Our community standards and expectations
+- **[Security Policy](./SECURITY.md)** — Responsible vulnerability reporting and security SLAs
+
+---
+
+## Trademarks & Disclaimers
+
+All product names, logos, brands, and registered trademarks (including AWS, Google Cloud, Docker, Oracle, Kubernetes, Redis, GitHub, and others) displayed or referenced in this project are the property of their respective owners. Their inclusion in diagramming nodes, templates, and documentation is strictly for technical architecture visualization and educational purposes and does not imply endorsement, affiliation, or sponsorship.
+
+---
+
 ## License
 
-MIT License. See `LICENSE` for details.
+Meshwork Studio is open-source software licensed under the [MIT License](./LICENSE).
 
 ---
 

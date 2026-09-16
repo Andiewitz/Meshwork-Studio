@@ -8,11 +8,11 @@ This guide covers operating the production EC2 instance.
 
 | Resource / Setting     | Value                                        | Notes                                  |
 | :--------------------- | :------------------------------------------- | :------------------------------------- |
-| **Domain**             | `https://meshwork-studio.duckdns.org`        | Reverse-proxied through Nginx with SSL |
-| **AWS Region**         | `us-east-1`                                  | N. Virginia                            |
-| **Instance ID**        | `i-0a96823caafbf35b6`                        | Ubuntu 22.04 LTS x86_64                |
+| **Domain**             | `https://<YOUR_DOMAIN>`                      | Reverse-proxied through Nginx with SSL |
+| **AWS Region**         | `us-east-1`                                  | Default AWS Region                     |
+| **Instance ID**        | `<YOUR_EC2_INSTANCE_ID>`                     | Ubuntu 22.04 LTS x86_64                |
 | **SSH User**           | `ubuntu`                                     | Default EC2 user                       |
-| **SSH Key Path**       | `ssh-keys/Mesh-EC2.pem`                      | Permissions must be `chmod 400`        |
+| **SSH Key Path**       | `~/.ssh/<YOUR_KEY>.pem`                      | Permissions must be `chmod 400`        |
 | **Remote App Dir**     | `/home/ubuntu/meshwork-studiov2`             | PM2 root and dist location             |
 | **Local Start Script** | `~/start-ec2.sh` (or `scripts/start-ec2.sh`) | Starts instance + all services         |
 
@@ -55,7 +55,7 @@ When finished working, turn off the instance to stop compute and RAM billing:
 ### Via AWS CLI:
 
 ```bash
-aws ec2 stop-instances --instance-ids i-0a96823caafbf35b6 --region us-east-1
+aws ec2 stop-instances --instance-ids <YOUR_EC2_INSTANCE_ID> --region us-east-1
 ```
 
 _(Or stop instance directly in the AWS Management Console.)_
@@ -80,13 +80,13 @@ This compiles:
 ### Step 2: Upload `dist/` to EC2
 
 ```bash
-rsync -avz -e "ssh -i ssh-keys/Mesh-EC2.pem" dist/ ubuntu@meshwork-studio.duckdns.org:/home/ubuntu/meshwork-studiov2/dist/
+rsync -avz -e "ssh -i <YOUR_SSH_KEY>" dist/ ubuntu@<YOUR_DOMAIN>:/home/ubuntu/meshwork-studiov2/dist/
 ```
 
 ### Step 3: Restart App on EC2
 
 ```bash
-ssh -i ssh-keys/Mesh-EC2.pem ubuntu@meshwork-studio.duckdns.org "pm2 restart meshwork"
+ssh -i <YOUR_SSH_KEY> ubuntu@<YOUR_DOMAIN> "pm2 restart meshwork"
 ```
 
 ---
@@ -96,7 +96,7 @@ ssh -i ssh-keys/Mesh-EC2.pem ubuntu@meshwork-studio.duckdns.org "pm2 restart mes
 ### SSH into EC2
 
 ```bash
-ssh -i ssh-keys/Mesh-EC2.pem ubuntu@meshwork-studio.duckdns.org
+ssh -i <YOUR_SSH_KEY> ubuntu@<YOUR_DOMAIN>
 ```
 
 ### PM2 Commands
@@ -164,5 +164,5 @@ sudo systemctl restart nginx
 curl -i http://localhost:5000/health
 
 # Test publicly
-curl -i https://meshwork-studio.duckdns.org/health
+curl -i https://<YOUR_DOMAIN>/health
 ```

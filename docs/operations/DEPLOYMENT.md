@@ -8,13 +8,13 @@
 
 ## Production facts
 
-| Resource       | Value                                                             |
-| -------------- | ----------------------------------------------------------------- |
-| Instance       | `i-0a96823caafbf35b6` — Ubuntu 22.04 LTS, us-east-1               |
-| SSH            | `ssh -i ssh-keys/Mesh-EC2.pem ubuntu@meshwork-studio.duckdns.org` |
-| Public URL     | `https://meshwork-studio.duckdns.org` (NGINX + TLS)               |
-| Remote app dir | `/home/ubuntu/meshwork-studiov2`                                  |
-| Env file       | `/home/ubuntu/meshwork-studiov2/.env` (chmod 600)                 |
+| Resource       | Value                                                  |
+| -------------- | ------------------------------------------------------ |
+| Instance       | `<YOUR_EC2_INSTANCE_ID>` — Ubuntu 22.04 LTS, us-east-1 |
+| SSH            | `ssh -i <YOUR_SSH_KEY> ubuntu@<YOUR_DOMAIN>`           |
+| Public URL     | `https://<YOUR_DOMAIN>` (NGINX + TLS)                  |
+| Remote app dir | `/home/ubuntu/meshwork-studiov2`                       |
+| Env file       | `/home/ubuntu/meshwork-studiov2/.env` (chmod 600)      |
 
 ### Runtime topology on the box
 
@@ -76,7 +76,7 @@ curl -s localhost:8081/healthz        # {"status":"healthy",...}
 sudo nginx -t && sudo systemctl reload nginx
 
 # End-to-end auth smoke test (from anywhere):
-BASE=https://meshwork-studio.duckdns.org
+BASE=https://<YOUR_DOMAIN>
 CSRF=$(curl -s -c /tmp/cj $BASE/api/v1/auth/csrf-token | jq -r .csrfToken)
 curl -s -b /tmp/cj -c /tmp/cj -X POST $BASE/api/v1/auth/register \
   -H "Origin: $BASE" -H "X-CSRF-Token: $CSRF" \

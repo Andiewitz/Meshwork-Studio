@@ -11,4 +11,4 @@ Disallow: /workspace/
 Disallow: /settings
 Disallow: /dev
 
-Sitemap: https://meshwork-studio.duckdns.org/sitemap.xml
+Sitemap: /sitemap.xml

@@ -25,14 +25,14 @@ The application is deployed on AWS EC2 (`t3.micro`) running Amazon Linux 2023 / 
 
 ### Production Environment Variables:
 
-| Variable         | Example Value                         | Why?                                                             |
-| ---------------- | ------------------------------------- | ---------------------------------------------------------------- |
-| `FRONTEND_URL`   | `https://meshwork-studio.duckdns.org` | Tells the backend to allow requests from your production domain. |
-| `SESSION_SECRET` | `openssl rand -base64 32`             | Encrypts user sessions.                                          |
-| `ENCRYPTION_KEY` | `node -e "..."` (32 bytes)            | Encrypts AI API keys (BYOK).                                     |
-| `DATABASE_URL`   | `postgresql://...`                    | Connection to your Postgres instance.                            |
-| `GEMINI_API_KEY` | `AQ.Ab8RN6Icid5E...`                  | App-owned Gemini API key for free-tier users.                    |
-| `NODE_ENV`       | `production`                          | Enables security headers (Helmet) and optimizations.             |
+| Variable         | Example Value              | Why?                                                             |
+| ---------------- | -------------------------- | ---------------------------------------------------------------- |
+| `FRONTEND_URL`   | `https://your-domain.com`  | Tells the backend to allow requests from your production domain. |
+| `SESSION_SECRET` | `openssl rand -base64 32`  | Encrypts user sessions.                                          |
+| `ENCRYPTION_KEY` | `node -e "..."` (32 bytes) | Encrypts AI API keys (BYOK).                                     |
+| `DATABASE_URL`   | `postgresql://...`         | Connection to your Postgres instance.                            |
+| `GEMINI_API_KEY` | `your-gemini-api-key`      | App-owned Gemini API key for free-tier users.                    |
+| `NODE_ENV`       | `production`               | Enables security headers (Helmet) and optimizations.             |
 
 ---
 

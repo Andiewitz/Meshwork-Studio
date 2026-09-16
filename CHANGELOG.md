@@ -1,3 +1,32 @@
+# [1.12.0](https://github.com/Andiewitz/Meshwork-Studio/compare/v1.11.0...v1.12.0) (2026-09-16)
+
+### 🚀 Open Source Milestone
+
+Meshwork Studio is officially open-sourced! This release consolidates all architectural modernizations developed since v1.11 into a production-grade, community-ready release.
+
+### Architecture & Security
+
+- **Go Identity Service**: Split authentication into a dedicated Go service (`server/services/auth`) featuring Argon2id password hashing, transparent bcrypt upgrade, TOTP MFA, PKCE OAuth, and ed25519-signed session assertions.
+- **Database-per-Service Isolation**: Segmented storage across isolated PostgreSQL databases (`workspace_db`, `auth_db`, `team_db`, `ai_db`, `metrics_db`) with CI-enforced boundary linting.
+- **DynamoDB Document Persistence**: Migrated canvas documents (nodes, edges, spatial containment) to DynamoDB with seamless DynamoDB Local support for zero-cost offline development.
+- **Responsible Disclosure & Security**: Added root `SECURITY.md` vulnerability reporting policy with private GitHub Security Advisory integration.
+
+### Features & User Experience
+
+- **Jenkos AI Diagramming Agent**: Native Google Gemini integration with automated fallback, tool calling for architecture generation, and AES-256-GCM encryption for user API keys.
+- **Canvas UI Redesign**: Complete visual refresh with collapsible toolbars, spatial containment for cloud VPCs, and fluid fluid-clamp responsive layout.
+- **Developer Experience**: Automated dev onboarding with `npm run setup` — generates all required ed25519 keypairs, AES/HMAC seeds, and local `.env` configurations automatically.
+
+### Community & Governance
+
+- Added root `LICENSE` (MIT).
+- Added `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1).
+- Expanded `CONTRIBUTING.md` into a complete guide covering dual-stack development, testing pyramid, and architecture boundaries.
+- Added GitHub issue templates (`bug_report.yml`, `feature_request.yml`, `config.yml`) and enhanced `PULL_REQUEST_TEMPLATE.md`.
+- Added CodeQL static security analysis workflow.
+
+---
+
 # [1.11.0](https://github.com/Andiewitz/meshwork-studiov2/compare/v1.10.0...v1.11.0) (2026-07-19)
 
 ### Features

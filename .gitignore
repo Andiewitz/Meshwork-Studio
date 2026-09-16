@@ -74,3 +74,10 @@ server/services/auth/meshwork-auth
 server/meshwork-auth
 **/meshwork-auth
 server/services/auth/test-auth
+
+# Service-specific env files
+server/services/auth/.env
+server/services/*/.env
+
+# Local AI agent caches
+.kilo/

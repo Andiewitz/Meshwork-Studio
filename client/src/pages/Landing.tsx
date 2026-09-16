@@ -1038,6 +1038,11 @@ const Home = () => {
     </div>
   );
 
+  const siteUrl =
+    import.meta.env.VITE_APP_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+  const previewImage = `${siteUrl}/assets/web-preview.png`;
+
   return (
     <div
       ref={containerRef}
@@ -1049,26 +1054,17 @@ const Home = () => {
           name="description"
           content="Design, visualize, and auto-sync your cloud architecture with Meshwork Studio. Explore comprehensive technical guides and JSON schemas."
         />
-        <link rel="canonical" href="https://meshwork-studio.duckdns.org/" />
+        <link rel="canonical" href={`${siteUrl}/`} />
         <meta property="og:title" content="Meshwork Studio" />
         <meta
           property="og:description"
           content="The open-source, local-first canvas for visualizing cloud infrastructure."
         />
         <meta property="og:type" content="website" />
-        <meta
-          property="og:url"
-          content="https://meshwork-studio.duckdns.org/"
-        />
-        <meta
-          property="og:image"
-          content="https://meshwork-studio.duckdns.org/assets/web-preview.png"
-        />
+        <meta property="og:url" content={`${siteUrl}/`} />
+        <meta property="og:image" content={previewImage} />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta
-          name="twitter:image"
-          content="https://meshwork-studio.duckdns.org/assets/web-preview.png"
-        />
+        <meta name="twitter:image" content={previewImage} />
       </Helmet>
 
       <motion.div

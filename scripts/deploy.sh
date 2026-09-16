@@ -22,16 +22,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # --- Configuration ---
-INSTANCE_ID="i-0a96823caafbf35b6"
-AWS_REGION="us-east-1"
-DOMAIN="meshwork-studio.duckdns.org"
-SSH_USER="ubuntu"
+INSTANCE_ID="${MESHWORK_EC2_INSTANCE_ID:-}"
+AWS_REGION="${AWS_REGION:-us-east-1}"
+DOMAIN="${MESHWORK_DOMAIN:-}"
+SSH_USER="${MESHWORK_SSH_USER:-ubuntu}"
 SSH_KEY_LOCATIONS=(
+  "${MESHWORK_SSH_KEY:-}"
   "$REPO_DIR/ssh-keys/Mesh-EC2.pem"
-  "$HOME/Desktop/Meshwork-Studio/ssh-keys/Mesh-EC2.pem"
-  "$HOME/ssh-keys/Mesh-EC2.pem"
-  "$HOME/.ssh/Mesh-EC2.pem"
-  "$HOME/Mesh-EC2.pem"
+  "$HOME/.ssh/meshwork.pem"
+  "$HOME/.ssh/id_rsa"
+  "$HOME/.ssh/id_ed25519"
 )
 
 # Colors
@@ -100,22 +100,28 @@ echo -e "${BLUE}▶ [2/4] Locating SSH credentials & target host...${NC}"
 
 SSH_KEY=""
 for key in "${SSH_KEY_LOCATIONS[@]}"; do
-  if [[ -f "$key" ]]; then
+  if [[ -n "$key" && -f "$key" ]]; then
     SSH_KEY="$key"
     break
   fi
 done
 
 if [[ -z "$SSH_KEY" ]]; then
-  echo -e "${RED}❌ Error: SSH Key (Mesh-EC2.pem) not found in expected paths.${NC}"
-  echo -e "   Please ensure Mesh-EC2.pem exists in $REPO_DIR/ssh-keys/"
+  echo -e "${RED}❌ Error: SSH Key not found.${NC}"
+  echo -e "   Please set MESHWORK_SSH_KEY=/path/to/key.pem or place a key in ~/.ssh/id_rsa"
   exit 1
 fi
 
 chmod 400 "$SSH_KEY" 2>/dev/null || true
 echo -e "${GREEN}✓${NC} SSH Key found: ${SSH_KEY}"
 
-HOST_TARGET="$DOMAIN"
+HOST_TARGET="${DOMAIN:-}"
+if [[ -z "$HOST_TARGET" && -z "$INSTANCE_ID" ]]; then
+  echo -e "${RED}❌ Error: Target host not specified.${NC}"
+  echo -e "   Set MESHWORK_DOMAIN (e.g. export MESHWORK_DOMAIN=your-server.com)"
+  echo -e "   or MESHWORK_EC2_INSTANCE_ID (e.g. export MESHWORK_EC2_INSTANCE_ID=i-xxxx)."
+  exit 1
+fi
 
 # Try getting public IP if AWS CLI is installed
 if command -v aws &>/dev/null; then
