@@ -113,6 +113,8 @@ test("@authenticated registers, saves a nested canvas, and reloads it", async ({
   );
 
   await page.goto(`/workspace/${workspace.id}`);
-  await expect(page.getByText(title, { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: title, exact: true }),
+  ).toBeVisible();
   await expect(page.locator(".react-flow__node")).toHaveCount(3);
 });
