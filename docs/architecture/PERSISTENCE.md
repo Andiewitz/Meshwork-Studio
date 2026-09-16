@@ -11,8 +11,8 @@ nodes or edges.
 Canvas change
   -> localStorage written immediately
   -> 3-second idle debounce
-  -> POST /api/v1/workspaces/:id/sync-canvas
-  -> ownership and editor-role check
+  -> POST /api/v1/workspaces/:id/canvas
+  -> direct-owner or shared editor-role check
   -> DynamoDB diff write
 ```
 

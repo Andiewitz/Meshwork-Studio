@@ -54,23 +54,12 @@ Every draggable component on the canvas is a **Node**. Meshwork Studio ships wit
 | **Regions**     | `vpc`, `region`, `k8s-namespace`             | Container boundaries   |
 | **Annotations** | `note`, `annotation`, `text`                 | Documentation overlays |
 
-Each node type has a predefined pixel dimension defined in `client/src/features/workspace/utils/dimensions.ts`. For example, a VPC container is `408×312px` while a Lambda function is `120×72px`. These dimensions ensure consistent, professional-looking diagrams regardless of zoom level.
-
-### Database Schema
-
-Nodes are stored in PostgreSQL with this structure:
-
-```sql
-CREATE TABLE nodes (
-  id          TEXT PRIMARY KEY,        -- React Flow string ID (e.g. "node_abc123")
-  workspace_id INTEGER NOT NULL,       -- Which workspace this belongs to
-  type        TEXT,                     -- Node type (e.g. "server", "vpc")
-  position    JSONB NOT NULL,          -- { x: number, y: number }
-  data        JSONB NOT NULL,          -- Label, icon, custom properties
-  parent_id   TEXT,                    -- Parent container node (for nesting)
-  extent      TEXT                     -- "parent" locks node inside parent bounds
-);
-```
+Default node frames live in
+[`nodeRegistry.ts`](../../client/src/features/workspace/utils/nodeRegistry.ts).
+For example, a VPC defaults to `600×408px` and a logic node (including a
+Lambda-style function) defaults to `120×72px`. Defaults apply when a node has
+no stored size; user-resized frames are preserved. The durable canvas lives in
+DynamoDB, not PostgreSQL.
 
 ### Dynamic Tooltips
 
@@ -195,7 +184,7 @@ A 3-second debounce is applied to the database sync — only the final resting s
 [change] → localStorage updated immediately
          → 3s debounce resets
          → [3 seconds of no activity]
-         → POST /api/workspaces/:id/sync-canvas
+         → POST /api/v1/workspaces/:id/canvas
          → On success: localStorage cache cleared
          → On failure: cache kept, retries next change
 ```
@@ -329,7 +318,7 @@ User drags node ──► React Flow fires onNodeDragStop
                             │
                             ▼
                    React Query fires
-                   POST /api/workspaces/:id/sync-canvas
+                   POST /api/v1/workspaces/:id/canvas
                             │
                             ▼
                    Express route validates
@@ -347,14 +336,14 @@ User drags node ──► React Flow fires onNodeDragStop
 
 ## Key Files
 
-| File                                                 | Purpose                                           |
-| ---------------------------------------------------- | ------------------------------------------------- |
-| `client/src/features/workspace/utils/containment.ts` | Spatial containment math                          |
-| `client/src/features/workspace/utils/dimensions.ts`  | Node size definitions (60+ types)                 |
-| `client/src/features/workspace/utils/nodeTypes.ts`   | Node component registry                           |
-| `client/src/features/workspace/utils/templates.ts`   | 4 built-in architecture templates                 |
-| `client/src/lib/canvas-cache.ts`                     | localStorage persistence utilities                |
-| `client/src/hooks/use-canvas.ts`                     | React Query hook + debounced sync + normalization |
-| `server/services/canvas/db/dynamo.ts`                | DynamoDB diff sync + database operations          |
-| `server/services/canvas/routes/canvasRoutes.ts`      | Canvas API endpoints                              |
-| `server/shared/schema/index.ts`                      | Client/server canvas contract types               |
+| File                                                  | Purpose                                           |
+| ----------------------------------------------------- | ------------------------------------------------- |
+| `client/src/features/workspace/utils/containment.ts`  | Spatial containment math                          |
+| `client/src/features/workspace/utils/nodeRegistry.ts` | Authoritative node types, aliases, and defaults   |
+| `client/src/features/workspace/utils/nodeTypes.ts`    | Node component registry                           |
+| `client/src/features/workspace/utils/templates.ts`    | 4 built-in architecture templates                 |
+| `client/src/lib/canvas-cache.ts`                      | localStorage persistence utilities                |
+| `client/src/hooks/use-canvas.ts`                      | React Query hook + debounced sync + normalization |
+| `server/services/canvas/db/dynamo.ts`                 | DynamoDB diff sync + database operations          |
+| `server/services/canvas/routes/canvasRoutes.ts`       | Canvas API endpoints                              |
+| `server/shared/schema/index.ts`                       | Client/server canvas contract types               |

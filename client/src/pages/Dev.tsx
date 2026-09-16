@@ -156,7 +156,7 @@ Optional fields include \`style\` (visual overrides: background color, border, o
 
 ## Canonical Node Sizes
 
-Every node type has a canonical width and height baked into the renderer. For example: \`database\` is 144×120px, \`gateway\` is 192×72px, \`vpc\` is 408×312px. The \`validateAndRepairCanvas\` utility automatically corrects any AI-generated node that uses non-canonical dimensions — making the canvas resilient to imperfect model output.
+Every node type has a default frame in the shared node registry. For example: \`database\` is 144×120px, \`gateway\` is 192×72px, and \`vpc\` is 600×408px. Defaults fill in missing dimensions; saved user-resized dimensions are preserved.
 
 ## Type Aliases & AI Normalisation
 
@@ -181,7 +181,7 @@ Every node and edge carries an \`ai\` sub-object — never rendered directly in 
 
 ## JSON Schema & Validation
 
-A full Draft-07 JSON Schema covering every field, enum, and constraint lives at \`docs/canvas-schema.json\` in the repository. Integrate it with any JSON Schema validator (e.g. Ajv) to validate canvas payloads in CI pipelines, import tools, or external editors. The \`validateAndRepairCanvas\` runtime utility in \`client/src/lib/ai-canvas-utils.ts\` performs a repair pass instead of hard rejection — correcting types, deduplicating IDs, and placing orphaned nodes at safe fallback coordinates.
+The server-side Zod contract in \`server/shared/canvas.ts\` validates saved canvas payloads. For AI and template output, the \`validateAndRepairCanvas\` utility in \`client/src/lib/ai-canvas-utils.ts\` normalizes aliases, preserves unknown components through the generic renderer, deduplicates IDs, and places nodes with missing coordinates safely.
     `,
   },
   {
@@ -520,13 +520,13 @@ await fetch(\`/api/v1/workspaces/\${workspaceId}/canvas\`, {
 
 ## Validation & Error Handling
 
-The canvas API runs the \`validateAndRepairCanvas\` pass on every import. Rather than rejecting malformed JSON, it heals it:
+The editor runs the \`validateAndRepairCanvas\` pass before AI or template output enters canvas state. Rather than rejecting malformed JSON, it heals it:
 
 - Unknown \`type\` values fall back to \`server\`
 - Duplicate \`id\` values get a \`_dup\` suffix
 - Nodes missing \`position\` are placed at \`{ x: 0, y: 0 }\`
 - Edges referencing nonexistent node IDs are silently dropped
-- Non-canonical \`width\`/\`height\` values are reset to type defaults
+- Missing or invalid \`width\`/\`height\` values use type defaults; valid resized frames are preserved
 
 This means AI-generated JSON — which is often slightly malformed — renders correctly without manual fixup.
 

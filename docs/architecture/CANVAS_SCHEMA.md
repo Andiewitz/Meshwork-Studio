@@ -47,7 +47,9 @@ Every canvas is represented as a JSON object with exactly two top-level arrays:
 }
 ```
 
-This is the format stored in the `nodes` and `edges` Postgres tables per workspace, exchanged with the Meshwork AI co-pilot on every `/api/ai/chat` request, and returned from `/api/workspaces/:id/canvas`.
+This is the payload accepted and returned by `GET`/`POST
+`/api/v1/workspaces/:id/canvas`. Durable nodes and edges are stored in
+DynamoDB; PostgreSQL stores workspace metadata only.
 
 ---
 
@@ -76,7 +78,10 @@ When the Meshwork AI generates new nodes, the viewport center is injected into t
 
 ### Node Type Registry
 
-Node types control which SVG icon, colour accent, and layout renderer is used. All types are lowercase or kebab-case strings.
+Node types control which SVG icon, colour accent, and layout renderer is used.
+All types are lowercase or kebab-case strings. The executable registry is
+[`nodeRegistry.ts`](../../client/src/features/workspace/utils/nodeRegistry.ts);
+this table is a human-readable snapshot and must be updated with that registry.
 
 #### Compute
 
@@ -132,23 +137,25 @@ Node types control which SVG icon, colour accent, and layout renderer is used. A
 
 These types act as **grouping containers** — other nodes can be nested inside them using `parentId`.
 
-| Type            | Description           | Size (w×h) |
-| --------------- | --------------------- | ---------- |
-| `vpc`           | Virtual Private Cloud | 408×312    |
-| `region`        | Cloud region boundary | 600×408    |
-| `k8s-namespace` | Kubernetes namespace  | 408×312    |
+| Type                | Description                | Size (w×h) |
+| ------------------- | -------------------------- | ---------- |
+| `region`            | Cloud region boundary      | 720×504    |
+| `vpc`               | Virtual Private Cloud      | 600×408    |
+| `availability-zone` | Availability zone boundary | 552×336    |
+| `subnet`            | Network subnet             | 408×216    |
+| `k8s-namespace`     | Kubernetes namespace       | 504×336    |
 
 #### Kubernetes Workloads
 
 | Type             | Size (w×h) | Type              | Size (w×h) |
 | ---------------- | ---------- | ----------------- | ---------- |
 | `k8s-pod`        | 144×96     | `k8s-deployment`  | 192×96     |
-| `k8s-replicaset` | 192×96     | `k8s-statefulset` | 192×96     |
-| `k8s-daemonset`  | 192×96     | `k8s-service`     | 168×72     |
+| `k8s-replicaset` | 168×96     | `k8s-statefulset` | 168×96     |
+| `k8s-daemonset`  | 168×96     | `k8s-service`     | 168×72     |
 | `k8s-ingress`    | 168×72     | `k8s-configmap`   | 168×72     |
 | `k8s-secret`     | 168×72     | `k8s-pvc`         | 168×96     |
-| `k8s-job`        | 144×72     | `k8s-cronjob`     | 168×96     |
-| `k8s-hpa`        | 168×96     |                   |            |
+| `k8s-job`        | 144×72     | `k8s-cronjob`     | 168×72     |
+| `k8s-hpa`        | 168×72     |                   |            |
 
 #### External / SaaS
 
@@ -174,9 +181,11 @@ These types act as **grouping containers** — other nodes can be nested inside 
 
 ### Canonical Sizes
 
-**Always use the sizes from the table above.** The `validateAndRepairCanvas` utility enforces them — any AI or external tool that emits a different size will be silently corrected to the canonical value.
-
-You may intentionally override dimensions in `style.width` / `style.height` (e.g. for container nodes that need to fit their children), but doing so disables automatic size correction for that node.
+Use the registry defaults when creating a node with no dimensions. Persisted node
+dimensions are deliberately preserved: a user-resized node must not be reset by
+an import, autosave, or AI repair pass. React Flow dimensions are persisted in
+top-level `width` and `height`; legacy `style.width` / `style.height` values are
+migrated in memory by `normalizeNodeDimensions()`.
 
 ### Node Data Object
 
@@ -543,22 +552,17 @@ Demonstrates the container-nesting pattern. Children use positions **relative to
 
 ## Validation
 
-Use `docs/canvas-schema.json` to validate a canvas payload programmatically:
+The server validates persisted writes with the Zod `canvasSyncSchema` in
+[`server/shared/canvas.ts`](../../server/shared/canvas.ts). There is no
+checked-in JSON Schema file. Integrations should either use that contract or
+call the API and handle its `400 INVALID_CANVAS` response.
 
-```ts
-import Ajv from "ajv";
-import schema from "../docs/canvas-schema.json";
-
-const ajv = new Ajv({ strict: false });
-const validate = ajv.compile(schema);
-
-const valid = validate(canvasPayload);
-if (!valid) {
-  console.error("Canvas validation errors:", validate.errors);
-}
-```
-
-At runtime, the [`validateAndRepairCanvas`](../../client/src/lib/ai-canvas-utils.ts) function performs a **repair pass** rather than a hard rejection — invalid types are aliased or fall back to `server`, missing positions are auto-placed, and duplicate IDs are de-duplicated. This makes the canvas resilient to imperfect AI output.
+Before AI or template output enters the editor,
+[`validateAndRepairCanvas`](../../client/src/lib/ai-canvas-utils.ts) performs a
+repair pass: type aliases are canonicalised, unknown types use the generic
+renderer while retaining their original type, missing positions are placed,
+duplicate IDs are made unique, and invalid edges are removed. Existing valid
+dimensions are retained.
 
 ---
 
@@ -566,7 +570,8 @@ At runtime, the [`validateAndRepairCanvas`](../../client/src/lib/ai-canvas-utils
 
 | File                                                                                                                                           | Purpose                                                                    |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| [`client/src/lib/ai-canvas-utils.ts`](../../client/src/lib/ai-canvas-utils.ts)                                                                 | Runtime type normalisation, size enforcement, and ID deduplication         |
+| [`client/src/lib/ai-canvas-utils.ts`](../../client/src/lib/ai-canvas-utils.ts)                                                                 | Runtime type normalisation, repair, and ID deduplication                   |
+| [`client/src/features/workspace/utils/nodeRegistry.ts`](../../client/src/features/workspace/utils/nodeRegistry.ts)                             | Authoritative node types, aliases, and default sizes                       |
 | [`server/shared/schema/index.ts`](../../server/shared/schema/index.ts)                                                                         | Client/server contract types                                               |
 | [`server/services/canvas/db/dynamo.ts`](../../server/services/canvas/db/dynamo.ts)                                                             | `syncCanvas()` — persistence layer that writes nodes and edges to DynamoDB |
 | [`client/src/features/workspace/components/WorkspaceLeftSidebar.tsx`](../../client/src/features/workspace/components/WorkspaceLeftSidebar.tsx) | Jenkos AI drawer and canvas actions                                        |
