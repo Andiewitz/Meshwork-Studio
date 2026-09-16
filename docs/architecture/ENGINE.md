@@ -202,24 +202,28 @@ A 3-second debounce is applied to the database sync — only the final resting s
 
 ### Edge Type Normalization
 
-PostgreSQL stores `edge.animated` as `INTEGER` (0 or 1). React Flow uses JavaScript booleans. Before every sync, edges are normalized in `use-canvas.ts`:
+React Flow keeps `edge.animated` as a JavaScript boolean. Canvas persistence
+stores the validated React Flow-compatible value in DynamoDB; no database-specific
+integer conversion is required:
 
 ```typescript
 const normalizedEdges = edges.map((edge) => ({
   ...edge,
-  animated: edge.animated ? 1 : 0,
+  animated: Boolean(edge.animated),
 }));
 ```
 
-React Flow state still uses booleans internally — the normalization only happens at the API boundary.
+This preserves a consistent boolean representation in the UI and persisted canvas.
 
 > For a full deep-dive, see **[docs/PERSISTENCE.md](./PERSISTENCE.md)**.
 
 ---
 
-## Database Sync Strategy
+## Historical Postgres Sync Strategy
 
-This is where things get interesting. Every time a user moves a node, the entire canvas state needs to be saved. The naive approach would destroy performance. Here's what we built instead.
+The remainder of this section describes the retired Postgres implementation and
+is retained only as migration history. Current canvas documents use validated
+DynamoDB persistence; see [Persistence](./PERSISTENCE.md) for the active path.
 
 ### The Problem (Before)
 

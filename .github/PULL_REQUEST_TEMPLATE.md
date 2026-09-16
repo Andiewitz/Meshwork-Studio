@@ -32,8 +32,8 @@
 - [ ] My commits follow [Conventional Commits](https://www.conventionalcommits.org/) format
 - [ ] I have added/updated tests covering my changes
 - [ ] I have verified that no private secrets, tokens, or environment files are included
-- [ ] My contribution complies with the [Developer Certificate of Origin (DCO)](./CONTRIBUTING.md#developer-certificate-of-origin)
-- [ ] I have read and agree to follow the [Code of Conduct](./CODE_OF_CONDUCT.md)
+- [ ] My contribution complies with the [Developer Certificate of Origin (DCO)](../CONTRIBUTING.md#developer-certificate-of-origin)
+- [ ] I have read and agree to follow the [Code of Conduct](../CODE_OF_CONDUCT.md)
 
 ## Screenshots / Video (if UI changes)
 

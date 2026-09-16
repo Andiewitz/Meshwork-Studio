@@ -16,7 +16,7 @@ Developer documentation, organized by domain.
 
 - [**Canvas Schema**](./architecture/CANVAS_SCHEMA.md) — ReactFlow node/edge structures and canvas data model.
 - [**The Engine**](./architecture/ENGINE.md) — Internal drawing engine and canvas state management.
-- [**Persistence**](./architecture/PERSISTENCE.md) — PostgreSQL, Drizzle ORM, and database storage mechanisms.
+- [**Persistence**](./architecture/PERSISTENCE.md) — Browser recovery and DynamoDB canvas persistence.
 
 ## Features
 
@@ -31,6 +31,7 @@ Developer documentation, organized by domain.
 - [**Deployment Runbook**](./operations/DEPLOYMENT.md) — Deploy paths, verification, rollback.
 - [**EC2 Operations**](./operations/EC2_OPERATIONS.md) — Day-to-day instance and service operations.
 - [**Secrets Inventory**](./operations/SECRETS.md) — Every secret: generation, consumers, rotation.
+- [**Historical Credential Response**](./operations/HISTORICAL-CREDENTIAL-RESPONSE.md) — Private rotation and verification procedure for historical exposure.
 
 ## Development
 

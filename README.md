@@ -24,7 +24,7 @@ Meshwork Studio lets you design system architecture diagrams by dragging infrast
 - **🎨 60+ Infrastructure Components** — Drag-and-drop servers, databases, load balancers, Lambda functions, Kubernetes pods, and more onto a visual canvas
 - **🧠 AI-Assisted Design** — Bring your own OpenAI/Anthropic API key to generate architecture suggestions (keys are AES-256 encrypted, never stored in plaintext)
 - **📦 Spatial Containment** — Drop an EC2 instance into a VPC and it automatically nests inside, just like real infrastructure
-- **⚡ Smart Sync** — Canvas changes are persisted using a Postgres upsert strategy that only writes what changed, not the entire diagram
+- **⚡ Smart Sync** — Canvas documents are validated and persisted in DynamoDB, with browser recovery for interrupted edits
 - **🔐 Security Hardened** — IDOR protection, brute-force lockouts, CSRF tokens, rate limiting, and PII-safe logging
 - **📁 Workspaces & Collections** — Organize diagrams into projects with nested folder structures
 - **🎭 Dark/Light Themes** — Full theme support
@@ -37,7 +37,7 @@ Meshwork Studio lets you design system architecture diagrams by dragging infrast
 ```
 ┌────────────────────┐     ┌────────────────────┐     ┌────────────────────┐
 │   CLIENT LAYER     │     │   NGINX GATEWAY    │     │   API SERVER       │
-│   (React + Vite)   │◄───►│   (Port 80)        │◄───►│   (Express :5000)  │
+│   (React + Vite)   │◄───►│   (Host :5000)     │◄───►│   (Express)       │
 │                    │     │                    │     │                    │
 │ • React 18         │     │ • Reverse Proxy    │     │ • Go Auth Service  │
 │ • React Flow       │     │ • Static Assets    │     │ • Drizzle ORM      │
@@ -62,28 +62,37 @@ Meshwork Studio lets you design system architecture diagrams by dragging infrast
 
 ### Prerequisites
 
-- **Docker Desktop** (for the full stack) or **Node.js 20+** (for local dev)
+- **Docker Desktop** for the supported local stack
+- **Node.js 20.19+** and npm 10+ for repository commands
 
 ### Option 1: Docker (Full Stack)
 
 ```bash
 git clone https://github.com/Andiewitz/Meshwork-Studio.git
 cd Meshwork-Studio
-
-cp .env.example .env
-# Edit .env with your credentials
-
-docker-compose up -d
-# Visit http://localhost
+npm ci
+npm run setup
+docker compose up --build
+# Visit http://localhost:5000
 ```
 
-### Option 2: Local Development
+`npm run setup` generates local-only credentials and configuration in ignored
+`.env`. Docker starts the Node app, Go identity service, PostgreSQL, Redis,
+DynamoDB Local, and NGINX together. No AWS account or AI provider key is needed
+for this local flow.
+
+### Option 2: Native Node/Go Development
+
+Use this when changing server code with hot reload. Docker still supplies the
+data services; the Go identity service is required for login.
 
 ```bash
-npm install
-npm run dev              # monolith + frontend on :5000
-make -C server/services/auth run  # auth service on :8081 (auth endpoints are Go)
-# Visit http://localhost:5000
+npm ci
+npm run setup
+docker compose up -d emnesh-postgres emnesh-dynamodb-local emnesh-redis
+make -C server/services/auth run
+# In another terminal:
+npm run dev
 ```
 
 ---
@@ -138,6 +147,7 @@ npm run check                  # TypeScript type checking
 
 # Testing
 npm run test:run         # Run all tests
+npm run test:system      # DynamoDB/WebSocket tests; requires DynamoDB Local
 npm run test:coverage    # Generate HTML coverage report
 
 # Production
@@ -149,10 +159,13 @@ npm run db:backup        # verified Postgres + canvas archive; requires BACKUP_S
 npm run diagnose         # Verify required config is present and valid
 
 # Docker
-docker-compose up -d     # Start full stack
-docker-compose logs -f   # Tail all container logs
-docker-compose down -v   # Stop and remove volumes
+docker compose up --build # Start full stack
+docker compose logs -f    # Tail all container logs
+docker compose down       # Stop containers and retain data volumes
 ```
+
+Use `docker compose down -v` only when you deliberately want to erase local
+PostgreSQL, Redis, and DynamoDB data.
 
 ---
 
@@ -160,22 +173,23 @@ docker-compose down -v   # Stop and remove volumes
 
 Every major system has its own deep-dive guide:
 
-| Document                                                                          | What You'll Learn                                                                                         |
-| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **[Security Architecture](./docs/SECURITY.md)**                                   | Auth flows, IDOR protection, brute-force lockouts, AES-256 encryption, CSRF, rate limiting, PII redaction |
-| **[Auth Architecture](./docs/AUTH_ARCHITECTURE.md)**                              | The Go identity service: sessions, MFA, OAuth, threat model, cutover/rollback                             |
-| **[Canvas Engine](./docs/architecture/ENGINE.md)**                                | How drag-and-drop works, spatial containment logic, the Postgres upsert sync strategy                     |
-| **[Canvas Schema](./docs/architecture/CANVAS_SCHEMA.md)**                         | ReactFlow node/edge structures and canvas data model                                                      |
-| **[Canvas Persistence](./docs/architecture/PERSISTENCE.md)**                      | Browser recovery cache plus DynamoDB document persistence                                                 |
-| **[Workspace & Collections API](./docs/features/WORKSPACES.md)**                  | REST API reference for workspaces and collections, IDOR pattern, client hooks                             |
-| **[AI Engine Guide](./docs/features/JENKOS_AI.md)**                               | Bring-your-own-key AI integration, encryption flow, and API endpoints                                     |
-| **[Theming & Design System](./docs/features/THEMING.md)**                         | Dark/light/system modes, CSS variables, brand identity                                                    |
-| **[Settings & Privacy](./docs/features/SETTINGS.md)**                             | User profile management, security settings, account controls                                              |
-| **[Testing Strategy](./docs/development/TESTING.md)**                             | The testing pyramid, how to run tests, how to write new ones                                              |
-| **[AWS Infrastructure (ECS/Terraform)](./docs/infrastructure/INFRASTRUCTURE.md)** | ECS/Fargate + ALB + RDS architecture via Terraform (with EC2 single-node path)                            |
-| **[Deployment Runbook](./docs/operations/DEPLOYMENT.md)**                         | Production deploy paths, verification checklist, rollback table                                           |
-| **[Secrets Inventory](./docs/operations/SECRETS.md)**                             | Every secret: generation, consumers, rotation & blast radius                                              |
-| **[Post-Mortem Log](./docs/archive/process/post-mortem.md)**                      | Production bugs found and fixed, with root cause analysis                                                 |
+| Document                                                                                  | What You'll Learn                                                                                         |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **[Security Architecture](./docs/SECURITY.md)**                                           | Auth flows, IDOR protection, brute-force lockouts, AES-256 encryption, CSRF, rate limiting, PII redaction |
+| **[Auth Architecture](./docs/AUTH_ARCHITECTURE.md)**                                      | The Go identity service: sessions, MFA, OAuth, threat model, cutover/rollback                             |
+| **[Canvas Engine](./docs/architecture/ENGINE.md)**                                        | How drag-and-drop works, spatial containment logic, and validated canvas synchronization                  |
+| **[Canvas Schema](./docs/architecture/CANVAS_SCHEMA.md)**                                 | ReactFlow node/edge structures and canvas data model                                                      |
+| **[Canvas Persistence](./docs/architecture/PERSISTENCE.md)**                              | Browser recovery cache plus DynamoDB document persistence                                                 |
+| **[Workspace & Collections API](./docs/features/WORKSPACES.md)**                          | REST API reference for workspaces and collections, IDOR pattern, client hooks                             |
+| **[AI Engine Guide](./docs/features/JENKOS_AI.md)**                                       | Bring-your-own-key AI integration, encryption flow, and API endpoints                                     |
+| **[Theming & Design System](./docs/features/THEMING.md)**                                 | Dark/light/system modes, CSS variables, brand identity                                                    |
+| **[Settings & Privacy](./docs/features/SETTINGS.md)**                                     | User profile management, security settings, account controls                                              |
+| **[Testing Strategy](./docs/development/TESTING.md)**                                     | The testing pyramid, how to run tests, how to write new ones                                              |
+| **[AWS Infrastructure (ECS/Terraform)](./docs/infrastructure/INFRASTRUCTURE.md)**         | ECS/Fargate + ALB + RDS architecture via Terraform (with EC2 single-node path)                            |
+| **[Deployment Runbook](./docs/operations/DEPLOYMENT.md)**                                 | Production deploy paths, verification checklist, rollback table                                           |
+| **[Secrets Inventory](./docs/operations/SECRETS.md)**                                     | Every secret: generation, consumers, rotation & blast radius                                              |
+| **[Historical Credential Response](./docs/operations/HISTORICAL-CREDENTIAL-RESPONSE.md)** | Private rotation and verification procedure for an exposed historical secret                              |
+| **[Post-Mortem Log](./docs/archive/process/post-mortem.md)**                              | Production bugs found and fixed, with root cause analysis                                                 |
 
 Historical documents (tickets, investigations, older audits) live in
 [`docs/archive/`](./docs/archive).
@@ -193,7 +207,7 @@ Meshwork Studio deploys to a single EC2 instance:
 
 ## Security Highlights
 
-This isn't a toy project with `if (loggedIn)` checks. Every security feature is battle-tested:
+Security controls are covered by focused unit, integration, and Go-service tests:
 
 | Feature                 | Implementation                                                                              |
 | ----------------------- | ------------------------------------------------------------------------------------------- |
@@ -204,7 +218,7 @@ This isn't a toy project with `if (loggedIn)` checks. Every security feature is 
 | **API Key Encryption**  | AES-256-GCM with unique IVs — keys never stored in plaintext                                |
 | **PII-Safe Logging**    | Production logs automatically redact emails, passwords, tokens, and API keys                |
 | **Input Validation**    | 4-layer defense: Client → Zod → Drizzle ORM → React output encoding                         |
-| **Type Safety**         | Zero `any` casts in route handlers — backed by global Express.User type declaration         |
+| **Type Safety**         | TypeScript contracts and runtime validation at API boundaries                               |
 
 Read the full [Security Architecture](./docs/SECURITY.md) for details.
 
@@ -242,24 +256,10 @@ meshwork-studio/
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and fill in your values:
-
-```bash
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5434/emnesh_workspace
-AUTH_DATABASE_URL=postgresql://user:password@localhost:5433/emnesh_auth
-
-# Auth
-SESSION_SECRET=<generate with: openssl rand -base64 32>
-GOOGLE_CLIENT_ID=<from Google Cloud Console>
-GOOGLE_CLIENT_SECRET=<from Google Cloud Console>
-
-# AI Encryption (for BYOK feature)
-ENCRYPTION_KEY=<generate with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))">
-
-# CAPTCHA (optional — skipped in development)
-HCAPTCHA_SECRET=<from hCaptcha dashboard>
-```
+Run `npm run setup` to generate a complete local `.env`, or copy
+[`.env.example`](./.env.example) when integrating an existing development
+environment. Production configuration is separate: use a secret manager and the
+[secrets inventory](./docs/operations/SECRETS.md), never the generated file.
 
 ---
 

@@ -63,25 +63,22 @@ npm install
 npm run setup
 ```
 
-This creates a valid `.env` and `server/services/auth/.env` with automatically generated cryptographic keys (ed25519 keypairs, AES/HMAC seeds).
+This creates one valid root `.env` with automatically generated local
+cryptographic keys. The Node app receives an Ed25519 public verification key;
+the Go identity service receives the private signing seed.
 
 ### 3. Start Infrastructure Services
 
-Start PostgreSQL, DynamoDB Local, and Redis:
+Start the complete supported development stack:
 
 ```bash
-docker-compose up -d emnesh-postgres emnesh-dynamodb-local emnesh-redis
+docker compose up --build
 ```
 
-### 4. Run the Development Server
-
-```bash
-npm run dev
-```
-
-The Express API and Vite client will be available at `http://localhost:5000`.
-
-_(If developing authentication features natively, run `make -C server/services/auth run` or run the containerized auth service via `docker-compose up -d emnesh-auth`)._
+The app is available at `http://localhost:5000`. This path includes the required
+Go identity service. For native Node/Go development, keep the three data
+containers running, run `make -C server/services/auth run`, then run `npm run dev`
+in another terminal.
 
 ---
 
@@ -139,9 +136,8 @@ npm run test:run
 ### Branch Strategy
 
 - `main` — Production-ready code. Protected branch; changes require pull requests.
-- `develop` — Integration branch for the next release.
-- `feat/<feature-name>` — New features branching from `develop`.
-- `fix/<bug-name>` — Bug fixes branching from `develop`.
+- `feat/<feature-name>` — New features branching from `main`.
+- `fix/<bug-name>` — Bug fixes branching from `main`.
 - `hotfix/<fix-name>` — Urgent fixes branching directly from `main`.
 
 ### Conventional Commits
@@ -176,7 +172,7 @@ test(canvas): add spatial containment collision tests
 
 ## Pull Request Process
 
-1. Fork the repository and create your branch from `develop` (or `main` for hotfixes).
+1. Fork the repository and create your branch from `main`.
 2. Write clean, readable code with descriptive variable names.
 3. Verify that all automated checks pass locally:
    ```bash
