@@ -16,12 +16,12 @@ The endpoint `POST /api/ai/keys/test` currently only validates key formats (e.g.
 
 ### Technical Details & Files to Modify
 
-- **File**: [server/modules/ai/routes.ts](file:///c:/Users/VMedia/Desktop/PROJECTS/Meshwork%20Studio/server/modules/ai/routes.ts)
+- **Historical file**: `server/modules/ai/routes.ts` (removed during service reorganisation)
   - Modify `/keys/test` route handler to import and invoke validation helpers based on the chosen `provider`.
 - **Files**:
-  - Use `validateOpenAIKey` from [server/modules/ai/providers/openai.ts](file:///c:/Users/VMedia/Desktop/PROJECTS/Meshwork%20Studio/server/modules/ai/providers/openai.ts).
-  - Use `validateAnthropicKey` from [server/modules/ai/providers/anthropic.ts](file:///c:/Users/VMedia/Desktop/PROJECTS/Meshwork%20Studio/server/modules/ai/providers/anthropic.ts).
-  - Implement and call `validateOpenRouterKey` in [server/modules/ai/providers/openrouter.ts](file:///c:/Users/VMedia/Desktop/PROJECTS/Meshwork%20Studio/server/modules/ai/providers/openrouter.ts).
+  - Use the historical `validateOpenAIKey` helper from `server/modules/ai/providers/openai.ts`.
+  - Use the historical `validateAnthropicKey` helper from `server/modules/ai/providers/anthropic.ts`.
+  - Implement and call the historical `validateOpenRouterKey` helper in `server/modules/ai/providers/openrouter.ts`.
 
 ### Acceptance Criteria
 
@@ -47,7 +47,7 @@ OpenRouter integration lacks a key validation function. Additionally, `openroute
 
 ### Technical Details & Files to Modify
 
-- **File**: [server/modules/ai/providers/openrouter.ts](file:///c:/Users/VMedia/Desktop/PROJECTS/Meshwork%20Studio/server/modules/ai/providers/openrouter.ts)
+- **Historical file**: `server/modules/ai/providers/openrouter.ts`
   - Implement `validateOpenRouterKey(apiKey: string): Promise<boolean>` by making a lightweight request to `https://openrouter.ai/api/v1/auth/key` (which returns quota and key details).
   - Retrieve the application URL dynamically using `process.env.APP_URL` or fallback to localhost, passing it into the `HTTP-Referer` header configuration.
 
@@ -74,7 +74,7 @@ Brute force protection currently utilizes an in-memory Map (`inMemoryLoginAttemp
 
 ### Technical Details & Files to Modify
 
-- **File**: [server/modules/auth/lockout.ts](file:///c:/Users/VMedia/Desktop/PROJECTS/Meshwork%20Studio/server/modules/auth/lockout.ts)
+- **Historical file**: `server/modules/auth/lockout.ts`
   - Replace the memory-backed `inMemoryLoginAttempts` Map with an active database constraint check, or support a Redis client adapter when horizontal scaling is active.
 
 ### Acceptance Criteria
@@ -96,9 +96,9 @@ CSRF protection middleware is automatically bypassed when `process.env.NODE_ENV 
 
 ### Technical Details & Files to Modify
 
-- **File**: [server/modules/auth/routes.ts](file:///c:/Users/VMedia/Desktop/PROJECTS/Meshwork%20Studio/server/modules/auth/routes.ts)
+- **Historical file**: `server/modules/auth/routes.ts`
   - Replace hardcoded `NODE_ENV === "production"` checks for `csrfProtection` with a configuration flag, e.g., `process.env.ENABLE_CSRF === "true" || process.env.NODE_ENV === "production"`.
-- **File**: [server/modules/ai/routes.ts](file:///c:/Users/VMedia/Desktop/PROJECTS/Meshwork%20Studio/server/modules/ai/routes.ts)
+- **Historical file**: `server/modules/ai/routes.ts`
   - Same `ENABLE_CSRF` flag applied to all AI state-changing endpoints.
 
 ### Acceptance Criteria
@@ -124,7 +124,7 @@ Current Playwright tests only verify that the login page mounts and resolves wit
 
 ### Technical Details & Files to Modify
 
-- **File**: [tests/e2e/canvas.spec.ts](file:///c:/Users/VMedia/Desktop/PROJECTS/Meshwork%20Studio/tests/e2e/canvas.spec.ts)
+- **Historical file**: `tests/e2e/canvas.spec.ts`
   - Add E2E tests checking signup, login, navigation to dashboard.
   - Implement canvas tests validating that a workspace can be created, nodes can be added, connected, and moved.
 
