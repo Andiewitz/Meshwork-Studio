@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import type { Node, Edge } from "@xyflow/react";
-import { executeEditCanvas } from "@/features/workspace/agent/tools/canvasToolExecutor";
+import {
+  executeCanvasToolCalls,
+  executeEditCanvas,
+} from "@/features/workspace/agent/tools/canvasToolExecutor";
 import {
   formatCanvasContext,
   JENKOS_TOOLS,
@@ -109,6 +112,34 @@ describe("Jenkos AI Agent Tool Calling & Execution Unit Tests", () => {
       expect(result.edges.some((edge) => edge.source === "api-gw-ai-2")).toBe(
         true,
       );
+    });
+
+    it("replays AI operations on the latest canvas without dropping local nodes", () => {
+      const locallyAdded: Node = {
+        id: "local-note",
+        type: "note",
+        position: { x: 0, y: 0 },
+        data: { label: "Local edit" },
+      };
+      const result = executeCanvasToolCalls(
+        [...initialNodes, locallyAdded],
+        initialEdges,
+        [
+          {
+            action: "add",
+            nodes: [{ id: "cache", type: "cache", label: "AI cache" }],
+          },
+          {
+            action: "add",
+            edges: [{ source: "backend-svc", target: "cache" }],
+          },
+        ],
+      );
+
+      expect(result.nodes.map((node) => node.id)).toEqual(
+        expect.arrayContaining(["local-note", "cache"]),
+      );
+      expect(result.edges.some((edge) => edge.target === "cache")).toBe(true);
     });
 
     it("should update existing nodes while preserving unchanged properties and coordinates", () => {

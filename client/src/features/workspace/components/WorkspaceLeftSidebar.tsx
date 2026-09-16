@@ -18,6 +18,7 @@ import {
   runJenkosAgent,
   JenkosAgentMessage,
 } from "@/features/workspace/agent/jenkosAgent";
+import { executeCanvasToolCalls } from "@/features/workspace/agent/tools/canvasToolExecutor";
 
 const DEFAULT_SUGGESTIONS = [
   "Add a Redis caching layer to the backend",
@@ -161,6 +162,10 @@ export function WorkspaceLeftSidebar({
       try {
         const currentNodes = getNodes();
         const currentEdges = getEdges();
+        const initialCanvas = JSON.stringify({
+          nodes: currentNodes,
+          edges: currentEdges,
+        });
 
         const agentResult = await runJenkosAgent({
           userPrompt,
@@ -173,8 +178,23 @@ export function WorkspaceLeftSidebar({
         });
 
         if (agentResult.canvasResult?.applied) {
-          setNodes(agentResult.canvasResult.nodes);
-          setEdges(agentResult.canvasResult.edges);
+          const latestNodes = getNodes();
+          const latestEdges = getEdges();
+          const operations = agentResult.message.toolCalls?.map(
+            (toolCall) => toolCall.args,
+          );
+          const canvasChangedWhileWaiting =
+            initialCanvas !==
+            JSON.stringify({ nodes: latestNodes, edges: latestEdges });
+          const canvasResult =
+            canvasChangedWhileWaiting && operations?.length
+              ? executeCanvasToolCalls(latestNodes, latestEdges, operations, {
+                  x: centerX,
+                  y: centerY,
+                })
+              : agentResult.canvasResult;
+          setNodes(canvasResult.nodes);
+          setEdges(canvasResult.edges);
           setTimeout(() => fitView({ duration: 700, padding: 0.2 }), 100);
         }
 

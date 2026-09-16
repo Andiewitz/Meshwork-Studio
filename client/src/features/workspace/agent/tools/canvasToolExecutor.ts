@@ -536,3 +536,31 @@ export function executeEditCanvas(
     applied: true,
   };
 }
+
+/** Replays native AI operations against the latest canvas as one transaction. */
+export function executeCanvasToolCalls(
+  currentNodes: Node[],
+  currentEdges: Edge[],
+  operations: EditCanvasToolArgs[],
+  viewportCenter?: { x: number; y: number },
+): CanvasExecutionResult {
+  let nodes = currentNodes;
+  let edges = currentEdges;
+  let latest: CanvasExecutionResult = {
+    nodes,
+    edges,
+    summary: "No canvas changes requested.",
+    applied: false,
+  };
+
+  for (const operation of operations) {
+    const result = executeEditCanvas(nodes, edges, operation, viewportCenter);
+    latest = result;
+    if (result.applied) {
+      nodes = result.nodes;
+      edges = result.edges;
+    }
+  }
+
+  return { ...latest, nodes, edges, applied: latest.applied };
+}
