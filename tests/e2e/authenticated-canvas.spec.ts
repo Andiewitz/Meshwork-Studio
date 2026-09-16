@@ -59,7 +59,8 @@ test("@authenticated registers, saves a nested canvas, and reloads it", async ({
   expect(registration.status(), await registration.text()).toBe(200);
   await copyAuthCookiesToBrowser(page, registration);
 
-  const title = `Persisted canvas ${suffix}`;
+  // Workspace titles are deliberately capped at 16 characters by the API.
+  const title = `E2E-${Date.now().toString(36)}`;
   const workspaceResponse = await request.post("/api/v1/workspaces", {
     headers: {
       "Content-Type": "application/json",
