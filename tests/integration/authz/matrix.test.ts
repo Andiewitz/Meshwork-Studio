@@ -240,7 +240,18 @@ describe("authorization matrix — no 403 on your own data", () => {
     const editorSync = await request(app)
       .post(`/api/v1/workspaces/${WS_ID}/canvas`)
       .set("x-test-user-id", EDITOR)
-      .send({ nodes: [{ id: "n1" }], edges: [], baseRevision: 0 });
+      .send({
+        nodes: [
+          {
+            id: "n1",
+            type: "server",
+            position: { x: 0, y: 0 },
+            data: { label: "Editor server" },
+          },
+        ],
+        edges: [],
+        baseRevision: 0,
+      });
     expect(editorSync.status).toBe(200);
     expect(canvasState[WS_ID]?.nodes).toHaveLength(1);
   });
