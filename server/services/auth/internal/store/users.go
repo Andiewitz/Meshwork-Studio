@@ -138,13 +138,6 @@ func (d *DB) CreateUser(ctx context.Context, in CreateUserInput) (*User, error) 
 	return u, err
 }
 
-func nullIfEmpty(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
 func (d *DB) SetPasswordHash(ctx context.Context, userID, hash, algo string) error {
 	_, err := d.Pool.Exec(ctx,
 		`UPDATE users SET password_hash = $2, password_algo = $3, updated_at = now() WHERE id = $1`,
