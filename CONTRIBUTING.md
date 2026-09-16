@@ -180,7 +180,10 @@ test(canvas): add spatial containment collision tests
    ```
 4. Push your branch and open a Pull Request using the provided template.
 5. Provide a clear description of the problem solved, architectural implications, and manual verification steps.
-6. Once submitted, GitHub Actions CI will run lint, typecheck, unit tests, and security audits.
+6. Once submitted, GitHub Actions CI will run static analysis, security scans,
+   Node and Go tests, the browser smoke test, coverage, and build verification.
+   See [CI/CD operations](./docs/operations/CI_CD.md) for the current gates and
+   failure-triage guidance.
 7. Address any code review feedback gracefully.
 
 ---

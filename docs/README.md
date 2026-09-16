@@ -30,6 +30,7 @@ Developer documentation, organized by domain.
 
 - [**Infrastructure**](./infrastructure/INFRASTRUCTURE.md) — Current single-EC2 topology and growth path.
 - [**Deployment Runbook**](./operations/DEPLOYMENT.md) — Deploy paths, verification, rollback.
+- [**CI/CD Operations**](./operations/CI_CD.md) — Required checks, deployment promotion, releases, and failure triage.
 - [**EC2 Operations**](./operations/EC2_OPERATIONS.md) — Day-to-day instance and service operations.
 - [**Secrets Inventory**](./operations/SECRETS.md) — Every secret: generation, consumers, rotation.
 - [**Historical Credential Response**](./operations/HISTORICAL-CREDENTIAL-RESPONSE.md) — Private rotation and verification procedure for historical exposure.
