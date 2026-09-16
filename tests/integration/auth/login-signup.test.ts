@@ -11,8 +11,6 @@ import {
   revokedSessions,
 } from "../../../server/auth";
 
-void publicKeyFromSeed;
-
 /**
  * Auth middleware contract tests.
  *
@@ -91,7 +89,8 @@ function signToken(seedB64: string, claims: Claims): string {
 
 const SEED = generateSeed();
 
-process.env.AUTH_ASSERTION_PUBLIC_KEY = SEED;
+process.env.AUTH_ASSERTION_PUBLIC_KEY =
+  publicKeyFromSeed(SEED).toString("base64");
 delete process.env.AUTH_ASSERTION_PREVIOUS_KEYS;
 process.env.AUTH_INTERNAL_KEY = "test-internal-key";
 process.env.AUTH_SERVICE_URL = "http://auth-service.test";

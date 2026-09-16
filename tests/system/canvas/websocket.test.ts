@@ -15,9 +15,12 @@ import WebSocket from "ws";
  *   4. Bob's live socket receives Alice's node-move broadcast
  */
 
-process.env.AUTH_ASSERTION_PUBLIC_KEY = crypto
-  .randomBytes(32)
+const assertionKeyPair = crypto.generateKeyPairSync("ed25519");
+const assertionPublicKey = assertionKeyPair.publicKey
+  .export({ format: "der", type: "spki" })
+  .subarray(-32)
   .toString("base64");
+process.env.AUTH_ASSERTION_PUBLIC_KEY = assertionPublicKey;
 vi.hoisted(() => {
   process.env.CANVAS_DDB_TABLE = "meshwork-canvas-ws-test";
   process.env.DYNAMODB_ENDPOINT ||= "http://127.0.0.1:8000";
@@ -64,12 +67,6 @@ vi.mock("@services/team/db/storage", () => ({
 }));
 
 function signAssertion(sub: string, sid: string): string {
-  const seed = Buffer.from(process.env.AUTH_ASSERTION_PUBLIC_KEY!, "base64");
-  const priv = crypto.createPrivateKey({
-    key: pkcs8(seed),
-    format: "der",
-    type: "pkcs8",
-  });
   const payload = Buffer.from(
     JSON.stringify({
       sub,
@@ -78,19 +75,8 @@ function signAssertion(sub: string, sid: string): string {
       exp: Math.floor(Date.now() / 1000) + 240,
     }),
   );
-  const sig = crypto.sign(null, payload, priv);
+  const sig = crypto.sign(null, payload, assertionKeyPair.privateKey);
   return `v1.${payload.toString("base64url")}.${sig.toString("base64url")}`;
-}
-
-function pkcs8(seed: Buffer): Buffer {
-  const inner = Buffer.concat([Buffer.from([0x04, 0x20]), seed]);
-  const body = Buffer.concat([
-    Buffer.from([0x02, 0x01, 0x00]),
-    Buffer.from([0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70]),
-    Buffer.from([0x04, inner.length]),
-    inner,
-  ]);
-  return Buffer.concat([Buffer.from([0x30, body.length]), body]);
 }
 
 describe("canvas + websocket e2e", () => {

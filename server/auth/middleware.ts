@@ -24,12 +24,12 @@ let verifier: Verifier | null = null;
 
 /** Boot-time initialisation. Production refuses to start without keys. */
 export function initAuth(): void {
-  const seed = process.env.AUTH_ASSERTION_PUBLIC_KEY?.trim();
-  if (!seed) {
+  const publicKey = process.env.AUTH_ASSERTION_PUBLIC_KEY?.trim();
+  if (!publicKey) {
     if (process.env.NODE_ENV === "production") {
       throw new Error(
         "FATAL: AUTH_ASSERTION_PUBLIC_KEY must be set in production " +
-          "(base64 ed25519 seed from the auth service)",
+          "(base64 Ed25519 public key from the auth service)",
       );
     }
     console.warn(
@@ -42,7 +42,7 @@ export function initAuth(): void {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  verifier = new Verifier(seed, prev);
+  verifier = new Verifier(publicKey, prev);
   startRevocationListener();
 }
 

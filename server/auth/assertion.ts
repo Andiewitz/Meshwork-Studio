@@ -25,49 +25,45 @@ export class Verifier {
   public currentKid = "";
 
   /**
-   * @param currentSeedB64 base64 of the 32-byte ed25519 seed whose PUBLIC
-   *                       half the auth service currently signs with
-   * @param previousSeedsB64 seeds still within their rotation window
+   * @param currentPublicKeyB64 base64 of the raw 32-byte ed25519 public key
+   * @param previousPublicKeysB64 public keys still within their rotation window
    */
-  constructor(currentSeedB64: string, previousSeedsB64: string[] = []) {
-    const load = (seedB64: string): [string, crypto.KeyObject] => {
-      const seed = Buffer.from(seedB64, "base64");
-      if (seed.length !== 32) {
+  constructor(
+    currentPublicKeyB64: string,
+    previousPublicKeysB64: string[] = [],
+  ) {
+    const load = (publicKeyB64: string): [string, crypto.KeyObject] => {
+      const rawPublicKey = Buffer.from(publicKeyB64, "base64");
+      if (rawPublicKey.length !== 32) {
         throw new Error(
-          `auth/assertion: key must be base64 of exactly 32 bytes, got ${seed.length}`,
+          `auth/assertion: public key must be base64 of exactly 32 bytes, got ${rawPublicKey.length}`,
         );
       }
-      // Derive the public key from the seed via a throwaway private key.
-      const priv = crypto.createPrivateKey({
-        key: pkcs8ForSeed(seed),
+      const pub = crypto.createPublicKey({
+        key: spkiForRawPublicKey(rawPublicKey),
         format: "der",
-        type: "pkcs8",
+        type: "spki",
       });
-      const pub = crypto.createPublicKey(priv);
       // Compute kid the same way Go does: sha256(rawPublicKey32Bytes)[:4] → hex.
-      // Go: hex.EncodeToString(sha256.Sum256(pub)[:4])
-      // The raw public key is the last 32 bytes of the SPKI DER export.
-      const spkiDer = pub.export({ format: "der", type: "spki" });
-      const rawPub = spkiDer.subarray(spkiDer.length - 32);
       const kid = crypto
         .createHash("sha256")
-        .update(rawPub)
+        .update(rawPublicKey)
         .digest("hex")
         .slice(0, 8);
       return [kid, pub];
     };
 
-    const [kid, pub] = load(currentSeedB64);
+    const [kid, pub] = load(currentPublicKeyB64);
     this.currentKid = kid;
     this.keys.set(kid, pub);
-    for (const prev of previousSeedsB64) {
+    for (const prev of previousPublicKeysB64) {
       if (!prev) continue;
       try {
         const [k, p] = load(prev);
         if (!this.keys.has(k)) this.keys.set(k, p);
       } catch {
         // A malformed rotation key must not prevent boot; skip it loudly.
-        console.warn(`[auth] ignoring malformed previous assertion key`);
+        console.warn(`[auth] ignoring malformed previous assertion public key`);
       }
     }
   }
@@ -119,29 +115,16 @@ export class Verifier {
 }
 
 /**
- * Build a PKCS#8 DER wrapper around a raw ed25519 seed so Node can import
- * it. Layout follows RFC 8410:
- *   SEQUENCE { INTEGER 0, SEQ{OID 1.3.101.112}, OCTET STRING{OCTET STRING seed} }
+ * Build an SPKI DER wrapper around a raw Ed25519 public key so Node can import
+ * it. RFC 8410 encodes it as `SEQUENCE { algorithm, BIT STRING publicKey }`.
  */
-function pkcs8ForSeed(seed: Buffer): Buffer {
-  const innerSeed = Buffer.concat([Buffer.from([0x04, 0x20]), seed]);
-  const alg = Buffer.from([
-    0x30,
-    0x05,
-    0x06,
-    0x03,
-    0x2b,
-    0x65,
-    0x70, // Ed25519 OID
+function spkiForRawPublicKey(rawPublicKey: Buffer): Buffer {
+  return Buffer.concat([
+    Buffer.from([
+      0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00,
+    ]),
+    rawPublicKey,
   ]);
-  const version = Buffer.from([0x02, 0x01, 0x00]); // INTEGER 0
-  const body = Buffer.concat([
-    version,
-    alg,
-    Buffer.from([0x04, innerSeed.length]),
-    innerSeed,
-  ]);
-  return Buffer.concat([Buffer.from([0x30, body.length]), body]);
 }
 
 /** Extracts the raw 32-byte public key from an SPKI DER buffer. */
