@@ -182,7 +182,8 @@ Every major system has its own deep-dive guide:
 | **[Canvas Persistence](./docs/architecture/PERSISTENCE.md)**                              | Browser recovery cache plus DynamoDB document persistence                                                 |
 | **[Workspace & Collections API](./docs/features/WORKSPACES.md)**                          | REST API reference for workspaces and collections, IDOR pattern, client hooks                             |
 | **[AI Engine Guide](./docs/features/JENKOS_AI.md)**                                       | Bring-your-own-key AI integration, encryption flow, and API endpoints                                     |
-| **[Theming & Design System](./docs/features/THEMING.md)**                                 | Dark/light/system modes, CSS variables, brand identity                                                    |
+| **[Design System](./DESIGN.md)**                                                          | Canonical visual language, semantic tokens, component rules, and accessibility baseline                   |
+| **[Theming implementation](./docs/features/THEMING.md)**                                  | Token implementation and requirements for a future supported theme                                        |
 | **[Settings & Privacy](./docs/features/SETTINGS.md)**                                     | User profile management, security settings, account controls                                              |
 | **[Testing Strategy](./docs/development/TESTING.md)**                                     | The testing pyramid, how to run tests, how to write new ones                                              |
 | **[Infrastructure Topology](./docs/infrastructure/INFRASTRUCTURE.md)**                    | Current single-EC2 topology, private dependencies, and measured growth triggers                           |

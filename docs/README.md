@@ -21,10 +21,11 @@ Developer documentation, organized by domain.
 
 ## Features
 
+- [**Design System**](../DESIGN.md) — Canonical visual language, tokens, primitives, accessibility baseline, and migration rules.
 - [**Jenkos AI**](./features/JENKOS_AI.md) — Embedded AI co-pilot and Bring Your Own Key (BYOK) mechanics.
 - [**Workspaces**](./features/WORKSPACES.md) — Workspace and real-time collaboration module.
 - [**Settings**](./features/SETTINGS.md) — User preferences, security settings and account architecture.
-- [**Theming**](./features/THEMING.md) — TailwindCSS configuration, CSS variables, and the dynamic theme system.
+- [**Theming implementation**](./features/THEMING.md) — Token implementation and future-theme requirements.
 
 ## Infrastructure
 

@@ -13,6 +13,7 @@ behaviour, not a historical design or intended feature.
 | Service ownership/migrations  | Service schemas, migrations, and `server/routes.ts`        | Service boundaries guide.                                |
 | Deployment and CI             | `.github/workflows`, deployment scripts, and NGINX config  | CI/CD, deployment, infrastructure, and secrets runbooks. |
 | Backup/recovery               | Backup and restore scripts plus AWS configuration evidence | Recovery and observability runbooks.                     |
+| Product design                | `DESIGN.md`, tokens, and UI primitives                     | Design system and theming implementation guidance.       |
 
 ## Documentation change checklist
 
