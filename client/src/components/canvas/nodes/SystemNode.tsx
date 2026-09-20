@@ -686,7 +686,7 @@ export function SystemNode({
             <p
               className="leading-relaxed font-semibold whitespace-pre-wrap break-all italic w-full max-w-full"
               style={{
-                fontFamily: "var(--font-serif)",
+                fontFamily: "var(--font-body)",
                 color: customFontColor || "rgba(66, 32, 6, 0.8)",
                 fontSize:
                   finalFontSize ||

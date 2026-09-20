@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,8 +29,6 @@ import {
   DocumentTextIcon,
   ArrowTopRightOnSquareIcon,
   TrashIcon,
-  SunIcon as Sun,
-  MoonIcon as Moon,
   EyeIcon,
   EyeSlashIcon,
   ArrowPathIcon as Loader2,
@@ -89,7 +86,6 @@ interface NavSection {
 
 export default function Settings() {
   const { user, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
@@ -621,30 +617,6 @@ export default function Settings() {
                         Japanese
                       </option>
                     </select>
-                  </div>
-                  <div className="p-5 flex items-center justify-between">
-                    <div>
-                      <h4 className="text-xs font-semibold text-white mb-0.5">
-                        Theme
-                      </h4>
-                      <p className="text-[11.5px] text-white/45">
-                        Choose interface color theme.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.08]">
-                      <button
-                        onClick={() => setTheme("dark")}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${theme === "dark" ? "bg-white/[0.12] text-white shadow-sm" : "text-white/40 hover:text-white"}`}
-                      >
-                        <Moon className="w-3.5 h-3.5" /> Dark
-                      </button>
-                      <button
-                        onClick={() => setTheme("light")}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${theme === "light" ? "bg-white/[0.12] text-white shadow-sm" : "text-white/40 hover:text-white"}`}
-                      >
-                        <Sun className="w-3.5 h-3.5" /> Light
-                      </button>
-                    </div>
                   </div>
                   <div className="p-5 flex items-center justify-between">
                     <div>

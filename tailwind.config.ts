@@ -28,6 +28,7 @@ export default {
         },
         primary: {
           DEFAULT: "hsl(var(--primary) / <alpha-value>)",
+          hover: "hsl(var(--primary-hover) / <alpha-value>)",
           foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
           border: "var(--primary-border)",
         },
@@ -51,6 +52,8 @@ export default {
           foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",
           border: "var(--destructive-border)",
         },
+        success: "hsl(var(--success) / <alpha-value>)",
+        warning: "hsl(var(--warning) / <alpha-value>)",
         ring: "hsl(var(--ring) / <alpha-value>)",
         chart: {
           "1": "hsl(var(--chart-1) / <alpha-value>)",
@@ -59,7 +62,7 @@ export default {
           "4": "hsl(var(--chart-4) / <alpha-value>)",
           "5": "hsl(var(--chart-5) / <alpha-value>)",
         },
-        // Design System v1.0 Surface Hierarchy
+        // Meshwork design-system surface hierarchy.
         "surface-lowest": "hsl(var(--surface-lowest) / <alpha-value>)",
         "surface-low": "hsl(var(--surface-low) / <alpha-value>)",
         surface: "hsl(var(--surface) / <alpha-value>)",
@@ -75,7 +78,8 @@ export default {
           border: "var(--mosh-border)",
         },
 
-        // High Contrast Redesign Mappings
+        // Compatibility names for existing surface classes. New code should
+        // prefer the surface-ladder names above.
         "surface-container-lowest": "var(--color-surface-container-lowest)",
         "surface-container-low": "var(--color-surface-container-low)",
         "surface-container": "var(--color-surface-container)",

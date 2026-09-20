@@ -12,7 +12,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { CookieBanner } from "@/components/ui/cookie-banner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
-import { ThemeProvider } from "@/hooks/use-theme";
 import { useCsrfTokenInitializer } from "@/lib/secure-fetch";
 import { DefaultLoading, RedirectLoading } from "@/components/loading-states";
 import { MobileGate } from "@/components/ui/mobile-gate";
@@ -240,19 +239,17 @@ function App() {
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <ThemeProvider>
-            <WouterRouter>
-              <TooltipProvider>
-                <Toaster />
-                <CookieBanner />
-                <ErrorBoundary>
-                  <Suspense fallback={<DefaultLoading />}>
-                    <Router />
-                  </Suspense>
-                </ErrorBoundary>
-              </TooltipProvider>
-            </WouterRouter>
-          </ThemeProvider>
+          <WouterRouter>
+            <TooltipProvider>
+              <Toaster />
+              <CookieBanner />
+              <ErrorBoundary>
+                <Suspense fallback={<DefaultLoading />}>
+                  <Router />
+                </Suspense>
+              </ErrorBoundary>
+            </TooltipProvider>
+          </WouterRouter>
         </AuthProvider>
       </QueryClientProvider>
     </HelmetProvider>

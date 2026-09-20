@@ -10,15 +10,16 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[#F0521E] text-[#0C0C0E] font-bold hover:bg-[#F26E41] shadow-sm",
+          "bg-primary text-primary-foreground font-bold hover:bg-primary-hover shadow-sm",
         secondary:
-          "bg-[#242430] text-[#FAFAFA] border border-[#2A2A36] hover:bg-[#2E2E3C]",
+          "bg-secondary text-secondary-foreground border border-secondary-border hover:bg-surface-highest",
         ghost:
-          "bg-transparent text-[#A0A0B0] hover:bg-[#242430] hover:text-[#FAFAFA]",
-        destructive: "bg-[#EF4444] text-[#FAFAFA] hover:bg-[#DC2626]",
-        mosh: "bg-[rgba(0,229,160,0.10)] text-[#00E5A0] border border-[rgba(0,229,160,0.22)] hover:bg-[rgba(0,229,160,0.18)]",
+          "bg-transparent text-muted-foreground hover:bg-surface-high hover:text-foreground",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        mosh: "bg-mosh-subtle text-mosh-primary border border-mosh-border hover:brightness-110",
         outline:
-          "border border-[#1E1E24] bg-transparent text-[#FAFAFA] hover:bg-[#242430]",
+          "border border-border bg-transparent text-foreground hover:bg-surface-high",
       },
       // Heights are set as "min" heights, because sometimes Ai will place large amount of content
       // inside buttons. With a min-height they will look appropriate with small amounts of content,
