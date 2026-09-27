@@ -104,6 +104,25 @@ export const MIGRATIONS: Migration[] = [
       ALTER TABLE workspace_outbox_events
         ADD CONSTRAINT workspace_outbox_events_event_type_check
           CHECK (event_type IN ('workspace.deleted', 'workspaces.deleted', 'workspace.duplicated'));
+      `,
+  },
+  {
+    version: "0022_workspace_collaborators",
+    up: `
+      CREATE TABLE IF NOT EXISTS workspace_collaborators (
+        workspace_id VARCHAR(128) NOT NULL
+          REFERENCES workspaces(id) ON DELETE CASCADE,
+        user_id VARCHAR(128) NOT NULL,
+        permission TEXT NOT NULL DEFAULT 'view'
+          CHECK (permission IN ('view', 'edit')),
+        added_by VARCHAR(128) NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (workspace_id, user_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS IDX_workspace_collaborators_user_id
+        ON workspace_collaborators (user_id);
     `,
   },
 ];

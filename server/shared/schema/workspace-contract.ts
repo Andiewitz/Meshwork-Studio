@@ -38,6 +38,34 @@ export const insertWorkspaceSchema = z.object({
   tags: z.array(z.string()).default([]),
 });
 
+/** Direct workspace sharing has only read-only and edit permissions. */
+export const workspaceCollaboratorPermissionSchema = z.enum(["view", "edit"]);
+export type WorkspaceCollaboratorPermission = z.infer<
+  typeof workspaceCollaboratorPermissionSchema
+>;
+
+export const workspaceAccessSchema = z.enum(["owner", "edit", "view", "none"]);
+export type WorkspaceAccess = z.infer<typeof workspaceAccessSchema>;
+
+/**
+ * Storage-level collaborator grant. Public routes intentionally do not use
+ * this contract yet: they will resolve an account email through the auth
+ * service before creating a grant.
+ */
+export const upsertWorkspaceCollaboratorSchema = z.object({
+  workspaceId: z.string().min(1).max(128),
+  userId: z.string().min(1).max(128),
+  permission: workspaceCollaboratorPermissionSchema,
+  addedBy: z.string().min(1).max(128),
+});
+export type UpsertWorkspaceCollaborator = z.infer<
+  typeof upsertWorkspaceCollaboratorSchema
+>;
+
+export const updateWorkspaceCollaboratorPermissionSchema = z.object({
+  permission: workspaceCollaboratorPermissionSchema,
+});
+
 /** Input: defaulted fields are optional. */
 export type InsertWorkspace = z.input<typeof insertWorkspaceSchema>;
 /** Parsed output as stored/returned. */

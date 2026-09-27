@@ -3,8 +3,11 @@ import {
   workspaces,
   collections,
   workspaceOutboxEvents,
+  workspaceCollaborators,
   type InsertWorkspace,
   type Workspace,
+  type WorkspaceCollaborator,
+  type InsertWorkspaceCollaborator,
   type Collection,
   type InsertCollection,
 } from "./schema";
@@ -14,6 +17,10 @@ import {
 import { fetchSharedWorkspaceIds } from "@services/team/db/ownership-client";
 import { eq, desc, and, isNull, or, inArray, sql } from "drizzle-orm";
 import type { DrizzleTx } from "@server/lib/events";
+import type {
+  WorkspaceAccess,
+  WorkspaceCollaboratorPermission,
+} from "@shared/schema/workspace-contract";
 
 export interface IWorkspaceStorage {
   // Collections (subcollections/folders)
@@ -35,6 +42,25 @@ export interface IWorkspaceStorage {
     collectionId?: number | null,
   ): Promise<Workspace[]>;
   getWorkspace(id: string): Promise<Workspace | undefined>;
+  listWorkspaceCollaborators(
+    workspaceId: string,
+  ): Promise<WorkspaceCollaborator[]>;
+  getWorkspaceAccess(
+    workspaceId: string,
+    userId: string,
+  ): Promise<WorkspaceAccess>;
+  upsertWorkspaceCollaborator(
+    collaborator: InsertWorkspaceCollaborator,
+  ): Promise<WorkspaceCollaborator>;
+  updateWorkspaceCollaboratorPermission(
+    workspaceId: string,
+    userId: string,
+    permission: WorkspaceCollaboratorPermission,
+  ): Promise<WorkspaceCollaborator>;
+  removeWorkspaceCollaborator(
+    workspaceId: string,
+    userId: string,
+  ): Promise<void>;
   /** Ids the user personally owns (not team-shared) — deletion choreography. */
   listWorkspaceIdsByOwner(userId: string): Promise<string[]>;
   countWorkspaces(): Promise<number>;
@@ -60,6 +86,21 @@ export interface IWorkspaceStorage {
 }
 
 export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
+  private async assertNotWorkspaceOwner(
+    workspaceId: string,
+    userId: string,
+  ): Promise<void> {
+    const [workspace] = await db
+      .select({ userId: workspaces.userId })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId));
+
+    if (!workspace) throw new Error("Workspace not found");
+    if (workspace.userId === userId) {
+      throw new Error("Workspace owner cannot be a collaborator");
+    }
+  }
+
   // Collections
   async getCollections(
     userId: string,
@@ -155,6 +196,97 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
       .from(workspaces)
       .where(eq(workspaces.id, id));
     return workspace;
+  }
+
+  async listWorkspaceCollaborators(
+    workspaceId: string,
+  ): Promise<WorkspaceCollaborator[]> {
+    return db
+      .select()
+      .from(workspaceCollaborators)
+      .where(eq(workspaceCollaborators.workspaceId, workspaceId));
+  }
+
+  async getWorkspaceAccess(
+    workspaceId: string,
+    userId: string,
+  ): Promise<WorkspaceAccess> {
+    const [workspace] = await db
+      .select({ userId: workspaces.userId })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId));
+    if (!workspace) return "none";
+    if (workspace.userId === userId) return "owner";
+
+    const [collaborator] = await db
+      .select({ permission: workspaceCollaborators.permission })
+      .from(workspaceCollaborators)
+      .where(
+        and(
+          eq(workspaceCollaborators.workspaceId, workspaceId),
+          eq(workspaceCollaborators.userId, userId),
+        ),
+      );
+    return collaborator?.permission ?? "none";
+  }
+
+  async upsertWorkspaceCollaborator(
+    collaborator: InsertWorkspaceCollaborator,
+  ): Promise<WorkspaceCollaborator> {
+    await this.assertNotWorkspaceOwner(
+      collaborator.workspaceId,
+      collaborator.userId,
+    );
+    const [saved] = await db
+      .insert(workspaceCollaborators)
+      .values(collaborator)
+      .onConflictDoUpdate({
+        target: [
+          workspaceCollaborators.workspaceId,
+          workspaceCollaborators.userId,
+        ],
+        set: {
+          permission: collaborator.permission,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return saved;
+  }
+
+  async updateWorkspaceCollaboratorPermission(
+    workspaceId: string,
+    userId: string,
+    permission: WorkspaceCollaboratorPermission,
+  ): Promise<WorkspaceCollaborator> {
+    await this.assertNotWorkspaceOwner(workspaceId, userId);
+    const [updated] = await db
+      .update(workspaceCollaborators)
+      .set({ permission, updatedAt: new Date() })
+      .where(
+        and(
+          eq(workspaceCollaborators.workspaceId, workspaceId),
+          eq(workspaceCollaborators.userId, userId),
+        ),
+      )
+      .returning();
+    if (!updated) throw new Error("Workspace collaborator not found");
+    return updated;
+  }
+
+  async removeWorkspaceCollaborator(
+    workspaceId: string,
+    userId: string,
+  ): Promise<void> {
+    await this.assertNotWorkspaceOwner(workspaceId, userId);
+    await db
+      .delete(workspaceCollaborators)
+      .where(
+        and(
+          eq(workspaceCollaborators.workspaceId, workspaceId),
+          eq(workspaceCollaborators.userId, userId),
+        ),
+      );
   }
 
   async createWorkspace(insertWorkspace: InsertWorkspace): Promise<Workspace> {
@@ -283,6 +415,11 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
     providedTx?: DrizzleTx,
   ): Promise<void> {
     const execute = async (tx: DrizzleTx) => {
+      // Users live in auth_db, so remove grants to a deleted user explicitly.
+      // The workspace FK only cascades grants for workspaces the user owns.
+      await tx
+        .delete(workspaceCollaborators)
+        .where(eq(workspaceCollaborators.userId, userId));
       await tx.delete(workspaces).where(eq(workspaces.userId, userId));
       await tx.delete(collections).where(eq(collections.userId, userId));
     };
@@ -302,6 +439,9 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
         .where(eq(workspaces.userId, userId));
       const ids = rows.map((row) => row.id);
 
+      await tx
+        .delete(workspaceCollaborators)
+        .where(eq(workspaceCollaborators.userId, userId));
       await tx.delete(workspaces).where(eq(workspaces.userId, userId));
       await tx.delete(collections).where(eq(collections.userId, userId));
       await tx.insert(workspaceOutboxEvents).values({
@@ -316,7 +456,16 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
 export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
   private collections: Collection[] = [];
   private workspaces: Workspace[] = [];
+  private workspaceCollaborators: WorkspaceCollaborator[] = [];
   private currentCollectionId = 1;
+
+  private assertNotWorkspaceOwner(workspaceId: string, userId: string): void {
+    const workspace = this.workspaces.find((item) => item.id === workspaceId);
+    if (!workspace) throw new Error("Workspace not found");
+    if (workspace.userId === userId) {
+      throw new Error("Workspace owner cannot be a collaborator");
+    }
+  }
 
   async getCollections(
     userId: string,
@@ -379,6 +528,88 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
     return this.workspaces.find((w) => w.id === id);
   }
 
+  async listWorkspaceCollaborators(
+    workspaceId: string,
+  ): Promise<WorkspaceCollaborator[]> {
+    return this.workspaceCollaborators.filter(
+      (collaborator) => collaborator.workspaceId === workspaceId,
+    );
+  }
+
+  async getWorkspaceAccess(
+    workspaceId: string,
+    userId: string,
+  ): Promise<WorkspaceAccess> {
+    const workspace = await this.getWorkspace(workspaceId);
+    if (!workspace) return "none";
+    if (workspace.userId === userId) return "owner";
+    return (
+      this.workspaceCollaborators.find(
+        (collaborator) =>
+          collaborator.workspaceId === workspaceId &&
+          collaborator.userId === userId,
+      )?.permission ?? "none"
+    );
+  }
+
+  async upsertWorkspaceCollaborator(
+    collaborator: InsertWorkspaceCollaborator,
+  ): Promise<WorkspaceCollaborator> {
+    this.assertNotWorkspaceOwner(collaborator.workspaceId, collaborator.userId);
+    const index = this.workspaceCollaborators.findIndex(
+      (item) =>
+        item.workspaceId === collaborator.workspaceId &&
+        item.userId === collaborator.userId,
+    );
+    const now = new Date();
+    if (index >= 0) {
+      const updated = {
+        ...this.workspaceCollaborators[index],
+        permission: collaborator.permission,
+        updatedAt: now,
+      };
+      this.workspaceCollaborators[index] = updated;
+      return updated;
+    }
+
+    const created: WorkspaceCollaborator = {
+      ...collaborator,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.workspaceCollaborators.push(created);
+    return created;
+  }
+
+  async updateWorkspaceCollaboratorPermission(
+    workspaceId: string,
+    userId: string,
+    permission: WorkspaceCollaboratorPermission,
+  ): Promise<WorkspaceCollaborator> {
+    this.assertNotWorkspaceOwner(workspaceId, userId);
+    const index = this.workspaceCollaborators.findIndex(
+      (item) => item.workspaceId === workspaceId && item.userId === userId,
+    );
+    if (index === -1) throw new Error("Workspace collaborator not found");
+    const updated = {
+      ...this.workspaceCollaborators[index],
+      permission,
+      updatedAt: new Date(),
+    };
+    this.workspaceCollaborators[index] = updated;
+    return updated;
+  }
+
+  async removeWorkspaceCollaborator(
+    workspaceId: string,
+    userId: string,
+  ): Promise<void> {
+    this.assertNotWorkspaceOwner(workspaceId, userId);
+    this.workspaceCollaborators = this.workspaceCollaborators.filter(
+      (item) => item.workspaceId !== workspaceId || item.userId !== userId,
+    );
+  }
+
   async createWorkspace(insertWorkspace: InsertWorkspace): Promise<Workspace> {
     const ws: Workspace = {
       id: crypto.randomUUID(),
@@ -419,6 +650,9 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
 
   async deleteWorkspace(id: string): Promise<void> {
     this.workspaces = this.workspaces.filter((w) => w.id !== id);
+    this.workspaceCollaborators = this.workspaceCollaborators.filter(
+      (collaborator) => collaborator.workspaceId !== id,
+    );
   }
 
   async deleteWorkspaceAndEnqueueCleanup(id: string): Promise<void> {
@@ -489,7 +723,17 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
   }
 
   async deleteAllUserData(userId: string): Promise<void> {
+    const workspaceIds = new Set(
+      this.workspaces
+        .filter((workspace) => workspace.userId === userId)
+        .map((workspace) => workspace.id),
+    );
     this.workspaces = this.workspaces.filter((w) => w.userId !== userId);
+    this.workspaceCollaborators = this.workspaceCollaborators.filter(
+      (collaborator) =>
+        !workspaceIds.has(collaborator.workspaceId) &&
+        collaborator.userId !== userId,
+    );
     this.collections = this.collections.filter((c) => c.userId !== userId);
   }
 

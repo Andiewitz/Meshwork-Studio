@@ -6,10 +6,17 @@ import {
   integer,
   jsonb,
   boolean,
+  index,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
+import {
+  type UpsertWorkspaceCollaborator,
+  type WorkspaceCollaboratorPermission,
+  workspaceCollaboratorPermissionSchema,
+} from "@shared/schema/workspace-contract";
 
 import crypto from "node:crypto";
 
@@ -49,6 +56,35 @@ export const workspaces = pgTable("workspaces", {
     .default("ready"),
   canvasCopySourceId: text("canvas_copy_source_id"),
 });
+
+/**
+ * Explicit, workspace-scoped grants. The owner remains workspaces.user_id and
+ * is deliberately never represented in this table.
+ */
+export const workspaceCollaborators = pgTable(
+  "workspace_collaborators",
+  {
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    permission: text("permission")
+      .$type<WorkspaceCollaboratorPermission>()
+      .notNull()
+      .default("view"),
+    addedBy: text("added_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.workspaceId, table.userId] }),
+    userIdIdx: index("IDX_workspace_collaborators_user_id").on(table.userId),
+  }),
+);
 
 /**
  * Events which have been committed alongside a workspace mutation but have
@@ -113,10 +149,19 @@ export const insertWorkspaceSchema = createInsertSchema(workspaces, {
   canvasCopySourceId: true,
 });
 
+export const insertWorkspaceCollaboratorSchema = createInsertSchema(
+  workspaceCollaborators,
+  {
+    permission: workspaceCollaboratorPermissionSchema,
+  },
+).omit({ createdAt: true, updatedAt: true });
+
 export type Collection = typeof collections.$inferSelect;
 export type InsertCollection = z.infer<typeof insertCollectionSchema>;
 export type Workspace = typeof workspaces.$inferSelect;
 export type InsertWorkspace = z.infer<typeof insertWorkspaceSchema>;
+export type WorkspaceCollaborator = typeof workspaceCollaborators.$inferSelect;
+export type InsertWorkspaceCollaborator = UpsertWorkspaceCollaborator;
 
 export type CreateWorkspaceRequest = InsertWorkspace;
 export type UpdateWorkspaceRequest = Partial<InsertWorkspace>;

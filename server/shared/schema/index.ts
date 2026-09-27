@@ -59,6 +59,13 @@ export {
   insertWorkspaceSchema,
   type InsertWorkspace,
   type UpdateWorkspaceRequest,
+  workspaceCollaboratorPermissionSchema,
+  workspaceAccessSchema,
+  upsertWorkspaceCollaboratorSchema,
+  updateWorkspaceCollaboratorPermissionSchema,
+  type WorkspaceCollaboratorPermission,
+  type WorkspaceAccess,
+  type UpsertWorkspaceCollaborator,
 } from "./workspace-contract";
 
 // ─── team_db (throwaway surface pending collaborators revamp) ───────────────
