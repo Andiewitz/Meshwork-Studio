@@ -1,11 +1,11 @@
-name: emnesh-studio
+name: meshwork-studio
 
 services:
   # ─── Single Postgres instance, database-per-service ────────────────────
   # Isolation = credentials: each service's user opens exactly its own DB.
   # docker/postgres/init/01-databases.sh provisions them on first boot.
-  emnesh-postgres:
-    container_name: emnesh-postgres
+  meshwork-postgres:
+    container_name: meshwork-postgres
     image: postgres:15-alpine
     restart: always
     environment:
@@ -29,8 +29,8 @@ services:
       retries: 5
 
   # Canvas documents (nodes/edges) — always-free tier, single table.
-  emnesh-dynamodb-local:
-    container_name: emnesh-dynamodb-local
+  meshwork-dynamodb-local:
+    container_name: meshwork-dynamodb-local
     image: amazon/dynamodb-local:latest
     restart: always
     command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
@@ -44,8 +44,8 @@ services:
     volumes:
       - dynamodb_data:/home/dynamodblocal/data
 
-  emnesh-redis:
-    container_name: emnesh-redis
+  meshwork-redis:
+    container_name: meshwork-redis
     image: redis:7-alpine
     restart: always
     ports:
@@ -59,9 +59,9 @@ services:
       timeout: 5s
       retries: 5
 
-  emnesh-backend:
-    container_name: emnesh-backend-api
-    image: emnesh-app:latest
+  meshwork-backend:
+    container_name: meshwork-backend-api
+    image: meshwork-app:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -69,14 +69,14 @@ services:
     restart: always
     environment:
       # Database-per-service: each domain service gets ONLY its own DSN.
-      WORKSPACE_DATABASE_URL: postgresql://workspace_app:${WORKSPACE_DB_PASSWORD}@emnesh-postgres:5432/workspace_db
-      TEAM_DATABASE_URL: postgresql://team_app:${TEAM_DB_PASSWORD}@emnesh-postgres:5432/team_db
-      AI_DATABASE_URL: postgresql://ai_app:${AI_DB_PASSWORD}@emnesh-postgres:5432/ai_db
-      JENKOS_DATABASE_URL: postgresql://jenkos_app:${JENKOS_DB_PASSWORD:-${AI_DB_PASSWORD}}@emnesh-postgres:5432/jenkos_db
-      METRICS_DATABASE_URL: postgresql://metrics_app:${METRICS_DB_PASSWORD}@emnesh-postgres:5432/metrics_db
+      WORKSPACE_DATABASE_URL: postgresql://workspace_app:${WORKSPACE_DB_PASSWORD}@meshwork-postgres:5432/workspace_db
+      TEAM_DATABASE_URL: postgresql://team_app:${TEAM_DB_PASSWORD}@meshwork-postgres:5432/team_db
+      AI_DATABASE_URL: postgresql://ai_app:${AI_DB_PASSWORD}@meshwork-postgres:5432/ai_db
+      JENKOS_DATABASE_URL: postgresql://jenkos_app:${JENKOS_DB_PASSWORD:-${AI_DB_PASSWORD}}@meshwork-postgres:5432/jenkos_db
+      METRICS_DATABASE_URL: postgresql://metrics_app:${METRICS_DB_PASSWORD}@meshwork-postgres:5432/metrics_db
       CANVAS_DDB_TABLE: ${CANVAS_DDB_TABLE:-meshwork-canvas}
       AWS_REGION: ${AWS_REGION:-us-east-1}
-      DYNAMODB_ENDPOINT: http://emnesh-dynamodb-local:8000
+      DYNAMODB_ENDPOINT: http://meshwork-dynamodb-local:8000
       AWS_ACCESS_KEY_ID: local
       AWS_SECRET_ACCESS_KEY: local
       # SECURITY: the monolith has NO auth_db access — it verifies Go-signed
@@ -84,8 +84,8 @@ services:
       AUTH_ASSERTION_PUBLIC_KEY: ${AUTH_ASSERTION_PUBLIC_KEY:?AUTH_ASSERTION_PUBLIC_KEY required}
       AUTH_INTERNAL_KEY: ${AUTH_INTERNAL_KEY:?AUTH_INTERNAL_KEY required}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY required}
-      AUTH_SERVICE_URL: http://emnesh-auth:8081
-      REDIS_URL: redis://emnesh-redis:6379
+      AUTH_SERVICE_URL: http://meshwork-auth:8081
+      REDIS_URL: redis://meshwork-redis:6379
       NODE_ENV: development
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET required}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY required}
@@ -95,16 +95,16 @@ services:
       APP_URL: ${APP_URL:-http://localhost:5000}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
     depends_on:
-      emnesh-postgres:
+      meshwork-postgres:
         condition: service_healthy
-      emnesh-dynamodb-local:
+      meshwork-dynamodb-local:
         condition: service_started
-      emnesh-redis:
+      meshwork-redis:
         condition: service_healthy
 
   # ─── Auth service (Go) — owns users/sessions/MFA/OAuth/audit ──────────
-  emnesh-auth:
-    container_name: emnesh-auth
+  meshwork-auth:
+    container_name: meshwork-auth
     build:
       context: ./server/services/auth
       dockerfile: Dockerfile
@@ -114,8 +114,8 @@ services:
       AUTH_PORT: 8081
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:5000}
       EXTRA_ALLOWED_ORIGINS: ${EXTRA_ALLOWED_ORIGINS:-}
-      AUTH_DATABASE_URL: postgresql://auth_app:${AUTH_DB_PASSWORD}@emnesh-postgres:5432/auth_db
-      AUTH_REDIS_URL: redis://emnesh-redis:6379
+      AUTH_DATABASE_URL: postgresql://auth_app:${AUTH_DB_PASSWORD}@meshwork-postgres:5432/auth_db
+      AUTH_REDIS_URL: redis://meshwork-redis:6379
       AUTH_IP_HASH_KEY: ${AUTH_IP_HASH_KEY:?AUTH_IP_HASH_KEY required}
       AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY:?AUTH_ENCRYPTION_KEY required}
       AUTH_ASSERTION_PRIVATE_KEY: ${AUTH_ASSERTION_PRIVATE_KEY:?AUTH_ASSERTION_PRIVATE_KEY required}
@@ -134,13 +134,13 @@ services:
       CAPTCHA_SECRET: ${CAPTCHA_SECRET:-}
       BOOTSTRAP_ADMIN_EMAILS: ${BOOTSTRAP_ADMIN_EMAILS:-}
     depends_on:
-      emnesh-postgres:
+      meshwork-postgres:
         condition: service_healthy
-      emnesh-redis:
+      meshwork-redis:
         condition: service_healthy
 
-  emnesh-frontend:
-    container_name: emnesh-frontend
+  meshwork-frontend:
+    container_name: meshwork-frontend
     build:
       context: .
       dockerfile: Dockerfile
@@ -149,8 +149,8 @@ services:
     ports:
       - "5000:80"
     depends_on:
-      - emnesh-backend
-      - emnesh-auth
+      - meshwork-backend
+      - meshwork-auth
 
 volumes:
   pgdata_postgres:

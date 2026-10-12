@@ -123,7 +123,7 @@ ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" bash <<'REMOTE_START'
   else echo "  ⚡ Starting Docker..."; sudo systemctl start docker; fi
 
   # Canonical compose names (see docker-compose.yml)
-  for c in emnesh-postgres emnesh-redis emnesh-dynamodb-local; do
+  for c in meshwork-postgres meshwork-redis meshwork-dynamodb-local; do
     if sudo docker ps --filter "name=^/${c}$" --filter "status=running" \
         --format '{{.Names}}' | grep -q "$c"; then
       echo "  ✓ $c running"

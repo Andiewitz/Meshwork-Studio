@@ -38,7 +38,7 @@ What it does, in order (`▶ [1/5]` … `▶ [5/5]`):
 1. Checks local `dist/index.cjs` exists (fails fast with "run deploy first").
 2. Wakes the EC2 via AWS CLI if stopped, waits for SSH (spinner + bar).
 3. Uploads `dist/` → `dist.new`, atomically swaps (`dist.old` kept).
-4. Starts Docker (`emnesh-postgres`, `emnesh-redis`, `emnesh-dynamodb-local`),
+4. Starts Docker (`meshwork-postgres`, `meshwork-redis`, `meshwork-dynamodb-local`),
    nginx, and PM2 apps with `restart` (no downtime for a mere start).
 5. Probes `:5000/health` + `:8081/healthz`, prints a summary.
 

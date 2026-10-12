@@ -89,7 +89,7 @@ data services; the Go identity service is required for login.
 ```bash
 npm ci
 npm run setup
-docker compose up -d emnesh-postgres emnesh-dynamodb-local emnesh-redis
+docker compose up -d meshwork-postgres meshwork-dynamodb-local meshwork-redis
 make -C server/services/auth run
 # In another terminal:
 npm run dev

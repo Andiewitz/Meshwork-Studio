@@ -64,6 +64,23 @@ permissions documented in [`DEPLOYMENT.md`](../operations/DEPLOYMENT.md). AWS
 credentials and IAM setup are separate operator responsibilities and are never
 stored in this repository.
 
+## One-time rename: `emnesh-*` → `meshwork-*` (operator action required)
+
+Docker containers, images, and hostnames were renamed to `meshwork-*`. The
+Postgres databases inside (`auth_db`, `workspace_db`, …) did **not** change,
+so no SQL migration is needed — but the compose project rename changes Docker
+volume prefixes, and volumes cannot be renamed in place. On any host with
+existing data:
+
+1. Back up first: `npm run db:backup` (verifies the off-host S3 archive).
+2. `docker compose down` (leaves `emnesh-studio_*` volumes in place).
+3. `docker compose up -d` (creates fresh `meshwork-studio_*` volumes).
+4. Restore from the backup drill: `npm run db:restore:drill` into the new
+   volumes, verify row counts, then cut over.
+5. Only then `docker volume rm` the old `emnesh-studio_*` volumes.
+
+Fresh hosts skip all of this — first boot provisions `meshwork-*` directly.
+
 ## Growth boundaries
 
 Move away from this topology only when observed limits justify it:

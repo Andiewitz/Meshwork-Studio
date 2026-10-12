@@ -1,5 +1,5 @@
 #!/bin/bash
-# Provisioned ONCE on first boot of the emnesh-postgres volume.
+# Provisioned ONCE on first boot of the meshwork-postgres volume.
 # Creates one database + one scoped user per service. A service's password
 # opens exactly its own database — that credential boundary IS the isolation.
 set -euo pipefail

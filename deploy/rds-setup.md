@@ -32,7 +32,7 @@ aws rds create-db-instance \
 --engine-version 15.4 \
 --allocated-storage 20 \
 --storage-type gp3 \
---db-name emnesh_workspace \
+--db-name meshwork_workspace \
 --master-username admin \
 --master-user-password "your-secure-password" \
 --vpc-security-group-ids sg-rds-xxx \
@@ -52,8 +52,8 @@ aws rds create-db-instance \
 
 # Connect via psql from EC2:
 
-# psql -h your-rds-endpoint -U admin -d emnesh_workspace
+# psql -h your-rds-endpoint -U admin -d meshwork_workspace
 
-# CREATE DATABASE emnesh_auth;
+# CREATE DATABASE meshwork_auth;
 
 # 5. Update .env on EC2 with the RDS endpoint

@@ -17,7 +17,7 @@ vi.hoisted(() => {
  * Canvas persistence PARITY suite.
  *
  * Runs against real DynamoDB semantics via dynamo-local (compose service
- * emnesh-dynamodb-local). It is in the explicit system-test tier, so ordinary
+ * meshwork-dynamodb-local). It is in the explicit system-test tier, so ordinary
  * unit/integration runs never silently skip this coverage.
  *
  * These tests pin the exact contract the old Postgres implementation
