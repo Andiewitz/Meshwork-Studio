@@ -173,27 +173,27 @@ PostgreSQL, Redis, and DynamoDB data.
 
 Every major system has its own deep-dive guide:
 
-| Document                                                                                  | What You'll Learn                                                                                         |
-| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **[Security Architecture](./docs/SECURITY.md)**                                           | Auth flows, IDOR protection, brute-force lockouts, AES-256 encryption, CSRF, rate limiting, PII redaction |
-| **[Auth Architecture](./docs/AUTH_ARCHITECTURE.md)**                                      | The Go identity service: sessions, MFA, OAuth, threat model, cutover/rollback                             |
-| **[Canvas Engine](./docs/architecture/ENGINE.md)**                                        | How drag-and-drop works, spatial containment logic, and validated canvas synchronization                  |
-| **[Canvas Schema](./docs/architecture/CANVAS_SCHEMA.md)**                                 | ReactFlow node/edge structures and canvas data model                                                      |
-| **[Canvas Persistence](./docs/architecture/PERSISTENCE.md)**                              | Browser recovery cache plus DynamoDB document persistence                                                 |
-| **[Workspace & Collections API](./docs/features/WORKSPACES.md)**                          | REST API reference for workspaces and collections, IDOR pattern, client hooks                             |
-| **[AI Engine Guide](./docs/features/JENKOS_AI.md)**                                       | Bring-your-own-key AI integration, encryption flow, and API endpoints                                     |
-| **[Design System](./DESIGN.md)**                                                          | Canonical visual language, semantic tokens, component rules, and accessibility baseline                   |
-| **[Theming implementation](./docs/features/THEMING.md)**                                  | Token implementation and requirements for a future supported theme                                        |
-| **[Settings & Privacy](./docs/features/SETTINGS.md)**                                     | User profile management, security settings, account controls                                              |
-| **[Testing Strategy](./docs/development/TESTING.md)**                                     | The testing pyramid, how to run tests, how to write new ones                                              |
-| **[Infrastructure Topology](./docs/infrastructure/INFRASTRUCTURE.md)**                    | Current single-EC2 topology, private dependencies, and measured growth triggers                           |
-| **[Deployment Runbook](./docs/operations/DEPLOYMENT.md)**                                 | Production deploy paths, verification checklist, and rollback                                             |
-| **[CI/CD Operations](./docs/operations/CI_CD.md)**                                        | Required CI gates, promotion, releases, and failure triage                                                |
-| **[Secrets Inventory](./docs/operations/SECRETS.md)**                                     | Every secret: generation, consumers, rotation & blast radius                                              |
-| **[Observability](./docs/operations/OBSERVABILITY.md)**                                   | Health, metrics, logs, alert policy, and first response                                                   |
-| **[Recovery](./docs/operations/RECOVERY.md)**                                             | Off-host archive, restore drills, and production recovery safeguards                                      |
-| **[Historical Credential Response](./docs/operations/HISTORICAL-CREDENTIAL-RESPONSE.md)** | Private rotation and verification procedure for an exposed historical secret                              |
-| **[Post-Mortem Log](./docs/archive/process/post-mortem.md)**                              | Production bugs found and fixed, with root cause analysis                                                 |
+| Document                                                               | What You'll Learn                                                                                         |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **[Security Architecture](./docs/SECURITY.md)**                        | Auth flows, IDOR protection, brute-force lockouts, AES-256 encryption, CSRF, rate limiting, PII redaction |
+| **[Auth Architecture](./docs/AUTH_ARCHITECTURE.md)**                   | The Go identity service: sessions, MFA, OAuth, threat model, cutover/rollback                             |
+| **[Canvas Engine](./docs/architecture/ENGINE.md)**                     | How drag-and-drop works, spatial containment logic, and validated canvas synchronization                  |
+| **[Canvas Schema](./docs/architecture/CANVAS_SCHEMA.md)**              | ReactFlow node/edge structures and canvas data model                                                      |
+| **[Canvas Persistence](./docs/architecture/PERSISTENCE.md)**           | Browser recovery cache plus DynamoDB document persistence                                                 |
+| **[Workspace & Collections API](./docs/features/WORKSPACES.md)**       | REST API reference for workspaces and collections, IDOR pattern, client hooks                             |
+| **[AI Engine Guide](./docs/features/JENKOS_AI.md)**                    | Bring-your-own-key AI integration, encryption flow, and API endpoints                                     |
+| **[Design System](./DESIGN.md)**                                       | Canonical visual language, semantic tokens, component rules, and accessibility baseline                   |
+| **[Theming implementation](./docs/features/THEMING.md)**               | Token implementation and requirements for a future supported theme                                        |
+| **[Settings & Privacy](./docs/features/SETTINGS.md)**                  | User profile management, security settings, account controls                                              |
+| **[Testing Strategy](./docs/development/TESTING.md)**                  | The testing pyramid, how to run tests, how to write new ones                                              |
+| **[Infrastructure Topology](./docs/infrastructure/INFRASTRUCTURE.md)** | Current single-EC2 topology, private dependencies, and measured growth triggers                           |
+| **[Deployment Runbook](./docs/operations/DEPLOYMENT.md)**              | Production deploy paths, verification checklist, and rollback                                             |
+| **[CI/CD Operations](./docs/operations/CI_CD.md)**                     | Required CI gates, promotion, releases, and failure triage                                                |
+| **[Secrets Inventory](./docs/operations/SECRETS.md)**                  | Every secret: generation, consumers, rotation & blast radius                                              |
+| **[Observability](./docs/operations/OBSERVABILITY.md)**                | Health, metrics, logs, alert policy, and first response                                                   |
+| **[Recovery](./docs/operations/RECOVERY.md)**                          | Off-host archive, restore drills, and production recovery safeguards                                      |
+| **[Credential Response](./docs/operations/CREDENTIAL-RESPONSE.md)**    | Private rotation and verification procedure for an exposed secret                                         |
+| **[Post-Mortem Log](./docs/archive/process/post-mortem.md)**           | Production bugs found and fixed, with root cause analysis                                                 |
 
 Historical documents (tickets, investigations, older audits) live in
 [`docs/archive/`](./docs/archive).

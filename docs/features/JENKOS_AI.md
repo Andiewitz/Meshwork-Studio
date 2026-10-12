@@ -1,6 +1,12 @@
-# Jenkos AI Architecture, Persistence & Security
+# Jenkos AI (reference)
 
-**Jenkos** (formerly Mosh / Meshwork AI) is the embedded cloud architecture co-pilot and persistent intelligence layer inside Meshwork Studio. It interprets natural language prompts, preserves contextual conversation threads, maintains architectural memory across workspaces, and translates requirements directly into structural canvas modifications (ReactFlow nodes and edges).
+> Status: active · Updated: 2026-10-12 · Context: the AI co-pilot that turns
+> plain-English requests into canvas diagrams. Your AI keys are encrypted —
+> how: [`../SECURITY.md`](../SECURITY.md#api-key-encryption-byok).
+
+**Jenkos** is the embedded cloud-architecture co-pilot inside Meshwork Studio.
+Describe what you want in words; it reads the current canvas, remembers past
+conversations per workspace, and adds or changes diagram nodes and edges for you.
 
 ---
 

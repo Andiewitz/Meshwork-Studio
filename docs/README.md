@@ -1,53 +1,46 @@
-# Meshwork Studio Documentation
+# Docs — find what you need
 
-Developer documentation, organized by domain.
+> Every page starts with a `Status` line. **Guides** answer "how do I…?" in
+> plain language; **references** keep every technical detail one click away.
 
----
+## I want to…
 
-## Security & Identity
+| I want to…                        | Read                                                                                                    |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Deploy code / start the server    | [**Scripts Guide**](./operations/SCRIPTS.md)                                                            |
+| Understand releases & rollbacks   | [**Deployment**](./operations/DEPLOYMENT.md)                                                            |
+| Run or fix tests                  | [**Testing**](./development/TESTING.md)                                                                 |
+| Understand logins & sessions      | [**Auth guide**](./AUTH_ARCHITECTURE.md)                                                                |
+| Configure secrets / rotate a leak | [**Secrets**](./operations/SECRETS.md) / [**Credential Response**](./operations/CREDENTIAL-RESPONSE.md) |
+| Back up / restore                 | [**Recovery**](./operations/RECOVERY.md)                                                                |
+| Check health, logs, metrics       | [**Observability**](./operations/OBSERVABILITY.md)                                                      |
+| Look after the EC2 box            | [**EC2 Operations**](./operations/EC2_OPERATIONS.md)                                                    |
+| Change the UI / theme             | [**Design System**](../DESIGN.md), [**Theming**](./features/THEMING.md)                                 |
+| Work on canvas code               | [**Canvas Schema**](./architecture/CANVAS_SCHEMA.md)                                                    |
+| Work on AI features               | [**Jenkos AI**](./features/JENKOS_AI.md)                                                                |
+| Change docs correctly             | [**Documentation Maintenance**](./development/DOCUMENTATION.md)                                         |
 
-- [**Auth Architecture**](./AUTH_ARCHITECTURE.md) — The Go identity service:
-  sessions, MFA, OAuth, threat model, ownership map, cutover/rollback.
-- [**Security Architecture**](./SECURITY.md) — Every layer from browser to
-  database: CSRF, IDOR protection, brute-force defence, BYOK encryption,
-  logging/PII policy.
+## All pages by area
 
-## Architecture
+**Security & identity:** [Auth guide](./AUTH_ARCHITECTURE.md) ·
+[Security reference](./SECURITY.md)
 
-- [**Canvas Schema**](./architecture/CANVAS_SCHEMA.md) — ReactFlow node/edge structures and canvas data model.
-- [**The Engine**](./architecture/ENGINE.md) — Internal drawing engine and canvas state management.
-- [**Persistence**](./architecture/PERSISTENCE.md) — Browser recovery and DynamoDB canvas persistence.
-- [**Service Boundaries**](./architecture/SERVICE_BOUNDARIES.md) — Domain ownership, internal calls, API contracts, and migrations.
+**Architecture:** [Canvas Schema](./architecture/CANVAS_SCHEMA.md) ·
+[Engine](./architecture/ENGINE.md) · [Persistence](./architecture/PERSISTENCE.md) ·
+[Service Boundaries](./architecture/SERVICE_BOUNDARIES.md)
 
-## Features
+**Features:** [Design System](../DESIGN.md) · [Jenkos AI](./features/JENKOS_AI.md) ·
+[Workspaces](./features/WORKSPACES.md) · [Settings](./features/SETTINGS.md) ·
+[Theming](./features/THEMING.md)
 
-- [**Design System**](../DESIGN.md) — Canonical visual language, tokens, primitives, accessibility baseline, and migration rules.
-- [**Jenkos AI**](./features/JENKOS_AI.md) — Embedded AI co-pilot and Bring Your Own Key (BYOK) mechanics.
-- [**Workspaces**](./features/WORKSPACES.md) — Workspace and real-time collaboration module.
-- [**Settings**](./features/SETTINGS.md) — User preferences, security settings and account architecture.
-- [**Theming implementation**](./features/THEMING.md) — Token implementation and future-theme requirements.
+**Run the platform:** [Infrastructure](./infrastructure/INFRASTRUCTURE.md) ·
+[Scripts](./operations/SCRIPTS.md) · [Deployment](./operations/DEPLOYMENT.md) ·
+[CI/CD](./operations/CI_CD.md) · [EC2](./operations/EC2_OPERATIONS.md) ·
+[Secrets](./operations/SECRETS.md) · [Observability](./operations/OBSERVABILITY.md) ·
+[Recovery](./operations/RECOVERY.md) · [Credential Response](./operations/CREDENTIAL-RESPONSE.md)
 
-## Infrastructure
+**Build it:** [Testing](./development/TESTING.md) ·
+[Documentation rules](./development/DOCUMENTATION.md)
 
-- [**Infrastructure**](./infrastructure/INFRASTRUCTURE.md) — Current single-EC2 topology and growth path.
-- [**Deployment Runbook**](./operations/DEPLOYMENT.md) — Deploy paths, verification, rollback.
-- [**CI/CD Operations**](./operations/CI_CD.md) — Required checks, deployment promotion, releases, and failure triage.
-- [**EC2 Operations**](./operations/EC2_OPERATIONS.md) — Day-to-day instance and service operations.
-- [**Secrets Inventory**](./operations/SECRETS.md) — Every secret: generation, consumers, rotation.
-- [**Observability**](./operations/OBSERVABILITY.md) — Health, metrics, logs, alerts, and incident response.
-- [**Recovery**](./operations/RECOVERY.md) — Backup prerequisites, restore drills, and production recovery boundaries.
-- [**Historical Credential Response**](./operations/HISTORICAL-CREDENTIAL-RESPONSE.md) — Private rotation and verification procedure for historical exposure.
-
-## Development
-
-- [**Testing**](./development/TESTING.md) — Test pyramid, commands, conventions.
-- [**Documentation Maintenance**](./development/DOCUMENTATION.md) — Source ownership and documentation review rules.
-
-## Archive
-
-Historical material kept for context only — **not** current guidance:
-
-- [`process/`](./archive/process/) — Q2 tickets, plans, investigations, post-mortems.
-- [`security-audit-2026-03.md`](./archive/security-audit-2026-03.md) — Original audit (superseded by the 2026-08 auth overhaul).
-- [`aws-migration-and-deployment.md`](./archive/aws-migration-and-deployment.md) — Earlier migration plan (references the removed JWT/csurf stack).
-- [`incidents/`](./archive/incidents/) — Historical incident reports.
+**History (not current guidance):** [`archive/`](./archive/) — old plans,
+the March security audit, incident reports, and the retired cleanup `PLAN.md`.

@@ -94,11 +94,11 @@ reliability iterations. `P2` is important hardening after the data path is safe.
 
 ### D01 — incomplete DynamoDB batches are acknowledged as successful
 
-[`dynamo.ts`](../server/services/canvas/db/dynamo.ts) lines 165–179 sends each
+[`dynamo.ts`](../../../server/services/canvas/db/dynamo.ts) lines 165–179 sends each
 25-item batch once and discards the response. DynamoDB documents that a batch is
 not atomic and may return failed writes in `UnprocessedItems` while the request
 itself succeeds. The current route then returns success and
-[`use-canvas.ts`](../client/src/hooks/use-canvas.ts) lines 41–43 deletes the local
+[`use-canvas.ts`](../../../client/src/hooks/use-canvas.ts) lines 41–43 deletes the local
 recovery copy.
 
 Repair:
@@ -119,8 +119,8 @@ Reference: [AWS BatchWriteItem API](https://docs.aws.amazon.com/amazondynamodb/l
 
 ### D02 — paginated canvases are truncated and can later be deleted
 
-[`getNodes`](../server/services/canvas/db/dynamo.ts) lines 183–199 and
-[`getEdges`](../server/services/canvas/db/dynamo.ts) lines 202–218 each issue one
+[`getNodes`](../../../server/services/canvas/db/dynamo.ts) lines 183–199 and
+[`getEdges`](../../../server/services/canvas/db/dynamo.ts) lines 202–218 each issue one
 query. DynamoDB Query pages are at most 1 MB and require the response's
 `LastEvaluatedKey` to be supplied as the next request's `ExclusiveStartKey`.
 The file already contains a correct paginator at lines 145–162, but these reads
@@ -146,7 +146,7 @@ Reference: [AWS DynamoDB query pagination](https://docs.aws.amazon.com/amazondyn
 
 ### D03 — nested navigation can autosave a sub-canvas as the root
 
-[`Workspace.tsx`](../client/src/pages/Workspace.tsx) lines 607–646 moves the root
+[`Workspace.tsx`](../../../client/src/pages/Workspace.tsx) lines 607–646 moves the root
 canvas into an in-memory `canvasStack` and replaces top-level `nodes`/`edges` with
 the selected node's sub-canvas. The unconditional autosave at lines 861–895 and
 manual save at lines 1115–1140 both send those displayed arrays to the root
@@ -167,10 +167,10 @@ Acceptance: root IDs and all nested edits survive every navigation/save sequence
 
 ### D04 and C01 — snapshot races and unsafe recovery acknowledgements
 
-[`syncCanvas`](../server/services/canvas/db/dynamo.ts) lines 221–255 is an
+[`syncCanvas`](../../../server/services/canvas/db/dynamo.ts) lines 221–255 is an
 eventually consistent read-modify-write with no version check. Independent tabs
 can both read revision N; the last save silently wins. Separately,
-[`use-canvas.ts`](../client/src/hooks/use-canvas.ts) clears the one local cache on
+[`use-canvas.ts`](../../../client/src/hooks/use-canvas.ts) clears the one local cache on
 any mutation success, even when a newer edit generation is already cached.
 
 Repair:
@@ -190,7 +190,7 @@ cannot provide safe collaborative merging.
 
 ### B01 — the backup utility does not represent the current system
 
-[`backup-db.ts`](../scripts/backup-db.ts) uses only `DATABASE_URL`, assumes old
+[`backup-db.ts`](../../../scripts/backup-db.ts) uses only `DATABASE_URL`, assumes old
 single-database tables including PostgreSQL `nodes`/`edges`, skips missing tables,
 catches other per-table errors, and still prints `Complete`. It omits the auth,
 workspace, team, Jenkos/AI, and metrics database boundaries, DynamoDB canvases,
@@ -239,9 +239,9 @@ References: [PostgreSQL pg_dump](https://www.postgresql.org/docs/16/app-pgdump.h
 
 ### A01 — the verifier holds signing material
 
-[`assertion.go`](../server/services/auth/internal/assertion/assertion.go) lines
+[`assertion.go`](../../../server/services/auth/internal/assertion/assertion.go) lines
 114–118 calls `s.priv.Seed()` from a function named `PublicKeySeed`.
-[`assertion.ts`](../server/auth/assertion.ts) lines 27–57 reconstructs a private
+[`assertion.ts`](../../../server/auth/assertion.ts) lines 27–57 reconstructs a private
 key from that seed and derives its public half. Therefore
 `AUTH_ASSERTION_PUBLIC_KEY` is actually private signing material. An isolated
 generated-key test confirmed the verifier accepted the private seed and rejected
@@ -260,16 +260,16 @@ Repair:
 
 ### A02 — enabled CAPTCHA and email verification paths are broken
 
-[`captchaProtect`](../server/services/auth/internal/httpapi/middleware.go) lines
+[`captchaProtect`](../../../server/services/auth/internal/httpapi/middleware.go) lines
 244–264 decodes the entire registration request into a struct containing only
 `captchaToken`. `readJSON` disallows unknown fields and closes the body, so a real
 registration payload is rejected when CAPTCHA is enabled and cannot be decoded
 again by the handler.
 
-[`handleVerifyEmail`](../server/services/auth/internal/httpapi/handlers_flows.go)
+[`handleVerifyEmail`](../../../server/services/auth/internal/httpapi/handlers_flows.go)
 lines 137–146 copies `body.Token` before decoding, so JSON tokens fall through to
 the query string. The client at
-[`auth-client.ts`](../client/src/auth/auth-client.ts) lines 137–144 sends JSON and
+[`auth-client.ts`](../../../client/src/auth/auth-client.ts) lines 137–144 sends JSON and
 does not attach the CSRF header required by the Go route.
 
 Repair the body middleware by buffering/restoring a size-bounded body or, better,
@@ -280,8 +280,8 @@ unknown fields, JSON/query verification, missing/expired tokens, and CSRF retry.
 
 ### A03 — Redis boot failure contradicts fail-closed intent
 
-[`main.go`](../server/services/auth/cmd/server/main.go) lines 89–104 leaves `rdb`
-nil when the configured Redis ping fails. [`ratelimit.go`](../server/services/auth/internal/ratelimit/ratelimit.go)
+[`main.go`](../../../server/services/auth/cmd/server/main.go) lines 89–104 leaves `rdb`
+nil when the configured Redis ping fails. [`ratelimit.go`](../../../server/services/auth/internal/ratelimit/ratelimit.go)
 lines 40–43 and 63–84 allow requests when the client is nil. The log says rate
 limiting and MFA fail closed, but login/register limiters actually disappear.
 Go `/healthz` and `/readyz` check only PostgreSQL.
@@ -294,7 +294,7 @@ recovery. MFA should return an explicit dependency error, never silently weaken.
 
 ### A04 — long-lived sockets outlive session authority
 
-[`presence.ts`](../server/services/team/websocket/presence.ts) lines 368–378 checks
+[`presence.ts`](../../../server/services/team/websocket/presence.ts) lines 368–378 checks
 only the in-memory revocation set. If pub/sub was disconnected when revocation was
 published, or a session simply expires, the socket can stay authorized while it
 continues responding to pings.
@@ -306,7 +306,7 @@ revocation lag, connection age, and close reason without user email in labels.
 
 ### R01 — readiness and liveness do not describe the running application
 
-[`index.ts`](../server/index.ts) listens before initialization at lines 293–310.
+[`index.ts`](../../../server/index.ts) listens before initialization at lines 293–310.
 If registration/migration fails, lines 372–384 deliberately keep serving and add
 the static frontend. `/health` checks only workspace PostgreSQL and optional Node
 Redis (lines 203–239); `/ready` is a permanent boolean after initial boot (lines
@@ -332,7 +332,7 @@ current shallow `/health` alone.
 
 The Go service uses signal-aware shutdown, but no Node handler was found for
 `SIGTERM`, `SIGINT`, `uncaughtException`, or `unhandledRejection`.
-[`disconnectRedis`](../server/lib/redis.ts) exists but is not wired into process
+[`disconnectRedis`](../../../server/lib/redis.ts) exists but is not wired into process
 lifecycle, and the metrics collector exposes no stop handle.
 
 Implement one idempotent shutdown coordinator:
@@ -387,7 +387,7 @@ Remaining gaps:
 - No daily global/provider spend budget, bounded canvas-fingerprint cache, or
   cancellation/timeout/cost counters yet.
 - Stream output has safe termination but no request ID in its terminal error.
-- [`jenkosAgent.ts`](../client/src/features/workspace/agent/jenkosAgent.ts) lines
+- [`jenkosAgent.ts`](../../../client/src/features/workspace/agent/jenkosAgent.ts) lines
   312–332 executes every edit tool against the same original nodes/edges; a
   two-tool probe retained only the second edit.
 
@@ -411,8 +411,8 @@ Repair contract:
 
 ### P01 — production deployment is not an atomic release
 
-[`deploy-production.yml`](../.github/workflows/deploy-production.yml) lines 57–66
-copies artifacts into the active directory. [`deploy-remote.sh`](../scripts/deploy-remote.sh)
+[`deploy-production.yml`](../../../.github/workflows/deploy-production.yml) lines 57–66
+copies artifacts into the active directory. [`deploy-remote.sh`](../../../scripts/deploy-remote.sh)
 then runs `npm ci` against active `node_modules`, copies NGINX configuration before
 validation, and restarts Node before the workflow separately replaces/restarts Go.
 There is no release manifest/checksum, current symlink, automatic rollback, or
@@ -437,7 +437,7 @@ compete with the live process or destroy its dependency tree.
 
 ### O01 and O02 — current metrics can mislead or exhaust memory
 
-[`collector.ts`](../server/services/metrics/collector/collector.ts) lines 34–49
+[`collector.ts`](../../../server/services/metrics/collector/collector.ts) lines 34–49
 sums every cumulative histogram bucket as if it were an independent count, while
 overwriting rather than summing `_sum` across label series. The computed average
 latency is therefore wrong. `requestRate` at lines 30–32 is a count per collector
@@ -445,7 +445,7 @@ interval, not a per-second rate, and its baseline advances before the database
 insert succeeds. Overlapping timer calls are possible if a snapshot exceeds the
 interval.
 
-[`metricsMiddleware.ts`](../server/middleware/metricsMiddleware.ts) lines 21–34
+[`metricsMiddleware.ts`](../../../server/middleware/metricsMiddleware.ts) lines 21–34
 uses raw `req.path` when no route matched. Go's `routeTemplate` similarly returns
 most raw paths. AI metrics accept client-influenced model strings. Random URLs or
 model names create unbounded time series.
@@ -466,10 +466,10 @@ Repair:
 
 ### O03 — make production failures traceable without leaking data
 
-The Node Pino logger at [`logger.ts`](../server/lib/logger.ts) has JSON output but
+The Node Pino logger at [`logger.ts`](../../../server/lib/logger.ts) has JSON output but
 no request context or redaction configuration. This directly contradicts the
 recursive-redaction claim in the public Dev/Landing copy. The server build is
-minified with no source map at [`build.ts`](../scripts/build.ts) lines 39–51, Vite
+minified with no source map at [`build.ts`](../../../scripts/build.ts) lines 39–51, Vite
 also has no production source-map workflow, and frontend error boundaries only
 write to the browser console. Their chunk-error reload has no once-only guard, so
 a persistent asset mismatch can loop.
@@ -554,18 +554,18 @@ References: [EC2 burstable credit behavior](https://docs.aws.amazon.com/AWSEC2/l
 
 ### R04–R06 — dependency and API hardening
 
-- [`redis.ts`](../server/lib/redis.ts) lines 35–73 stops reconnecting after five
+- [`redis.ts`](../../../server/lib/redis.ts) lines 35–73 stops reconnecting after five
   attempts but keeps the singleton object. Use jittered persistent recovery for
   optional cache/pub-sub roles, explicit fail-closed behavior for security roles,
   status transition metrics, and a way to rebuild subscriptions after reconnect.
-- [`db.ts`](../server/lib/db.ts) lines 29–34 gives each of four Node services a
+- [`db.ts`](../../../server/lib/db.ts) lines 29–34 gives each of four Node services a
   maximum of ten connections; Go adds ten and keeps two warm. Pools allocate
   lazily, but the 50-connection ceiling is not budgeted against the database or
   small host. Make pool sizes per service configurable, begin around 2–4 for
   request-serving domains and 1–2 for metrics, expose waiters, then load test.
   Set transaction, statement, and lock timeouts so one query cannot occupy a slot
   indefinitely.
-- [`static.ts`](../server/static.ts) sends `index.html` for every unmatched GET.
+- [`static.ts`](../../../server/static.ts) sends `index.html` for every unmatched GET.
   Add an explicit JSON `/api` 404/method handler before the SPA fallback and make
   client fetch validate content type before parsing.
 

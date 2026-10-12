@@ -45,7 +45,7 @@ aws rds create-db-instance \
 > These settings are intentionally non-zero/non-destructive: snapshots on the
 > same account are not a substitute for the verified off-host application
 > archive, but zero retention and no deletion protection provide no recovery
-> window at all. Use the [backup and recovery plan](../plans/Q5-BACKUP-AND-RECOVERY.md)
+> window at all. Use the [backup and recovery plan](../docs/archive/plans/Q5-BACKUP-AND-RECOVERY.md)
 > before creating or modifying the production instance.
 
 # 4. Wait for available, then create second database

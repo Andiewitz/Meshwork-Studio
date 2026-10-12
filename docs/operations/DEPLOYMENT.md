@@ -1,115 +1,103 @@
-# Meshwork Studio — Production Deployment Guide
+# Deployment — putting code on the live server
 
-> Canonical runbook for the production EC2 instance. Secrets inventory lives
-> in [`SECRETS.md`](./SECRETS.md). Day-to-day start/stop lives in
-> [`EC2_OPERATIONS.md`](./EC2_OPERATIONS.md).
+> Status: active · Updated: 2026-10-12 · Context: the deep reference for
+> releases. Daily commands live in [`SCRIPTS.md`](./SCRIPTS.md); server
+> care in [`EC2_OPERATIONS.md`](./EC2_OPERATIONS.md).
 
----
+## Production facts (canonical)
 
-## Production facts
+| Thing        | Value                                                            |
+| ------------ | ---------------------------------------------------------------- |
+| Instance     | `<YOUR_EC2_INSTANCE_ID>` — Ubuntu 22.04, `t3.small`, `us-east-1` |
+| SSH          | `ssh -i <YOUR_SSH_KEY> ubuntu@<YOUR_DOMAIN>`                     |
+| Public URL   | `https://<YOUR_DOMAIN>` (nginx + TLS)                            |
+| App folder   | `/home/ubuntu/meshwork-studiov2`                                 |
+| Secrets file | `/home/ubuntu/meshwork-studiov2/.env` (`chmod 600`)              |
 
-| Resource       | Value                                                              |
-| -------------- | ------------------------------------------------------------------ |
-| Instance       | `<YOUR_EC2_INSTANCE_ID>` — Ubuntu 22.04 LTS, `t3.small`, us-east-1 |
-| SSH            | `ssh -i <YOUR_SSH_KEY> ubuntu@<YOUR_DOMAIN>`                       |
-| Public URL     | `https://<YOUR_DOMAIN>` (NGINX + TLS)                              |
-| Remote app dir | `/home/ubuntu/meshwork-studiov2`                                   |
-| Env file       | `/home/ubuntu/meshwork-studiov2/.env` (chmod 600)                  |
+How traffic flows on the box:
 
-### Runtime topology on the box
-
-```
-NGINX :80/:443 ── TLS termination, static frontend
- ├─ /api/v1/auth/* , /api/v1/user/*  → Go auth service  (PM2 meshwork-auth, :8081)
- ├─ /api/* , /health , /ready        → Node monolith    (PM2 meshwork,     :5000)
- └─ /ws                              → Node monolith (WebSocket upgrade)
-
-PostgreSQL domain databases, Redis, and DynamoDB remain private dependencies.
+```text
+nginx :80/:443 (ends TLS, serves the website files)
+ ├─ /api/v1/auth/* , /api/v1/user/* → Go auth service (PM2 meshwork-auth, :8081)
+ ├─ /api/* , /health , /ready       → Node app         (PM2 meshwork,     :5000)
+ └─ /ws                             → Node app (live-canvas connections)
 ```
 
-The **Go auth service** (`server/services/auth`) owns users, sessions, MFA, OAuth and
-audit. The monolith only validates sessions through its auth bridge.
-Architecture details: [`../AUTH_ARCHITECTURE.md`](../AUTH_ARCHITECTURE.md).
+Postgres, Redis, and DynamoDB are private helpers behind the apps. The Go
+auth service owns logins, sessions, MFA, and OAuth; the Node app only checks
+sessions using a public key. Details:
+[`../AUTH_ARCHITECTURE.md`](../AUTH_ARCHITECTURE.md).
 
----
+## Path A — GitHub Actions (normal releases)
 
-## Deploy path A — GitHub Actions (preferred)
+Pushing to `main` runs the `CI/CD Pipeline` workflow; on success it triggers
+`Deploy to Production` (`develop` → staging). The robot:
 
-`.github/workflows/deploy-production.yml` runs after a successful CI run for
-`main`, using the exact SHA verified by CI:
+1. Builds the website + app bundle (`npm run build`)
+2. Compiles the Go auth program for Linux
+3. Copies `dist/`, configs, and the auth program to the server
+4. Runs `scripts/deploy-remote.sh` **on the server** (swaps folders, restarts)
+5. Restarts the auth service, checks `:8081/healthz`
+6. Checks the public `/health`, then runs browser smoke tests
 
-1. Builds the client+monolith bundle (`npm run build`)
-2. Cross-compiles the Go auth binary (`linux/amd64`, migrations embedded)
-3. SCPs `dist/`, manifests and `meshwork-auth` to the instance
-4. Runs `scripts/deploy-remote.sh` on the instance (dist swap + PM2 reload)
-5. Installs/restarts `meshwork-auth` under PM2, probes `127.0.0.1:8081/healthz`
-6. Health-gates the deploy, then runs Playwright `@smoke` E2E
+Needs repo secrets: `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`, `VITE_API_URL`.
+You never run `deploy-remote.sh` by hand — it's the robot's tool.
 
-Required repo secrets: `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`, `VITE_API_URL`.
-
-## Deploy path B — local dist-swap (manual / emergency)
+## Path B — deploy from your laptop (manual / emergency)
 
 ```bash
-./scripts/deploy.sh               # builds everything, ships both artifacts
-./scripts/deploy.sh --skip-build  # reuse existing dist/
-./scripts/deploy.sh --skip-auth   # monolith-only change
+meshwork-deploy               # build everything & deploy live
+meshwork-deploy --skip-build  # reuse existing dist/ (no rebuild)
+meshwork-deploy --skip-auth   # app-only change, skip Go build
 ```
 
-The script rsyncs `dist/`, uploads `meshwork-auth` to a staging dir, performs
-atomic swaps (`dist.old` / `meshwork-auth.old` kept for instant rollback),
-reloads both PM2 processes and prints health status for :5000 and :8081.
+(Without global install: `./scripts/deploy.sh` with the same flags.)
+What it does: builds locally → uploads `dist/` + auth program → swaps them
+into place atomically (old copies kept as `dist.old` / `meshwork-auth.old`)
+→ restarts both PM2 apps → prints health for `:5000` and `:8081`.
+Full flag/table docs: [`SCRIPTS.md`](./SCRIPTS.md).
 
-> First time enabling the auth service on the box? Ensure its env vars exist
-> in the remote `.env` (`AUTH_*` namespace — see
-> [`SECRETS.md`](./SECRETS.md)) and NGINX carries the identity location block
-> from `deploy/nginx.conf`.
+> First time turning on the auth service? Its `AUTH_*` settings must exist in
+> the server `.env` (see [`SECRETS.md`](./SECRETS.md)) and nginx needs the
+> identity block from `deploy/nginx.conf`.
 
----
-
-## Verification checklist
+## Did it work? (verification)
 
 ```bash
 # On the server:
 pm2 ls                                # expect: meshwork, meshwork-auth online
 curl -s localhost:5000/health         # {"status":"healthy",...}
 curl -s localhost:8081/healthz        # {"status":"healthy",...}
-sudo nginx -t && sudo systemctl reload nginx
 
-# End-to-end auth smoke test (from anywhere):
+# Full login test, from anywhere (201 + user JSON = everything works):
 BASE=https://<YOUR_DOMAIN>
 CSRF=$(curl -s -c /tmp/cj $BASE/api/v1/auth/csrf-token | jq -r .csrfToken)
 curl -s -b /tmp/cj -c /tmp/cj -X POST $BASE/api/v1/auth/register \
   -H "Origin: $BASE" -H "X-CSRF-Token: $CSRF" \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"smoke+$RANDOM@example.com\",\"password\":\"SmokeTest123!\"}"
-# → 201 with user JSON means auth service + DB + cookies all work
 ```
 
-## Rollback
+## Undoing a bad deploy (rollback)
 
-| Failure          | Action                                                                                                                                                              |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Monolith bad     | `ssh … 'cd ~/meshwork-studiov2 && rm -rf dist && mv dist.old dist && pm2 reload meshwork'`                                                                          |
-| Auth service bad | `mv meshwork-auth.old meshwork-auth && pm2 restart meshwork-auth`                                                                                                   |
-| Routing bad      | revert the `/api/v1/(auth\|user)/` location block in `/etc/nginx/sites-available/*` back to `proxy_pass http://127.0.0.1:5000;` — sessions are valid on both stacks |
-| GHA deploy bad   | re-run the workflow on the previous commit                                                                                                                          |
+| What broke       | Undo it with                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| App bad          | `ssh … 'cd ~/meshwork-studiov2 && rm -rf dist && mv dist.old dist && pm2 reload meshwork'`    |
+| Auth bad         | `mv meshwork-auth.old meshwork-auth && pm2 restart meshwork-auth`                             |
+| Routing bad      | Revert the `/api/v1/(auth\|user)/` block in nginx back to `proxy_pass http://127.0.0.1:5000;` |
+| Robot deploy bad | Re-run the GitHub workflow on the previous commit                                             |
 
-Sessions are shared opaque tokens hashed in `auth_db`: either stack validates
-them, so rolling back never logs users out.
+Rolling back never logs users out: sessions are shared tokens both stacks accept.
 
-## Fresh instance bootstrap
+## Brand-new server (first boot)
 
-`deploy/ec2-user-data.sh` provisions Docker, NGINX and base tooling on first
-boot; `deploy/rds-setup.md` covers managed-Postgres setup if you outgrow the
-on-instance containers. After first boot:
-
-1. Clone the repo to `~/meshwork-studiov2`
-2. Create `.env` from the inventory in [`SECRETS.md`](./SECRETS.md)
-   ⚠️ Database cutover note: the consolidated Postgres starts EMPTY.
-   Run `npx tsx scripts/provision-dynamodb.mjs` for the canvas table.
-   Existing canvas/team/ai rows are NOT migrated (fresh start).
-   (generate every key listed there — no defaults exist). The auth
-   service's `AUTH_ASSERTION_PRIVATE_KEY` and the monolith's
-   `AUTH_ASSERTION_PUBLIC_KEY` must be generated as one keypair.
-3. Run `./scripts/deploy.sh`
-4. Point the DNS record at the instance's public IP / Elastic IP
+1. `deploy/ec2-user-data.sh` installs Docker, nginx, base tools on first boot.
+   `deploy/rds-setup.md` covers managed Postgres if you outgrow the box.
+2. Clone the repo to `~/meshwork-studiov2`.
+3. Write `.env` using [`SECRETS.md`](./SECRETS.md) — generate **every** key,
+   no defaults exist. The auth service's `AUTH_ASSERTION_PRIVATE_KEY` and the
+   app's `AUTH_ASSERTION_PUBLIC_KEY` must be one matching pair.
+   ⚠️ The database starts **empty** — existing data is not migrated.
+   Create the canvas table: `npx tsx scripts/provision-dynamodb.mjs`.
+4. Run `meshwork-deploy`.
+5. Point DNS at the instance's public / Elastic IP.

@@ -1,6 +1,7 @@
-# Canvas Engine
+# Canvas engine (reference)
 
-> How Meshwork Studio turns drag-and-drop interactions into persistent, performant architecture diagrams.
+> Status: active · Updated: 2026-10-12 · Context: how drag-and-drop becomes
+> a saved architecture diagram. Data shapes: [`CANVAS_SCHEMA.md`](./CANVAS_SCHEMA.md).
 
 ## Table of Contents
 

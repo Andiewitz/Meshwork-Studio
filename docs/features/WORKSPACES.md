@@ -1,4 +1,8 @@
-# Workspaces, Teams, and Canvas Access
+# Workspaces, teams & canvas access (reference)
+
+> Status: active · Updated: 2026-10-12 · Context: who can see and change
+> what. Canvas data shapes: [`../architecture/CANVAS_SCHEMA.md`](../architecture/CANVAS_SCHEMA.md);
+> how canvases are saved: [`../architecture/PERSISTENCE.md`](../architecture/PERSISTENCE.md).
 
 Workspaces hold canvas metadata in PostgreSQL and canvas documents in DynamoDB.
 Collections are private folders owned by one user. Teams can share a workspace

@@ -1,14 +1,14 @@
 # Implementation plans
 
-This folder holds focused audits and actionable implementation plans. A plan is
-a proposal until its tasks are implemented and its acceptance checks pass.
+Active plans live here. A plan is a proposal until its tasks are implemented
+and its acceptance checks pass. Completed point-in-time audits are kept as
+history in [`docs/archive/plans/`](../docs/archive/plans/).
 
-| Plan                                                          | Status                            | Scope                                                                                                                     |
-| ------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [Codebase reliability audit](CODEBASE-RELIABILITY-AUDIT.md)   | Active; P0 canvas Q1–Q4 complete  | Data safety, auth, failure handling, observability, backups, recovery, t3.small capacity, and cost                        |
-| [CI/CD audit and repair plan](CI-CD-AUDIT.md)                 | Draft, audited 2026-09-06         | GitHub Actions, artifact packaging, EC2 deployment, tests, release automation, recovery, and pipeline cost                |
-| [Open-source readiness audit](OPEN-SOURCE-READINESS-AUDIT.md) | Audited 2026-09-16; blockers open | Historical credentials, reproducible setup, build/tests, public-key isolation, licensing, community and release readiness |
+| Plan                                                                | Status | Scope                                     |
+| ------------------------------------------------------------------- | ------ | ----------------------------------------- |
+| [Collaborators replacement plan](COLLABORATORS-REPLACEMENT-PLAN.md) | Active | Team replacement, workspace collaborators |
 
-The root [PLAN.md](../PLAN.md) remains the broad cleanup history. The codebase
-reliability audit is the current prioritized implementation backlog; the CI/CD
-plan expands its pipeline and deployment findings.
+Archived (implemented or superseded): codebase reliability, CI/CD, node system,
+open-source readiness, test suite, and Q5 backup & recovery audits — see
+[`docs/archive/plans/`](../docs/archive/plans/). The broad cleanup history is
+[`docs/archive/PLAN.md`](../docs/archive/PLAN.md).

@@ -1,4 +1,4 @@
-# Historical Credential Response
+# Credential Response
 
 Use this runbook when a secret was committed to Git history. Treat the value as
 potentially exposed even when the file no longer exists at `main`.

@@ -100,8 +100,8 @@ unverified. The release annotation does establish that a PR rule exists.
 
 ### F01 — P0: production and staging bypass CI
 
-Evidence: [production workflow](../.github/workflows/deploy-production.yml),
-lines 3–6; [staging workflow](../.github/workflows/deploy-staging.yml), lines 3–6.
+Evidence: [production workflow](../../../.github/workflows/deploy-production.yml),
+lines 3–6; [staging workflow](../../../.github/workflows/deploy-staging.yml), lines 3–6.
 Each deploys on a branch push in an independent workflow. Neither waits for CI or
 auth checks. Build in CI also excludes security and coverage jobs from its needs.
 
@@ -122,7 +122,7 @@ deliberate aggregate result rather than leaving required checks pending.
 Evidence: production line 63 and staging line 51 upload a missing root `shared`
 directory. Both later execute `scripts/deploy-remote.sh`, but neither uploads
 `scripts`. The archive also omits workspace package manifests even though the
-[root package](../package.json) declares npm workspaces. Root Drizzle config
+[root package](../../../package.json) declares npm workspaces. Root Drizzle config
 points into `server/shared/schema.ts`, which that upload does not contain.
 
 Fix: create one versioned release archive in CI with an explicit allowlist and
@@ -137,14 +137,14 @@ release directory. Missing entrypoint, package, or binary fails before SSH.
 
 ### F03 — P0: remote installs and migration paths are not reproducible
 
-Evidence: [deploy-remote.sh](../scripts/deploy-remote.sh), lines 48–52, runs
+Evidence: [deploy-remote.sh](../../../scripts/deploy-remote.sh), lines 48–52, runs
 `npm install --omit=dev --legacy-peer-deps` followed by `drizzle-kit push`.
-[package.json](../package.json) runs `husky` in prepare, while Husky is a dev
+[package.json](../../../package.json) runs `husky` in prepare, while Husky is a dev
 dependency. A clean production-only install therefore needs an explicit lifecycle
-strategy. [drizzle.config.ts](../drizzle.config.ts) requires `DATABASE_URL`, while
+strategy. [drizzle.config.ts](../../../drizzle.config.ts) requires `DATABASE_URL`, while
 the application uses domain-specific DSNs. Node and Go already apply versioned
-migrations during startup; see [Node migration runner](../server/lib/migrate.ts)
-and [Go migration runner](../server/services/auth/internal/store/migrate.go).
+migrations during startup; see [Node migration runner](../../../server/lib/migrate.ts)
+and [Go migration runner](../../../server/services/auth/internal/store/migrate.go).
 
 Fix: prepare locked production dependencies on a Linux runner matching the host's
 OS/architecture, and include them in the archive. Account for workspace symlinks
@@ -166,7 +166,7 @@ dev tools. Repeated migration runs are safe. A failed migration stops activation
 ### F04 — P0: updates lack a complete rollback transaction
 
 Evidence: workflows upload directly over the application directory with `rm: false`.
-[local deploy script](../scripts/deploy.sh), lines 194–234, moves `dist` and the
+[local deploy script](../../../scripts/deploy.sh), lines 194–234, moves `dist` and the
 auth binary separately and deletes/recreates PM2 processes. Despite its comments,
 the two directory moves are not one atomic release switch. It transfers neither
 updated dependencies nor a complete release. Staging cancellation can interrupt
@@ -193,7 +193,7 @@ the job reports failure, and logs identify both attempted and restored SHAs.
 
 ### F05 — P0: health success does not prove release readiness
 
-Evidence: [server/index.ts](../server/index.ts), lines 203–248 and 296–376,
+Evidence: [server/index.ts](../../../server/index.ts), lines 203–248 and 296–376,
 exposes `/health` before module initialization finishes. It can keep serving
 health after route initialization fails; `/ready` tracks initialization separately.
 The remote script only warns on failed health, and the local deploy script prints
@@ -214,12 +214,12 @@ produce a successful deployment. Auth starts correctly on a fresh target.
 
 ### F06 — P1: E2E environment no longer matches the application
 
-Evidence: [ci.yml](../.github/workflows/ci.yml), lines 112–153, provisions one
-PostgreSQL database and exports legacy generic DSNs. [makeServiceDb](../server/lib/db.ts)
+Evidence: [ci.yml](../../../.github/workflows/ci.yml), lines 112–153, provisions one
+PostgreSQL database and exports legacy generic DSNs. [makeServiceDb](../../../server/lib/db.ts)
 rejects missing per-service DSNs. CI does not start Go auth, Redis, or DynamoDB
-Local. [Playwright config](../playwright.config.ts) sets `E2E_BYPASS_AUTH=true`,
+Local. [Playwright config](../../../playwright.config.ts) sets `E2E_BYPASS_AUTH=true`,
 but runtime code does not implement that flag and the
-[security guard](../scripts/no-auth-bypass.sh) forbids it. Existing dashboard tests
+[security guard](../../../scripts/no-auth-bypass.sh) forbids it. Existing dashboard tests
 assume the removed bypass. GitHub confirms E2E failure; full logs should establish
 the first runtime error before implementation.
 
@@ -249,14 +249,14 @@ configured origin, and a deliberate public routing failure fails deployment.
 
 ### F08 — P1: coverage and DynamoDB parity checks give false reassurance
 
-Evidence: [Vitest config](../vitest.config.ts), line 20, produces text/json/html,
+Evidence: [Vitest config](../../../vitest.config.ts), line 20, produces text/json/html,
 but CI expects `coverage-summary.json` and explicitly exits successfully when it
 is absent. No built-in threshold is configured. The 80% threshold is therefore
 not enforced through the configured reporting path.
 
 The former DynamoDB parity suite skipped itself during collection before its
 reachability check could run. It is now an explicit system test at
-[`tests/system/canvas/dynamodb-parity.test.ts`](../tests/system/canvas/dynamodb-parity.test.ts)
+[`tests/system/canvas/dynamodb-parity.test.ts`](../../../tests/system/canvas/dynamodb-parity.test.ts)
 and CI runs it against its DynamoDB Local service. Vitest's own DSNs point to
 port 5434, whereas CI's PostgreSQL service uses 5432.
 Many integration suites mock storage, so a passing run is not proof of real DB IO.
@@ -275,9 +275,9 @@ that dependency is intentionally absent in CI.
 
 ### F09 — P1: Go workflow configuration and security need repair
 
-Evidence: [auth.yml](../.github/workflows/auth.yml), lines 8/12, filters changes
+Evidence: [auth.yml](../../../.github/workflows/auth.yml), lines 8/12, filters changes
 to a nonexistent `identity.yml`, so editing auth.yml alone does not trigger it.
-[.golangci.yml](../server/services/auth/.golangci.yml) nests linters under run;
+[.golangci.yml](../../../server/services/auth/.golangci.yml) nests linters under run;
 the hosted annotation explicitly rejects this schema. gosec receives an unsupported
 `workdir` input; defaults.run.working-directory does not configure an action step.
 govulncheck uses `@latest`, has failed findings, and is not a Docker prerequisite.
@@ -295,10 +295,10 @@ race tests, gosec, and govulncheck pass with pinned tools on a clean runner.
 
 ### F10 — P1: Docker checks cannot validate a fresh checkout
 
-Evidence: [Dockerfile](../Dockerfile) copies host node_modules/dist and missing
+Evidence: [Dockerfile](../../../Dockerfile) copies host node_modules/dist and missing
 shared, while the Docker CI job only checks out source and never downloads build
 output or installs dependencies. It uses Node 20 while workflows select Node 22.
-[Auth Dockerfile](../server/services/auth/Dockerfile), line 16, appends shell
+[Auth Dockerfile](../../../server/services/auth/Dockerfile), line 16, appends shell
 syntax to a JSON-looking healthcheck on a distroless image without a shell.
 
 Fix: use a multi-stage reproducible root build, align the tested Node version, and
@@ -315,9 +315,9 @@ according to the documented probe contract.
 
 ### F11 — P1: release automation conflicts with main's PR rule
 
-Evidence: [.releaserc.cjs](../.releaserc.cjs) uses changelog/git plugins, and the
+Evidence: [.releaserc.cjs](../../../.releaserc.cjs) uses changelog/git plugins, and the
 hosted Release annotation reports the attempted main push was rejected by GH013.
-[release.yml](../.github/workflows/release.yml) independently builds on each push,
+[release.yml](../../../.github/workflows/release.yml) independently builds on each push,
 has broad write permissions, and does not depend on validation or deployment.
 
 Fix: prefer GitHub release notes and tags tied to the verified deployed SHA, with
@@ -333,11 +333,11 @@ verified SHA, and can be retried without modifying main or redeploying.
 
 ### F12 — P1: deployment topology and staging have drifted
 
-Evidence: [NGINX config](../deploy/nginx.conf) serves an ec2-user/app path; workflows
+Evidence: [NGINX config](../../../deploy/nginx.conf) serves an ec2-user/app path; workflows
 use a username-dependent meshwork-studiov2 path. The remote script starts Node
-with its parent directory as cwd. [start-ec2.sh](../scripts/start-ec2.sh) names two
-historical PostgreSQL containers; [Compose](../docker-compose.yml) defines one.
-[Bootstrap script](../deploy/ec2-user-data.sh) targets Amazon Linux, host Redis,
+with its parent directory as cwd. [start-ec2.sh](../../../scripts/start.sh names two
+historical PostgreSQL containers; [Compose](../../../docker-compose.yml) defines one.
+[Bootstrap script](../../../deploy/ec2-user-data.sh) targets Amazon Linux, host Redis,
 and an RDS client, while other instructions use Ubuntu and Docker datastores.
 Staging does not build/deploy auth, so it cannot validate the production pair.
 
@@ -359,8 +359,8 @@ Evidence: npm audit uses continue-on-error. Actions reference mutable tags/branc
 (including TruffleHog main and gosec master); some tools are installed at latest.
 Most workflows do not explicitly scope token permissions. SSH steps provide no
 expected host fingerprint. Runtime-deprecation annotations already exist.
-[Dependabot](../.github/dependabot.yml) does not cover Go or the nested auth
-Dockerfile. [CODEOWNERS](../.github/CODEOWNERS) still names server/modules/auth
+[Dependabot](../../../.github/dependabot.yml) does not cover Go or the nested auth
+Dockerfile. [CODEOWNERS](../../../.github/CODEOWNERS) still names server/modules/auth
 and root shared paths; its default owner still applies, but specialist paths drifted.
 
 Fix: block applicable high/critical production dependency findings; report dev

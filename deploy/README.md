@@ -15,7 +15,7 @@ Scripts live in [`/scripts`](../scripts). The **deployment runbook** is
 Quick links:
 
 - Deploy: `./scripts/deploy.sh` (local dist-swap) or push to `main` (GitHub Actions)
-- Start/stop instance: `~/start-ec2.sh`
+- Start/stop instance: `meshwork-start` (or `./scripts/start.sh`)
 - Architecture of the auth split: [`docs/AUTH_ARCHITECTURE.md`](../docs/AUTH_ARCHITECTURE.md)
 
 `nginx.conf` contains an application-root path that must match the target host

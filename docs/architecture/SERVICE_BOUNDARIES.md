@@ -1,8 +1,11 @@
-# Service Boundaries and API Contracts
+# Service boundaries & API contracts (reference)
 
-Meshwork Studio is deployed as a Node monolith plus a Go identity service. The
-code is organised into domain services so that a future extraction does not
-require shared database access.
+> Status: active · Updated: 2026-10-12 · Context: which part of the code owns
+> which data. Login flow: [`../AUTH_ARCHITECTURE.md`](../AUTH_ARCHITECTURE.md).
+
+Meshwork Studio runs as a Node app plus a Go login service. The code is
+organised into domain services (workspace, team, AI, metrics, canvas) so that
+a future split into separate services won't require shared database access.
 
 ## Ownership map
 

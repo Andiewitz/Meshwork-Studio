@@ -1,6 +1,8 @@
-# Canvas Schema — Developer Guide
+# Canvas schema (reference)
 
-> Reference documentation for the Meshwork Studio canvas data model. Covers the full JSON shape for nodes, edges, and workspace payloads, including the canonical type registry, coordinate system, nesting rules, style overrides, and AI metadata fields.
+> Status: active · Updated: 2026-10-12 · Context: the full dictionary of
+> canvas data — node/edge shapes, coordinates, nesting, styles, AI fields.
+> Start here only if you write code that reads or writes canvases.
 
 The runtime contract is defined by the React Flow types, `server/shared/schema`,
 and the canvas validation utilities. There is no checked-in Draft-07 JSON

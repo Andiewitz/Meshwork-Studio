@@ -1,8 +1,9 @@
-# Secrets & Environment Inventory
+# Secrets & environment inventory (reference)
 
-> Everything the platform needs to run, where each value is consumed, how to
-> generate it, and what happens when it leaks. **Never commit real values** —
-> `.env` and `ssh-keys/` are gitignored; keep it that way.
+> Every setting the platform needs: what it does, who reads it, how to make
+> one, and what breaks if it leaks. **Never commit real values** — `.env` and
+> `ssh-keys/` are gitignored; keep it that way. New to logins? Start at
+> [`../AUTH_ARCHITECTURE.md`](../AUTH_ARCHITECTURE.md), then come back here.
 
 ---
 

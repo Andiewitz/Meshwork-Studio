@@ -1,4 +1,8 @@
-# Settings and Account Capabilities
+# Settings & account (reference)
+
+> Status: active · Updated: 2026-10-12 · Context: what the settings UI can
+> actually do (server contract, not just rendered buttons). How logins work:
+> [`../AUTH_ARCHITECTURE.md`](../AUTH_ARCHITECTURE.md).
 
 This page documents the current server contract, not every control visible in
 the settings UI. A rendered control is not evidence that its endpoint exists.

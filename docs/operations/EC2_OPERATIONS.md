@@ -1,169 +1,81 @@
-# Meshwork Studio — EC2 Operations Guide
+# EC2 Operations — running the live server
 
-This guide covers operating the production EC2 instance.
+> Status: active · Updated: 2026-10-12 · Context: day-to-day care of the
+> production EC2 box (start, stop, logs, restarts). Deploying new code lives in
+> [`SCRIPTS.md`](./SCRIPTS.md) and [`DEPLOYMENT.md`](./DEPLOYMENT.md).
 
----
+Think of the EC2 instance as the always-on computer that serves the website.
+This guide is about keeping that computer happy. For the full production facts
+table (ports, topology, app dir), see
+[`DEPLOYMENT.md`](./DEPLOYMENT.md#production-facts).
 
-## 📌 Quick Reference
+## Quick reference
 
-| Resource / Setting     | Value                                        | Notes                                  |
-| :--------------------- | :------------------------------------------- | :------------------------------------- |
-| **Domain**             | `https://<YOUR_DOMAIN>`                      | Reverse-proxied through Nginx with SSL |
-| **AWS Region**         | `us-east-1`                                  | Default AWS Region                     |
-| **Instance ID**        | `<YOUR_EC2_INSTANCE_ID>`                     | Ubuntu 22.04 LTS x86_64                |
-| **SSH User**           | `ubuntu`                                     | Default EC2 user                       |
-| **SSH Key Path**       | `~/.ssh/<YOUR_KEY>.pem`                      | Permissions must be `chmod 400`        |
-| **Remote App Dir**     | `/home/ubuntu/meshwork-studiov2`             | PM2 root and dist location             |
-| **Local Start Script** | `~/start-ec2.sh` (or `scripts/start-ec2.sh`) | Starts instance + all services         |
+| Thing      | Value                                                                  |
+| ---------- | ---------------------------------------------------------------------- |
+| Domain     | `https://<YOUR_DOMAIN>`                                                |
+| AWS region | `us-east-1`                                                            |
+| Instance   | `<YOUR_EC2_INSTANCE_ID>` (Ubuntu 22.04)                                |
+| SSH        | `ssh -i <YOUR_KEY>.pem ubuntu@<YOUR_DOMAIN>` (key must be `chmod 400`) |
+| App folder | `/home/ubuntu/meshwork-studiov2`                                       |
 
----
+## Starting everything
 
-## 🚀 One-Command Start: `~/start-ec2.sh`
-
-To save AWS costs, the EC2 instance can be kept stopped when not in use. When you want to work:
-
-### 1. Start Services and Verify Health
-
-```bash
-~/start-ec2.sh
-```
-
-**What happens:**
-
-1. Checks AWS to ensure the EC2 instance is started (if AWS CLI is configured).
-2. Waits for network and SSH port 22 to become available.
-3. Automatically connects via SSH using `ssh-keys/Mesh-EC2.pem`.
-4. Starts the Docker daemon. Validate the actual host layout with `docker compose ps`; do not assume historical split-container names.
-5. Starts the Nginx web server.
-6. Starts/Restarts the Node.js backend under PM2 (`pm2 resurrect` / `pm2 restart meshwork`).
-7. Checks the `/health` endpoint and prints a readiness summary.
-
-### 2. Start Services + Open SSH Shell
+One command wakes the box, starts services, and checks health:
 
 ```bash
-~/start-ec2.sh --ssh
+meshwork-start              # push current dist/, start all, health-check
+meshwork-start --no-push    # start services only (no upload)
+meshwork-start --ssh        # start all, then open an SSH shell
 ```
 
-Starts everything and immediately attaches an interactive SSH terminal (`ubuntu@meshwork-studio:~$`).
+(Without the global install: `./scripts/start.sh` with the same flags.)
+Changed code? Run `meshwork-deploy` instead — `start` never builds.
+Details: [`SCRIPTS.md`](./SCRIPTS.md).
 
----
+**What it does behind the scenes:** starts the EC2 instance if stopped → waits
+for SSH → starts Docker, nginx, and the PM2 apps → probes `/health`.
 
-## 💰 Cost Saving: Stopping the Instance
+## Stopping the box (saves money)
 
-When finished working, turn off the instance to stop compute and RAM billing:
-
-### Via AWS CLI:
+When nobody needs the site, stop the instance so AWS stops billing compute:
 
 ```bash
 aws ec2 stop-instances --instance-ids <YOUR_EC2_INSTANCE_ID> --region us-east-1
 ```
 
-_(Or stop instance directly in the AWS Management Console.)_
+Or press Stop in the AWS console. Start again with `meshwork-start`.
 
----
+## Deploying new code
 
-## 🔄 Building & Deploying Updates
+Don't follow manual build/upload/restart steps — the scripts do it for you:
 
-When you make changes to frontend or backend code locally and want to push them to the server:
+- New code → live: [`SCRIPTS.md`](./SCRIPTS.md) (`meshwork-deploy`)
+- Full runbook (CI path, rollback, fresh box): [`DEPLOYMENT.md`](./DEPLOYMENT.md)
 
-### Step 1: Build Locally
+## Looking inside the box
 
 ```bash
-npm run build
+ssh -i <YOUR_KEY>.pem ubuntu@<YOUR_DOMAIN>
 ```
 
-This compiles:
-
-- Frontend assets into `dist/public/`
-- Backend bundle into `dist/index.cjs`
-
-### Step 2: Upload `dist/` to EC2
+Once in:
 
 ```bash
-rsync -avz -e "ssh -i <YOUR_SSH_KEY>" dist/ ubuntu@<YOUR_DOMAIN>:/home/ubuntu/meshwork-studiov2/dist/
-```
+pm2 status            # are the apps running?
+pm2 logs meshwork     # live backend logs
+pm2 restart meshwork  # restart the backend
+pm2 save              # remember state across reboots
 
-### Step 3: Restart App on EC2
+docker compose ps               # are postgres/redis/dynamodb up?
+docker compose logs --tail=100  # dependency logs
 
-```bash
-ssh -i <YOUR_SSH_KEY> ubuntu@<YOUR_DOMAIN> "pm2 restart meshwork"
-```
-
----
-
-## 🛠️ Remote Server Management
-
-### SSH into EC2
-
-```bash
-ssh -i <YOUR_SSH_KEY> ubuntu@<YOUR_DOMAIN>
-```
-
-### PM2 Commands
-
-```bash
-# Check application status
-pm2 status
-
-# View live application logs
-pm2 logs meshwork
-
-# Restart backend process
-pm2 restart meshwork
-
-# Save current PM2 state for reboots
-pm2 save
-```
-
-### Docker dependencies
-
-```bash
-# From the deployed repository directory, inspect the compose-managed stack.
-docker compose ps
-docker compose logs --tail=100
-
-# Restart only after identifying the failing dependency.
-docker compose restart <service>
-```
-
-### Verified backup timer
-
-The deployment bundles the recovery runner in `dist/recovery/backup.cjs`. After
-creating the S3 destination, granting the least-privilege role, enabling canvas
-PITR, and setting the `BACKUP_*` values in the protected `.env`, install the
-reviewed timer once:
-
-```bash
-cd ~/meshwork-studiov2
-chmod +x scripts/install-backup-timer.sh
-./scripts/install-backup-timer.sh
-sudo systemctl start meshwork-backup.service
-journalctl -u meshwork-backup.service -n 100 --no-pager
-```
-
-The service runs nightly with a randomized delay, a 384 MiB memory ceiling, and
-low CPU/I/O priority. A failed service is deliberately visible through systemd;
-do not treat a local Docker volume as a disaster-recovery backup. See
-[`RECOVERY.md`](./RECOVERY.md) for the policy, restore drill, and AWS
-prerequisites.
-
-### Nginx (Reverse Proxy & SSL)
-
-```bash
-# Test nginx configuration syntax
-sudo nginx -t
-
-# Reload / restart nginx
+sudo nginx -t              # check nginx config syntax
 sudo systemctl reload nginx
-sudo systemctl restart nginx
+
+curl -i http://localhost:5000/health   # health, from inside
+curl -i https://<YOUR_DOMAIN>/health   # health, from outside
 ```
 
-### Health Check Endpoint
-
-```bash
-# Test from server
-curl -i http://localhost:5000/health
-
-# Test publicly
-curl -i https://<YOUR_DOMAIN>/health
-```
+Restart a dependency only after checking what failed (`docker compose ps`
+first). For backups and disaster recovery, see [`RECOVERY.md`](./RECOVERY.md).

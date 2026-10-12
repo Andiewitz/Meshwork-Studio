@@ -1,80 +1,82 @@
-# Authentication & Authorization Architecture
+# Login & sessions — how it works
 
-> Status: implemented on `feat/go-identity-service`. The Go identity service
-> (`server/services/auth`) owns identity; the Node monolith serves everything else.
+> Status: active · Updated: 2026-10-12 · Context: the plain-language guide to
+> who owns logins and how sessions flow. Full threat-by-threat detail lives in
+> [`SECURITY.md`](./SECURITY.md); every secret in
+> [`operations/SECRETS.md`](./operations/SECRETS.md).
 
-## Ownership map
+## The 5-step version
 
-| Concern                                                                     | Owner                                                            | Storage              |
-| --------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------- |
-| Users, sessions, CSRF secrets, lockout, MFA, OAuth identities, audit events | **Go identity service** (`server/services/auth`)                 | `auth_db` (Postgres) |
-| Workspace / canvas / teams / AI / metrics                                   | Node monolith (`server/`)                                        | workspace DB         |
-| WebSocket presence                                                          | Node monolith, handshake-authenticated against identity sessions | —                    |
+1. You POST email + password. Nginx sends `/api/v1/auth/*` to the **Go auth
+   service** (`server/services/auth`, port `:8081`), everything else to the
+   **Node app** (`:5000`).
+2. Go checks the password (Argon2id) and creates a random 256-bit session
+   token. Only a SHA-256 hash of it is stored — the raw token lives in your
+   `HttpOnly` cookie.
+3. On later requests to Node routes, Go signs a short-lived note ("assertion")
+   saying "this user is logged in". Node verifies the signature with a public
+   key — it never sees the password database.
+4. Logout or ban? Go publishes to Redis; the Node app kills affected live
+   (WebSocket) connections immediately, plus re-checks every 5 minutes.
+5. Passwords from the old system (bcrypt) still work once, then silently
+   upgrade to Argon2id on next login.
 
-Routing (NGINX): `/api/v1/auth/*` and `/api/v1/user/*` → identity :8081;
-everything else → monolith :5000. Rollback = revert the nginx location block.
+## Who owns what
 
-## Session model
+| Job                                                       | Owner                                        | Stored in       |
+| --------------------------------------------------------- | -------------------------------------------- | --------------- |
+| Users, sessions, CSRF secrets, lockout, MFA, OAuth, audit | **Go auth service** (`server/services/auth`) | `auth_db`       |
+| Workspaces, canvas, teams, AI, metrics                    | Node app (`server/`)                         | per-service DBs |
+| Live-canvas presence                                      | Node app, checked against login sessions     | —               |
 
-- Opaque 256-bit random token in an HttpOnly cookie; only its SHA-256 hash is stored.
-- Rotated on every login/register. Idle TTL 7d, absolute TTL 14d.
-- Postgres is the source of truth; Redis caches hot validation entries (60s).
-- Revocation publishes to Redis channel `identity:sessions:revoked`; the
-  monolith's WebSocket layer closes affected live sockets immediately, and a
-  5-minute revalidation loop is a second line of defence.
-- Password hashing: Argon2id (64 MiB, t=3, p=2). Legacy bcrypt hashes verify
-  transparently and upgrade to Argon2id on next successful login.
+Route split (nginx): `/api/v1/auth/*` + `/api/v1/user/*` → Go `:8081`;
+everything else → Node `:5000`. Rollback = point the nginx block back.
 
-## Threat model highlights
+## Session facts
 
-| Threat                              | Mitigation                                                                                                                                                           |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Credential stuffing                 | Per-account atomic lockout (5 failures → 15m exponential → 8h cap) + per-IP Redis sliding window + CAPTCHA hook on register                                          |
-| Account enumeration                 | Uniform responses AND uniform timing: dummy Argon2id verification on miss paths; no lockout countdown in responses                                                   |
-| Password reuse                      | HIBP k-anonymity screening (only a 5-char SHA-1 prefix leaves the server); fail-open on outage                                                                       |
-| CSRF                                | Double-submit cookie + session-bound server secret + exact-match origin allowlist; cookie-bearing mutations without Origin/Referer fail closed                       |
-| OAuth account takeover              | Google identity requires `email_verified`; linking into an existing password account demands the account password; state is single-use (Redis GETDEL) with S256 PKCE |
-| Stolen password alone disabling MFA | MFA disable requires password + current TOTP/backup code                                                                                                             |
-| Token replay                        | One-time tokens hashed + single-use at the DB level; new request invalidates prior family                                                                            |
-| Mass assignment                     | Preferences update uses an explicit column whitelist                                                                                                                 |
-| IP privacy / GDPR                   | IPs stored as keyed HMAC-SHA256 (`AUTH_IP_HASH_KEY`), never raw                                                                                                      |
-| Silent degradation                  | No in-memory fallbacks: missing DB URL fails boot; Redis outage fails auth endpoints closed instead of silently disabling protections                                |
+- Token: random 256-bit, cookie-only (`HttpOnly`). Re-issued on every login.
+- Lifetimes: idle 7 days, absolute 14 days (`SESSION_IDLE_TTL` / `SESSION_ABSOLUTE_TTL`).
+- Postgres is the source of truth; Redis caches hot checks for 60s.
+- Hashing: Argon2id (64 MiB, 3 passes). Old bcrypt hashes verify once, then upgrade.
 
-## Secrets policy
+## Attack cheat-sheet (headlines)
 
-All keys are per-service env vars validated at boot; production refuses to
-start without real values. There are **no** defaults or fallback constants.
+Full reasoning per row: [`SECURITY.md`](./SECURITY.md).
 
-```
-AUTH_IP_HASH_KEY      openssl rand -base64 32
-AUTH_ENCRYPTION_KEY   openssl rand -base64 32   # AES-GCM for TOTP secrets
-SESSION_SECRET            openssl rand -base64 32   # monolith only
-```
+| Attack                                  | How we stop it                                                              |
+| --------------------------------------- | --------------------------------------------------------------------------- |
+| Password guessing                       | Lock account after 5 fails (grows to 8h max) + per-IP limits + CAPTCHA hook |
+| Figuring out who has an account         | Same reply + same speed whether the email exists or not                     |
+| Reused breached passwords               | Checked against HaveIBeenPwned (only 5 hash chars leave the server)         |
+| Forged cross-site requests              | Double-submit cookie + server secret + exact origin allowlist               |
+| OAuth account theft                     | Google must confirm the email; linking needs your password                  |
+| Disabling MFA with a stolen password    | Needs password **plus** current code                                        |
+| Replaying one-time tokens               | Single-use at the DB level; new request kills the old family                |
+| Snooping on stored IPs                  | Stored as keyed hashes (`AUTH_IP_HASH_KEY`), never raw                      |
+| Quietly weakening when Redis/DB is down | No silent fallbacks: auth fails closed instead of dropping protections      |
 
-## Admin access
+## Admins, metrics, CI
 
-`/admin` requires a session whose user has `users.is_admin = true`. Bootstrap
-admins are promoted at identity boot via `BOOTSTRAP_ADMIN_EMAILS`. The old
-secret-in-URL gate was removed (leaks via logs/history/Referer).
+- `/admin` needs `users.is_admin = true`. First admins come from
+  `BOOTSTRAP_ADMIN_EMAILS` at boot. (The old secret-in-URL gate was removed —
+  URLs leak into logs.)
+- Metrics: Go on loopback-only `127.0.0.1:9091/metrics`; Node `/metrics` needs
+  `Authorization: Bearer $METRICS_BEARER_TOKEN`.
+- CI (`auth.yml`): Go lint, security scan, race tests, docker build.
+  `scripts/no-auth-bypass.sh` fails the pipeline if `E2E_BYPASS_AUTH` ever
+  returns to runtime code.
 
-## Metrics
+## Switching versions (cutover & rollback)
 
-Identity exposes Prometheus metrics on loopback-only `127.0.0.1:9091/metrics`.
-The monolith's `/metrics` requires `Authorization: Bearer $METRICS_BEARER_TOKEN`
-(constant-time compare).
+1. Deploy (migrations only add; old sessions and hashes keep working).
+2. Nginx sends auth routes to Go. Existing cookies work on both sides — both
+   validate the same hashed tokens.
+3. Rollback: point nginx back at Node. Sessions from either side stay valid.
 
-## Cutover & rollback
+## Secrets
 
-1. Deploy stack (identity runs migrations additively; existing sessions and
-   bcrypt hashes remain valid).
-2. NGINX routes auth endpoints to identity. Existing cookies keep working —
-   both stacks validate the same hashed opaque tokens.
-3. Rollback: point the NGINX location block back at the monolith. Sessions
-   created by either side remain valid on both.
-
-## CI enforcement
-
-- `.github/workflows/auth.yml`: golangci-lint, gosec, govulncheck,
-  race-enabled tests, docker build.
-- `scripts/no-auth-bypass.sh` runs in the main pipeline and fails if
-  `E2E_BYPASS_AUTH` ever reappears in runtime code.
+No defaults, no fallbacks — production refuses to boot without real values.
+Generate with `openssl rand -base64 32`. The complete table (what each key
+does, who reads it, how to rotate): [`operations/SECRETS.md`](./operations/SECRETS.md).
+One rule that bites: the auth service's `AUTH_ASSERTION_PRIVATE_KEY` and the
+app's `AUTH_ASSERTION_PUBLIC_KEY` must be generated as **one pair**.

@@ -75,6 +75,6 @@ Move away from this topology only when observed limits justify it:
 | DynamoDB throttling or large-canvas latency                        | Revisit capacity, item model, and write batching using measured traffic. |
 | Multiple app instances required                                    | Externalize session/pub-sub dependencies and introduce a load balancer.  |
 
-See [`PLAN.md`](../../PLAN.md) for the cost/reliability assumptions behind these
+See [`PLAN.md`](../archive/PLAN.md) for the cost/reliability assumptions behind these
 triggers. The historical Terraform files under `docs/archive/` are reference
 material only.

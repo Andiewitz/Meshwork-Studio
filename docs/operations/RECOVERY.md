@@ -80,4 +80,4 @@ There is no automated production restore command. A production recovery needs:
 
 Do not overwrite the live database or canvas table as part of a drill. The
 implementation history and acceptance criteria are retained in
-[`Q5-BACKUP-AND-RECOVERY.md`](../../plans/Q5-BACKUP-AND-RECOVERY.md).
+[`Q5-BACKUP-AND-RECOVERY.md`](../archive/plans/Q5-BACKUP-AND-RECOVERY.md).

@@ -1,8 +1,11 @@
-# Security Architecture
+# Security Architecture (reference)
 
-> A complete guide to every security layer protecting Meshwork Studio — from the browser to the database.
+> The deep reference for every security layer, browser to database. New here?
+> Read [`AUTH_ARCHITECTURE.md`](./AUTH_ARCHITECTURE.md) first — it explains
+> logins in plain language in 5 steps. Secrets table:
+> [`operations/SECRETS.md`](./operations/SECRETS.md).
 
-**Last Updated:** August 26, 2026 (rewritten for the Go auth service split)
+**Last Updated:** October 12, 2026 (guide/reference split; content unchanged)
 
 ## Table of Contents
 

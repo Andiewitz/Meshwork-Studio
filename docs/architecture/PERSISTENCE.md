@@ -1,4 +1,9 @@
-# Canvas Persistence
+# Canvas persistence (reference)
+
+> Status: active · Updated: 2026-10-12 · Context: where your diagram goes
+> when you draw it, and how it survives reloads. Data shapes:
+> [`CANVAS_SCHEMA.md`](./CANVAS_SCHEMA.md); backups:
+> [`../operations/RECOVERY.md`](../operations/RECOVERY.md).
 
 Canvas documents use a two-layer persistence model: browser storage for
 immediate recovery and DynamoDB for the durable source of truth. PostgreSQL

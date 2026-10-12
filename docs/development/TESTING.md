@@ -1,6 +1,9 @@
-# Testing Strategy
+# Testing (guide + reference)
 
-> How Meshwork Studio validates correctness across every layer of the stack.
+> Status: active · Updated: 2026-10-12 · Context: run the suite with
+> `npm run test:unit` (fast) or `npm run test:run` (everything). The tiers,
+> philosophy, and per-file breakdown below are the reference — read on when a
+> test fails or you're writing a new one.
 
 ## Table of Contents
 
@@ -68,7 +71,7 @@ npx vitest run tests/unit
 # Integration tests only
 npx vitest run tests/integration
 
-# Auth lockout tests specifically
+# Auth tests (login, sessions, CSRF — unit + integration)
 npm run test:auth
 
 # E2E tests (requires dev server running)
@@ -150,11 +153,14 @@ beforeEach(() => {
 
 Use this same pattern in any future test that interacts with browser storage APIs.
 
-### Auth Lockout Logic
+### Auth Unit Tests
 
-**File:** `tests/unit/auth/lockout.test.ts`
+**Files:** `tests/unit/auth/` (`session-expiration`, `csrf-origin`,
+`assertion-public-key`, `shared-auth`, `storage-selection`)
 
-These tests verify the brute-force protection math — lockout durations, attempt counting, and progressive delays. Extensive test cases cover every edge case of the lockout algorithm.
+These tests verify login-adjacent logic with no database: when sessions expire,
+which request origins pass CSRF checks, and that the app only ever holds the
+public half of the Go signing key (it must never contain private key material).
 
 ---
 
@@ -176,34 +182,30 @@ These unit tests spin up an Express server with mocked storage and fire HTTP req
 **How Mocking Works:**
 
 ```typescript
-// We mock the database layer, not the routes
-vi.mock("@server/modules/workspace/storage", () => ({
+// We mock the database layer, not the routes (actual paths from
+// tests/unit/workspace/routes.test.ts — check the file, mocks drift)
+vi.mock("@services/workspace/db/storage", () => ({
   workspaceStorage: {
     getWorkspace: (...args) => mockGetWorkspace(...args),
     updateWorkspace: (...args) => mockUpdateWorkspace(...args),
   },
 }));
 
-// We mock the auth middleware to inject test users
-vi.mock("@server/modules/auth", () => ({
-  AuthModule: {
-    middleware: {
-      isAuthenticated: (req, res, next) => {
-        req.user = { id: req.headers["x-test-user-id"] };
-        next();
-      },
-    },
-  },
+// We mock auth to inject test users
+vi.mock("../../../server/auth", () => ({
+  // …stub that sets req.user from a test header, then calls next()
 }));
 ```
 
 This lets us test the **route logic** (ownership checks, Zod validation) without needing a real database or real authentication.
 
-### Auth Lockout Routes
+### Auth Signup/Login Flow
 
-**File:** `tests/integration/auth/lockout-routes.test.ts`
+**File:** `tests/integration/auth/login-signup.test.ts`
 
-Tests that verify the lockout system works correctly at the HTTP level — including progressive delays, lockout expiration, and attempt reset after successful login.
+Tests that verify registration and login work end to end at the HTTP level —
+valid input creates a session, bad input gets a clear error, and a successful
+login resets any prior failed-attempt tracking.
 
 ---
 
