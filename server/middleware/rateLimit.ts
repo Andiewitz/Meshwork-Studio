@@ -1,14 +1,22 @@
 import rateLimit from "express-rate-limit";
 import type { Request } from "express";
+import { errorBody } from "../lib/errorEnvelope";
+
+/** 429 body with a stable code clients can switch on + the request ID. */
+function rateLimitedBody(req: Request, message: string) {
+  return errorBody(message, req.requestId ?? "unscoped", "RATE_LIMITED");
+}
 
 // Global API rate limiter - protects against general DoS
 // Limit each IP to 100 requests per 1 minute window
 export const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100, // Limit each IP to 100 requests per window
-  message: {
-    message: "Too many requests from this IP, please try again after a minute.",
-  },
+  message: (req: Request) =>
+    rateLimitedBody(
+      req,
+      "Too many requests from this IP, please try again after a minute.",
+    ),
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   skip: () => process.env.NODE_ENV === "test",
@@ -19,10 +27,11 @@ export const apiLimiter = rateLimit({
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Limit each IP to 10 requests per window
-  message: {
-    message:
+  message: (req: Request) =>
+    rateLimitedBody(
+      req,
       "Too many authentication attempts, please try again after 15 minutes.",
-  },
+    ),
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV === "test",
@@ -33,9 +42,11 @@ export const authLimiter = rateLimit({
 export const refreshLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 100, // Limit each IP to 100 refresh requests per window
-  message: {
-    message: "Too many token refresh requests, please try again later.",
-  },
+  message: (req: Request) =>
+    rateLimitedBody(
+      req,
+      "Too many token refresh requests, please try again later.",
+    ),
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV === "test",
@@ -46,7 +57,8 @@ export const refreshLimiter = rateLimit({
 export const aiChatLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 30, // Limit each IP to 30 AI requests per window
-  message: { message: "Too many AI requests, please slow down." },
+  message: (req: Request) =>
+    rateLimitedBody(req, "Too many AI requests, please slow down."),
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV === "test",
@@ -58,10 +70,11 @@ export const aiChatLimiter = rateLimit({
 export const aiFreeTierLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 10, // 10 req/min on free tier (vs 30 for BYOK)
-  message: {
-    message:
+  message: (req: Request) =>
+    rateLimitedBody(
+      req,
       "Free tier rate limit reached. Add your own API key in settings for higher limits.",
-  },
+    ),
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV === "test",

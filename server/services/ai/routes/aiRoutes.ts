@@ -70,16 +70,27 @@ interface ChatCompletionResponse {
   }[];
 }
 
-function handleResolutionError(error: ProviderResolutionError, res: Response) {
+function handleResolutionError(
+  error: ProviderResolutionError,
+  req: Request,
+  res: Response,
+) {
+  const requestId = req.requestId ?? "unscoped";
   switch (error.code) {
     case "BYOK_DECRYPT_FAILED":
-      return res.status(500).json({ code: error.code, message: error.message });
+      return res
+        .status(500)
+        .json({ code: error.code, message: error.message, requestId });
     case "NO_ACTIVE_KEY":
-      return res.status(404).json({ code: error.code, message: error.message });
+      return res
+        .status(404)
+        .json({ code: error.code, message: error.message, requestId });
     case "FALLBACK_NOT_CONFIGURED":
-      return res.status(503).json({ code: error.code, message: error.message });
+      return res
+        .status(503)
+        .json({ code: error.code, message: error.message, requestId });
     default:
-      return res.status(500).json({ message: error.message });
+      return res.status(500).json({ message: error.message, requestId });
   }
 }
 
@@ -316,7 +327,7 @@ export function createAIRoutes(context: AppContext) {
           resolved = await resolveProviderForRequest(userId, provider, model);
         } catch (error) {
           if (error instanceof ProviderResolutionError) {
-            return handleResolutionError(error, res);
+            return handleResolutionError(error, req, res);
           }
           throw error;
         }
@@ -532,9 +543,14 @@ export function createAIRoutes(context: AppContext) {
           reason instanceof ProviderTimeoutError
             ? reason.message
             : (providerError.message ?? "AI provider returned an error");
+        const requestId = req.requestId ?? "unscoped";
         if (res.headersSent) {
           if (!res.writableEnded && !res.destroyed) {
-            writeSse(res, { code: "PROVIDER_ERROR", message }, "error");
+            writeSse(
+              res,
+              { code: "PROVIDER_ERROR", message, requestId },
+              "error",
+            );
             res.end();
           }
           return;
@@ -544,6 +560,7 @@ export function createAIRoutes(context: AppContext) {
           .json({
             code: "PROVIDER_ERROR",
             message,
+            requestId,
           });
       } finally {
         providerAbortScope?.dispose();

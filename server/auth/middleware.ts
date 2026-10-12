@@ -120,10 +120,12 @@ async function authenticate(
   return toUser(claims);
 }
 
-const unauthorized = (res: Response) =>
-  res
-    .status(401)
-    .json({ code: "UNAUTHENTICATED", message: "Authentication required" });
+const unauthorized = (req: Request, res: Response) =>
+  res.status(401).json({
+    code: "UNAUTHENTICATED",
+    message: "Authentication required",
+    requestId: req.requestId ?? "unscoped",
+  });
 
 /** Populates req.user when a valid assertion exists; never rejects. */
 export const optionalAuth: RequestHandler = (req, _res, next) => {
@@ -147,7 +149,7 @@ export const optionalAuth: RequestHandler = (req, _res, next) => {
 export const requireAuth: RequestHandler = (req, res, next) => {
   void authenticate(req, res)
     .then((user) => {
-      if (!user) return unauthorized(res);
+      if (!user) return unauthorized(req, res);
       (req as Request & { auth?: AuthContext }).auth = {
         userId: user.id,
         sessionId: user.sessionId,
@@ -156,7 +158,7 @@ export const requireAuth: RequestHandler = (req, res, next) => {
       req.user = user as unknown as Request["user"];
       next();
     })
-    .catch(() => unauthorized(res));
+    .catch(() => unauthorized(req, res));
 };
 
 /** Verify a raw assertion token without an Express request (WS upgrades). */

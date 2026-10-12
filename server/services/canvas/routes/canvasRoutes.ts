@@ -43,12 +43,14 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
     if (workspace.canvasCopyStatus === "copying") {
       return res.status(409).json({
         code: "CANVAS_COPY_IN_PROGRESS",
+        requestId: req.requestId ?? "unscoped",
         message: "This workspace canvas is still being copied.",
       });
     }
     if (workspace.canvasCopyStatus === "failed") {
       return res.status(503).json({
         code: "CANVAS_COPY_FAILED",
+        requestId: req.requestId ?? "unscoped",
         message:
           "This workspace canvas copy failed. Retry it from the dashboard.",
       });
@@ -83,12 +85,14 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
       if (workspace.canvasCopyStatus === "copying") {
         return res.status(409).json({
           code: "CANVAS_COPY_IN_PROGRESS",
+          requestId: req.requestId ?? "unscoped",
           message: "This workspace canvas is still being copied.",
         });
       }
       if (workspace.canvasCopyStatus === "failed") {
         return res.status(503).json({
           code: "CANVAS_COPY_FAILED",
+          requestId: req.requestId ?? "unscoped",
           message:
             "This workspace canvas copy failed. Retry it from the dashboard.",
         });
@@ -108,6 +112,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
       if (!input.success) {
         return res.status(400).json({
           code: "INVALID_CANVAS",
+          requestId: req.requestId ?? "unscoped",
           message: "Canvas contains invalid nodes or connections.",
           issues: input.error.issues.slice(0, 10).map((issue) => ({
             path: issue.path.join("."),
@@ -128,6 +133,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
         if (err instanceof CanvasRevisionConflictError) {
           return res.status(409).json({
             code: err.code,
+            requestId: req.requestId ?? "unscoped",
             message: "Canvas changed elsewhere. Reload before saving again.",
             revision: err.currentRevision,
           });
@@ -135,12 +141,14 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
         if (err instanceof CanvasWriteLockedError) {
           return res.status(503).json({
             code: err.code,
+            requestId: req.requestId ?? "unscoped",
             message: "Another canvas save is in progress. Retry shortly.",
           });
         }
         if (err instanceof CanvasWriteIncompleteError) {
           return res.status(503).json({
             code: err.code,
+            requestId: req.requestId ?? "unscoped",
             message: "Canvas save was not fully written. Retry shortly.",
           });
         }

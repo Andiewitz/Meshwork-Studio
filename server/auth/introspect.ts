@@ -11,6 +11,8 @@ const log = createChildLogger("auth-introspect");
 
 export interface IntrospectionResult {
   active: boolean;
+  /** Additive reason for inactive results (old responses omit it). */
+  reason?: "session_invalid" | "user_missing" | string;
   sub?: string;
   sid?: string;
   adm?: boolean;
@@ -94,7 +96,7 @@ export async function introspectSession(
       // Node hop joins the Go trace even when Node didn't mint the ID
       // (e.g. WS upgrades, where no Express request exists).
       const upstreamId =
-        res.headers.get("X-Request-Id") ?? requestId ?? "unscoped";
+        res.headers?.get?.("X-Request-Id") ?? requestId ?? "unscoped";
 
       if (!res.ok) {
         log.warn(

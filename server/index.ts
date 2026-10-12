@@ -19,6 +19,7 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { apiLimiter } from "./middleware/rateLimit";
 import { requestIdMiddleware } from "./middleware/requestId";
+import { errorBody, resolvePublicCode } from "./lib/errorEnvelope";
 import { disconnectRedis, isRedisAvailable } from "./lib/redis";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import { metricsRegistry } from "./lib/metrics";
@@ -372,7 +373,10 @@ app.get("/admin", requireAuth, (_req, res) => {
       await setupVite(httpServer, app);
     }
 
-    // Global error handler — MUST be registered AFTER all routes
+    // Global error handler — MUST be registered AFTER all routes.
+    // Additive envelope: historically `{message}` only; now also `code`
+    // (stable token, safe to switch on) and `requestId` (joins to logs).
+    // `message` text is unchanged so old clients keep working.
     app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
       const httpErr = err as {
         status?: number;
@@ -380,11 +384,14 @@ app.get("/admin", requireAuth, (_req, res) => {
         message?: string;
         code?: string;
       };
-      const status = httpErr.status ?? httpErr.statusCode ?? 500;
       const requestId = req.requestId ?? "unscoped";
+      const resolved = resolvePublicCode(httpErr.code);
+      const status =
+        resolved.status ?? httpErr.status ?? httpErr.statusCode ?? 500;
+      const code = resolved.code;
 
       log.error(
-        { err, status, requestId },
+        { err, status, code, requestId },
         "Unhandled error reached global handler",
       );
 
@@ -392,24 +399,39 @@ app.get("/admin", requireAuth, (_req, res) => {
         return next(err);
       }
 
-      // Handle Postgres database constraint errors
+      // Handle Postgres database constraint errors (mapped to public codes)
       if (httpErr.code === "23505") {
-        return res.status(400).json({
-          message:
-            "A record with this value already exists. Please use a unique value.",
-          requestId,
-        });
+        return res
+          .status(400)
+          .json(
+            errorBody(
+              "A record with this value already exists. Please use a unique value.",
+              requestId,
+              "DUPLICATE_VALUE",
+            ),
+          );
       }
       if (httpErr.code === "23503") {
-        return res.status(400).json({
-          message: "Referenced record does not exist or cannot be deleted.",
-          requestId,
-        });
+        return res
+          .status(400)
+          .json(
+            errorBody(
+              "Referenced record does not exist or cannot be deleted.",
+              requestId,
+              "REFERENCE_NOT_FOUND",
+            ),
+          );
       }
       if (httpErr.code === "22P02") {
         return res
           .status(400)
-          .json({ message: "Invalid data format provided.", requestId });
+          .json(
+            errorBody(
+              "Invalid data format provided.",
+              requestId,
+              "INVALID_FORMAT",
+            ),
+          );
       }
 
       // SECURITY: Never forward raw error messages to clients in production
@@ -418,7 +440,7 @@ app.get("/admin", requireAuth, (_req, res) => {
           ? "An unexpected error occurred"
           : (httpErr.message ?? "Internal Server Error");
 
-      return res.status(status).json({ message: clientMessage, requestId });
+      return res.status(status).json(errorBody(clientMessage, requestId, code));
     });
 
     // Serve static files LAST so the SPA catch-all doesn't swallow API routes.

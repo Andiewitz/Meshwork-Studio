@@ -113,9 +113,11 @@ export const csrfProtect: RequestHandler = (req, res, next) => {
   if (!MUTATING.has(req.method)) return next();
 
   if (!originAllowed(req)) {
-    return res
-      .status(403)
-      .json({ code: "CSRF_REJECTED", message: "CSRF validation failed" });
+    return res.status(403).json({
+      code: "CSRF_REJECTED",
+      message: "CSRF validation failed",
+      requestId: req.requestId ?? "unscoped",
+    });
   }
 
   const cookieToken =
@@ -126,9 +128,11 @@ export const csrfProtect: RequestHandler = (req, res, next) => {
     !headerToken ||
     !timingSafeEqual(cookieToken, headerToken)
   ) {
-    return res
-      .status(403)
-      .json({ code: "CSRF_REJECTED", message: "CSRF validation failed" });
+    return res.status(403).json({
+      code: "CSRF_REJECTED",
+      message: "CSRF validation failed",
+      requestId: req.requestId ?? "unscoped",
+    });
   }
   next();
 };

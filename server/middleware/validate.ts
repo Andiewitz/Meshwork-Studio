@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { ZodSchema, ZodError } from "zod";
+import { errorBody } from "../lib/errorEnvelope";
 
 interface ValidationSchemas {
   body?: ZodSchema;
@@ -26,13 +27,19 @@ export function validate(schemas: ValidationSchemas) {
           field: err.path.join("."),
           message: err.message,
         }));
-        
+
         // Find the first informative message to show at the top level
         const firstError = errors[0];
-        const defaultMessage = firstError ? `${firstError.field}: ${firstError.message}` : "Validation failed";
+        const defaultMessage = firstError
+          ? `${firstError.field}: ${firstError.message}`
+          : "Validation failed";
 
         return res.status(400).json({
-          message: defaultMessage,
+          ...errorBody(
+            defaultMessage,
+            req.requestId ?? "unscoped",
+            "VALIDATION_FAILED",
+          ),
           errors,
         });
       }

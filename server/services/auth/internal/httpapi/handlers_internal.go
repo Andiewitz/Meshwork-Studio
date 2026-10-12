@@ -54,16 +54,17 @@ func (s *Server) handleIntrospect(w http.ResponseWriter, r *http.Request) {
 		// Inactive is a normal outcome (expired/revoked), not an error —
 		// but log the reason class so monolith-side mysteries are joinable
 		// by request ID instead of undebuggable. Never log the token.
+		// `reason` is additive: old monoliths ignore it.
 		s.log.Info("introspect inactive: session invalid",
 			"request_id", requestIDFrom(r), "err", err)
-		writeJSON(w, http.StatusOK, map[string]any{"active": false})
+		writeJSON(w, http.StatusOK, map[string]any{"active": false, "reason": "session_invalid"})
 		return
 	}
 	user, err := s.db.FindUserByID(r.Context(), rec.UserID)
 	if err != nil {
 		s.log.Warn("introspect inactive: user lookup failed",
 			"request_id", requestIDFrom(r), "err", err)
-		writeJSON(w, http.StatusOK, map[string]any{"active": false})
+		writeJSON(w, http.StatusOK, map[string]any{"active": false, "reason": "user_missing"})
 		return
 	}
 

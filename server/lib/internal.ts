@@ -61,7 +61,11 @@ export function requireInternalKey(
     presented.length !== expected.length ||
     !crypto.timingSafeEqual(Buffer.from(presented), Buffer.from(expected))
   ) {
-    res.status(404).json({ message: "Not Found" }); // deliberately opaque
+    // Deliberately opaque (no code — must not confirm the route exists),
+    // but the request ID still joins to server logs.
+    res
+      .status(404)
+      .json({ message: "Not Found", requestId: req.requestId ?? "unscoped" });
     return;
   }
   next();
