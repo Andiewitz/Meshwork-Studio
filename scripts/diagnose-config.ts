@@ -161,9 +161,9 @@ check(
 check(
   "SMTP_HOST + EMAIL_FROM",
   !isProd || (has("SMTP_HOST") && has("EMAIL_FROM")),
-  has("SMTP_HOST")
+  has("SMTP_HOST") && has("EMAIL_FROM")
     ? `relay: ${process.env.SMTP_HOST}`
-    : "production needs email for verify/reset flows",
+    : "production needs both SMTP_HOST and EMAIL_FROM for verify/reset flows",
 );
 
 const googleOk = has("GOOGLE_CLIENT_ID") && has("GOOGLE_CLIENT_SECRET");

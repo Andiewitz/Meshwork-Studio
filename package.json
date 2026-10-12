@@ -30,11 +30,16 @@
     "client",
     "server/services/*"
   ],
+  "bin": {
+    "meshwork-start": "./scripts/start.sh",
+    "meshwork-deploy": "./scripts/deploy.sh"
+  },
   "scripts": {
     "setup": "tsx scripts/setup-dev.ts",
     "dev": "tsx scripts/dev.ts",
     "build": "tsx scripts/build.ts",
     "deploy": "./scripts/deploy.sh",
+    "start:ec2": "./scripts/start.sh",
     "start": "node dist/index.cjs",
     "check": "tsc",
     "db:push": "drizzle-kit push",
@@ -48,8 +53,7 @@
     "test:system": "vitest run --config vitest.system.config.ts",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:auth": "vitest tests/unit/auth tests/integration/auth",
-    "test:lockout": "vitest tests/unit/auth/lockout.test.ts tests/integration/auth/lockout-routes.test.ts",
+    "test:auth": "vitest run tests/unit/auth tests/integration/auth",
     "test:e2e": "playwright test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -71,6 +75,7 @@
     "express-rate-limit": "^8.3.1",
     "helmet": "^8.1.0",
     "ioredis": "^5.11.1",
+    "nanoid": "^5.1.5",
     "openai": "^6.27.0",
     "pg": "^8.16.3",
     "pino": "^10.3.1",

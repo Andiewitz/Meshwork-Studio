@@ -8,7 +8,6 @@ const allowlist = [
   "@aws-sdk/client-dynamodb",
   "@aws-sdk/lib-dynamodb",
   "cors",
-  "date-fns",
   "drizzle-orm",
   "drizzle-zod",
   "express",
@@ -19,7 +18,6 @@ const allowlist = [
   "pg",
   "ws",
   "zod",
-  "zod-validation-error",
 ];
 
 async function buildAll() {
