@@ -18,8 +18,12 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 	_ = json.NewEncoder(w).Encode(body)
 }
 
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	writeJSON(w, status, map[string]any{"code": code, "message": message})
+func writeError(w http.ResponseWriter, r *http.Request, status int, code, message string) {
+	writeJSON(w, status, map[string]any{
+		"code":      code,
+		"message":   message,
+		"requestId": requestIDFrom(r),
+	})
 }
 
 func readJSON(r *http.Request, dst any) error {
@@ -104,5 +108,6 @@ func (s *Server) auditEntry(r *http.Request, userID, email string, event audit.E
 		Event:     event,
 		IPHash:    ipHash,
 		UserAgent: r.UserAgent(),
+		RequestID: requestIDFrom(r),
 	}
 }

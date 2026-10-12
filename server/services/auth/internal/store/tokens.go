@@ -18,10 +18,11 @@ func (d *DB) InsertAudit(ctx context.Context, e audit.Entry) error {
 		meta, _ = json.Marshal(e.Metadata)
 	}
 	_, err := d.Pool.Exec(ctx, `
-		INSERT INTO audit_events (user_id, email, event, ip_hash, user_agent, metadata)
-		VALUES ($1,$2,$3,$4,$5,$6)`,
+		INSERT INTO audit_events (user_id, email, event, ip_hash, user_agent, metadata, request_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7)`,
 		nilIfEmpty(e.UserID), nilIfEmpty(e.Email), string(e.Event),
-		nilIfEmpty(e.IPHash), nilIfEmpty(e.UserAgent), meta)
+		nilIfEmpty(e.IPHash), nilIfEmpty(e.UserAgent), meta,
+		nilIfEmpty(e.RequestID))
 	return err
 }
 

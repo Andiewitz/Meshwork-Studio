@@ -72,7 +72,7 @@ func (s *Server) sessionMeta(r *http.Request) (ua, ipHash *string) {
 func (s *Server) handleIssueCSRF(w http.ResponseWriter, r *http.Request) {
 	secret, err := csrf.NewSecret()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Could not create token")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Could not create token")
 		return
 	}
 	var sessionIDHash string
@@ -80,7 +80,7 @@ func (s *Server) handleIssueCSRF(w http.ResponseWriter, r *http.Request) {
 		sessionIDHash = session.HashToken(raw)
 	}
 	if err := csrf.Bind(s.csrfStore, sessionIDHash, secret, time.Hour); err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Could not bind token")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Could not bind token")
 		return
 	}
 	setCookie(w, s.cfg, s.cfg.CSRFCookieName, secret, time.Hour, false)
@@ -100,15 +100,15 @@ type registerBody struct {
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var body registerBody
 	if err := readJSON(r, &body); err != nil || !validateEmail(body.Email) {
-		writeError(w, http.StatusBadRequest, "VALIDATION", "A valid email and password are required")
+		writeError(w, r, http.StatusBadRequest, "VALIDATION", "A valid email and password are required")
 		return
 	}
 	if err := validatePassword(body.Password); err != nil {
-		writeError(w, http.StatusBadRequest, "WEAK_PASSWORD", err.Error())
+		writeError(w, r, http.StatusBadRequest, "WEAK_PASSWORD", err.Error())
 		return
 	}
 	if breached, err := password.Breached(body.Password); err == nil && breached {
-		writeError(w, http.StatusBadRequest, "BREACHED_PASSWORD",
+		writeError(w, r, http.StatusBadRequest, "BREACHED_PASSWORD",
 			"This password appears in public breach lists. Choose another.")
 		return
 	}
@@ -117,7 +117,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	_, lookupErr := s.db.FindUserByEmail(r.Context(), email)
 	hasExisting := lookupErr == nil
 	if lookupErr != nil && !errors.Is(lookupErr, store.ErrNotFound) {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Registration unavailable")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Registration unavailable")
 		return
 	}
 
@@ -125,13 +125,13 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	// latency profile (anti-enumeration).
 	hash, herr := password.Hash(body.Password)
 	if herr != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Registration unavailable")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Registration unavailable")
 		return
 	}
 	if hasExisting {
 		password.VerifyDummy(body.Password)
 		s.auditor.Record(s.auditEntry(r, "", email, audit.Register))
-		writeError(w, http.StatusConflict, "REGISTRATION_UNAVAILABLE",
+		writeError(w, r, http.StatusConflict, "REGISTRATION_UNAVAILABLE",
 			"Registration could not be completed with the provided information.")
 		return
 	}
@@ -147,12 +147,12 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	if errors.Is(err, store.ErrDuplicateEmail) {
 		// Lost a concurrent-registration race — identical public answer.
 		s.auditor.Record(s.auditEntry(r, "", email, audit.Register))
-		writeError(w, http.StatusConflict, "REGISTRATION_UNAVAILABLE",
+		writeError(w, r, http.StatusConflict, "REGISTRATION_UNAVAILABLE",
 			"Registration could not be completed with the provided information.")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Registration unavailable")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Registration unavailable")
 		return
 	}
 
@@ -161,7 +161,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		UserID: user.ID, UserAgent: ua, IPHash: ipHash,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Session creation failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Session creation failed")
 		return
 	}
 	s.setSessionCookie(w, raw)
@@ -188,26 +188,26 @@ type loginBody struct {
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var body loginBody
 	if err := readJSON(r, &body); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION", "Email and password required")
+		writeError(w, r, http.StatusBadRequest, "VALIDATION", "Email and password required")
 		return
 	}
 	email := normalizeEmail(body.Email)
 
 	locked, err := s.lockouts.Check(r.Context(), email)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Login unavailable")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Login unavailable")
 		return
 	}
 	if locked {
 		s.auditor.Record(s.auditEntry(r, "", email, audit.AccountLocked))
-		writeError(w, http.StatusTooManyRequests, "ACCOUNT_LOCKED",
+		writeError(w, r, http.StatusTooManyRequests, "ACCOUNT_LOCKED",
 			"Too many failed attempts. Try again later.")
 		return
 	}
 
 	user, lookupErr := s.db.FindUserByEmail(r.Context(), email)
 	if lookupErr != nil && !errors.Is(lookupErr, store.ErrNotFound) {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Login unavailable")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Login unavailable")
 		return
 	}
 
@@ -228,11 +228,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		s.auditor.Record(s.auditEntry(r, userIDOrEmpty(user), email, audit.LoginFailed))
 		if rerr == nil && res.Locked {
 			s.auditor.Record(s.auditEntry(r, userIDOrEmpty(user), email, audit.AccountLocked))
-			writeError(w, http.StatusTooManyRequests, "ACCOUNT_LOCKED",
+			writeError(w, r, http.StatusTooManyRequests, "ACCOUNT_LOCKED",
 				"Too many failed attempts. Try again later.")
 			return
 		}
-		writeError(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
+		writeError(w, r, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
 		return
 	}
 
@@ -259,7 +259,7 @@ func (s *Server) completeLogin(w http.ResponseWriter, r *http.Request, user *sto
 		UserID: user.ID, UserAgent: ua, IPHash: ipHash,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Session creation failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Session creation failed")
 		return
 	}
 	s.setSessionCookie(w, raw)
@@ -299,7 +299,7 @@ func (s *Server) handleLogoutAll(w http.ResponseWriter, r *http.Request) {
 	info := authFrom(r)
 	n, err := s.sessions.RevokeAllForUser(r.Context(), info.User.ID, "")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Logout failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Logout failed")
 		return
 	}
 	s.clearSessionCookies(w)
@@ -334,15 +334,15 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 	info := authFrom(r)
 	var body changePasswordBody
 	if err := readJSON(r, &body); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION", "Current and new passwords required")
+		writeError(w, r, http.StatusBadRequest, "VALIDATION", "Current and new passwords required")
 		return
 	}
 	if err := validatePassword(body.NewPassword); err != nil {
-		writeError(w, http.StatusBadRequest, "WEAK_PASSWORD", err.Error())
+		writeError(w, r, http.StatusBadRequest, "WEAK_PASSWORD", err.Error())
 		return
 	}
 	if breached, err := password.Breached(body.NewPassword); err == nil && breached {
-		writeError(w, http.StatusBadRequest, "BREACHED_PASSWORD",
+		writeError(w, r, http.StatusBadRequest, "BREACHED_PASSWORD",
 			"This password appears in public breach lists. Choose another.")
 		return
 	}
@@ -355,22 +355,22 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	if !ok {
 		s.auditor.Record(s.auditEntry(r, info.User.ID, info.User.Email, audit.LoginFailed))
-		writeError(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Current password is incorrect")
+		writeError(w, r, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Current password is incorrect")
 		return
 	}
 
 	newHash, err := password.Hash(body.NewPassword)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Change failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Change failed")
 		return
 	}
 	if err := s.db.SetPasswordHash(r.Context(), info.User.ID, newHash, "argon2id"); err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Change failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Change failed")
 		return
 	}
 	// Revoke EVERYTHING including the current session — full re-login everywhere.
 	if _, err := s.sessions.RevokeAllForUser(r.Context(), info.User.ID, ""); err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Change failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Change failed")
 		return
 	}
 	_ = s.db.InvalidateTokensForUser(r.Context(), info.User.ID, store.TokenPasswordReset)
@@ -392,12 +392,12 @@ func (s *Server) handleUpdatePreferences(w http.ResponseWriter, r *http.Request)
 	info := authFrom(r)
 	var body prefsBody
 	if err := readJSON(r, &body); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION", "Invalid preference payload")
+		writeError(w, r, http.StatusBadRequest, "VALIDATION", "Invalid preference payload")
 		return
 	}
 	user, err := s.db.UpdatePreferences(r.Context(), info.User.ID, body.HasNotifiedTeam, body.ReadNotificationIDs)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Update failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Update failed")
 		return
 	}
 	writeJSON(w, http.StatusOK, user.Public())

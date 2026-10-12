@@ -106,7 +106,7 @@ async function authenticate(
   const rawSession = readCookie(req, SESSION_COOKIE_NAMES);
   if (!rawSession) return null;
 
-  const result = await introspectSession(rawSession);
+  const result = await introspectSession(rawSession, req.requestId);
   if (!result?.assertion) return null;
 
   // Verify what the service just signed before trusting it — never assume.
@@ -203,7 +203,14 @@ export async function authenticateUpgrade(
     cookieMap["__Host-meshwork_session"] || cookieMap.meshwork_session;
   if (!rawSession) return null;
 
-  const result = await introspectSession(rawSession);
+  // WS upgrades bypass Express (no req.requestId). Browsers can't set
+  // headers on the handshake, so adopt one if a proxy set it, else mint —
+  // either way the introspect hop stays traceable.
+  const upgradeRequestId =
+    (Array.isArray(req.headers["x-request-id"])
+      ? req.headers["x-request-id"][0]
+      : req.headers["x-request-id"]) || undefined;
+  const result = await introspectSession(rawSession, upgradeRequestId);
   if (!result?.sub || !result.sid || !result.assertion) return null;
 
   if (!verifier) return null;

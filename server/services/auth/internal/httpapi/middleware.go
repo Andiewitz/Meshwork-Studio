@@ -49,6 +49,19 @@ func clientIPFrom(r *http.Request) string {
 	return ""
 }
 
+// requestIDFrom returns the ID minted (or adopted) by requestIDMiddleware.
+// Falls back to "unscoped" for background work with no inbound request so
+// every log line and error body carries a joinable value.
+func requestIDFrom(r *http.Request) string {
+	if r == nil {
+		return "unscoped"
+	}
+	if v, ok := r.Context().Value(ctxRequestID).(string); ok && v != "" {
+		return v
+	}
+	return "unscoped"
+}
+
 // ─── Base middleware ────────────────────────────────────────────────────────
 
 func requestIDMiddleware(next http.Handler) http.Handler {
@@ -101,7 +114,7 @@ func recoverMiddleware(log *slog.Logger) func(http.Handler) http.Handler {
 			defer func() {
 				if rec := recover(); rec != nil {
 					log.Error("panic recovered", "panic", rec, "path", r.URL.Path)
-					writeError(w, http.StatusInternalServerError, "INTERNAL", "Internal error")
+					writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Internal error")
 				}
 			}()
 			next.ServeHTTP(w, r)
@@ -164,17 +177,17 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw := s.sessionCookieValue(r)
 		if raw == "" {
-			writeError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+			writeError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
 			return
 		}
 		rec, err := s.sessions.Validate(r.Context(), raw)
 		if err != nil {
-			writeError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "Session invalid or expired")
+			writeError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Session invalid or expired")
 			return
 		}
 		user, err := s.db.FindUserByID(r.Context(), rec.UserID)
 		if err != nil {
-			writeError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "Account unavailable")
+			writeError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Account unavailable")
 			return
 		}
 		info := &AuthInfo{User: user, Session: rec, RawToken: raw}
@@ -190,13 +203,13 @@ func (s *Server) requireMFATicket(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, err := r.Cookie(s.cfg.MFACookieName)
 		if err != nil || c.Value == "" || s.rdb == nil {
-			writeError(w, http.StatusUnauthorized, "MFA_TICKET_REQUIRED", "Complete password step first")
+			writeError(w, r, http.StatusUnauthorized, "MFA_TICKET_REQUIRED", "Complete password step first")
 			return
 		}
 		val, err := s.rdb.GetDel(r.Context(), mfaTicketPrefix+csrf.HashForLookup(c.Value)).Result()
 		if err != nil || val == "" {
 			clearCookie(w, s.cfg.MFACookieName)
-			writeError(w, http.StatusUnauthorized, "MFA_TICKET_INVALID", "Verification window expired, log in again")
+			writeError(w, r, http.StatusUnauthorized, "MFA_TICKET_INVALID", "Verification window expired, log in again")
 			return
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), mfaTicketUserKey{}, val)))
@@ -222,7 +235,7 @@ func (s *Server) csrfProtect(next http.Handler) http.Handler {
 			return
 		}
 		if !csrf.OriginAllowed(r, s.allow) {
-			writeError(w, http.StatusForbidden, "CSRF_ORIGIN", "Invalid request origin")
+			writeError(w, r, http.StatusForbidden, "CSRF_ORIGIN", "Invalid request origin")
 			return
 		}
 		var sessionIDHash string
@@ -234,7 +247,7 @@ func (s *Server) csrfProtect(next http.Handler) http.Handler {
 		headerToken := r.Header.Get("X-CSRF-Token")
 		cookieToken := cookieValue(r, s.cfg.CSRFCookieName)
 		if !csrf.Verify(cookieToken, headerToken, sessionIDHash, s.csrfStore) {
-			writeError(w, http.StatusForbidden, "CSRF_REJECTED", "CSRF validation failed")
+			writeError(w, r, http.StatusForbidden, "CSRF_REJECTED", "CSRF validation failed")
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -252,12 +265,12 @@ func (s *Server) captchaProtect(next http.Handler) http.Handler {
 			CaptchaToken string `json:"captchaToken"`
 		}
 		if err := readJSON(r, &body); err != nil || body.CaptchaToken == "" {
-			writeError(w, http.StatusBadRequest, "CAPTCHA_REQUIRED", "CAPTCHA verification required")
+			writeError(w, r, http.StatusBadRequest, "CAPTCHA_REQUIRED", "CAPTCHA verification required")
 			return
 		}
 		if err := s.captcha.Verify(r.Context(), body.CaptchaToken, clientIPFrom(r)); err != nil {
 			s.auditor.Record(s.auditEntry(r, "", "", audit.CaptchaFailed))
-			writeError(w, http.StatusBadRequest, "CAPTCHA_FAILED", "CAPTCHA verification failed")
+			writeError(w, r, http.StatusBadRequest, "CAPTCHA_FAILED", "CAPTCHA verification failed")
 			return
 		}
 		next.ServeHTTP(w, r)

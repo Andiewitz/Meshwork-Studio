@@ -37,7 +37,7 @@ type forgotBody struct {
 func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 	var body forgotBody
 	if err := readJSON(r, &body); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION", "Email required")
+		writeError(w, r, http.StatusBadRequest, "VALIDATION", "Email required")
 		return
 	}
 	email := normalizeEmail(body.Email)
@@ -78,15 +78,15 @@ type resetBody struct {
 func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 	var body resetBody
 	if err := readJSON(r, &body); err != nil || len(body.Token) < 20 {
-		writeError(w, http.StatusBadRequest, "VALIDATION", "A valid token and new password are required")
+		writeError(w, r, http.StatusBadRequest, "VALIDATION", "A valid token and new password are required")
 		return
 	}
 	if err := validatePassword(body.NewPassword); err != nil {
-		writeError(w, http.StatusBadRequest, "WEAK_PASSWORD", err.Error())
+		writeError(w, r, http.StatusBadRequest, "WEAK_PASSWORD", err.Error())
 		return
 	}
 	if breached, err := password.Breached(body.NewPassword); err == nil && breached {
-		writeError(w, http.StatusBadRequest, "BREACHED_PASSWORD",
+		writeError(w, r, http.StatusBadRequest, "BREACHED_PASSWORD",
 			"This password appears in public breach lists. Choose another.")
 		return
 	}
@@ -94,26 +94,26 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 	userID, err := s.db.ConsumeOneTimeToken(r.Context(),
 		password.KeyedHash("one-time-token", body.Token), store.TokenPasswordReset)
 	if errors.Is(err, store.ErrNotFound) {
-		writeError(w, http.StatusBadRequest, "TOKEN_INVALID", "Reset link is invalid or expired")
+		writeError(w, r, http.StatusBadRequest, "TOKEN_INVALID", "Reset link is invalid or expired")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Reset failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Reset failed")
 		return
 	}
 
 	newHash, err := password.Hash(body.NewPassword)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Reset failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Reset failed")
 		return
 	}
 	if err := s.db.SetPasswordHash(r.Context(), userID, newHash, "argon2id"); err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Reset failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Reset failed")
 		return
 	}
 	// A reset is a credential compromise response: kill every session.
 	if _, err := s.sessions.RevokeAllForUser(r.Context(), userID, ""); err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Reset failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Reset failed")
 		return
 	}
 
@@ -140,22 +140,22 @@ func (s *Server) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 	if err := readJSON(r, &body); err != nil || token == "" {
 		token = r.URL.Query().Get("token")
 		if token == "" {
-			writeError(w, http.StatusBadRequest, "VALIDATION", "Verification token required")
+			writeError(w, r, http.StatusBadRequest, "VALIDATION", "Verification token required")
 			return
 		}
 	}
 	userID, err := s.db.ConsumeOneTimeToken(r.Context(),
 		password.KeyedHash("one-time-token", token), store.TokenEmailVerification)
 	if errors.Is(err, store.ErrNotFound) {
-		writeError(w, http.StatusBadRequest, "TOKEN_INVALID", "Verification link is invalid or expired")
+		writeError(w, r, http.StatusBadRequest, "TOKEN_INVALID", "Verification link is invalid or expired")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Verification failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Verification failed")
 		return
 	}
 	if err := s.db.MarkEmailVerified(r.Context(), userID); err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Verification failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Verification failed")
 		return
 	}
 	s.auditor.Record(s.auditEntry(r, userID, "", audit.EmailVerified))

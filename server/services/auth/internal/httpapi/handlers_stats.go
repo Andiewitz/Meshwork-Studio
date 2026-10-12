@@ -15,7 +15,7 @@ type userStats struct {
 // metrics collector. Internal-key guarded; never routed through NGINX.
 func (s *Server) handleUserStats(w http.ResponseWriter, r *http.Request) {
 	if !internalKeyMatches(r.Header.Get("X-Internal-Key")) {
-		writeError(w, http.StatusUnauthorized, "INTERNAL_AUTH", "Invalid internal key")
+		writeError(w, r, http.StatusUnauthorized, "INTERNAL_AUTH", "Invalid internal key")
 		return
 	}
 	var stats userStats
@@ -27,7 +27,7 @@ func (s *Server) handleUserStats(w http.ResponseWriter, r *http.Request) {
 			(SELECT COUNT(*) FROM login_attempts WHERE last_attempt >= CURRENT_DATE)
 	`).Scan(&stats.TotalUsers, &stats.NewUsersToday, &stats.ActiveUsers24h, &stats.LoginsToday)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Stats unavailable")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Stats unavailable")
 		return
 	}
 	writeJSON(w, http.StatusOK, stats)

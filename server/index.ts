@@ -18,6 +18,7 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { apiLimiter } from "./middleware/rateLimit";
+import { requestIdMiddleware } from "./middleware/requestId";
 import { disconnectRedis, isRedisAvailable } from "./lib/redis";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import { metricsRegistry } from "./lib/metrics";
@@ -82,6 +83,10 @@ process.once("unhandledRejection", (reason) => {
 
 // SECURITY: Trust the NGINX reverse proxy so rate limiting works per user IP, not proxy IP
 app.set("trust proxy", 1);
+
+// Traceability: mint/adopt a request ID first so every log line and error
+// body downstream can carry it. See server/middleware/requestId.ts.
+app.use(requestIdMiddleware);
 
 // SECURITY: Apply global rate limiting to all API routes
 app.use("/api/", apiLimiter);
@@ -368,49 +373,53 @@ app.get("/admin", requireAuth, (_req, res) => {
     }
 
     // Global error handler — MUST be registered AFTER all routes
-    app.use(
-      (err: unknown, _req: Request, res: Response, next: NextFunction) => {
-        const httpErr = err as {
-          status?: number;
-          statusCode?: number;
-          message?: string;
-          code?: string;
-        };
-        const status = httpErr.status ?? httpErr.statusCode ?? 500;
+    app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
+      const httpErr = err as {
+        status?: number;
+        statusCode?: number;
+        message?: string;
+        code?: string;
+      };
+      const status = httpErr.status ?? httpErr.statusCode ?? 500;
+      const requestId = req.requestId ?? "unscoped";
 
-        log.error({ err, status }, "Unhandled error reached global handler");
+      log.error(
+        { err, status, requestId },
+        "Unhandled error reached global handler",
+      );
 
-        if (res.headersSent) {
-          return next(err);
-        }
+      if (res.headersSent) {
+        return next(err);
+      }
 
-        // Handle Postgres database constraint errors
-        if (httpErr.code === "23505") {
-          return res.status(400).json({
-            message:
-              "A record with this value already exists. Please use a unique value.",
-          });
-        }
-        if (httpErr.code === "23503") {
-          return res.status(400).json({
-            message: "Referenced record does not exist or cannot be deleted.",
-          });
-        }
-        if (httpErr.code === "22P02") {
-          return res
-            .status(400)
-            .json({ message: "Invalid data format provided." });
-        }
+      // Handle Postgres database constraint errors
+      if (httpErr.code === "23505") {
+        return res.status(400).json({
+          message:
+            "A record with this value already exists. Please use a unique value.",
+          requestId,
+        });
+      }
+      if (httpErr.code === "23503") {
+        return res.status(400).json({
+          message: "Referenced record does not exist or cannot be deleted.",
+          requestId,
+        });
+      }
+      if (httpErr.code === "22P02") {
+        return res
+          .status(400)
+          .json({ message: "Invalid data format provided.", requestId });
+      }
 
-        // SECURITY: Never forward raw error messages to clients in production
-        const clientMessage =
-          process.env.NODE_ENV === "production"
-            ? "An unexpected error occurred"
-            : (httpErr.message ?? "Internal Server Error");
+      // SECURITY: Never forward raw error messages to clients in production
+      const clientMessage =
+        process.env.NODE_ENV === "production"
+          ? "An unexpected error occurred"
+          : (httpErr.message ?? "Internal Server Error");
 
-        return res.status(status).json({ message: clientMessage });
-      },
-    );
+      return res.status(status).json({ message: clientMessage, requestId });
+    });
 
     // Serve static files LAST so the SPA catch-all doesn't swallow API routes.
     if (process.env.NODE_ENV === "production") {

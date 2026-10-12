@@ -180,11 +180,11 @@ func (s *Server) Router() http.Handler {
 		a.With(s.csrfProtect).Post("/auth/mfa/activate", s.handleMFAActivate)
 		a.With(s.csrfProtect).Post("/auth/mfa/disable", s.handleMFADisable)
 	})
-	api.NotFound(func(w http.ResponseWriter, _ *http.Request) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "Unknown endpoint")
+	api.NotFound(func(w http.ResponseWriter, req *http.Request) {
+		writeError(w, req, http.StatusNotFound, "NOT_FOUND", "Unknown endpoint")
 	})
-	api.MethodNotAllowed(func(w http.ResponseWriter, _ *http.Request) {
-		writeError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "Method not allowed")
+	api.MethodNotAllowed(func(w http.ResponseWriter, req *http.Request) {
+		writeError(w, req, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "Method not allowed")
 	})
 
 	// Server-to-server surface. Never routed through NGINX; guarded by the

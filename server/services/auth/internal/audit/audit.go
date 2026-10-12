@@ -56,6 +56,9 @@ type Entry struct {
 	IPHash    string
 	UserAgent string
 	Metadata  map[string]any
+	// RequestID joins this row to request logs (Node + Go) and error
+	// bodies. Empty for background jobs with no inbound request.
+	RequestID string
 }
 
 type entry struct {
@@ -98,5 +101,6 @@ func (w *Writer) LogOnly(e Entry) {
 		"event", string(e.Event),
 		"user_id", e.UserID,
 		"ip_hash", e.IPHash,
+		"request_id", e.RequestID,
 		"meta", string(meta))
 }

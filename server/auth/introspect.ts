@@ -62,6 +62,7 @@ function cachedNegative(fp: string): boolean {
  */
 export async function introspectSession(
   rawToken: string,
+  requestId?: string,
 ): Promise<IntrospectionResult | null> {
   const key = internalKey();
   if (!key) return null; // unconfigured → caller fails closed on assertion alone
@@ -81,14 +82,25 @@ export async function introspectSession(
         headers: {
           "Content-Type": "application/json",
           "X-Internal-Key": key,
+          // Join this hop to the inbound request's trace. Go adopts it
+          // verbatim (requestIDMiddleware) and echoes it in logs + body.
+          ...(requestId ? { "X-Request-Id": requestId } : {}),
         },
         body: JSON.stringify({ token: rawToken }),
         signal: controller.signal,
       });
       clearTimeout(timer);
+      // Go echoes the adopted (or its own minted) ID back. Log it so the
+      // Node hop joins the Go trace even when Node didn't mint the ID
+      // (e.g. WS upgrades, where no Express request exists).
+      const upstreamId =
+        res.headers.get("X-Request-Id") ?? requestId ?? "unscoped";
 
       if (!res.ok) {
-        log.warn({ status: res.status }, "introspection rejected");
+        log.warn(
+          { status: res.status, requestId: upstreamId },
+          "introspection rejected",
+        );
         negativeCache.set(fp, Date.now() + NEGATIVE_TTL);
         return null;
       }
@@ -100,7 +112,10 @@ export async function introspectSession(
       return data;
     } catch (err) {
       log.warn(
-        { err: err instanceof Error ? err.message : err },
+        {
+          err: err instanceof Error ? err.message : err,
+          requestId: requestId ?? "unscoped (no upstream response)",
+        },
         "introspection unavailable — failing closed",
       );
       // Do NOT negative-cache transport failures; auth may come back any second.

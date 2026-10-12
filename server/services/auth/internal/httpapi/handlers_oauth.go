@@ -49,23 +49,23 @@ func randomToken() (string, error) {
 
 func (s *Server) handleGoogleStart(w http.ResponseWriter, r *http.Request) {
 	if s.oauthCfg == nil {
-		writeError(w, http.StatusNotImplemented, "OAUTH_NOT_CONFIGURED", "Google sign-in is not configured")
+		writeError(w, r, http.StatusNotImplemented, "OAUTH_NOT_CONFIGURED", "Google sign-in is not configured")
 		return
 	}
 	state, err := randomToken()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "OAuth start failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "OAuth start failed")
 		return
 	}
 	returnTo := safeReturnTo(r.URL.Query().Get("returnTo"))
 	if s.rdb != nil {
 		payload, _ := json.Marshal(oauthStatePayload{ReturnTo: returnTo})
 		if err := s.rdb.Set(r.Context(), "oauth:state:"+state, payload, oauthStateTTL).Err(); err != nil {
-			writeError(w, http.StatusServiceUnavailable, "OAUTH_UNAVAILABLE", "Sign-in temporarily unavailable")
+			writeError(w, r, http.StatusServiceUnavailable, "OAUTH_UNAVAILABLE", "Sign-in temporarily unavailable")
 			return
 		}
 	} else {
-		writeError(w, http.StatusServiceUnavailable, "OAUTH_UNAVAILABLE", "Sign-in requires Redis")
+		writeError(w, r, http.StatusServiceUnavailable, "OAUTH_UNAVAILABLE", "Sign-in requires Redis")
 		return
 	}
 
@@ -90,7 +90,7 @@ type googleUserInfo struct {
 
 func (s *Server) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	if s.oauthCfg == nil {
-		writeError(w, http.StatusNotImplemented, "OAUTH_NOT_CONFIGURED", "Google sign-in is not configured")
+		writeError(w, r, http.StatusNotImplemented, "OAUTH_NOT_CONFIGURED", "Google sign-in is not configured")
 		return
 	}
 	ctx := r.Context()
@@ -261,34 +261,34 @@ type googleLinkBody struct {
 func (s *Server) handleGoogleLinkConfirm(w http.ResponseWriter, r *http.Request) {
 	var body googleLinkBody
 	if err := readJSON(r, &body); err != nil || len(body.State) < 16 || body.Password == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION", "Link state and password required")
+		writeError(w, r, http.StatusBadRequest, "VALIDATION", "Link state and password required")
 		return
 	}
 	raw, err := s.rdb.GetDel(r.Context(), "oauth:link:"+body.State).Result()
 	if err != nil || raw == "" {
-		writeError(w, http.StatusBadRequest, "LINK_INVALID", "Link request expired; sign in again")
+		writeError(w, r, http.StatusBadRequest, "LINK_INVALID", "Link request expired; sign in again")
 		return
 	}
 	var payload map[string]string
 	if json.Unmarshal([]byte(raw), &payload) != nil ||
 		payload["provider"] != "google" || payload["userId"] == "" {
-		writeError(w, http.StatusBadRequest, "LINK_INVALID", "Malformed link request")
+		writeError(w, r, http.StatusBadRequest, "LINK_INVALID", "Malformed link request")
 		return
 	}
 
 	user, err := s.db.FindUserByID(r.Context(), payload["userId"])
 	if err != nil || user.PasswordHash == nil {
-		writeError(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Password incorrect")
+		writeError(w, r, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Password incorrect")
 		return
 	}
 	ok, verr := verifyPasswordHash(body.Password, *user.PasswordHash)
 	password.VerifyDummy(body.Password) // keep timing flat when hash missing
 	if verr != nil || !ok {
-		writeError(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Password incorrect")
+		writeError(w, r, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Password incorrect")
 		return
 	}
 	if err := s.db.LinkIdentity(r.Context(), user.ID, "google", payload["providerAccountId"]); err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Link failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Link failed")
 		return
 	}
 	s.auditor.Record(s.auditEntry(r, user.ID, user.Email, audit.OAuthLink))
@@ -297,7 +297,7 @@ func (s *Server) handleGoogleLinkConfirm(w http.ResponseWriter, r *http.Request)
 		UserID: user.ID, UserAgent: uaPtr(r), IPHash: ipHashPtr(s, r),
 	})
 	if serr != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Session creation failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Session creation failed")
 		return
 	}
 	s.setSessionCookie(w, rawTok)

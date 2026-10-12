@@ -51,17 +51,17 @@ func verifyPasswordHash(plain, hash string) (bool, error) {
 func (s *Server) issueMFATicket(w http.ResponseWriter, r *http.Request, user *store.User) {
 	b := make([]byte, 32)
 	if _, err := cryptoRandRead(b); err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Login failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Login failed")
 		return
 	}
 	raw := base64.RawURLEncoding.EncodeToString(b)
 	key := mfaTicketPrefix + csrf.HashForLookup(raw)
 	if s.rdb == nil {
-		writeError(w, http.StatusServiceUnavailable, "MFA_UNAVAILABLE", "MFA temporarily unavailable")
+		writeError(w, r, http.StatusServiceUnavailable, "MFA_UNAVAILABLE", "MFA temporarily unavailable")
 		return
 	}
 	if err := s.rdb.Set(r.Context(), key, user.ID, mfaTicketTTL).Err(); err != nil {
-		writeError(w, http.StatusServiceUnavailable, "MFA_UNAVAILABLE", "MFA temporarily unavailable")
+		writeError(w, r, http.StatusServiceUnavailable, "MFA_UNAVAILABLE", "MFA temporarily unavailable")
 		return
 	}
 	// Attempt counter for the challenge step.
@@ -82,19 +82,19 @@ type mfaChallengeBody struct {
 func (s *Server) handleMFAChallenge(w http.ResponseWriter, r *http.Request) {
 	ticketUserID, _ := r.Context().Value(mfaTicketUserKey{}).(string)
 	if ticketUserID == "" || s.rdb == nil {
-		writeError(w, http.StatusUnauthorized, "MFA_TICKET_INVALID", "Verification window expired")
+		writeError(w, r, http.StatusUnauthorized, "MFA_TICKET_INVALID", "Verification window expired")
 		return
 	}
 
 	user, err := s.db.FindUserByID(r.Context(), ticketUserID)
 	if err != nil || !user.MFAEnabled {
-		writeError(w, http.StatusUnauthorized, "MFA_TICKET_INVALID", "Verification window expired")
+		writeError(w, r, http.StatusUnauthorized, "MFA_TICKET_INVALID", "Verification window expired")
 		return
 	}
 
 	var body mfaChallengeBody
 	if err := readJSON(r, &body); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION", "A verification code is required")
+		writeError(w, r, http.StatusBadRequest, "VALIDATION", "A verification code is required")
 		return
 	}
 
@@ -117,7 +117,7 @@ func (s *Server) handleMFAChallenge(w http.ResponseWriter, r *http.Request) {
 
 	if !ok {
 		s.auditor.Record(s.auditEntry(r, user.ID, user.Email, audit.MFAChallengeFailed))
-		writeError(w, http.StatusUnauthorized, "MFA_INVALID", "Invalid verification code")
+		writeError(w, r, http.StatusUnauthorized, "MFA_INVALID", "Invalid verification code")
 		return
 	}
 
@@ -128,7 +128,7 @@ func (s *Server) handleMFAChallenge(w http.ResponseWriter, r *http.Request) {
 		UserID: user.ID, UserAgent: ua, IPHash: ipHash,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Login failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Login failed")
 		return
 	}
 	s.setSessionCookie(w, raw)
@@ -157,16 +157,16 @@ type enrollResponse struct {
 func (s *Server) handleMFAEnroll(w http.ResponseWriter, r *http.Request) {
 	info := authFrom(r)
 	if info.User.MFAEnabled {
-		writeError(w, http.StatusConflict, "MFA_ENABLED", "MFA is already active; disable it first")
+		writeError(w, r, http.StatusConflict, "MFA_ENABLED", "MFA is already active; disable it first")
 		return
 	}
 	secret, uri, sealed, err := s.mfa.Enroll(info.User.Email)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Enrollment failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Enrollment failed")
 		return
 	}
 	if err := s.db.SetMFASecret(r.Context(), info.User.ID, strPtr(sealed)); err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Enrollment failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Enrollment failed")
 		return
 	}
 	s.auditor.Record(s.auditEntry(r, info.User.ID, info.User.Email, audit.MFAEnrollStart))
@@ -184,19 +184,19 @@ func (s *Server) handleMFAActivate(w http.ResponseWriter, r *http.Request) {
 	info := authFrom(r)
 	var body mfaActivateBody
 	if err := readJSON(r, &body); err != nil || !isNumeric(body.Code) {
-		writeError(w, http.StatusBadRequest, "VALIDATION", "A numeric code is required")
+		writeError(w, r, http.StatusBadRequest, "VALIDATION", "A numeric code is required")
 		return
 	}
 	if info.User.MFAEnabled {
-		writeError(w, http.StatusConflict, "MFA_ENABLED", "MFA is already active")
+		writeError(w, r, http.StatusConflict, "MFA_ENABLED", "MFA is already active")
 		return
 	}
 	if !s.mfa.Verify(info.User.MFASecretOrEmpty(), body.Code) {
-		writeError(w, http.StatusBadRequest, "MFA_INVALID", "Code did not match; try the next one")
+		writeError(w, r, http.StatusBadRequest, "MFA_INVALID", "Code did not match; try the next one")
 		return
 	}
 	if err := s.db.ActivateMFA(r.Context(), info.User.ID); err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Activation failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Activation failed")
 		return
 	}
 	codes, hashes, err := mfa.GenerateBackupCodes()
@@ -225,12 +225,12 @@ func (s *Server) handleMFADisable(w http.ResponseWriter, r *http.Request) {
 	info := authFrom(r)
 	var body mfaDisableBody
 	if err := readJSON(r, &body); err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION", "Password confirmation required")
+		writeError(w, r, http.StatusBadRequest, "VALIDATION", "Password confirmation required")
 		return
 	}
 	if info.User.PasswordHash == nil ||
 		func() bool { ok, _ := verifyPasswordHash(body.Password, *info.User.PasswordHash); return !ok }() {
-		writeError(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Password incorrect")
+		writeError(w, r, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Password incorrect")
 		return
 	}
 	// Require a current factor so a stolen password alone cannot strip MFA.
@@ -243,11 +243,11 @@ func (s *Server) handleMFADisable(w http.ResponseWriter, r *http.Request) {
 		factorOK = n > 0
 	}
 	if !factorOK {
-		writeError(w, http.StatusUnauthorized, "MFA_INVALID", "A valid code is required to disable MFA")
+		writeError(w, r, http.StatusUnauthorized, "MFA_INVALID", "A valid code is required to disable MFA")
 		return
 	}
 	if err := s.db.DisableMFA(r.Context(), info.User.ID); err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Disable failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Disable failed")
 		return
 	}
 	s.auditor.Record(s.auditEntry(r, info.User.ID, info.User.Email, audit.MFADisabled))
@@ -261,7 +261,7 @@ func (s *Server) handleListSessions(w http.ResponseWriter, r *http.Request) {
 	info := authFrom(r)
 	recs, err := s.sessions.ListActiveForUser(r.Context(), info.User.ID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Could not list sessions")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Could not list sessions")
 		return
 	}
 	out := make([]map[string]any, 0, len(recs))
@@ -283,16 +283,16 @@ func (s *Server) handleRevokeSession(w http.ResponseWriter, r *http.Request) {
 	info := authFrom(r)
 	idHash := chi.URLParam(r, "idHash")
 	if len(idHash) < 16 {
-		writeError(w, http.StatusBadRequest, "VALIDATION", "Session id required")
+		writeError(w, r, http.StatusBadRequest, "VALIDATION", "Session id required")
 		return
 	}
 	err := s.sessions.RevokeByID(r.Context(), info.User.ID, idHash)
 	if errors.Is(err, session.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "Session not found")
+		writeError(w, r, http.StatusNotFound, "NOT_FOUND", "Session not found")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL", "Revoke failed")
+		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Revoke failed")
 		return
 	}
 	s.auditor.Record(s.auditEntry(r, info.User.ID, info.User.Email, audit.SessionRevoked))

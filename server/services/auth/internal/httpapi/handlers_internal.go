@@ -39,23 +39,30 @@ type introspectResponse struct {
 // client ever noticing the refresh happened.
 func (s *Server) handleIntrospect(w http.ResponseWriter, r *http.Request) {
 	if !internalKeyMatches(r.Header.Get("X-Internal-Key")) {
-		writeError(w, http.StatusUnauthorized, "INTERNAL_AUTH", "Invalid internal key")
+		writeError(w, r, http.StatusUnauthorized, "INTERNAL_AUTH", "Invalid internal key")
 		return
 	}
 
 	var body introspectBody
 	if err := readJSON(r, &body); err != nil || len(body.Token) < 16 || len(body.Token) > 512 {
-		writeError(w, http.StatusBadRequest, "VALIDATION", "Token required")
+		writeError(w, r, http.StatusBadRequest, "VALIDATION", "Token required")
 		return
 	}
 
 	rec, err := s.sessions.Validate(r.Context(), body.Token)
 	if err != nil {
+		// Inactive is a normal outcome (expired/revoked), not an error —
+		// but log the reason class so monolith-side mysteries are joinable
+		// by request ID instead of undebuggable. Never log the token.
+		s.log.Info("introspect inactive: session invalid",
+			"request_id", requestIDFrom(r), "err", err)
 		writeJSON(w, http.StatusOK, map[string]any{"active": false})
 		return
 	}
 	user, err := s.db.FindUserByID(r.Context(), rec.UserID)
 	if err != nil {
+		s.log.Warn("introspect inactive: user lookup failed",
+			"request_id", requestIDFrom(r), "err", err)
 		writeJSON(w, http.StatusOK, map[string]any{"active": false})
 		return
 	}
