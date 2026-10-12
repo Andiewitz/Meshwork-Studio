@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.7.0",
     "express": "^5.0.1",

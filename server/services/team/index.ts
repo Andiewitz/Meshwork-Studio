@@ -29,9 +29,6 @@ export class TeamService {
   static storage = teamStorage;
 }
 
-// Backward compatibility alias
-export const TeamModule = TeamService;
-
 export * from "./db";
 export * from "./websocket";
 export * from "./routes";

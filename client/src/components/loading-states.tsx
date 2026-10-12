@@ -157,8 +157,4 @@ export function DefaultLoading({
   );
 }
 
-// Named alias
-export const DefaultLoader = DefaultLoading;
-
-// Default export
 export default DefaultLoading;

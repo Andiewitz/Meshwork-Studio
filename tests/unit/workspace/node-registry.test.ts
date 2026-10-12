@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { nodeDimensions } from "@/features/workspace/utils/dimensions";
 import {
   CONTAINER_TYPES,
   getNodeSize,
@@ -10,7 +9,6 @@ import { validateAndRepairCanvas } from "@/lib/ai-canvas-utils";
 
 describe("node registry", () => {
   it("uses the same defaults for manual and AI-created nodes", () => {
-    expect(nodeDimensions).toBe(NODE_SIZES);
     expect(getNodeSize("database")).toEqual({ w: 144, h: 120 });
     expect(getNodeSize("lambda")).toEqual(getNodeSize("logic"));
   });

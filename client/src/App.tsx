@@ -28,7 +28,6 @@ const lazyMap = {
   Settings: React.lazy(() => import("@/pages/Settings")),
   Workspace: React.lazy(() => import("@/pages/Workspace")),
   Dev: React.lazy(() => import("@/pages/Dev")),
-  Docs: React.lazy(() => import("@/pages/Dev")),
   Team: React.lazy(() => import("@/pages/Team")),
   Templates: React.lazy(() => import("@/pages/Templates")),
   TermsOfService: React.lazy(() => import("@/pages/TermsOfService")),
@@ -58,7 +57,6 @@ const {
   Settings,
   Workspace,
   Dev,
-  Docs,
   Team,
   Templates,
   TermsOfService,
@@ -198,7 +196,7 @@ function Router() {
       <Route path="/verify-email" component={VerifyEmailPage} />
       <Route path="/terms" component={TermsOfService} />
       <Route path="/privacy" component={PrivacyPolicy} />
-      <Route path="/docs" component={Docs} />
+      <Route path="/docs" component={Dev} />
 
       {/* Standalone Workspace Route */}
       <Route path="/workspace/:id">

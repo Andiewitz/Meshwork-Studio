@@ -335,7 +335,7 @@ verified SHA, and can be retried without modifying main or redeploying.
 
 Evidence: [NGINX config](../../../deploy/nginx.conf) serves an ec2-user/app path; workflows
 use a username-dependent meshwork-studiov2 path. The remote script starts Node
-with its parent directory as cwd. [start-ec2.sh](../../../scripts/start.sh names two
+with its parent directory as cwd. [start.sh](../../../scripts/start.sh) previously named two
 historical PostgreSQL containers; [Compose](../../../docker-compose.yml) defines one.
 [Bootstrap script](../../../deploy/ec2-user-data.sh) targets Amazon Linux, host Redis,
 and an RDS client, while other instructions use Ubuntu and Docker datastores.

@@ -175,7 +175,7 @@ import {
   registerEnterNodeHandler,
   unregisterEnterNodeHandler,
 } from "@/features/workspace/utils/canvasEvents";
-import { nodeDimensions } from "@/features/workspace/utils/dimensions";
+import { NODE_SIZES } from "@/features/workspace/utils/nodeRegistry";
 import {
   getNodeDimensions,
   normalizeNodeDimensions,
@@ -981,7 +981,7 @@ function WorkspaceView() {
     (type: string, label: string, position = { x: 100, y: 100 }) => {
       takeSnapshot();
       const nodeTypeInfo = nodeTypesList.find((n) => n.type === type);
-      const dim = nodeDimensions[type] || { w: 168, h: 96 };
+      const dim = NODE_SIZES[type] || { w: 168, h: 96 };
       const brand = nodeBrands[type] || {
         color: "#4F46E5",
         borderColor: "#4338CA",

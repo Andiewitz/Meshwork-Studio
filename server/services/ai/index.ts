@@ -26,10 +26,6 @@ export class AIService {
   }
 }
 
-// Service aliases
-export const JenkosService = AIService;
-export const AIModule = AIService;
-
 export * from "./db";
 export * from "./encryption";
 export * from "./providers";

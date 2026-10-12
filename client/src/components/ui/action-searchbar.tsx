@@ -529,5 +529,4 @@ export function ActionSearchBar({
   );
 }
 
-export const Component = ActionSearchBar;
 export default ActionSearchBar;
