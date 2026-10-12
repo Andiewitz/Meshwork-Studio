@@ -1,268 +1,191 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Meshwork Studio — Local Build & EC2 Dist Swap Deploy Script
+# Meshwork Studio — Build locally, deploy live to EC2 (dist swap)
 # ==============================================================================
-# Workflow:
-#   1. Runs local production build (`npm run build`)
-#   1b. Builds the Go auth service binary (linux/amd64)
-#   2. Locates EC2 instance / SSH key
-#   3. Syncs fresh `dist/` directory + auth binary to remote EC2 server
-#   4. Swaps both atomically and restarts/reloads PM2 processes
-#   5. Runs health checks (monolith :5000 + auth :8081)
+# Use when you changed code and want it LIVE. Builds Node dist + Go auth
+# binary on this machine, pushes both to EC2, atomically swaps, restarts PM2.
+# For reboot/start without rebuilding use ./scripts/start.sh instead.
 #
 # Usage:
-#   ./scripts/deploy.sh               # Build everything & deploy
-#   ./scripts/deploy.sh --skip-build  # Deploy existing local dist without rebuilding
-#   ./scripts/deploy.sh --skip-auth   # Skip the Go auth service build/upload
+#   ./scripts/deploy.sh               # build everything & deploy live
+#   ./scripts/deploy.sh --skip-build  # push existing local dist (no rebuild)
+#   ./scripts/deploy.sh --skip-auth   # skip Go auth build/upload
+#   ./scripts/deploy.sh --help        # this help
+#
+# Env: MESHWORK_EC2_INSTANCE_ID, MESHWORK_DOMAIN, MESHWORK_SSH_USER (ubuntu),
+#      MESHWORK_SSH_KEY, AWS_REGION (us-east-1), REMOTE_APP_DIR (override).
 # ==============================================================================
-
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve symlinks so global installs (~/.local/bin/meshwork-deploy) still
+# find the repo. Works with bash on Linux/macOS.
+_SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$_SOURCE" ]]; do
+  _DIR="$(cd -P "$(dirname "$_SOURCE")" && pwd)"
+  _SOURCE="$(readlink "$_SOURCE")"
+  [[ "$_SOURCE" != /* ]] && _SOURCE="$_DIR/$_SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$_SOURCE")" && pwd)"
+unset _SOURCE _DIR
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=lib/ec2-common.sh
+source "$SCRIPT_DIR/lib/ec2-common.sh"
 
-# --- Configuration ---
-INSTANCE_ID="${MESHWORK_EC2_INSTANCE_ID:-}"
-AWS_REGION="${AWS_REGION:-us-east-1}"
-DOMAIN="${MESHWORK_DOMAIN:-}"
-SSH_USER="${MESHWORK_SSH_USER:-ubuntu}"
-SSH_KEY_LOCATIONS=(
-  "${MESHWORK_SSH_KEY:-}"
-  "$REPO_DIR/ssh-keys/Mesh-EC2.pem"
-  "$HOME/.ssh/meshwork.pem"
-  "$HOME/.ssh/id_rsa"
-  "$HOME/.ssh/id_ed25519"
-)
-
-# Colors
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-NC='\033[0m' # No Color
-
-echo -e "${BOLD}${CYAN}======================================================${NC}"
-echo -e "${BOLD}${CYAN}   🚀 Meshwork Studio — Dist Swap Deploy to EC2      ${NC}"
-echo -e "${BOLD}${CYAN}======================================================${NC}"
-
-# Parse flags
 SKIP_BUILD=false
 SKIP_AUTH=false
 for arg in "$@"; do
-  case $arg in
-    --skip-build|-s)
-      SKIP_BUILD=true
-      shift
-      ;;
-    --skip-auth|-a)
-      SKIP_AUTH=true
-      shift
+  case "$arg" in
+    --skip-build|-s) SKIP_BUILD=true ;;
+    --skip-auth|-a) SKIP_AUTH=true ;;
+    --help|-h)
+      sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0
       ;;
   esac
 done
 
-# Step 1: Run Local Build
-if [ "$SKIP_BUILD" = false ]; then
-  echo -e "${BLUE}▶ [1/5] Building production bundle locally...${NC}"
+tui_banner "🚀 Meshwork — Build & Deploy LIVE to EC2"
+
+# ── [1/5] Local build ───────────────────────────────────────────────────────
+tui_step "1/5" "Local production build..."
+tui_bar 0 5 24; echo ""
+if [[ "$SKIP_BUILD" == false ]]; then
   cd "$REPO_DIR"
   npm run build
-  echo -e "${GREEN}✓ Local build complete!${NC}"
+  tui_ok "Local build complete."
 else
-  echo -e "${YELLOW}⚡ [1/5] Skipping build step (--skip-build). Using existing dist/...${NC}"
+  tui_warn "Skipping build (--skip-build). Using existing dist/."
 fi
-
-# Verify local dist exists
-if [ ! -d "$REPO_DIR/dist" ] || [ ! -f "$REPO_DIR/dist/index.cjs" ]; then
-  echo -e "${RED}❌ Error: Local dist directory or dist/index.cjs is missing.${NC}"
-  echo -e "   Please run 'npm run build' first."
+if [[ ! -d "$REPO_DIR/dist" || ! -f "$REPO_DIR/dist/index.cjs" ]]; then
+  tui_fail "dist/ or dist/index.cjs missing. Run without --skip-build."
   exit 1
 fi
+tui_ok "Bundle: dist/index.cjs ($(du -sh "$REPO_DIR/dist" | cut -f1))"
+tui_bar 1 5 24; echo ""
 
-# Step 1b: Build Go auth service (linux/amd64)
+# ── [1b] Go auth binary ─────────────────────────────────────────────────────
 AUTH_BIN="$REPO_DIR/server/services/auth/meshwork-auth"
-if [ "$SKIP_AUTH" = false ]; then
-  echo -e "${BLUE}▶ [1b/5] Building Go auth service (linux/amd64)...${NC}"
-  if ! command -v go &>/dev/null; then
-    echo -e "${RED}❌ Error: Go toolchain not found. Install Go ≥1.26 or pass --skip-auth.${NC}"
+if [[ "$SKIP_AUTH" == false ]]; then
+  tui_step "1b/5" "Building Go auth service (linux/amd64)..."
+  command -v go &>/dev/null || {
+    tui_fail "Go toolchain missing. Install Go ≥1.26 or pass --skip-auth."
     exit 1
-  fi
+  }
   (cd "$REPO_DIR/server/services/auth" && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -ldflags="-s -w" -o meshwork-auth ./cmd/server)
-  echo -e "${GREEN}✓ Auth binary built: server/services/auth/meshwork-auth${NC}"
+    go build -ldflags="-s -w" -o meshwork-auth ./cmd/server) &
+  tui_spin $! "Compiling Go auth..."
+  wait $!
+  tui_ok "Auth binary: server/services/auth/meshwork-auth"
 else
-  echo -e "${YELLOW}⚡ [1b/5] Skipping auth service build (--skip-auth).${NC}"
+  tui_warn "Skipping auth build (--skip-auth)."
 fi
 
-# Step 2: Locate SSH Key & Target Host
-echo -e "${BLUE}▶ [2/4] Locating SSH credentials & target host...${NC}"
-
-SSH_KEY=""
-for key in "${SSH_KEY_LOCATIONS[@]}"; do
-  if [[ -n "$key" && -f "$key" ]]; then
-    SSH_KEY="$key"
-    break
-  fi
-done
-
-if [[ -z "$SSH_KEY" ]]; then
-  echo -e "${RED}❌ Error: SSH Key not found.${NC}"
-  echo -e "   Please set MESHWORK_SSH_KEY=/path/to/key.pem or place a key in ~/.ssh/id_rsa"
+# ── [2/5] EC2 connection ────────────────────────────────────────────────────
+tui_step "2/5" "Connecting to EC2..."
+SSH_KEY="$(ec2_find_key "$REPO_DIR")" || {
+  tui_fail "SSH key not found. Set MESHWORK_SSH_KEY=/path/to/key.pem"
+  exit 1
+}
+tui_ok "SSH key: $SSH_KEY"
+ec2_ensure_running
+HOST_TARGET="$(ec2_resolve_host)"
+if [[ -z "$HOST_TARGET" ]]; then
+  ec2_explain_target missing
   exit 1
 fi
-
-chmod 400 "$SSH_KEY" 2>/dev/null || true
-echo -e "${GREEN}✓${NC} SSH Key found: ${SSH_KEY}"
-
-HOST_TARGET="${DOMAIN:-}"
-if [[ -z "$HOST_TARGET" && -z "$INSTANCE_ID" ]]; then
-  echo -e "${RED}❌ Error: Target host not specified.${NC}"
-  echo -e "   Set MESHWORK_DOMAIN (e.g. export MESHWORK_DOMAIN=your-server.com)"
-  echo -e "   or MESHWORK_EC2_INSTANCE_ID (e.g. export MESHWORK_EC2_INSTANCE_ID=i-xxxx)."
+HOST_TARGET="$(ec2_wait_ssh "$SSH_KEY" "$SSH_USER" "$HOST_TARGET" 30)" || {
+  ec2_explain_target "$HOST_TARGET"
   exit 1
+}
+REMOTE_APP_DIR="$(REMOTE_APP_DIR="${REMOTE_APP_DIR:-}" ec2_remote_dir "$SSH_KEY" "$SSH_USER" "$HOST_TARGET")"
+tui_ok "Remote app dir: $REMOTE_APP_DIR"
+tui_bar 2 5 24; echo ""
+
+# Stale-dist guard: warn if remote dist is newer than local.
+LOCAL_MTIME=$(stat -c %Y "$REPO_DIR/dist/index.cjs" 2>/dev/null || stat -f %m "$REPO_DIR/dist/index.cjs")
+REMOTE_MTIME=$(ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" \
+  "stat -c %Y '$REMOTE_APP_DIR/dist/index.cjs' 2>/dev/null || stat -f %m '$REMOTE_APP_DIR/dist/index.cjs' 2>/dev/null || echo 0")
+if [[ "$REMOTE_MTIME" -gt "$LOCAL_MTIME" ]]; then
+  tui_warn "Remote dist is NEWER than local. Pushing would roll back live."
+  tui_warn "Local: $(date -d @"$LOCAL_MTIME" 2>/dev/null || date -r "$LOCAL_MTIME") | Remote: $(date -d @"$REMOTE_MTIME" 2>/dev/null || echo "$REMOTE_MTIME")"
+  read -r -p "  Push anyway? [y/N] " yn
+  [[ "$yn" == "y" || "$yn" == "Y" ]] || { tui_info "Aborted. Rebuild first."; exit 1; }
 fi
 
-# Try getting public IP if AWS CLI is installed
-if command -v aws &>/dev/null; then
-  EC2_PUBLIC_IP=$(aws ec2 describe-instances \
-    --instance-ids "$INSTANCE_ID" \
-    --region "$AWS_REGION" \
-    --query "Reservations[0].Instances[0].PublicIpAddress" \
-    --output text 2>/dev/null || echo "")
-  
-  if [[ -n "$EC2_PUBLIC_IP" && "$EC2_PUBLIC_IP" != "None" ]]; then
-    HOST_TARGET="$EC2_PUBLIC_IP"
-  fi
-fi
-
-# Verify SSH connectivity
-echo -e "${BLUE}▶ Checking SSH connection to ${HOST_TARGET}...${NC}"
-if ! ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=8 -o BatchMode=yes "$SSH_USER@$HOST_TARGET" "echo ok" &>/dev/null; then
-  if [[ "$HOST_TARGET" != "$DOMAIN" ]]; then
-    echo -e "${YELLOW}Retrying connection via domain: ${DOMAIN}...${NC}"
-    HOST_TARGET="$DOMAIN"
-    if ! ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=8 -o BatchMode=yes "$SSH_USER@$HOST_TARGET" "echo ok" &>/dev/null; then
-      echo -e "${RED}❌ Could not connect to EC2 (${HOST_TARGET}) via SSH.${NC}"
-      exit 1
-    fi
-  else
-    echo -e "${RED}❌ Could not connect to EC2 (${HOST_TARGET}) via SSH.${NC}"
-    exit 1
-  fi
-fi
-echo -e "${GREEN}✓ SSH connection established!${NC}"
-
-# Detect remote app directory
-REMOTE_APP_DIR=$(ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" '
-  if [ -d "/home/ubuntu/meshwork-studiov2" ]; then
-    echo "/home/ubuntu/meshwork-studiov2"
-  elif [ -d "/home/ubuntu/app/meshwork-studio" ]; then
-    echo "/home/ubuntu/app/meshwork-studio"
-  elif [ -d "/home/ec2-user/app/meshwork-studio" ]; then
-    echo "/home/ec2-user/app/meshwork-studio"
-  else
-    echo "$HOME/meshwork-studiov2"
-  fi
-')
-
-echo -e "${GREEN}✓${NC} Remote application directory: ${REMOTE_APP_DIR}"
-
-# Step 3: Transfer & Swap dist
-echo -e "${BLUE}▶ [3/5] Uploading dist bundle to remote server...${NC}"
-
-# Upload dist directly into dist.new
+# ── [3/5] Upload ────────────────────────────────────────────────────────────
+tui_step "3/5" "Uploading dist bundle..."
 ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" "mkdir -p '$REMOTE_APP_DIR/dist.new'"
-
 if command -v rsync &>/dev/null; then
-  rsync -avz --delete \
+  rsync -avz --delete --info=progress2 \
     -e "ssh -i '$SSH_KEY' -o StrictHostKeyChecking=accept-new" \
-    "$REPO_DIR/dist/" \
-    "$SSH_USER@$HOST_TARGET:$REMOTE_APP_DIR/dist.new/"
+    "$REPO_DIR/dist/" "$SSH_USER@$HOST_TARGET:$REMOTE_APP_DIR/dist.new/" \
+    | stdbuf -o0 tr '\r' '\n' | tail -3
 else
-  # Tar stream fallback if rsync isn't available
-  tar -czf - -C "$REPO_DIR/dist" . | ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" "tar -xzf - -C '$REMOTE_APP_DIR/dist.new'"
+  tui_info "rsync missing — tar-stream fallback..."
+  tar -czf - -C "$REPO_DIR/dist" . \
+    | ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" "tar -xzf - -C '$REMOTE_APP_DIR/dist.new'"
 fi
+tui_ok "Dist upload complete."
+tui_bar 3 5 24; echo ""
 
-echo -e "${GREEN}✓ Upload complete.${NC}"
-
-# Step 3b: Upload auth binary
-AUTH_REMOTE_PATH="$REMOTE_APP_DIR/meshwork-auth"
-if [ "$SKIP_AUTH" = false ] && [ -f "$AUTH_BIN" ]; then
-  echo -e "${BLUE}▶ [3b/5] Uploading Go auth service binary...${NC}"
-  ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" \
-    "mkdir -p '$REMOTE_APP_DIR/auth.staging'"
+if [[ "$SKIP_AUTH" == false && -f "$AUTH_BIN" ]]; then
+  tui_step "3b/5" "Uploading Go auth binary..."
+  ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" "mkdir -p '$REMOTE_APP_DIR/auth.staging'"
   scp -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new \
     "$AUTH_BIN" "$SSH_USER@$HOST_TARGET:$REMOTE_APP_DIR/auth.staging/meshwork-auth.new"
-  echo -e "${GREEN}✓ Auth binary uploaded.${NC}"
+  tui_ok "Auth binary uploaded."
 fi
 
-# Step 4: Swap dist and reload processes
-echo -e "${BLUE}▶ [4/5] Performing atomic swaps & reloading applications...${NC}"
-
-ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" SKIP_AUTH="$SKIP_AUTH" bash -s "$REMOTE_APP_DIR" << 'REMOTE_SCRIPT'
+# ── [4/5] Atomic swap + restart ─────────────────────────────────────────────
+tui_step "4/5" "Swapping live + restarting PM2..."
+ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" SKIP_AUTH="$SKIP_AUTH" bash -s "$REMOTE_APP_DIR" <<'REMOTE_SCRIPT'
   set -euo pipefail
   TARGET_DIR="$1"
-
-  # Atomic swap: backup current dist, move dist.new to dist
   if [ -d "$TARGET_DIR/dist" ]; then
     rm -rf "$TARGET_DIR/dist.old" 2>/dev/null || true
     mv "$TARGET_DIR/dist" "$TARGET_DIR/dist.old"
   fi
   mv "$TARGET_DIR/dist.new" "$TARGET_DIR/dist"
 
-  # Restart PM2 monolith (hard delete+start: guarantees fresh env from .env)
-  set -a
-  [ -f "$TARGET_DIR/.env" ] && . "$TARGET_DIR/.env"
-  set +a
-  echo "  ⚡ Restarting PM2 meshwork process..."
+  set -a; [ -f "$TARGET_DIR/.env" ] && . "$TARGET_DIR/.env"; set +a
+  echo "  ⚡ Restarting PM2 meshwork..."
   pm2 delete meshwork >/dev/null 2>&1 || true
   pm2 start "$TARGET_DIR/dist/index.cjs" --name meshwork --cwd "$TARGET_DIR" >/dev/null
 
-  # Atomic swap + restart for the Go auth service
   if [ "${SKIP_AUTH:-false}" != "true" ] && [ -f "$TARGET_DIR/auth.staging/meshwork-auth.new" ]; then
     chmod +x "$TARGET_DIR/auth.staging/meshwork-auth.new"
-    if [ -f "$TARGET_DIR/meshwork-auth" ]; then
-      mv "$TARGET_DIR/meshwork-auth" "$TARGET_DIR/meshwork-auth.old"
-    fi
+    [ -f "$TARGET_DIR/meshwork-auth" ] && mv "$TARGET_DIR/meshwork-auth" "$TARGET_DIR/meshwork-auth.old"
     mv "$TARGET_DIR/auth.staging/meshwork-auth.new" "$TARGET_DIR/meshwork-auth"
     rmdir "$TARGET_DIR/auth.staging" 2>/dev/null || true
-
-    echo "  ⚡ Restarting PM2 meshwork-auth process..."
-    set -a
-    [ -f "$TARGET_DIR/.env" ] && . "$TARGET_DIR/.env"
-    set +a
+    echo "  ⚡ Restarting PM2 meshwork-auth..."
     pm2 delete meshwork-auth >/dev/null 2>&1 || true
     pm2 start "$TARGET_DIR/meshwork-auth" --name meshwork-auth --cwd "$TARGET_DIR" >/dev/null
   fi
-
   pm2 save >/dev/null 2>&1 || true
-
-  # Reload NGINX if active
   if systemctl is-active --quiet nginx; then
     sudo systemctl reload nginx 2>/dev/null || true
   fi
 REMOTE_SCRIPT
+tui_ok "Swap + restart done."
+tui_bar 4 5 24; echo ""
 
-# Verification / Health Check
-echo -e "${BLUE}▶ [5/5] Verifying application health...${NC}"
+# ── [5/5] Health ────────────────────────────────────────────────────────────
+tui_step "5/5" "Verifying health..."
 sleep 2
-
-HEALTH_STATUS=$(ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" "curl -sf http://localhost:5000/health 2>/dev/null || curl -sf http://localhost/health 2>/dev/null || echo 'UNKNOWN'")
-
+HEALTH_STATUS=$(ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" \
+  "curl -sf http://localhost:5000/health 2>/dev/null || curl -sf http://localhost/health 2>/dev/null || echo UNKNOWN")
 AUTH_HEALTH="skipped"
-if [ "$SKIP_AUTH" = false ]; then
+if [[ "$SKIP_AUTH" == false ]]; then
   AUTH_HEALTH=$(ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" \
-    "curl -sf http://127.0.0.1:8081/healthz 2>/dev/null || echo 'UNAVAILABLE'")
+    "curl -sf http://127.0.0.1:8081/healthz 2>/dev/null || echo UNAVAILABLE")
 fi
+tui_bar 5 5 24; echo ""
 
 echo ""
-echo -e "${BOLD}${GREEN}======================================================${NC}"
-echo -e "${BOLD}${GREEN}   🎉 Deployment successfully completed!             ${NC}"
-echo -e "${BOLD}${GREEN}======================================================${NC}"
-echo -e "  🌐 ${BOLD}Live App:${NC}      https://${DOMAIN}"
-echo -e "  📡 ${BOLD}Target Host:${NC}   ${HOST_TARGET}"
-echo -e "  📊 ${BOLD}Monolith:${NC}      ${HEALTH_STATUS}"
-echo -e "  🔐 ${BOLD}Auth Service:${NC}  ${AUTH_HEALTH}"
-echo -e "  🕒 ${BOLD}Deployed At:${NC}   $(date)"
+tui_banner "🎉 Deployment complete!"
+echo -e "  🌐 Live App:     ${TUI_BOLD}https://${MESHWORK_DOMAIN:-$HOST_TARGET}${TUI_NC}"
+echo -e "  📡 Target Host:  $HOST_TARGET"
+echo -e "  📊 Monolith:     $HEALTH_STATUS"
+echo -e "  🔐 Auth Service: $AUTH_HEALTH"
+echo -e "  🕒 Deployed At:  $(date)"
 echo ""

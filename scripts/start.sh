@@ -1,206 +1,179 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Meshwork Studio — Start & Health Check Script
+# Meshwork Studio — Start EC2 from current dist (no build)
 # ==============================================================================
+# Manual use: EC2 rebooted, services down, or push the LAST local build
+# without rebuilding. For fresh code changes use ./scripts/deploy.sh.
+#
 # Usage:
-#   ~/start-ec2.sh          # Starts EC2 (if needed), starts all services, checks health
-#   ~/start-ec2.sh --ssh    # Starts everything and opens an interactive SSH terminal
+#   ./scripts/start.sh            # push current dist/, start everything, check health
+#   ./scripts/start.sh --no-push  # start remote services only (no upload)
+#   ./scripts/start.sh --ssh/-s   # ...then open an interactive SSH shell
+#   ./scripts/start.sh --help     # this help
+#
+# Env: MESHWORK_EC2_INSTANCE_ID, MESHWORK_DOMAIN, MESHWORK_SSH_USER (ubuntu),
+#      MESHWORK_SSH_KEY, AWS_REGION (us-east-1), REMOTE_APP_DIR (override).
 # ==============================================================================
-
 set -euo pipefail
 
-# --- Configuration ---
-INSTANCE_ID="${MESHWORK_EC2_INSTANCE_ID:-}"
-AWS_REGION="${AWS_REGION:-us-east-1}"
-DOMAIN="${MESHWORK_DOMAIN:-}"
-SSH_USER="${MESHWORK_SSH_USER:-ubuntu}"
-SSH_KEY_LOCATIONS=(
-  "${MESHWORK_SSH_KEY:-}"
-  "$HOME/.ssh/meshwork.pem"
-  "$HOME/.ssh/id_rsa"
-  "$HOME/.ssh/id_ed25519"
-)
+# Resolve symlinks so global installs (~/.local/bin/meshwork-start) still
+# find the repo. Works with bash on Linux/macOS.
+_SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$_SOURCE" ]]; do
+  _DIR="$(cd -P "$(dirname "$_SOURCE")" && pwd)"
+  _SOURCE="$(readlink "$_SOURCE")"
+  [[ "$_SOURCE" != /* ]] && _SOURCE="$_DIR/$_SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$_SOURCE")" && pwd)"
+unset _SOURCE _DIR
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=lib/ec2-common.sh
+source "$SCRIPT_DIR/lib/ec2-common.sh"
 
-# Colors
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-NC='\033[0m' # No Color
-
-echo -e "${BOLD}${CYAN}======================================================${NC}"
-echo -e "${BOLD}${CYAN}   🚀 Meshwork Studio — EC2 & Services Starter   ${NC}"
-echo -e "${BOLD}${CYAN}======================================================${NC}"
-
-# Check configuration
-if [[ -z "$INSTANCE_ID" && -z "$DOMAIN" ]]; then
-  echo -e "${RED}❌ Error: EC2 Instance ID or Domain not configured.${NC}"
-  echo -e "   Please set MESHWORK_EC2_INSTANCE_ID (e.g. export MESHWORK_EC2_INSTANCE_ID=i-xxxx)"
-  echo -e "   or MESHWORK_DOMAIN (e.g. export MESHWORK_DOMAIN=your-server.com)."
-  exit 1
-fi
-
-# Locate SSH Key
-SSH_KEY=""
-for key in "${SSH_KEY_LOCATIONS[@]}"; do
-  if [[ -n "$key" && -f "$key" ]]; then
-    SSH_KEY="$key"
-    break
-  fi
+NO_PUSH=false
+WANT_SSH=false
+for arg in "$@"; do
+  case "$arg" in
+    --no-push) NO_PUSH=true ;;
+    --ssh|-s) WANT_SSH=true ;;
+    --help|-h)
+      sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0
+      ;;
+  esac
 done
 
-if [[ -z "$SSH_KEY" ]]; then
-  echo -e "${RED}❌ Error: SSH Key not found.${NC}"
-  echo -e "   Please set MESHWORK_SSH_KEY=/path/to/key.pem or place a key in ~/.ssh/id_rsa"
-  exit 1
+tui_banner "🔌 Meshwork — Start EC2 (current dist, no build)"
+
+# ── [1/5] Local dist check ──────────────────────────────────────────────────
+tui_step "1/5" "Checking current local dist..."
+if [[ "$NO_PUSH" == false ]]; then
+  if [[ ! -d "$REPO_DIR/dist" || ! -f "$REPO_DIR/dist/index.cjs" ]]; then
+    tui_fail "Local dist/ or dist/index.cjs missing."
+    tui_info "Run ./scripts/deploy.sh first to build, or use --no-push to skip upload."
+    exit 1
+  fi
+  tui_ok "Found dist/index.cjs ($(du -sh "$REPO_DIR/dist" | cut -f1))"
+else
+  tui_info "--no-push: skipping dist upload, starting remote services only."
 fi
 
-chmod 400 "$SSH_KEY" 2>/dev/null || true
-echo -e "${GREEN}✓${NC} SSH Key found: ${SSH_KEY}"
-
-# 1. AWS CLI Start Check (if AWS CLI is configured)
-HOST_TARGET="$DOMAIN"
-
-if command -v aws &>/dev/null && [[ -n "$INSTANCE_ID" ]]; then
-  echo -e "${BLUE}▶ Checking AWS EC2 instance status via AWS CLI...${NC}"
-  INSTANCE_STATE=$(aws ec2 describe-instances \
-    --instance-ids "$INSTANCE_ID" \
-    --region "$AWS_REGION" \
-    --query "Reservations[0].Instances[0].State.Name" \
-    --output text 2>/dev/null || echo "unknown")
-
-  if [[ "$INSTANCE_STATE" == "stopped" ]]; then
-    echo -e "${YELLOW}⚡ EC2 instance is currently stopped. Starting instance ($INSTANCE_ID)...${NC}"
-    aws ec2 start-instances --instance-ids "$INSTANCE_ID" --region "$AWS_REGION" >/dev/null
-    echo -e "${YELLOW}⏳ Waiting for EC2 instance to enter 'running' state...${NC}"
-    aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$AWS_REGION"
-    echo -e "${GREEN}✓ EC2 instance is now running!${NC}"
-  elif [[ "$INSTANCE_STATE" == "running" ]]; then
-    echo -e "${GREEN}✓${NC} EC2 instance ($INSTANCE_ID) is already running in ${AWS_REGION}."
+# ── [2/5] EC2 power + SSH ───────────────────────────────────────────────────
+tui_step "2/5" "Waking EC2 + connecting..."
+SSH_KEY="$(ec2_find_key "$REPO_DIR")" || {
+  tui_fail "SSH key not found. Set MESHWORK_SSH_KEY=/path/to/key.pem"
+  exit 1
+}
+tui_ok "SSH key: $SSH_KEY"
+ec2_ensure_running
+HOST_TARGET="$(ec2_resolve_host)"
+if [[ -z "$HOST_TARGET" ]]; then
+  ec2_explain_target missing
+  exit 1
+fi
+HOST_TARGET="$(ec2_wait_ssh "$SSH_KEY" "$SSH_USER" "$HOST_TARGET" 30)" || {
+  if [[ -n "${MESHWORK_DOMAIN:-}" && "$HOST_TARGET" != "${MESHWORK_DOMAIN}" ]]; then
+    tui_warn "Retrying via domain ${MESHWORK_DOMAIN}..."
+    HOST_TARGET="$(ec2_wait_ssh "$SSH_KEY" "$SSH_USER" "${MESHWORK_DOMAIN}" 10)" || {
+      ec2_explain_target "${MESHWORK_DOMAIN}"
+      exit 1
+    }
   else
-    echo -e "${YELLOW}ℹ AWS CLI instance state: ${INSTANCE_STATE}${NC}"
+    ec2_explain_target "$HOST_TARGET"
+    exit 1
   fi
+}
+REMOTE_APP_DIR="$(REMOTE_APP_DIR="${REMOTE_APP_DIR:-}" ec2_remote_dir "$SSH_KEY" "$SSH_USER" "$HOST_TARGET")"
+tui_ok "Remote app dir: $REMOTE_APP_DIR"
 
-  # Retrieve public IP if available
-  EC2_PUBLIC_IP=$(aws ec2 describe-instances \
-    --instance-ids "$INSTANCE_ID" \
-    --region "$AWS_REGION" \
-    --query "Reservations[0].Instances[0].PublicIpAddress" \
-    --output text 2>/dev/null || echo "")
-  
-  if [[ -n "$EC2_PUBLIC_IP" && "$EC2_PUBLIC_IP" != "None" ]]; then
-    HOST_TARGET="$EC2_PUBLIC_IP"
+# ── [3/5] Push current dist (no build) ──────────────────────────────────────
+if [[ "$NO_PUSH" == false ]]; then
+  tui_step "3/5" "Pushing current dist/ (no build)..."
+  ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" "mkdir -p '$REMOTE_APP_DIR/dist.new'"
+  if command -v rsync &>/dev/null; then
+    rsync -avz --delete --info=progress2 \
+      -e "ssh -i '$SSH_KEY' -o StrictHostKeyChecking=accept-new" \
+      "$REPO_DIR/dist/" "$SSH_USER@$HOST_TARGET:$REMOTE_APP_DIR/dist.new/" \
+      | stdbuf -o0 tr '\r' '\n' | tail -3
+  else
+    tui_info "rsync missing — tar-stream fallback..."
+    tar -czf - -C "$REPO_DIR/dist" . \
+      | ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" "tar -xzf - -C '$REMOTE_APP_DIR/dist.new'"
   fi
-fi
-
-# 2. Wait for SSH availability
-echo -e "${BLUE}▶ Waiting for SSH connectivity on ${HOST_TARGET}...${NC}"
-MAX_RETRIES=30
-RETRY_COUNT=0
-SSH_READY=false
-
-while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 -o BatchMode=yes "$SSH_USER@$HOST_TARGET" "echo ready" &>/dev/null; then
-    SSH_READY=true
-    break
-  fi
-  RETRY_COUNT=$((RETRY_COUNT + 1))
-  echo -ne "${YELLOW}.${NC}"
-  sleep 3
-done
-echo ""
-
-if [ "$SSH_READY" = false ]; then
-  # Fallback to domain if IP failed
-  if [[ "$HOST_TARGET" != "$DOMAIN" ]]; then
-    echo -e "${YELLOW}Retrying via domain ${DOMAIN}...${NC}"
-    HOST_TARGET="$DOMAIN"
-    if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 -o BatchMode=yes "$SSH_USER@$HOST_TARGET" "echo ready" &>/dev/null; then
-      SSH_READY=true
+  tui_ok "Upload complete."
+  ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" bash -s "$REMOTE_APP_DIR" <<'REMOTE_SWAP'
+    set -euo pipefail
+    TARGET_DIR="$1"
+    if [ -d "$TARGET_DIR/dist" ]; then
+      rm -rf "$TARGET_DIR/dist.old" 2>/dev/null || true
+      mv "$TARGET_DIR/dist" "$TARGET_DIR/dist.old"
     fi
-  fi
+    mv "$TARGET_DIR/dist.new" "$TARGET_DIR/dist"
+REMOTE_SWAP
+  tui_ok "Swapped dist.new → dist (old kept as dist.old)."
+else
+  tui_step "3/5" "Skipped dist push (--no-push)."
 fi
 
-if [ "$SSH_READY" = false ]; then
-  echo -e "${RED}❌ Could not connect to EC2 via SSH within the timeout.${NC}"
-  echo -e "   Please verify the instance is powered on in AWS and security group allows port 22."
-  exit 1
-fi
-
-echo -e "${GREEN}✓${NC} SSH Connection established!"
-
-# 3. Start remote services
-echo -e "${BLUE}▶ Starting services on EC2 instance...${NC}"
-
-ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" bash << 'EOF'
+# ── [4/5] Start services ────────────────────────────────────────────────────
+tui_step "4/5" "Starting Docker / nginx / PM2..."
+ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" bash <<'REMOTE_START'
   set -e
-  
-  # Ensure Docker service is running
-  if systemctl is-active --quiet docker; then
-    echo "  ✓ Docker daemon is active"
-  else
-    echo "  ⚡ Starting Docker daemon..."
-    sudo systemctl start docker
-  fi
+  if systemctl is-active --quiet docker; then echo "  ✓ Docker active";
+  else echo "  ⚡ Starting Docker..."; sudo systemctl start docker; fi
 
-  # Start Postgres & Redis containers if stopped
-  CONTAINERS=("emnesh-postgres-workspace" "emnesh-postgres-auth" "emnesh-redis")
-  for container in "${CONTAINERS[@]}"; do
-    if sudo docker ps --filter "name=^/${container}$" --filter "status=running" --format '{{.Names}}' | grep -q "${container}"; then
-      echo "  ✓ Container ${container} is running"
+  # Canonical compose names (see docker-compose.yml)
+  for c in emnesh-postgres emnesh-redis emnesh-dynamodb-local; do
+    if sudo docker ps --filter "name=^/${c}$" --filter "status=running" \
+        --format '{{.Names}}' | grep -q "$c"; then
+      echo "  ✓ $c running"
     else
-      echo "  ⚡ Starting container ${container}..."
-      sudo docker start "${container}" 2>/dev/null || true
+      echo "  ⚡ Starting $c..."
+      sudo docker start "$c" 2>/dev/null || echo "  ⚠ $c not found (ok if using compose)"
     fi
   done
 
-  # Ensure Nginx is running
-  if systemctl is-active --quiet nginx; then
-    echo "  ✓ Nginx web server is active"
-  else
-    echo "  ⚡ Starting Nginx..."
-    sudo systemctl start nginx
-  fi
+  if systemctl is-active --quiet nginx; then echo "  ✓ nginx active";
+  else echo "  ⚡ Starting nginx..."; sudo systemctl start nginx; fi
 
-  # Ensure PM2 app is running
-  if pm2 list | grep -q "meshwork"; then
-    STATUS=$(pm2 jlist | grep -o '"pm2_env":{"status":"[^"]*"' | head -n1 | cut -d'"' -f6 || echo "")
-    if [[ "$STATUS" != "online" ]]; then
-      echo "  ⚡ Resuming PM2 meshwork process..."
-      pm2 restart meshwork >/dev/null 2>&1 || pm2 resurrect >/dev/null 2>&1
+  for app in meshwork meshwork-auth; do
+    if pm2 describe "$app" >/dev/null 2>&1; then
+      echo "  ⚡ Restarting PM2 $app..."
+      pm2 restart "$app" --update-env >/dev/null 2>&1 || pm2 resurrect >/dev/null 2>&1 || true
     else
-      echo "  ✓ PM2 meshwork process is online"
+      echo "  ℹ PM2 $app not registered (deploy.sh registers it on next deploy)"
     fi
-  else
-    echo "  ⚡ Starting PM2 meshwork process..."
-    pm2 resurrect >/dev/null 2>&1 || pm2 start /home/ubuntu/meshwork-studiov2/dist/index.cjs --name meshwork >/dev/null 2>&1
-  fi
-EOF
+  done
+  pm2 save >/dev/null 2>&1 || true
+REMOTE_START
+tui_ok "Remote start sequence done."
 
-# 4. Verify Health Endpoint
-echo -e "${BLUE}▶ Verifying application health check...${NC}"
-HEALTH_STATUS=$(ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" "curl -sf http://localhost:5000/health 2>/dev/null || curl -sf http://localhost/health 2>/dev/null || echo 'FAILED'")
-
-if [[ "$HEALTH_STATUS" == *"status"* || "$HEALTH_STATUS" == *"ok"* || "$HEALTH_STATUS" == *"200"* ]]; then
-  echo -e "${GREEN}✓ Application Health Check: PASSED${NC}"
+# ── [5/5] Health ────────────────────────────────────────────────────────────
+tui_step "5/5" "Health checks..."
+tui_bar 1 3 20; echo ""
+MONO="$(ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" \
+  "curl -sf http://localhost:5000/health 2>/dev/null || curl -sf http://localhost/health 2>/dev/null || echo FAILED")"
+tui_bar 2 3 20; echo ""
+AUTH="$(ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" \
+  "curl -sf http://127.0.0.1:8081/healthz 2>/dev/null || echo UNAVAILABLE")"
+tui_bar 3 3 20; echo ""
+if [[ "$MONO" == *"status"* || "$MONO" == *"ok"* || "$MONO" == *"200"* ]]; then
+  tui_ok "Monolith: $MONO"
 else
-  echo -e "${YELLOW}⚠ Health check response: ${HEALTH_STATUS}${NC}"
+  tui_warn "Monolith response: $MONO"
 fi
+tui_info "Auth service: $AUTH"
 
-# 5. Summary banner
 echo ""
-echo -e "${BOLD}${GREEN}======================================================${NC}"
-echo -e "${BOLD}${GREEN}   🎉 Everything is up and running successfully!     ${NC}"
-echo -e "${BOLD}${GREEN}======================================================${NC}"
-echo -e "  🌐 ${BOLD}Website:${NC}      https://${DOMAIN}"
-echo -e "  📡 ${BOLD}Host Target:${NC}  ${HOST_TARGET}"
-echo -e "  🔑 ${BOLD}SSH Command:${NC}  ssh -i ${SSH_KEY} ${SSH_USER}@${HOST_TARGET}"
+tui_banner "🎉 EC2 started!"
+echo -e "  🌐 Live:      ${TUI_BOLD}https://${MESHWORK_DOMAIN:-$HOST_TARGET}${TUI_NC}"
+echo -e "  📡 Host:      $HOST_TARGET"
+echo -e "  📊 Monolith:  $MONO"
+echo -e "  🔐 Auth:      $AUTH"
+echo -e "  🔑 SSH:       ssh -i $SSH_KEY $SSH_USER@$HOST_TARGET"
 echo ""
 
-# If --ssh argument provided, enter interactive SSH session
-if [[ "${1:-}" == "--ssh" || "${1:-}" == "-s" ]]; then
-  echo -e "${CYAN}Entering interactive SSH shell...${NC}"
+if [[ "$WANT_SSH" == true ]]; then
+  tui_info "Opening interactive SSH shell..."
   exec ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET"
 fi
