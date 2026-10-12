@@ -1841,7 +1841,8 @@ const Home = () => {
             {/* CALL TO ACTION */}
             <section className="relative min-h-[60vh] flex items-center justify-center border-t border-white/10 overflow-hidden">
               <div className="absolute inset-0 z-0">
-                {/* eslint-disable-next-line no-secrets/no-secrets */}
+                {/* Decorative dot pattern (inline SVG, not a secret) */}
+                {/* eslint-disable-next-line no-secrets/no-secrets -- base64-encoded background SVG */}
                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNCkiLz48L3N2Zz4=')] bg-[length:24px_24px] bg-repeat [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]" />
               </div>
 

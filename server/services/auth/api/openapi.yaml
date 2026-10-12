@@ -6,6 +6,9 @@ info:
     Owns users, sessions, MFA, OAuth and the security audit trail.
     Session model: opaque bearer cookie (256-bit random, stored SHA-256-hashed),
     rotated on every login, idle + absolute TTLs, revocable per device.
+    Operational endpoints intentionally omitted here: GET /healthz, GET /readyz
+    (probes), POST /internal/introspect, GET /internal/stats/users (loopback,
+    internal key required), and Prometheus metrics on 127.0.0.1:9091.
 servers:
   - url: /api/v1
 tags:
@@ -179,12 +182,15 @@ paths:
       responses:
         "200": { description: Disabled }
         "401": { $ref: "#/components/responses/Error" }
+  # NOTE: all three /auth/google* routes are only mounted when
+  # GOOGLE_CLIENT_ID is configured; otherwise they return 404.
   /auth/google:
     get:
       tags: [OAuth]
-      summary: Start Google OAuth 2.0 + PKCE flow
+      summary: Start Google OAuth 2.0 + PKCE flow (requires Google OAuth configured)
       responses:
         "302": { description: Redirect to Google }
+        "404": { description: Google OAuth not configured }
   /auth/google/callback:
     get:
       tags: [OAuth]

@@ -26,6 +26,19 @@ export interface ChatMessage {
   tool_calls?: ToolCall[];
 }
 
+/**
+ * Our wire format matches the OpenAI chat schema field-for-field (roles,
+ * content, tool_calls, tool_call_id). The single boundary assertion keeps
+ * `any` out of every provider call site; if the SDK type drifts, tsc fails
+ * here instead of silently at runtime.
+ */
+export type OpenAIMessageParams =
+  import("openai/resources/chat/completions").ChatCompletionMessageParam[];
+
+export function toMessageParams(messages: ChatMessage[]): OpenAIMessageParams {
+  return messages as unknown as OpenAIMessageParams;
+}
+
 export interface ChatCompletionRequest {
   model: string;
   messages: ChatMessage[];

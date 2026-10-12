@@ -11,9 +11,8 @@ import {
   type Collection,
   type InsertCollection,
 } from "./schema";
-// TODO(C5): replace this cross-service read with the team internal endpoint.
 // Team membership rows are NOT queryable from workspace_db — the shared
-// workspace ids arrive via the team service's internal API.
+// workspace ids arrive via the team service's internal HTTP API.
 import { fetchSharedWorkspaceIds } from "@services/team/db/ownership-client";
 import { eq, desc, and, isNull, or, inArray, sql } from "drizzle-orm";
 import type { DrizzleTx } from "@server/lib/events";

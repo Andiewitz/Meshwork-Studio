@@ -230,20 +230,27 @@ export function WorkspaceToolbar({
                 Line Shape
               </div>
               <div className="grid grid-cols-3 gap-1">
-                {[
-                  {
-                    id: "straight",
-                    label: "Straight",
-                    icon: FiMinus,
-                    rotate: true,
-                  },
-                  { id: "default", label: "Curved", icon: FiShare2 },
-                  { id: "step", label: "Step", icon: FiCornerDownRight },
-                ].map((tool) => (
+                {(
+                  [
+                    {
+                      id: "straight",
+                      label: "Straight",
+                      icon: FiMinus,
+                      rotate: true,
+                    },
+                    { id: "default", label: "Curved", icon: FiShare2 },
+                    { id: "step", label: "Step", icon: FiCornerDownRight },
+                  ] satisfies {
+                    id: EdgeType;
+                    label: string;
+                    icon: typeof FiMinus;
+                    rotate?: boolean;
+                  }[]
+                ).map((tool) => (
                   <button
                     key={tool.id}
                     onClick={() => {
-                      setEdgeType(tool.id as any);
+                      setEdgeType(tool.id);
                       setEdges((eds) =>
                         eds.map((e) =>
                           e.selected ? { ...e, type: tool.id } : e,

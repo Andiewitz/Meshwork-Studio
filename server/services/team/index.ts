@@ -2,7 +2,6 @@ import type { Express } from "express";
 import { teamStorage } from "./db/storage";
 import { registerTeamRoutes } from "./routes/teamRoutes";
 import { registerTeamInternalRoutes } from "./db/internal-routes";
-import { pool } from "./db/connection";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
 
@@ -11,8 +10,7 @@ const log = createChildLogger("team-service");
 export class TeamService {
   static initialize(app: Express, context: AppContext) {
     registerTeamRoutes(app, context);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    registerTeamInternalRoutes(app as any);
+    registerTeamInternalRoutes(app);
 
     context.eventBus.on("user.deleted", async ({ id }) => {
       try {

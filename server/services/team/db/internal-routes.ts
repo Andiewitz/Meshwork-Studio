@@ -1,6 +1,6 @@
 // Internal HTTP surface for the team service. Key-guarded, loopback only.
 
-import { Router, type Request, type Response } from "express";
+import { Router, type Express, type Request, type Response } from "express";
 import { requireInternalKey } from "@server/lib/internal";
 import {
   teamMembers as teamMembersTable,
@@ -11,7 +11,7 @@ import { inArray } from "drizzle-orm";
 import { db } from "../db/connection";
 import { eq, sql } from "drizzle-orm";
 
-export function registerTeamInternalRoutes(app: Router) {
+export function registerTeamInternalRoutes(app: Express) {
   const internal = Router();
   internal.use(requireInternalKey);
 

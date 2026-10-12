@@ -1,12 +1,12 @@
 // Internal HTTP surface for the workspace service. Key-guarded, loopback
 // only (NGINX never routes /internal/*).
 
-import { Router, type Request, type Response } from "express";
+import { Router, type Express, type Request, type Response } from "express";
 import { z } from "zod";
 import { requireInternalKey } from "@server/lib/internal";
 import { workspaceStorage } from "../db/storage";
 
-export function registerWorkspaceInternalRoutes(app: Router) {
+export function registerWorkspaceInternalRoutes(app: Express) {
   const internal = Router();
   internal.use(requireInternalKey);
 

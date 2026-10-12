@@ -216,6 +216,7 @@ import {
   type EdgeType,
   type EdgeStyle,
   type BgVariant,
+  toBackgroundVariant,
 } from "@/features/workspace/utils/canvasSettings";
 import {
   materializeRootCanvas,
@@ -1298,7 +1299,7 @@ function WorkspaceView() {
   );
 
   const onPaneContextMenu = useCallback(
-    (event: React.MouseEvent) => {
+    (event: MouseEvent | React.MouseEvent) => {
       event.preventDefault();
       setMenu({
         id: "pane",
@@ -1725,7 +1726,7 @@ function WorkspaceView() {
               onNodeContextMenu={onNodeContextMenu}
               onSelectionContextMenu={onSelectionContextMenu}
               onEdgeContextMenu={onEdgeContextMenu}
-              onPaneContextMenu={onPaneContextMenu as any}
+              onPaneContextMenu={onPaneContextMenu}
               onNodesDelete={() => takeSnapshot()}
               onEdgesDelete={() => takeSnapshot()}
               onPaneClick={onPaneClick}
@@ -1768,7 +1769,7 @@ function WorkspaceView() {
               />
               {bgVariant !== "none" && (
                 <Background
-                  variant={bgVariant as any}
+                  variant={toBackgroundVariant(bgVariant)}
                   gap={gridSize}
                   size={1.2}
                   color="#ffffff22"
@@ -1790,7 +1791,7 @@ function WorkspaceView() {
               >
                 {bgVariant !== "none" && (
                   <Background
-                    variant={bgVariant as any}
+                    variant={toBackgroundVariant(bgVariant)}
                     gap={gridSize}
                     size={1.5}
                     color="#FFFFFF"

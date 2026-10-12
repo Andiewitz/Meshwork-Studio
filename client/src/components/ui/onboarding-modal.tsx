@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { secureFetch } from "@/lib/secure-fetch";
 import { useQueryClient } from "@tanstack/react-query";
 
+// LocalStorage flag, not a credential — the value is always the literal "true".
 // eslint-disable-next-line no-secrets/no-secrets
 const ONBOARDING_KEY = "meshwork_onboarding_complete";
 
@@ -365,8 +366,13 @@ export function useOnboardingComplete(
     }
   }
 
-  // Dev mock user — skip onboarding so the dashboard is usable in dev (unless pending prompt exists)
-  if (import.meta.env.DEV && user) {
+  // Local dev shortcut: skip onboarding for mock users unless explicitly
+  // disabled with VITE_SKIP_ONBOARDING=0. Never active in production builds.
+  if (
+    import.meta.env.DEV &&
+    import.meta.env.VITE_SKIP_ONBOARDING !== "0" &&
+    user
+  ) {
     localStorage.setItem(ONBOARDING_KEY, "true");
     return true;
   }

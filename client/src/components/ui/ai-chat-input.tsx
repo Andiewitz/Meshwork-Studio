@@ -524,7 +524,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
     const streamRef = useRef<MediaStream | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
     const rafRef = useRef<number | null>(null);
-    const recognitionRef = useRef<any>(null);
+    const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
     const demoIntervalRef = useRef<number | null>(null);
     const demoTextIntervalRef = useRef<number | null>(null);
 
@@ -543,7 +543,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
     const hasAttachments = attachments.length > 0;
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const internalContainerRef = useRef<HTMLDivElement>(null);
+    const internalContainerRef = useRef<HTMLDivElement | null>(null);
     const topFadeRef = useRef<HTMLDivElement>(null);
     const bottomFadeRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -653,8 +653,8 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
       if (stream) {
         streamRef.current = stream;
 
-        const AudioCtx =
-          window.AudioContext || (window as any).webkitAudioContext;
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
         const audioCtx = new AudioCtx();
         audioContextRef.current = audioCtx;
 
@@ -682,8 +682,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
         updateVisualizer();
 
         const SpeechRecognition =
-          (window as any).SpeechRecognition ||
-          (window as any).webkitSpeechRecognition;
+          window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
           const recognition = new SpeechRecognition();
           recognition.continuous = true;
@@ -691,7 +690,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
 
           let baseline = valueRef.current;
 
-          recognition.onresult = (event: any) => {
+          recognition.onresult = (event: SpeechRecognitionEventLike) => {
             let interimTranscript = "";
             let finalTranscript = "";
 
@@ -922,7 +921,6 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
           ref={(node) => {
             if (typeof ref === "function") ref(node);
             else if (ref) ref.current = node;
-            // @ts-expect-error ref assignment
             internalContainerRef.current = node;
           }}
           onBlur={handleBlur}

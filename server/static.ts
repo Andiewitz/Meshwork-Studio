@@ -13,6 +13,8 @@ const moduleDir =
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(moduleDir, "public");
+  // Path is derived from the bundle location, never from user input, so the
+  // non-literal-filename warning does not apply here.
   // eslint-disable-next-line security/detect-non-literal-fs-filename
   if (!fs.existsSync(distPath)) {
     throw new Error(

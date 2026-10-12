@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { ChatCompletionRequest } from "./types";
+import { toMessageParams } from "./types";
 import { providerTimeoutMs } from "./runtime";
 
 export async function createOpenAIChatCompletion(
@@ -11,7 +12,7 @@ export async function createOpenAIChatCompletion(
   const response = await openai.chat.completions.create(
     {
       model: request.model,
-      messages: request.messages as any,
+      messages: toMessageParams(request.messages),
       temperature: request.temperature ?? 0.7,
       max_tokens: request.maxTokens,
       stream: request.stream ?? false,
@@ -32,7 +33,7 @@ export async function* streamOpenAIChatCompletion(
   const stream = await openai.chat.completions.create(
     {
       model: request.model,
-      messages: request.messages as any,
+      messages: toMessageParams(request.messages),
       temperature: request.temperature ?? 0.7,
       max_tokens: request.maxTokens,
       stream: true,

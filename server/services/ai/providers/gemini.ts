@@ -13,6 +13,35 @@ export const BACKUP_GEMINI_MODELS = [
 const MAX_RETRIES = 2;
 const BASE_RETRY_DELAY_MS = 800;
 
+/** HTTP status/code attached to provider errors for retry decisions. */
+export interface GeminiError extends Error {
+  status?: number;
+  code?: string;
+}
+
+interface GeminiPart {
+  text?: string;
+  functionCall?: { name: string; args?: unknown };
+}
+
+interface GeminiCandidate {
+  content?: { parts?: GeminiPart[] };
+  finishReason?: string;
+}
+
+interface GeminiResponse {
+  candidates?: GeminiCandidate[];
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
+}
+
+interface GeminiErrorBody {
+  error?: { message?: string; code?: string };
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -35,10 +64,10 @@ function buildGeminiPayload(request: ChatCompletionRequest) {
   const contents = request.messages
     .filter((m) => m.role !== "system")
     .map((m) => {
-      const parts: any[] = [];
+      const parts: Record<string, unknown>[] = [];
 
       if (m.role === "tool") {
-        let responseObj: any = { output: m.content };
+        let responseObj: unknown = { output: m.content };
         try {
           if (m.content) responseObj = JSON.parse(m.content);
         } catch {
@@ -89,7 +118,7 @@ function buildGeminiPayload(request: ChatCompletionRequest) {
       };
     });
 
-  const payload: Record<string, any> = {
+  const payload: Record<string, unknown> = {
     contents:
       contents.length > 0
         ? contents
@@ -125,7 +154,7 @@ function buildGeminiPayload(request: ChatCompletionRequest) {
     ];
   }
 
-  const generationConfig: Record<string, any> = {};
+  const generationConfig: Record<string, unknown> = {};
   if (typeof request.temperature === "number") {
     generationConfig.temperature = request.temperature;
   }
@@ -172,9 +201,9 @@ export async function createGeminiChatCompletion(
           const errorMsg =
             errData?.error?.message ||
             `HTTP ${response.status}: ${response.statusText}`;
-          const err = new Error(errorMsg);
-          (err as any).status = response.status;
-          (err as any).code = errData?.error?.code;
+          const err = new Error(errorMsg) as GeminiError;
+          err.status = response.status;
+          err.code = errData?.error?.code;
 
           // If rate-limited or transient, retry or fall back to next model
           if (response.status === 429 || response.status === 503) {
@@ -196,16 +225,22 @@ export async function createGeminiChatCompletion(
           throw err;
         }
 
-        const data: any = await response.json();
+        const data = (await response.json()) as GeminiResponse;
         const candidate = data.candidates?.[0];
         const parts = candidate?.content?.parts || [];
         const text = parts
-          .filter((p: any) => p.text)
-          .map((p: any) => p.text || "")
+          .filter((p) => p.text)
+          .map((p) => p.text || "")
           .join("");
 
-        const functionCallParts = parts.filter((p: any) => p.functionCall);
-        const toolCalls = functionCallParts.map((p: any, idx: number) => ({
+        const functionCallParts = parts.filter(
+          (
+            p,
+          ): p is GeminiPart & {
+            functionCall: NonNullable<GeminiPart["functionCall"]>;
+          } => p.functionCall !== undefined,
+        );
+        const toolCalls = functionCallParts.map((p, idx: number) => ({
           id: `call_${Date.now()}_${idx}`,
           type: "function",
           function: {
@@ -217,7 +252,7 @@ export async function createGeminiChatCompletion(
           },
         }));
 
-        const message: Record<string, any> = {
+        const message: Record<string, unknown> = {
           role: "assistant",
           content: text || (toolCalls.length > 0 ? null : ""),
         };
@@ -245,12 +280,14 @@ export async function createGeminiChatCompletion(
             total_tokens: data.usageMetadata?.totalTokenCount || 0,
           },
         };
-      } catch (err: any) {
-        lastError = err;
-        if (err.status === 429 || err.status === 503 || err.status === 404) {
+      } catch (err: unknown) {
+        const status =
+          err instanceof Error ? (err as GeminiError).status : undefined;
+        lastError = err instanceof Error ? err : new Error(String(err));
+        if (status === 429 || status === 503 || status === 404) {
           break; // Try next model in loop
         }
-        throw err;
+        throw lastError;
       }
     }
   }
@@ -294,12 +331,12 @@ export async function* streamGeminiChatCompletion(
         const errorMsg =
           errData?.error?.message ||
           `HTTP ${response.status}: ${response.statusText}`;
-        const err = new Error(errorMsg);
-        (err as any).status = response.status;
+        const err = new Error(errorMsg) as GeminiError;
+        err.status = response.status;
         lastError = err;
       }
-    } catch (err: any) {
-      lastError = err;
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err : new Error(String(err));
     }
   }
 

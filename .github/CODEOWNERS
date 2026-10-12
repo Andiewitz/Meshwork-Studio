@@ -5,15 +5,16 @@
 .github/ @VMedia
 
 # Security-sensitive areas
-server/modules/auth/ @VMedia
+server/services/auth/ @VMedia
+server/auth/ @VMedia
 server/middleware/ @VMedia
 
 # Client core
 client/src/ @VMedia
 
-# Shared types
-shared/ @VMedia
+# Shared types and contracts
+server/shared/ @VMedia
 
-# Database schema
-shared/schema.ts @VMedia
+# Database schemas and migrations
+server/services/*/db/ @VMedia
 drizzle.config.ts @VMedia

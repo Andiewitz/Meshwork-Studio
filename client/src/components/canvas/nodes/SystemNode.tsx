@@ -1042,9 +1042,9 @@ export function SystemNode({
                 >
                   <path d="M1 1L7 4L1 7V1Z" fill="currentColor" />
                 </svg>
-                {(data.subCanvas as any)?.nodes?.length > 0 && (
+                {(data.subCanvas?.nodes?.length ?? 0) > 0 && (
                   <span className="text-[7px] font-bold text-white/20 group-hover/enter:text-white/50 transition-colors">
-                    {(data.subCanvas as any).nodes.length}
+                    {data.subCanvas?.nodes?.length}
                   </span>
                 )}
               </button>
