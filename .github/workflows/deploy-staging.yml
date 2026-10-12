@@ -23,7 +23,7 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
@@ -45,7 +45,7 @@ jobs:
       - name: Setup Go for Auth Service
         uses: actions/setup-go@v5
         with:
-          go-version: "1.26.8"
+          go-version: "1.26.9"
           cache-dependency-path: server/services/auth/go.sum
 
       - name: Build Auth Service (linux/amd64)
