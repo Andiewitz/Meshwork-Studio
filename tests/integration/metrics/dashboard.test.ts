@@ -34,11 +34,7 @@ async function buildApp(isAdmin: boolean | undefined) {
   app.set("testAdmin", isAdmin);
   app.use(requestIdMiddleware);
   app.use(express.json());
-  const context = {
-    registry: { get: () => null },
-    eventBus: { emit: vi.fn(), emitAsync: vi.fn() },
-  } as any;
-  registerMetricsRoutes(app, context);
+  registerMetricsRoutes(app);
   return app;
 }
 
