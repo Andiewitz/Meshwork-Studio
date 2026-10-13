@@ -27,7 +27,7 @@ import {
 import { logTraceback } from "./lib/traceback";
 import { disconnectRedis, isRedisAvailable } from "./lib/redis";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
-import { metricsRegistry } from "./lib/metrics";
+import { startMetricsServer } from "./lib/metricsServer";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -317,26 +317,11 @@ app.get("/ready", async (_req, res) => {
   }
 });
 
-// SECURITY: Prometheus metrics require a bearer token (constant-time
-// compare). Scrape configs set `Authorization: Bearer <METRICS_BEARER_TOKEN>`.
-// When the token is unset the endpoint 404s entirely.
-const metricsBearer = process.env.METRICS_BEARER_TOKEN || "";
-app.get("/metrics", async (req, res) => {
-  if (
-    !metricsBearer ||
-    req.headers.authorization !== `Bearer ${metricsBearer}`
-  ) {
-    return res.status(404).send("Not Found");
-  }
-  try {
-    res.set("Content-Type", metricsRegistry.contentType);
-    const metrics = await metricsRegistry.metrics();
-    res.send(metrics);
-  } catch (err) {
-    log.error({ err }, "Metrics endpoint error");
-    res.status(500).send("Error generating metrics");
-  }
-});
+// Prometheus exposition lives ONLY on a loopback listener
+// (server/lib/metricsServer.ts). There is deliberately no /metrics route on
+// the public app and no bearer token anywhere: binding to 127.0.0.1 IS the
+// access control, and SSH (`-L 9090:127.0.0.1:9090`) is the only path in.
+// No secret to leak, no misconfiguration mode that exposes it.
 
 // Admin dashboard: session-authenticated admin users only. The old
 // secret-in-URL gate leaked via logs/history/Referer and had no authz.
@@ -484,6 +469,7 @@ app.get("/admin", requireAuth, (_req, res) => {
         resolve();
       });
     });
+    startMetricsServer();
     isAppReady = true;
     log.info(`Server fully ready and serving on port ${port}`);
   } catch (error) {

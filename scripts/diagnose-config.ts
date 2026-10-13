@@ -93,13 +93,8 @@ check(
   isProd ? (process.env.SESSION_SECRET?.length ?? 0) >= 32 : true,
   isProd ? "must be ≥32 chars in production" : "dev — any value accepted",
 );
-check(
-  "METRICS_BEARER_TOKEN",
-  !isProd || has("METRICS_BEARER_TOKEN"),
-  has("METRICS_BEARER_TOKEN")
-    ? "/metrics protected"
-    : "⚠ /metrics returns 404 in production",
-);
+// No METRICS_BEARER_TOKEN check by design: Prometheus exposition has no
+// public route and no token — loopback binding is the access control.
 
 // ─── Go auth service ────────────────────────────────────────────────────────
 

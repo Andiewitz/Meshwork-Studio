@@ -17,21 +17,28 @@ already been configured.
 Use `/ready` to gate a deploy. A `200 /health` does not prove that an
 authenticated browser session, canvas write, or external email provider works.
 
-## Metrics
+## Metrics (localhost + SSH only — no public route, no token)
 
-The Node monolith serves Prometheus output at `/metrics` only when
-`METRICS_BEARER_TOKEN` is configured and the request supplies
-`Authorization: Bearer <token>`. Otherwise it deliberately returns `404`.
-The Go auth process exposes Prometheus metrics on loopback port `9091`; do not
-route either metrics surface publicly without network and token controls.
+Prometheus numbers are spoken only inside the server. There is no password
+because there is no door: the Node app serves them on loopback-only
+`127.0.0.1:9090`, Go on loopback-only `127.0.0.1:9091`, and nginx answers
+`404` for `/metrics` so the address doesn't even pretend to exist. Binding
+is the entire access control — reach it like this and no other way:
+
+```bash
+# Tunnel from your laptop (leave running), then read locally — no token:
+ssh -i <YOUR_KEY>.pem -L 9090:127.0.0.1:9090 ubuntu@<YOUR_DOMAIN>
+curl http://127.0.0.1:9090/metrics   # Node app
+# Go auth: -L 9091:127.0.0.1:9091, then curl :9091/metrics
+```
 
 Authenticated users can access stored application history through:
 
-| Endpoint                             | Access       | Purpose                                                |
-| ------------------------------------ | ------------ | ------------------------------------------------------ |
-| `GET /api/v1/metrics/history?limit=` | Session      | Recent stored snapshots; limit is capped at 1440.      |
-| `GET /api/v1/metrics/summary`        | Session      | Latest snapshot and aggregates.                        |
-| `POST /api/v1/metrics/cleanup`       | Admin + CSRF | Destructively removes snapshots older than seven days. |
+| Endpoint                             | Access        | Purpose                                                |
+| ------------------------------------ | ------------- | ------------------------------------------------------ |
+| `GET /api/v1/metrics/history?limit=` | Admin session | Recent stored snapshots; limit is capped at 1440.      |
+| `GET /api/v1/metrics/summary`        | Admin session | Latest snapshot and aggregates.                        |
+| `POST /api/v1/metrics/cleanup`       | Admin + CSRF  | Destructively removes snapshots older than seven days. |
 
 ## Log sources
 

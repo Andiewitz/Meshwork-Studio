@@ -60,8 +60,8 @@ Full reasoning per row: [`SECURITY.md`](./SECURITY.md).
 - `/admin` needs `users.is_admin = true`. First admins come from
   `BOOTSTRAP_ADMIN_EMAILS` at boot. (The old secret-in-URL gate was removed —
   URLs leak into logs.)
-- Metrics: Go on loopback-only `127.0.0.1:9091/metrics`; Node `/metrics` needs
-  `Authorization: Bearer $METRICS_BEARER_TOKEN`.
+- Metrics: Go on loopback-only `127.0.0.1:9091/metrics`; Node exposition on
+  loopback-only `127.0.0.1:9090` — no public route, no token, SSH tunnel only.
 - CI (`auth.yml`): Go lint, security scan, race tests, docker build.
   `scripts/no-auth-bypass.sh` fails the pipeline if `E2E_BYPASS_AUTH` ever
   returns to runtime code.

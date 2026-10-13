@@ -27,7 +27,6 @@
 | `SESSION_SECRET`                                               | Express-level cookie signing (legacy surface)           | `server/services/auth/config.ts` (`getSecret`)       | Sessions are DB-backed opaque tokens — rotating does **not** log users out. Min 32 chars.                                        |
 | `AUTH_ASSERTION_PUBLIC_KEY`                                    | Raw Ed25519 public key for local assertion verification | `server/auth/assertion.ts`                           | Public material only. It must never contain the auth service's private signing seed.                                             |
 | `ENCRYPTION_KEY`                                               | AES-256-GCM key for encrypted BYOK provider credentials | `server/services/ai/encryption`                      | Required when BYOK is used. Rotate with a planned re-encryption migration.                                                       |
-| `METRICS_BEARER_TOKEN`                                         | Gates `/metrics` on the monolith                        | `server/index.ts` (constant-time compare)            | Rotate anytime; scrapers need the new `Authorization: Bearer …`. Unset = endpoint 404s.                                          |
 | `FRONTEND_URL` / `APP_URL`                                     | CORS origin + CSRF allowlist + OAuth redirects          | `server/index.ts`, auth bridge CSRF, identity config | Wrong value = CSRF rejections from the SPA. Not secret; listed here because misconfig looks like an outage.                      |
 | `OPENROUTER_API_KEY`, `GEMINI_API_KEY`                         | Free-tier AI provider spend                             | AI service providers                                 | Revoke in provider dashboard; per-user BYOK keys are separate and AES-256-GCM encrypted at rest with the app's own key material. |
 
@@ -72,9 +71,8 @@ Rotate `EC2_SSH_KEY` whenever anyone with repo-admin access leaves the team.
 
 ## Incident quick reference
 
-| Suspected leak         | Do now                                                                                                                                               |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AUTH_ENCRYPTION_KEY`  | Treat all MFA seeds exposed → force re-enroll (disable+reenroll), then rotate                                                                        |
-| `AUTH_DATABASE_URL`    | Rotate DB password; consider mass session revoke (`UPDATE auth_sessions SET revoked_at=now() WHERE revoked_at IS NULL`) via a temporary admin script |
-| `METRICS_BEARER_TOKEN` | Rotate; metrics are informational only                                                                                                               |
-| `EC2_SSH_KEY`          | Add new keypair, remove old from `authorized_keys`, update GH secret                                                                                 |
+| Suspected leak        | Do now                                                                                                                                               |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTH_ENCRYPTION_KEY` | Treat all MFA seeds exposed → force re-enroll (disable+reenroll), then rotate                                                                        |
+| `AUTH_DATABASE_URL`   | Rotate DB password; consider mass session revoke (`UPDATE auth_sessions SET revoked_at=now() WHERE revoked_at IS NULL`) via a temporary admin script |
+| `EC2_SSH_KEY`         | Add new keypair, remove old from `authorized_keys`, update GH secret                                                                                 |

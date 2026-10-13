@@ -6,9 +6,9 @@ export function metricsMiddleware(
   res: Response,
   next: NextFunction,
 ) {
-  // Ignore the metrics and health endpoints to prevent noise
+  // Ignore health endpoints to prevent noise (Prometheus exposition
+  // runs on its own loopback listener now, never through this middleware).
   if (
-    req.path === "/metrics" ||
     req.path === "/health" ||
     req.path === "/healthz" ||
     req.path === "/ready"

@@ -126,7 +126,6 @@ AWS_SECRET_ACCESS_KEY=local
 
 # Local cryptographic material. The Node app receives only the public assertion key.
 SESSION_SECRET=${randomBase64()}
-METRICS_BEARER_TOKEN=${randomHex(16)}
 INTERNAL_API_KEY=${randomHex()}
 AUTH_INTERNAL_KEY=${randomHex()}
 AUTH_IP_HASH_KEY=${randomBase64()}
