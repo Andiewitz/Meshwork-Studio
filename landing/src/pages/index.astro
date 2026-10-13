@@ -1,0 +1,127 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { Navbar1 } from '../components/blocks/shadcnblocks-com-navbar1';
+import Hero from '../components/Hero.astro';
+import Features from '../components/Features.astro';
+import InteractiveDemo from '../components/InteractiveDemo';
+import { ArticleCarousel } from '../components/blocks/article-carousel';
+import CTA from '../components/CTA.astro';
+import Footer from '../components/Footer.astro';
+
+// Navbar data — flat links suit the workspace; no marketing dropdowns.
+const siteNav = {
+  logo: {
+    url: '/',
+    src: '/favicon.svg',
+    alt: 'Meshwork Studio',
+    title: 'Meshwork Studio',
+  },
+  menu: [
+    { title: 'Product', url: '#demo' },
+    { title: 'Docs', url: '#docs' },
+    { title: 'About Dev', url: '#features' },
+    { title: 'Privacy Policy', url: '#' },
+  ],
+  mobileExtraLinks: [
+    { name: 'Status', url: '#demo' },
+    { name: 'Contact', url: '#' },
+  ],
+  auth: {
+    login: { text: 'Sign in', url: '#' },
+    signup: { text: 'Download', url: '#cta' },
+  },
+};
+
+// Docs rail — plain strings only, so it lives in frontmatter.
+const docsItems = [
+  {
+    id: 'deploy-first-cluster',
+    imageSrc:
+      'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80',
+    imageAlt: 'Network server hardware',
+    tag: 'Docs',
+    title: 'Deploy your first cluster',
+    description: 'From zero to running in eleven minutes.',
+    author: 'Meshwork Team',
+    meta: 'Guide · 11 min',
+    href: '#demo',
+  },
+  {
+    id: 'healthy-not-colored',
+    imageSrc:
+      'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=800&q=80',
+    imageAlt: 'Colorful code on a screen',
+    tag: 'Blog',
+    title: 'Why healthy is not colored',
+    description: 'Normal states are neutral, so exceptions speak up.',
+    author: 'Meshwork Team',
+    meta: 'Blog · 6 min',
+    href: '#features',
+  },
+  {
+    id: 'keyboard-first',
+    imageSrc:
+      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80',
+    imageAlt: 'Laptop with a code editor open',
+    tag: 'Docs',
+    title: 'Keyboard-first operations',
+    description: 'Every action has a shortcut. Most have two.',
+    author: 'Meshwork Team',
+    meta: 'Guide · 8 min',
+    href: '#demo',
+  },
+  {
+    id: 'incidents-2am',
+    imageSrc:
+      'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80',
+    imageAlt: 'Terminal with green code',
+    tag: 'Blog',
+    title: 'Incidents at 2 a.m.',
+    description: 'What calm tooling changes about on-call.',
+    author: 'Meshwork Team',
+    meta: 'Blog · 5 min',
+    href: '#features',
+  },
+  {
+    id: 'rollback-without-fear',
+    imageSrc:
+      'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=800&q=80',
+    imageAlt: 'Code on a dark screen',
+    tag: 'Docs',
+    title: 'Roll back without fear',
+    description: 'Offer undo instead of asking twice.',
+    author: 'Meshwork Team',
+    meta: 'Guide · 4 min',
+    href: '#demo',
+  },
+];
+---
+
+<BaseLayout
+  title="Meshwork Studio — Clusters, without the guesswork"
+  description="Meshwork Studio is a dense, keyboard-first workspace for managing clusters and deployments."
+>
+  <div class="fixed inset-x-0 top-0 z-50 bg-transparent">
+    <Navbar1 {...siteNav} client:load />
+  </div>
+  <main class="bg-island pt-15">
+    <Hero />
+    <Features />
+    <section id="docs" class="mx-auto max-w-7xl scroll-mt-24 px-4 py-6">
+      <h2 class="text-[16px] font-semibold leading-6 text-fg">Docs</h2>
+      <p class="mb-4 mt-1 max-w-2xl text-[13px] leading-5 text-muted">
+        Guides and notes from the team. Short enough to read with coffee.
+      </p>
+      <ArticleCarousel articles={docsItems} client:visible />
+    </section>
+    <section id="demo" class="mx-auto max-w-7xl scroll-mt-24 px-4 py-6">
+      <h2 class="text-[16px] font-semibold leading-6 text-fg">Deployments</h2>
+      <p class="mb-4 mt-1 max-w-2xl text-[13px] leading-5 text-muted">
+        Live filter and row selection. Every row is reachable by keyboard.
+      </p>
+      <InteractiveDemo client:visible />
+    </section>
+    <CTA />
+  </main>
+  <Footer />
+</BaseLayout>

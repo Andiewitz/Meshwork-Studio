@@ -1,0 +1,42 @@
+---
+// Intro — centered display hero per §17. Copy lives here at the top.
+import Chatbox from './blocks/chatbox';
+const titleA = 'Clusters, without the ';
+const titleB = 'guesswork.';
+const body =
+  'A dense, keyboard-first workspace for clusters and deployments. Nothing happens that you did not see coming.';
+---
+
+<section class="relative overflow-x-clip px-4 pb-16 pt-28 text-center md:pt-32">
+  {/* Hero glow — exact old-page gradient, full-bleed so it never cuts at the content margins. */}
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute inset-x-0 bottom-[-20px] top-[60px] bg-[radial-gradient(ellipse_at_bottom,rgba(236,72,153,.35)_0%,rgba(139,92,246,.3)_35%,rgba(59,130,246,.22)_65%,transparent_85%)] opacity-60 [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)]"
+  ></div>
+  <div class="relative mx-auto max-w-7xl">
+  <h1
+    class="mx-auto text-[46px] font-semibold leading-[1.05] tracking-tight text-fg md:text-[57px]"
+  >
+    {titleA}<span class="text-accent">{titleB}</span>
+  </h1>
+  <p class="mx-auto mt-5 max-w-lg text-pretty text-base leading-7 text-muted">
+    {body}
+  </p>
+  <div class="mt-8 flex justify-center">
+    <a
+      href="#cta"
+      class="inline-flex h-11.5 items-center rounded-full bg-white px-7.5 text-[14px] font-medium text-black transition-colors hover:bg-white/90"
+    >
+      Download
+    </a>
+  </div>
+  <p class="mt-5 font-mono text-[11px] text-disabled">
+    Requires macOS 14 or later. No account needed for local clusters.
+  </p>
+
+  <div class="mx-auto mt-10 max-w-2xl text-left">
+    <Chatbox client:visible />
+  </div>
+
+  </div>
+</section>
