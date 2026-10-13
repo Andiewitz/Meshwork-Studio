@@ -125,3 +125,18 @@ describe("payload-too-large detection (10MB upload vs 5mb limit)", () => {
     expect(text).toContain("(ref AAAA-AAAA)");
   });
 });
+
+describe("unprocessable imports (422 with guidance, not jargon)", () => {
+  it("prefers the server's specific 422 text", async () => {
+    const { formatUserErrorMessage, ApiError } =
+      await import("@/lib/error-utils");
+    const notCanvas = new ApiError(
+      422,
+      "That file doesn't look like a canvas — it needs a nodes list and an edges list.",
+      { code: "NOT_A_CANVAS_FILE", requestId: "req-bbbbbbbbbbbbbbbbbbbbbbbb" },
+    );
+    const text = formatUserErrorMessage(notCanvas);
+    expect(text).toContain("doesn't look like a canvas");
+    expect(text).toContain("(ref BBBB-BBBB)");
+  });
+});

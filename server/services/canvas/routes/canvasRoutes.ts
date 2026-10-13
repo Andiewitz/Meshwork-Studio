@@ -6,6 +6,8 @@ import {
   CanvasWriteLockedError,
 } from "../db/dynamo";
 import { api } from "@shared/routes";
+import type { z } from "zod";
+import { canvasEdgeSchema, canvasNodeSchema } from "@shared/canvas";
 import { csrfProtect } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
@@ -154,6 +156,163 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
         }
         throw err;
       }
+    },
+  );
+
+  // Import a canvas from an uploaded JSON file. Unlike syncCanvas (strict:
+  // one bad field rejects everything), import is forgiving by design:
+  // - body without nodes[]/edges[] → 422, it doesn't belong here at all
+  // - items with bad fields are dropped individually, survivors import,
+  //   and the response says exactly what got in and what didn't
+  // - nothing usable at all → 422
+  app.post(
+    "/api/v1/workspaces/:id/import-canvas",
+    csrfProtect,
+    isAuthenticated,
+    async (req, res) => {
+      const requestId = req.requestId ?? "unscoped";
+      const id = getParamId(req);
+      const workspace = await workspaceStorage.getWorkspace(id);
+      if (!workspace)
+        return res.status(404).json({ message: "Workspace not found" });
+
+      const userId = req.user!.id;
+      const role = isWorkspaceOwner(workspace, userId)
+        ? "workspace-owner"
+        : await teamStorage.getWorkspaceRole(workspace.id, userId);
+      if (!canEditWorkspace(role)) {
+        return res.status(403).json({
+          message: "Forbidden: Insufficient permissions to import canvas",
+        });
+      }
+
+      const body = req.body as unknown;
+      const rawNodes =
+        typeof body === "object" &&
+        body !== null &&
+        Array.isArray((body as { nodes?: unknown }).nodes)
+          ? (body as { nodes: unknown[] }).nodes
+          : undefined;
+      const rawEdges =
+        typeof body === "object" &&
+        body !== null &&
+        Array.isArray((body as { edges?: unknown }).edges)
+          ? (body as { edges: unknown[] }).edges
+          : undefined;
+      if (!rawNodes || !rawEdges) {
+        return res.status(422).json({
+          code: "NOT_A_CANVAS_FILE",
+          message:
+            "That file doesn't look like a canvas — it needs a nodes list and an edges list.",
+          requestId,
+        });
+      }
+      if (rawNodes.length > 5_000 || rawEdges.length > 10_000) {
+        return res.status(422).json({
+          code: "IMPORT_TOO_LARGE",
+          message:
+            "That file is too big to import (max 5,000 nodes / 10,000 edges). Split it and try again.",
+          requestId,
+        });
+      }
+
+      interface ImportWarning {
+        kind: "node" | "edge";
+        index: number;
+        id?: unknown;
+        reasons: string[];
+      }
+      const MAX_WARNINGS = 10;
+      const warnings: ImportWarning[] = [];
+      const pushWarning = (w: ImportWarning) => {
+        if (warnings.length < MAX_WARNINGS) warnings.push(w);
+      };
+
+      const validNodes: z.infer<typeof canvasNodeSchema>[] = [];
+      let droppedNodes = 0;
+      rawNodes.forEach((item, index) => {
+        const parsed = canvasNodeSchema.safeParse(item);
+        if (parsed.success) {
+          validNodes.push(parsed.data);
+          return;
+        }
+        droppedNodes += 1;
+        pushWarning({
+          kind: "node",
+          index,
+          id:
+            typeof item === "object" && item !== null
+              ? (item as { id?: unknown }).id
+              : undefined,
+          reasons: parsed.error.issues.map(
+            (issue) => `${issue.path.join(".") || "(item)"}: ${issue.message}`,
+          ),
+        });
+      });
+
+      const validEdges: z.infer<typeof canvasEdgeSchema>[] = [];
+      let droppedEdges = 0;
+      rawEdges.forEach((item, index) => {
+        const parsed = canvasEdgeSchema.safeParse(item);
+        if (parsed.success) {
+          validEdges.push(parsed.data);
+          return;
+        }
+        droppedEdges += 1;
+        pushWarning({
+          kind: "edge",
+          index,
+          id:
+            typeof item === "object" && item !== null
+              ? (item as { id?: unknown }).id
+              : undefined,
+          reasons: parsed.error.issues.map(
+            (issue) => `${issue.path.join(".") || "(item)"}: ${issue.message}`,
+          ),
+        });
+      });
+
+      if (validNodes.length === 0 && validEdges.length === 0) {
+        log.warn(
+          { workspaceId: id, userId, requestId },
+          "Canvas import rejected: nothing usable in file",
+        );
+        return res.status(422).json({
+          code: "NOTHING_IMPORTABLE",
+          message:
+            "Nothing in that file could be used — every node and edge failed validation. Check the warnings and try again.",
+          warnings,
+          requestId,
+        });
+      }
+
+      const revision = await canvasStorage.getCanvasRevision(id);
+      const nextRevision = await canvasStorage.syncCanvas(
+        id,
+        validNodes,
+        validEdges,
+        revision,
+      );
+      log.info(
+        {
+          workspaceId: id,
+          userId,
+          requestId,
+          importedNodes: validNodes.length,
+          importedEdges: validEdges.length,
+          droppedNodes,
+          droppedEdges,
+        },
+        "Canvas import complete",
+      );
+      res.json({
+        success: true,
+        imported: { nodes: validNodes.length, edges: validEdges.length },
+        dropped: { nodes: droppedNodes, edges: droppedEdges },
+        warnings,
+        revision: nextRevision,
+        requestId,
+      });
     },
   );
 

@@ -163,6 +163,21 @@ function friendlyMessage(
     return "Too many attempts. Please wait a few moments and try again.";
   }
 
+  // 4a. Unprocessable file (422) — wrong shape or nothing usable inside.
+  // Our server messages here are pre-sanitized and specific, so prefer them.
+  if (statusCode === 422 || lower.includes("doesn't look like")) {
+    const cleaned422 = rawMessage.replace(/^[0-9]{3}:\s*/, "").trim();
+    if (
+      cleaned422 &&
+      !cleaned422.startsWith("{") &&
+      !cleaned422.startsWith("<") &&
+      cleaned422.length < 200
+    ) {
+      return cleaned422;
+    }
+    return "That file couldn't be used. Check its contents and try again.";
+  }
+
   // 4b. Payload too large (413) — file/canvas over the size limit.
   // Our server messages here are pre-sanitized and specific (size limits,
   // node counts), so prefer them over the generic fallback.
