@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import request from "supertest";
 import express from "express";
 import aiRoutes from "@services/ai/routes";
+import { requestIdMiddleware } from "@server/middleware/requestId";
 
 const { mockGeminiCompletion } = vi.hoisted(() => ({
   mockGeminiCompletion: vi.fn(),
@@ -48,6 +49,8 @@ vi.mock("../../../server/auth", () => ({
 
 const setupTestApp = () => {
   const app = express();
+  // Mirror production wiring (server/index.ts): request IDs first.
+  app.use(requestIdMiddleware);
   app.use(express.json());
 
   const mockContext = {
@@ -191,7 +194,11 @@ describe("AI Chat Route Integration Tests", () => {
         });
 
       expect(res.status).toBe(413);
-      expect(res.body.message).toBe("Canvas is too large for AI suggestions");
+      expect(res.body.message).toBe(
+        "Canvas is too large for AI suggestions. Split it or slim it below 100 nodes / 150 edges.",
+      );
+      expect(res.body.code).toBe("CANVAS_TOO_LARGE");
+      expect(res.body.requestId).toMatch(/^req-[0-9a-f]{24}$/);
     });
 
     it("should return fallback suggestions if resolver cannot resolve", async () => {

@@ -594,7 +594,10 @@ export function createAIRoutes(context: AppContext) {
         // document into an unbounded provider prompt.
         if (canvasNodes.length > 100 || canvasEdges.length > 150) {
           return res.status(413).json({
-            message: "Canvas is too large for AI suggestions",
+            code: "CANVAS_TOO_LARGE",
+            message:
+              "Canvas is too large for AI suggestions. Split it or slim it below 100 nodes / 150 edges.",
+            requestId: req.requestId ?? "unscoped",
           });
         }
 

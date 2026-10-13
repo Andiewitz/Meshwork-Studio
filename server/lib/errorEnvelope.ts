@@ -24,6 +24,19 @@ const PG_TO_PUBLIC: Record<string, { status: number; code: string }> = {
 };
 
 /**
+ * Body-parser rejections (express.json `limit: "5mb"`). The thrown error
+ * carries `type: "entity.too.large"`, status 413, and a raw English message
+ * — normalize all three so clients get a switchable code, not a sentence.
+ */
+export function isPayloadTooLarge(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { type?: unknown }).type === "entity.too.large"
+  );
+}
+
+/**
  * Public codes are UPPER_SNAKE without digits (pg codes contain digits).
  * Errno-style strings (ECONNREFUSED, EPIPE — leading E, no underscores)
  * are internal and never pass: use underscored tokens for new codes.

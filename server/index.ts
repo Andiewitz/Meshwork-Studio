@@ -19,7 +19,11 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { apiLimiter } from "./middleware/rateLimit";
 import { requestIdMiddleware } from "./middleware/requestId";
-import { errorBody, resolvePublicCode } from "./lib/errorEnvelope";
+import {
+  errorBody,
+  isPayloadTooLarge,
+  resolvePublicCode,
+} from "./lib/errorEnvelope";
 import { disconnectRedis, isRedisAvailable } from "./lib/redis";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import { metricsRegistry } from "./lib/metrics";
@@ -230,17 +234,21 @@ if (process.env.NODE_ENV !== "production") {
   });
 }
 
-// SECURITY: Add request size limits to prevent DoS
+// SECURITY: Add request size limits to prevent DoS.
+// Single source of truth — the 413 message in the global error handler
+// below derives its "under X" wording from this constant.
+const JSON_BODY_LIMIT = "5mb";
+export const JSON_BODY_LIMIT_DISPLAY = "5 MB";
 app.use(
   express.json({
-    limit: "5mb",
+    limit: JSON_BODY_LIMIT,
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
 
-app.use(express.urlencoded({ extended: false, limit: "5mb" }));
+app.use(express.urlencoded({ extended: false, limit: JSON_BODY_LIMIT }));
 
 // Prometheus metrics middleware
 app.use(metricsMiddleware);
@@ -430,6 +438,25 @@ app.get("/admin", requireAuth, (_req, res) => {
               "Invalid data format provided.",
               requestId,
               "INVALID_FORMAT",
+            ),
+          );
+      }
+
+      // Uploads bigger than the JSON body limit (currently 5mb) die in the
+      // body parser before any route runs. Give them a code + plain words
+      // instead of the parser's raw "request entity too large" sentence.
+      if (isPayloadTooLarge(err)) {
+        log.error(
+          { err, status: 413, requestId },
+          "Upload rejected: body exceeds size limit",
+        );
+        return res
+          .status(413)
+          .json(
+            errorBody(
+              `That file is too large to upload. Try a file under ${JSON_BODY_LIMIT_DISPLAY}.`,
+              requestId,
+              "PAYLOAD_TOO_LARGE",
             ),
           );
       }

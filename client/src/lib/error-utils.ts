@@ -163,6 +163,30 @@ function friendlyMessage(
     return "Too many attempts. Please wait a few moments and try again.";
   }
 
+  // 4b. Payload too large (413) — file/canvas over the size limit.
+  // Our server messages here are pre-sanitized and specific (size limits,
+  // node counts), so prefer them over the generic fallback.
+  if (
+    statusCode === 413 ||
+    lower.includes("too large") ||
+    lower.includes("entity too large")
+  ) {
+    // Body-parser jargon ("request entity too large") is never shown —
+    // fall through to the generic text below for it.
+    if (!lower.includes("entity too large")) {
+      const cleaned413 = rawMessage.replace(/^[0-9]{3}:\s*/, "").trim();
+      if (
+        cleaned413 &&
+        !cleaned413.startsWith("{") &&
+        !cleaned413.startsWith("<") &&
+        cleaned413.length < 200
+      ) {
+        return cleaned413;
+      }
+    }
+    return "That file is too large. Try a smaller file and upload again.";
+  }
+
   // 5. Server Errors
   if (
     statusCode === 500 ||

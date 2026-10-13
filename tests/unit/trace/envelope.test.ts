@@ -101,3 +101,27 @@ describe("support IDs (quotable refs for users, greppable for support)", () => {
     expect(formatUserErrorMessage(plain)).not.toContain("ref ");
   });
 });
+
+describe("payload-too-large detection (10MB upload vs 5mb limit)", () => {
+  it("recognizes body-parser rejections and nothing else", async () => {
+    const { isPayloadTooLarge } = await import("@server/lib/errorEnvelope");
+    expect(isPayloadTooLarge({ type: "entity.too.large", status: 413 })).toBe(
+      true,
+    );
+    expect(isPayloadTooLarge(new Error("boom"))).toBe(false);
+    expect(isPayloadTooLarge({ code: "23505" })).toBe(false);
+    expect(isPayloadTooLarge(undefined)).toBe(false);
+  });
+
+  it("tells the user plainly with a ref (not parser jargon)", async () => {
+    const { formatUserErrorMessage, ApiError } =
+      await import("@/lib/error-utils");
+    const tooLarge = new ApiError(413, "request entity too large", {
+      code: "PAYLOAD_TOO_LARGE",
+      requestId: "req-aaaaaaaaaaaaaaaaaaaaaaaa",
+    });
+    const text = formatUserErrorMessage(tooLarge);
+    expect(text).not.toContain("entity");
+    expect(text).toContain("(ref AAAA-AAAA)");
+  });
+});
