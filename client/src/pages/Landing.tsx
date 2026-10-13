@@ -1236,18 +1236,23 @@ const Home = () => {
             </NavigationMenu>
 
             {/* Right CTAs & Mobile Drawer Trigger */}
-            <div className="flex items-center gap-3">
+            {/* Pill buttons copied verbatim from the approved redesign
+                (Inter, rounded-full) — approved exception to the 8px rule. */}
+            <div
+              className="flex items-center gap-3"
+              style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+            >
               <button
                 onClick={() => setLocation("/login")}
-                className="font-sans font-medium text-sm text-white/70 hover:text-white transition-colors cursor-pointer px-3 py-1.5"
+                className="h-[38px] rounded-full border border-white/20 bg-transparent px-5 text-[14px] font-medium text-white transition-colors hover:bg-white/[0.06] cursor-pointer"
               >
-                Log in
+                Sign in
               </button>
               <button
                 onClick={() => setLocation("/register")}
-                className="bg-primary text-white rounded-lg py-2 px-5 text-sm font-bold hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
+                className="h-[38px] rounded-full bg-white px-5 text-[14px] font-medium text-black transition-colors hover:bg-white/90 cursor-pointer"
               >
-                Get Started
+                Get started
               </button>
 
               {/* Mobile Sheet Trigger */}
@@ -1616,6 +1621,96 @@ const Home = () => {
                 </motion.div>
               </motion.div>
             </main>
+
+            {/* UPDATE 2.0 — BUILT FOR OPERATORS. Copy is PLACEHOLDER: each
+                card carries a TODO(copy) marker; fill real 2.0 highlights
+                before launch. Sticky panel + card rail, our dark system. */}
+            <section
+              id="update-2-0"
+              className="w-full relative z-10 py-20 border-t border-white/10"
+            >
+              <div className="max-w-6xl mx-auto px-6 grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+                <aside className="lg:sticky lg:top-24 lg:self-start">
+                  <div className="flex min-h-[320px] flex-col justify-between rounded-xl border border-white/[0.08] bg-[#0C0C0E] p-6 md:p-8 lg:min-h-[480px]">
+                    <div>
+                      <p className="font-mono text-xs tracking-widest text-primary">
+                        UPDATE 2.0
+                      </p>
+                      <h2 className="mt-3 max-w-[14ch] text-4xl font-bold leading-[1.1] tracking-tight text-white font-headline">
+                        Built for operators.
+                      </h2>
+                      <p className="mt-3 max-w-md text-[15px] leading-relaxed text-white/50">
+                        Everything new in 2.0, in six cards. Scroll for each
+                        one.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setLocation("/register")}
+                      className="h-[38px] rounded-full bg-white px-5 text-[14px] font-medium text-black transition-colors hover:bg-white/90 cursor-pointer mt-8 self-start"
+                      style={{
+                        fontFamily: "Inter, system-ui, sans-serif",
+                      }}
+                    >
+                      Get started
+                    </button>
+                  </div>
+                </aside>
+                <div className="space-y-4">
+                  {[
+                    {
+                      id: "u20-01",
+                      title: "Headline one of update 2.0",
+                      body: "One or two sentences on what changed and why it matters. Replace this text.",
+                    },
+                    {
+                      id: "u20-02",
+                      title: "Headline two of update 2.0",
+                      body: "One or two sentences on what changed and why it matters. Replace this text.",
+                    },
+                    {
+                      id: "u20-03",
+                      title: "Headline three of update 2.0",
+                      body: "One or two sentences on what changed and why it matters. Replace this text.",
+                    },
+                    {
+                      id: "u20-04",
+                      title: "Headline four of update 2.0",
+                      body: "One or two sentences on what changed and why it matters. Replace this text.",
+                    },
+                    {
+                      id: "u20-05",
+                      title: "Headline five of update 2.0",
+                      body: "One or two sentences on what changed and why it matters. Replace this text.",
+                    },
+                    {
+                      id: "u20-06",
+                      title: "Headline six of update 2.0",
+                      body: "One or two sentences on what changed and why it matters. Replace this text.",
+                    },
+                  ].map((f) => (
+                    <article
+                      key={f.id}
+                      id={f.id}
+                      className="scroll-mt-24 overflow-hidden rounded-xl border border-white/[0.08] bg-[#1a1a1d]"
+                    >
+                      <div className="flex h-20 items-end bg-[#0C0C0E] p-5">
+                        <span className="font-mono text-xs tracking-widest text-primary">
+                          TODO(copy)
+                        </span>
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-lg font-bold text-white font-headline">
+                          {f.title}
+                        </h3>
+                        <p className="mt-1 text-[15px] leading-relaxed text-white/50">
+                          {f.body}
+                        </p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </section>
 
             {/* TEMPLATES SECTION */}
             <section
