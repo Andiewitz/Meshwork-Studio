@@ -1661,31 +1661,49 @@ const Home = () => {
                       id: "u20-01",
                       title: "Headline one of update 2.0",
                       body: "One or two sentences on what changed and why it matters. Replace this text.",
+                      visual:
+                        "bg-[radial-gradient(circle_at_30%_20%,#F59E0B_0%,#E8391A_55%,#7C2D12_100%)]",
+                      meta: "Update · TODO(date) · 2 min read",
                     },
                     {
                       id: "u20-02",
                       title: "Headline two of update 2.0",
                       body: "One or two sentences on what changed and why it matters. Replace this text.",
+                      visual:
+                        "bg-[radial-gradient(circle_at_70%_30%,#D946EF_0%,#7C3AED_55%,#1E1B4B_100%)]",
+                      meta: "Update · TODO(date) · 3 min read",
                     },
                     {
                       id: "u20-03",
                       title: "Headline three of update 2.0",
                       body: "One or two sentences on what changed and why it matters. Replace this text.",
+                      visual:
+                        "bg-[radial-gradient(circle_at_50%_20%,#2DD4BF_0%,#0E7490_55%,#082F49_100%)]",
+                      meta: "Update · TODO(date) · 2 min read",
                     },
                     {
                       id: "u20-04",
                       title: "Headline four of update 2.0",
                       body: "One or two sentences on what changed and why it matters. Replace this text.",
+                      visual:
+                        "bg-[radial-gradient(circle_at_30%_70%,#60A5FA_0%,#2563EB_55%,#172554_100%)]",
+                      meta: "Update · TODO(date) · 4 min read",
                     },
                     {
                       id: "u20-05",
                       title: "Headline five of update 2.0",
                       body: "One or two sentences on what changed and why it matters. Replace this text.",
+                      visual:
+                        "bg-[radial-gradient(circle_at_70%_70%,#F472B6_0%,#E8391A_55%,#450A0A_100%)]",
+                      meta: "Update · TODO(date) · 2 min read",
                     },
                     {
                       id: "u20-06",
                       title: "Headline six of update 2.0",
                       body: "One or two sentences on what changed and why it matters. Replace this text.",
+                      visual:
+                        "bg-[radial-gradient(circle_at_50%_50%,#A3E635_0%,#059669_55%,#022C22_100%)]",
+                      meta: "Update · TODO(date) · 3 min read",
                     },
                   ].map((f) => (
                     <article
@@ -1693,18 +1711,19 @@ const Home = () => {
                       id={f.id}
                       className="scroll-mt-24 overflow-hidden rounded-xl border border-white/[0.08] bg-[#1a1a1d]"
                     >
-                      <div className="flex h-28 items-end bg-[#0C0C0E] p-5">
-                        <span className="font-mono text-xs tracking-widest text-primary">
+                      <div className={`relative aspect-square ${f.visual}`}>
+                        <span className="absolute bottom-3 left-4 font-mono text-[11px] tracking-widest text-white/70">
                           TODO(copy)
                         </span>
                       </div>
-                      <div className="p-6">
-                        <h3 className="text-[13px] font-semibold text-white">
+                      <div className="p-5">
+                        <h3 className="text-[15px] font-semibold leading-snug text-white">
                           {f.title}
                         </h3>
                         <p className="mt-1 text-[13px] leading-5 text-white/50">
                           {f.body}
                         </p>
+                        <p className="mt-3 text-xs text-white/40">{f.meta}</p>
                       </div>
                     </article>
                   ))}
