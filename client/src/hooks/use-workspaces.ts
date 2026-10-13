@@ -5,6 +5,7 @@ import {
   type UpdateWorkspaceRequest,
 } from "@shared/schema";
 import { secureFetch } from "../lib/secure-fetch";
+import { ApiError } from "../lib/error-utils";
 import { useAuth } from "./use-auth";
 import {
   type WorkspaceRole,
@@ -24,10 +25,21 @@ function getApiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
 }
 
+/**
+ * Throw a failed response as an ApiError that keeps the server's full body
+ * (message AND code/requestId). Plain `new Error("Failed to …")` destroys
+ * the request ID — never do that here; toasts and error screens need it.
+ */
+async function throwApiError(res: Response, fallback: string): Promise<never> {
+  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  const message =
+    typeof body.message === "string" && body.message ? body.message : fallback;
+  throw new ApiError(res.status, message, body);
+}
+
 /** Extract a human-readable message from a failed response JSON */
 async function extractError(res: Response, fallback: string): Promise<never> {
-  const body = (await res.json().catch(() => ({}))) as { message?: string };
-  throw new Error(body.message ?? fallback);
+  return throwApiError(res, fallback);
 }
 
 // Hook to fetch all workspaces
@@ -41,14 +53,7 @@ export function useWorkspaces() {
         credentials: "include",
       });
       if (!res.ok) {
-        const errorText = await res.text().catch(() => "Unknown error");
-        console.error(
-          `[useWorkspaces] Failed with status ${res.status}:`,
-          errorText,
-        );
-        throw new Error(
-          `Failed to fetch workspaces (${res.status}): ${errorText}`,
-        );
+        await throwApiError(res, `Failed to fetch workspaces (${res.status})`);
       }
       return api.workspaces.list.responses[200].parse(await res.json());
     },
@@ -74,7 +79,7 @@ export function useWorkspace(id: string | null | undefined) {
       const url = buildUrl(api.workspaces.get.path, { id: id! });
       const res = await secureFetch(getApiUrl(url), { credentials: "include" });
       if (res.status === 404) return null;
-      if (!res.ok) throw new Error("Failed to fetch workspace");
+      if (!res.ok) await throwApiError(res, "Failed to fetch workspace");
       return api.workspaces.get.responses[200].parse(await res.json());
     },
     enabled: isAuthenticated && !!id,
@@ -128,7 +133,7 @@ export function useUpdateWorkspace() {
         credentials: "include",
       });
 
-      if (!res.ok) throw new Error("Failed to update workspace");
+      if (!res.ok) await throwApiError(res, "Failed to update workspace");
       return api.workspaces.update.responses[200].parse(await res.json());
     },
     onMutate: async (newWorkspace): Promise<WorkspaceUpdateContext> => {
@@ -208,7 +213,7 @@ export function useDeleteWorkspace() {
         credentials: "include",
       });
 
-      if (!res.ok) throw new Error("Failed to delete workspace");
+      if (!res.ok) await throwApiError(res, "Failed to delete workspace");
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
@@ -232,7 +237,7 @@ export function useDuplicateWorkspace() {
         credentials: "include",
       });
 
-      if (!res.ok) throw new Error("Failed to duplicate workspace");
+      if (!res.ok) await throwApiError(res, "Failed to duplicate workspace");
       return api.workspaces.duplicate.responses[201].parse(await res.json());
     },
     onSuccess: () => {
@@ -347,12 +352,7 @@ export function useUpdateMemberRole() {
           credentials: "include",
         },
       );
-      if (!res.ok) {
-        const err = (await res.json().catch(() => ({ message: "Failed" }))) as {
-          message?: string;
-        };
-        throw new Error(err.message ?? "Failed to update role");
-      }
+      if (!res.ok) await throwApiError(res, "Failed to update role");
       return res.json() as Promise<{ role: string }>;
     },
     onSuccess: () => {

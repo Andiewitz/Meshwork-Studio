@@ -138,6 +138,7 @@ import {
   ShieldCheckIcon as ShieldCheck,
 } from "@heroicons/react/24/outline";
 import { useToast } from "@/hooks/use-toast";
+import { formatUserErrorMessage } from "@/lib/error-utils";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -232,11 +233,13 @@ function WorkspaceView() {
     sync,
     isSyncing,
     isError: isCanvasError,
+    error: canvasError,
   } = useCanvas(workspaceId);
   const {
     data: workspace,
     isLoading: isWorkspaceLoading,
     isError: isWorkspaceError,
+    error: workspaceError,
   } = useWorkspace(workspaceId);
 
   const isLoading = isCanvasLoading || isWorkspaceLoading;
@@ -1576,10 +1579,15 @@ function WorkspaceView() {
         <h1 className="text-2xl font-black uppercase tracking-widest mb-3">
           Project Not Found
         </h1>
-        <p className="text-white/40 mb-8 max-w-md text-center text-sm leading-relaxed">
+        <p className="text-white/40 mb-3 max-w-md text-center text-sm leading-relaxed">
           The architecture project you are looking for does not exist, has been
           deleted, or you do not have permission to access it.
         </p>
+        {(canvasError ?? workspaceError) && (
+          <p className="text-white/50 mb-8 max-w-md text-center font-mono text-xs leading-relaxed">
+            {formatUserErrorMessage(canvasError ?? workspaceError)}
+          </p>
+        )}
         <Link href="/">
           <button className="px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-md transition-colors text-[11px] font-bold tracking-[0.2em] uppercase text-white/80 hover:text-white">
             Return to Library

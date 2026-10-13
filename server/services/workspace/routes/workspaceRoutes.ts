@@ -147,21 +147,43 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
   }
 
   app.get(api.workspaces.get.path, isAuthenticated, async (req, res) => {
+    const requestId = req.requestId ?? "unscoped";
     const id = getParamId(req);
-    const workspace = await workspaceStorage.getWorkspace(id);
-    if (!workspace)
-      return res.status(404).json({ message: "Workspace not found" });
+    try {
+      const workspace = await workspaceStorage.getWorkspace(id);
+      if (!workspace)
+        return res
+          .status(404)
+          .json({ message: "Workspace not found", requestId });
 
-    const userId = getUserId(req);
-    const hasAccess =
-      isWorkspaceOwner(workspace, userId) ||
-      (await teamStorage.canAccessWorkspace(userId, workspace.id));
-    if (!hasAccess)
-      return res
-        .status(403)
-        .json({ message: "You do not have access to this workspace" });
+      const userId = getUserId(req);
+      const hasAccess =
+        isWorkspaceOwner(workspace, userId) ||
+        (await teamStorage.canAccessWorkspace(userId, workspace.id));
+      if (!hasAccess)
+        return res.status(403).json({
+          message: "You do not have access to this workspace",
+          requestId,
+        });
 
-    res.json(workspace);
+      res.json(workspace);
+    } catch (error) {
+      // A workspace that exists must never 500 opaquely on open: a database
+      // failure here is a dependency outage (503), joined by request ID.
+      log.error(
+        { err: error, workspaceId: id, requestId },
+        "Failed to load workspace",
+      );
+      res
+        .status(503)
+        .json(
+          errorBody(
+            "Workspace service is temporarily unavailable. Try again shortly.",
+            requestId,
+            "WORKSPACE_UNAVAILABLE",
+          ),
+        );
+    }
   });
 
   app.post(
