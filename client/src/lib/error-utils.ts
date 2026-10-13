@@ -16,10 +16,67 @@ export class ApiError extends Error {
 }
 
 /**
- * Formats any raw error (HTTP error, thrown exception, or API response)
- * into a clean, human-readable message suitable for toasts and UI alerts.
+ * Quotable support ID derived from a request ID (`req-<24hex>` or bare hex).
+ * Display form `XXXX-XXXX` (first 4 + last 4 hex chars, uppercase).
+ * Support joins it with `grep -i <chunk>` against server logs, which always
+ * carry the full request ID. Mirrors `supportIdFrom` in
+ * `server/lib/errorEnvelope.ts` — keep the algorithms identical.
  */
-export function formatUserErrorMessage(
+export function supportIdFrom(
+  requestId: string | undefined | null,
+): string | undefined {
+  if (!requestId) return undefined;
+  const hex = requestId.replace(/^req-/i, "");
+  if (!/^[0-9a-fA-F]{8,}$/.test(hex)) return undefined;
+  const h = hex.toUpperCase();
+  return `${h.slice(0, 4)}-${h.slice(-4)}`;
+}
+
+/** Pull a server request ID out of any error shape without throwing. */
+export function requestIdOf(error: unknown): string | undefined {
+  if (error instanceof ApiError) {
+    const data = error.data as Record<string, unknown> | undefined;
+    if (data && typeof data.requestId === "string") return data.requestId;
+  }
+  if (typeof error === "object" && error !== null) {
+    const id = (error as Record<string, unknown>).requestId;
+    if (typeof id === "string") return id;
+  }
+  return undefined;
+}
+
+export interface SupportError {
+  message: string;
+  code?: string;
+  requestId?: string;
+  supportId?: string;
+  status?: number;
+}
+
+/** Friendly message + preserved server signal (code/IDs) for toasts. */
+export function toSupportError(
+  error: unknown,
+  fallbackMessage = "Something went wrong. Please try again.",
+): SupportError {
+  const out: SupportError = {
+    message: formatUserErrorMessage(error, fallbackMessage),
+  };
+  const requestId = requestIdOf(error);
+  if (requestId) {
+    out.requestId = requestId;
+    out.supportId = supportIdFrom(requestId);
+  }
+  const data =
+    error instanceof ApiError
+      ? (error.data as Record<string, unknown> | undefined)
+      : undefined;
+  if (data && typeof data.code === "string") out.code = data.code;
+  if (error instanceof ApiError) out.status = error.status;
+  return out;
+}
+
+/** Friendly text only (no IDs) — the shared core behind both formatters. */
+function friendlyMessage(
   error: unknown,
   fallbackMessage = "Something went wrong. Please try again.",
 ): string {
@@ -140,4 +197,19 @@ export function formatUserErrorMessage(
   }
 
   return fallbackMessage;
+}
+
+/**
+ * Formats any raw error into a clean, human-readable message for toasts.
+ * When the server attached a request ID, appends a quotable support ref
+ * (`… (ref XXXX-XXXX)`) so users can report it and support can grep logs.
+ * All existing callers get this automatically — no call-site changes.
+ */
+export function formatUserErrorMessage(
+  error: unknown,
+  fallbackMessage = "Something went wrong. Please try again.",
+): string {
+  const base = friendlyMessage(error, fallbackMessage);
+  const supportId = supportIdFrom(requestIdOf(error));
+  return supportId ? `${base} (ref ${supportId})` : base;
 }

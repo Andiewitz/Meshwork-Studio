@@ -61,3 +61,20 @@ export function errorBody(
 ): ErrorBody {
   return code ? { message, code, requestId } : { message, requestId };
 }
+
+/**
+ * Quotable support ID derived from a request ID (`req-<24hex>` or bare
+ * hex). Display form `XXXX-XXXX` (first 4 + last 4 hex chars, uppercase).
+ * Support joins it with `grep -i <chunk>` against logs carrying the full
+ * request ID. Mirrors `supportIdFrom` in `client/src/lib/error-utils.ts` —
+ * keep the algorithms identical.
+ */
+export function supportIdFrom(
+  requestId: string | undefined | null,
+): string | undefined {
+  if (!requestId) return undefined;
+  const hex = requestId.replace(/^req-/i, "");
+  if (!/^[0-9a-fA-F]{8,}$/.test(hex)) return undefined;
+  const h = hex.toUpperCase();
+  return `${h.slice(0, 4)}-${h.slice(-4)}`;
+}

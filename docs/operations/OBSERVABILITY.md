@@ -46,6 +46,23 @@ Authenticated users can access stored application history through:
 Keep request IDs, workspace IDs, and error codes in incident notes. Never paste
 cookies, bearer tokens, passwords, assertion keys, or raw environment files.
 
+## Joining a user report to logs (support IDs)
+
+Every error toast and crash screen shows a quotable ref (`ref XXXX-XXXX`,
+derived from the request ID). To trace one report end to end:
+
+```bash
+# 1. The ref is the head + tail of the full request ID — match either half:
+pm2 logs meshwork | grep -i "7c77" | grep -i "9cef"
+pm2 logs meshwork-auth | grep -i "7c77"
+# 2. Audit rows carry the same ID:
+#    SELECT * FROM audit_events WHERE request_id ILIKE '%7c77%9cef%';
+```
+
+Client render crashes mint their own incident ID (`req-<24hex>`, shown on the
+crash screen and in the browser console) — those never reach the server, so
+ask the user to read it off the screen.
+
 ## First response guide
 
 | Symptom                      | Check                                                 | Safe first action                                                                                   |

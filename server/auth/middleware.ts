@@ -5,6 +5,9 @@ import type { IncomingMessage } from "http";
 import { Verifier, type AssertionClaims } from "./assertion";
 import { revokedSessions, startRevocationListener } from "./denylist";
 import { introspectSession } from "./introspect";
+import { createChildLogger } from "../lib/logger";
+
+const log = createChildLogger("auth-middleware");
 
 export interface AuthUser {
   id: string;
@@ -100,20 +103,28 @@ async function authenticate(
   req: Request,
   res: Response,
 ): Promise<AuthUser | null> {
+  const requestId = req.requestId ?? "unscoped";
+  const deny = (reason: string) => {
+    // 401 stays opaque outside; the reason class lives here in the logs.
+    log.debug({ reason, requestId }, "authenticate denied");
+    return null;
+  };
+
   const local = verify(req);
   if (local) return local;
 
   const rawSession = readCookie(req, SESSION_COOKIE_NAMES);
-  if (!rawSession) return null;
+  if (!rawSession) return deny("no_session_cookie");
 
   const result = await introspectSession(rawSession, req.requestId);
-  if (!result?.assertion) return null;
+  if (!result?.assertion)
+    return deny(`introspect_inactive:${result?.reason ?? "unknown"}`);
 
   // Verify what the service just signed before trusting it — never assume.
-  if (!verifier) return null;
+  if (!verifier) return deny("verifier_unconfigured");
   const claims = verifier.verify(result.assertion);
   if (!claims || claims.sub !== result.sub || revokedSessions.has(claims.sid)) {
-    return null;
+    return deny("assertion_rejected");
   }
 
   setAssertionCookie(res, result.assertion);
@@ -139,8 +150,16 @@ export const optionalAuth: RequestHandler = (req, _res, next) => {
       };
       req.user = user as unknown as Request["user"];
     }
-  } catch {
-    // optional auth must never break the request path
+  } catch (err) {
+    // Optional auth must never break the request path — but the reason
+    // still belongs in the logs, joined by request ID for support.
+    log.debug(
+      {
+        err: err instanceof Error ? err.message : err,
+        requestId: req.requestId ?? "unscoped",
+      },
+      "optionalAuth fell back to anonymous",
+    );
   }
   next();
 };

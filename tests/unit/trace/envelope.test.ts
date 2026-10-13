@@ -78,3 +78,26 @@ describe("error envelope (additive: message text never changes)", () => {
     expect(next).toHaveBeenCalledOnce();
   });
 });
+
+describe("support IDs (quotable refs for users, greppable for support)", () => {
+  it("derives XXXX-XXXX display form from request IDs", async () => {
+    const { supportIdFrom } = await import("@/lib/error-utils");
+    expect(supportIdFrom("req-7c778bb3b2d476bf24d89cef")).toBe("7C77-9CEF");
+    expect(supportIdFrom("7c778bb3b2d476bf24d89cef")).toBe("7C77-9CEF");
+    expect(supportIdFrom(undefined)).toBeUndefined();
+    expect(supportIdFrom("garbage")).toBeUndefined();
+    expect(supportIdFrom("req-short")).toBeUndefined();
+  });
+
+  it("appends the ref to toast text only when a request ID exists", async () => {
+    const { formatUserErrorMessage, ApiError } =
+      await import("@/lib/error-utils");
+    const withId = new ApiError(500, "An unexpected error occurred", {
+      code: "INTERNAL",
+      requestId: "req-7c778bb3b2d476bf24d89cef",
+    });
+    expect(formatUserErrorMessage(withId)).toContain("(ref 7C77-9CEF)");
+    const plain = new Error("boom");
+    expect(formatUserErrorMessage(plain)).not.toContain("ref ");
+  });
+});
