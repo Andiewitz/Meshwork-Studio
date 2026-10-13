@@ -69,7 +69,11 @@ if [[ "$SKIP_BUILD" == false ]]; then
   tui_step "1b/5" "Building landing page (Astro static)..."
   if [[ ! -d "$REPO_DIR/landing/node_modules" ]]; then
     tui_info "Installing landing dependencies (first run)..."
-    (cd "$REPO_DIR/landing" && npm install --no-audit --no-fund)
+    if [[ -f "$REPO_DIR/landing/package-lock.json" ]]; then
+      (cd "$REPO_DIR/landing" && npm ci --no-audit --no-fund)
+    else
+      (cd "$REPO_DIR/landing" && npm install --no-audit --no-fund)
+    fi
   fi
   (cd "$REPO_DIR/landing" && npm run build)
   tui_ok "Landing: landing/dist ($(du -sh "$REPO_DIR/landing/dist" | cut -f1))"
