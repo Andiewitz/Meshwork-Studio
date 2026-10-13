@@ -5,10 +5,11 @@
 
 ## The 10-second version
 
-| You want to…                             | Run                                    |
-| ---------------------------------------- | -------------------------------------- |
-| Wake the EC2 / push last build / restart | `meshwork-start` (no build, fast)      |
-| Put new code live                        | `meshwork-deploy` (builds, then ships) |
+| You want to…                             | Run                                                  |
+| ---------------------------------------- | ---------------------------------------------------- |
+| Wake the EC2 / push last build / restart | `meshwork-start` (no build, fast)                    |
+| Put new code live                        | `meshwork-deploy` (builds, then ships)               |
+| Open the metrics dashboard locally       | `npm run dashboard` (needs dev server + admin login) |
 
 Changed code? → **deploy**. Reboot, crash, or stale services? → **start**.
 

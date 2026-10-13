@@ -39,6 +39,7 @@
     "dev": "tsx scripts/dev.ts",
     "build": "tsx scripts/build.ts",
     "deploy": "./scripts/deploy.sh",
+    "dashboard": "./scripts/dashboard.sh",
     "start:ec2": "./scripts/start.sh",
     "start": "node dist/index.cjs",
     "check": "tsc",

@@ -325,7 +325,11 @@ app.get("/ready", async (_req, res) => {
 
 // Admin dashboard: session-authenticated admin users only. The old
 // secret-in-URL gate leaked via logs/history/Referer and had no authz.
-const adminHtmlPath = path.resolve(moduleDir, "admin.html");
+// Production serves the bundled copy (build.ts copies it to dist/);
+// local dev (tsx) falls back to the source file so /admin works pre-build.
+const adminHtmlPath = fs.existsSync(path.resolve(moduleDir, "admin.html"))
+  ? path.resolve(moduleDir, "admin.html")
+  : path.resolve(moduleDir, "public/admin/index.html");
 app.get("/admin", requireAuth, (_req, res) => {
   const user = (_req as { user?: { isAdmin?: boolean } }).user;
   if (!user?.isAdmin) {
