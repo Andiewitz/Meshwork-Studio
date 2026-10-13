@@ -5,6 +5,7 @@ import { z } from "zod";
 import { csrfProtect } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
 import { errorBody } from "@server/lib/errorEnvelope";
+import { logTraceback } from "@server/lib/traceback";
 import type { AppContext } from "@server/lib/registry";
 import { canEditWorkspace, canDeleteWorkspace } from "@server/lib/permissions";
 import type { ITeamStorage } from "@services/team/db/storage";
@@ -170,10 +171,12 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     } catch (error) {
       // A workspace that exists must never 500 opaquely on open: a database
       // failure here is a dependency outage (503), joined by request ID.
-      log.error(
-        { err: error, workspaceId: id, requestId },
-        "Failed to load workspace",
-      );
+      // Full stack + cause chain go to the log; the client gets the envelope.
+      logTraceback(log, "Failed to load workspace", error, {
+        userId: req.user?.id,
+        workspaceId: id,
+        requestId,
+      });
       res
         .status(503)
         .json(
@@ -339,15 +342,11 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
       } catch (error) {
         // Raw storage text stays in the logs — clients get a stable code
         // they can switch on plus the request ID to quote to support.
-        log.error(
-          {
-            err: error,
-            userId,
-            workspaceId: id,
-            requestId: req.requestId ?? "unscoped",
-          },
-          "Canvas copy retry failed",
-        );
+        logTraceback(log, "Canvas copy retry failed", error, {
+          userId,
+          workspaceId: id,
+          requestId: req.requestId ?? "unscoped",
+        });
         res
           .status(409)
           .json(

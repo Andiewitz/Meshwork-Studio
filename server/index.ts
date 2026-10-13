@@ -24,6 +24,7 @@ import {
   isPayloadTooLarge,
   resolvePublicCode,
 } from "./lib/errorEnvelope";
+import { logTraceback } from "./lib/traceback";
 import { disconnectRedis, isRedisAvailable } from "./lib/redis";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import { metricsRegistry } from "./lib/metrics";
@@ -398,10 +399,10 @@ app.get("/admin", requireAuth, (_req, res) => {
         resolved.status ?? httpErr.status ?? httpErr.statusCode ?? 500;
       const code = resolved.code;
 
-      log.error(
-        { err, status, code, requestId },
-        "Unhandled error reached global handler",
-      );
+      logTraceback(log, "Unhandled error reached global handler", err, {
+        status,
+        requestId,
+      });
 
       if (res.headersSent) {
         return next(err);
