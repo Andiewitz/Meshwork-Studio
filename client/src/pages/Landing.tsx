@@ -1629,9 +1629,9 @@ const Home = () => {
               id="update-2-0"
               className="w-full relative z-10 py-20 border-t border-white/10"
             >
-              <div className="max-w-6xl mx-auto px-6 grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+              <div className="max-w-[1400px] mx-auto px-4 grid gap-4 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
                 <aside className="lg:sticky lg:top-24 lg:self-start">
-                  <div className="flex min-h-[320px] flex-col justify-between rounded-xl border border-white/[0.08] bg-[#0C0C0E] p-6 md:p-8 lg:min-h-[560px]">
+                  <div className="flex min-h-[320px] flex-col justify-between rounded-xl border border-white/[0.08] bg-[#0C0C0E] p-6 md:p-8 lg:h-[calc(100vh-8rem)] lg:min-h-[560px]">
                     <div>
                       <p className="font-mono text-xs tracking-widest text-primary">
                         UPDATE 2.0
