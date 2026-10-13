@@ -80,8 +80,12 @@ func (s *Server) handleIssueCSRF(w http.ResponseWriter, r *http.Request) {
 		sessionIDHash = session.HashToken(raw)
 	}
 	if err := csrf.Bind(s.csrfStore, sessionIDHash, secret, time.Hour); err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Could not bind token")
-		return
+		// Best-effort binding: the token is still issued. Validation
+		// self-heals a missing binding on first use (Verify re-saves),
+		// while a 500 here locks the user out of EVERY mutation the moment
+		// their CSRF cookie expires. Log the cause, don't fail the request.
+		s.log.Warn("csrf bind failed; issuing unbound token",
+			"request_id", requestIDFrom(r), "err", err)
 	}
 	setCookie(w, s.cfg, s.cfg.CSRFCookieName, secret, time.Hour, false)
 	writeJSON(w, http.StatusOK, map[string]any{"csrfToken": secret, "message": "CSRF token generated"})
