@@ -1046,7 +1046,7 @@ const Home = () => {
   return (
     <div
       ref={containerRef}
-      className="relative font-sans text-white min-h-screen flex flex-col bg-background overflow-x-hidden"
+      className="relative font-sans text-white min-h-screen flex flex-col bg-background overflow-x-clip"
     >
       <Helmet>
         <title>Meshwork Studio | Design your architecture with AI</title>
@@ -1629,9 +1629,9 @@ const Home = () => {
               id="update-2-0"
               className="w-full relative z-10 py-20 border-t border-white/10"
             >
-              <div className="max-w-6xl mx-auto px-6 grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+              <div className="max-w-6xl mx-auto px-6 grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
                 <aside className="lg:sticky lg:top-24 lg:self-start">
-                  <div className="flex min-h-[320px] flex-col justify-between rounded-xl border border-white/[0.08] bg-[#0C0C0E] p-6 md:p-8 lg:min-h-[480px]">
+                  <div className="flex min-h-[320px] flex-col justify-between rounded-xl border border-white/[0.08] bg-[#0C0C0E] p-6 md:p-8 lg:min-h-[560px]">
                     <div>
                       <p className="font-mono text-xs tracking-widest text-primary">
                         UPDATE 2.0
@@ -1693,16 +1693,16 @@ const Home = () => {
                       id={f.id}
                       className="scroll-mt-24 overflow-hidden rounded-xl border border-white/[0.08] bg-[#1a1a1d]"
                     >
-                      <div className="flex h-20 items-end bg-[#0C0C0E] p-5">
+                      <div className="flex h-28 items-end bg-[#0C0C0E] p-5">
                         <span className="font-mono text-xs tracking-widest text-primary">
                           TODO(copy)
                         </span>
                       </div>
                       <div className="p-6">
-                        <h3 className="text-lg font-bold text-white font-headline">
+                        <h3 className="text-[13px] font-semibold text-white">
                           {f.title}
                         </h3>
-                        <p className="mt-1 text-[15px] leading-relaxed text-white/50">
+                        <p className="mt-1 text-[13px] leading-5 text-white/50">
                           {f.body}
                         </p>
                       </div>
