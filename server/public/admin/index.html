@@ -187,11 +187,23 @@ pre.raw{
     </div>
     <div class="panel">
       <div class="panel-header">
-        <span class="panel-title">AI Requests</span>
-        <span class="panel-badge">by provider</span>
+        <span class="panel-title" id="aiPanelTitle">Errors</span>
+        <span class="panel-badge">by endpoint</span>
       </div>
       <div class="chart-wrap"><canvas id="aiChart"></canvas></div>
     </div>
+  </div>
+
+  <div class="table-panel">
+    <div class="panel-header">
+      <span class="panel-title">Support lookup</span>
+      <span class="panel-badge">request ID → audit trail</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input id="supportInput" placeholder="Paste ref or request-ID fragment…" style="flex:1;background:#111;border:1px solid #2E2E2E;color:#eee;border-radius:6px;padding:7px 10px;font-size:12px" onkeydown="if(event.key==='Enter')lookupSupport()" />
+      <button class="btn-ghost" onclick="lookupSupport()">Search</button>
+    </div>
+    <div id="supportResults" style="font-size:12px"><span style="color:#555">User quoted a ref? Paste it here to see what the audit trail recorded.</span></div>
   </div>
 
   <div class="table-panel">
@@ -230,29 +242,8 @@ function toggleRaw(){
   document.getElementById('rawBtn').textContent=rawOn?'Hide Raw':'Raw';
 }
 
-// ─── Prometheus parser (for live view) ──────────────────────────────
-
-function parsePrometheus(text){
-  const m={};
-  for(const l of text.split('\n')){
-    if(l.startsWith('#')||!l.trim())continue;
-    const tagged=l.match(/^([a-zA-Z_:][a-zA-Z0-9_:]*)\{([^}]*)\}\s+([\d.eE+-]+)/);
-    if(tagged){
-      const[,n,ls,v]=tagged;
-      const lbl={};
-      if(ls)for(const p of ls.split(',')){const[k,val]=p.split('=');lbl[k.trim()]=val.replace(/"/g,'').trim();}
-      if(!m[n])m[n]=[];m[n].push({labels:lbl,value:parseFloat(v)});continue;
-    }
-    const plain=l.match(/^([a-zA-Z_:][a-zA-Z0-9_:]*)\s+([\d.eE+-]+)/);
-    if(plain){const[,n,v]=plain;if(!m[n])m[n]=[];m[n].push({labels:{},value:parseFloat(v)});}
-  }
-  return m;
-}
-
-function val(m,n,l={}){for(const e of(m[n]||[])){let ok=true;for(const[k,v]of Object.entries(l))if(e.labels[k]!==v){ok=false;break;}if(ok)return e.value;}return 0;}
-function sumBy(m,n,k){const g={};for(const e of(m[n]||[])){const t=e.labels[k]||'?';g[t]=(g[t]||0)+e.value;}return g;}
-function sumByLabels(m,n){const g={};for(const e of(m[n]||[])){const t=`${e.labels.method||''} ${e.labels.path||''} ${e.labels.status_code||''}`.trim();g[t]=(g[t]||0)+e.value;}return g;}
-function durations(m){return(m['http_request_duration_seconds']||[]).map(e=>({method:e.labels.method,path:e.labels.path,duration:e.value}));}
+// (Live view consumes /api/v1/metrics/live JSON — exposition text never
+// reaches the browser by design. See updateLiveJson above.)
 function fmt(n){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n.toFixed(0);}
 
 // ─── Charts ─────────────────────────────────────────────────────────
@@ -279,68 +270,78 @@ function init(){
   charts.ai=new Chart('aiChart',{type:'bar',data:{labels:[],datasets:[{data:[],backgroundColor:[]}]},options:{...CO,indexAxis:'y',scales:{x:{beginAtZero:true,grid:{color:'#2E2E2E'},ticks:{color:'#555555',font:{size:10}}},y:{display:true,grid:{display:false},ticks:{color:'#999999',font:{size:10}}}}}});
 }
 
-// ─── Live view update ───────────────────────────────────────────────
+// ─── Live view update (JSON from /api/v1/metrics/live — never exposition text)
 
-function updateLive(m){
-  const total=(m['http_requests_total']||[]).reduce((s,e)=>s+e.value,0);
-  const mem=val(m,'meshwork_process_resident_memory_bytes')/1048576;
-  const cpu=val(m,'meshwork_process_cpu_user_seconds_total');
-  const lag=val(m,'meshwork_eventloop_lag_seconds')*1000;
-  const ws=val(m,'websocket_connections_active');
-  const rooms=val(m,'websocket_rooms_active');
-  const ai=(m['ai_chat_requests_total']||[]).reduce((s,e)=>s+e.value,0);
+let lastLive=null;
+
+function updateLiveJson(d){
+  lastLive=d;
+  const err5=d.requests5xx||0, err4=d.requests4xx||0;
+  const errCls=err5>0?'err':err4>0?'warn':'ok';
+  const uptimeMin=Math.max(0,Math.round((Date.now()-new Date(d.startedAt).getTime())/60000));
 
   const stats=[
-    {l:'Requests',v:fmt(total),s:'total'},
-    {l:'Memory',v:mem.toFixed(0)+' MB',s:'resident'},
-    {l:'Event Loop',v:lag.toFixed(1)+' ms',s:lag<10?'healthy':'under load',c:lag<10?'ok':lag<50?'warn':'err'},
-    {l:'WebSocket',v:ws+' / '+rooms,s:'conn / rooms'},
-    {l:'AI Calls',v:fmt(ai),s:'total'},
-    {l:'CPU',v:cpu.toFixed(1)+'s',s:'user time'},
+    {l:'Requests',v:fmt(d.totalRequests||0),s:'total'},
+    {l:'Errors',v:fmt(err5+err4),s:`${fmt(err5)} × 5xx · ${fmt(err4)} × 4xx`,c:errCls},
+    {l:'Memory',v:(d.memoryMb||0).toFixed(0)+' MB',s:'resident'},
+    {l:'Event Loop',v:(d.eventLoopLagMs||0).toFixed(1)+' ms',s:(d.eventLoopLagMs||0)<10?'healthy':'under load',c:(d.eventLoopLagMs||0)<10?'ok':'warn'},
+    {l:'WebSocket',v:(d.wsConnections||0)+' / '+(d.wsRooms||0),s:'conn / rooms'},
+    {l:'AI Calls',v:fmt(d.aiRequests||0),s:'total'},
+    {l:'Uptime',v:uptimeMin+' min',s:'restarted '+new Date(d.startedAt).toLocaleTimeString()},
   ];
   document.getElementById('cards').innerHTML=stats.map(s=>`<div class="stat"><div class="stat-label">${s.l}</div><div class="stat-value">${s.v}</div><div class="stat-sub ${s.c||''}">${s.s}</div></div>`).join('');
   document.getElementById('userCards').innerHTML='<div class="stat" style="grid-column:1/-1;text-align:center;color:#555">User metrics available in History view</div>';
   document.getElementById('summary').innerHTML='';
 
   // Request rate (live delta)
-  reqHist.push(total);if(reqHist.length>HIST)reqHist.shift();
+  reqHist.push(d.totalRequests||0);if(reqHist.length>HIST)reqHist.shift();
   charts.req.data.labels=Array(reqHist.length).fill('');
   charts.req.data.datasets[0].data=reqHist.slice(1).map((v,i)=>v-reqHist[i]);
   charts.req.update('none');
 
-  // Latency
-  const dm={};for(const e of durations(m)){const k=e.path||'?';if(!dm[k])dm[k]={s:0,n:0};dm[k].s+=e.duration*1000;dm[k].n++;}
-  const dk=Object.keys(dm),dv=dk.map(k=>dm[k].s/dm[k].n);
-  charts.lat.data.labels=dk.map(l=>l.length>18?l.slice(0,18)+'...':l);
-  charts.lat.data.datasets[0].data=dv;
-  charts.lat.data.datasets[0].backgroundColor=dv.map(v=>v<50?'#22C55E':v<200?'#F59E0B':'#E63636');
-  charts.lat.update('none');
-
   // WebSocket
-  wsHist.push({c:ws,r:rooms});if(wsHist.length>HIST)wsHist.shift();
+  wsHist.push({c:d.wsConnections||0,r:d.wsRooms||0});if(wsHist.length>HIST)wsHist.shift();
   charts.ws.data.labels=Array(wsHist.length).fill('');
   charts.ws.data.datasets[0].data=wsHist.map(h=>h.c);
   charts.ws.data.datasets[1].data=wsHist.map(h=>h.r);
   charts.ws.update('none');
 
-  // AI
-  const ab=sumBy(m,'ai_chat_requests_total','provider');
-  charts.ai.data.labels=Object.keys(ab);
-  charts.ai.data.datasets[0].data=Object.values(ab);
-  charts.ai.data.datasets[0].backgroundColor=['#FF8000','#22C55E','#F59E0B','#E63636','#3B82F6','#FF5500'];
+  // Errors by endpoint (replaces provider split — same canvas)
+  const errs=(d.topEndpoints||[]).filter(e=>e.errors>0).slice(0,6);
+  charts.ai.data.labels=errs.map(e=>e.route.length>24?e.route.slice(0,24)+'…':e.route);
+  charts.ai.data.datasets[0].data=errs.map(e=>e.errors);
+  charts.ai.data.datasets[0].backgroundColor=errs.map(()=>'#E63636');
   charts.ai.update('none');
+  const aiTitle=document.querySelector('#aiPanelTitle');
+  if(aiTitle)aiTitle.textContent='Errors by endpoint';
 
   // Endpoints table
-  const ep=sumByLabels(m,'http_requests_total');
-  const rows=Object.entries(ep).map(([k,c])=>{
-    const[method,path,status]=k.split(' ');
-    const d=dm[path];
-    return{method,path,status,c,a:d?(d.s/d.n).toFixed(1):'-'};
-  }).sort((a,b)=>b.c-a.c).slice(0,15);
-  document.getElementById('endpoints').innerHTML=rows.map(r=>{
-    const sc=r.status||'';const cls=sc.startsWith('2')?'s2':sc.startsWith('4')?'s4':sc.startsWith('5')?'s5':'';
-    return`<tr><td><span class="method ${r.method}">${r.method}</span></td><td class="path">${r.path}</td><td class="status-code ${cls}">${sc}</td><td>${fmt(r.c)}</td><td>${r.a==='-'?'-':r.a+'ms'}</td></tr>`;
+  document.getElementById('endpoints').innerHTML=(d.topEndpoints||[]).map(r=>{
+    const[method,path,status]=(r.route||'').split(' ');
+    const sc=status||'';const cls=sc.startsWith('2')?'s2':sc.startsWith('4')?'s4':sc.startsWith('5')?'s5':'';
+    const ec=r.errors>0?` <span class="status-code s5">${r.errors} err</span>`:'';
+    return`<tr><td><span class="method ${method}">${method}</span></td><td class="path">${path}${ec}</td><td class="status-code ${cls}">${sc}</td><td>${fmt(r.count)}</td><td>-</td></tr>`;
   }).join('');
+}
+
+// ─── Support lookup: "user quoted ref XXXX-XXXX, what happened?" ──────
+
+async function lookupSupport(){
+  const box=document.getElementById('supportResults');
+  const q=document.getElementById('supportInput').value.trim();
+  if(!q){box.innerHTML='<span style="color:#555">Type part of a request ID first.</span>';return;}
+  box.innerHTML='<span style="color:#555">Searching audit trail…</span>';
+  try{
+    const r=await fetch('/api/v1/metrics/audit-lookup?requestId='+encodeURIComponent(q));
+    const data=await r.json();
+    if(!r.ok)throw new Error(data.message||r.statusText);
+    if(!data.hits||!data.hits.length){box.innerHTML='<span style="color:#555">No audit rows for that ID. Try a longer fragment, or grep server logs.</span>';return;}
+    box.innerHTML='<table><thead><tr><th>Time</th><th>Event</th><th>User</th><th>Request</th></tr></thead><tbody>'+
+      data.hits.map(h=>`<tr><td>${new Date(h.createdAt).toLocaleString()}</td><td>${h.event||''}</td><td>${h.email||h.userId||''}</td><td class="path">${h.requestId||''}</td></tr>`).join('')+
+      '</tbody></table>';
+  }catch(e){
+    box.innerHTML='<span style="color:#E63636">Lookup failed: '+e.message+'</span>';
+  }
 }
 
 // ─── History view ───────────────────────────────────────────────────
@@ -428,10 +429,10 @@ async function loadHistory(){
 
 async function loadLive(){
   try{
-    const r=await fetch('/metrics');if(!r.ok)throw new Error(r.statusText);
-    const t=await r.text();
-    document.getElementById('rawOutput').textContent=t;
-    updateLive(parsePrometheus(t));
+    const r=await fetch('/api/v1/metrics/live');if(!r.ok)throw new Error(r.statusText);
+    const d=await r.json();
+    document.getElementById('rawOutput').textContent=JSON.stringify(d,null,1);
+    updateLiveJson(d);
     document.getElementById('statusDot').classList.add('ok');
     document.getElementById('statusText').textContent='Live';
   }catch(e){

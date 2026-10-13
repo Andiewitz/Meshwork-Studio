@@ -191,6 +191,7 @@ func (s *Server) Router() http.Handler {
 	// shared internal key inside the handler itself.
 	r.Post("/internal/introspect", s.handleIntrospect)
 	r.Get("/internal/stats/users", s.handleUserStats)
+	r.Get("/internal/audit-search", s.handleAuditSearch)
 
 	r.Route("/api/v1", func(v1 chi.Router) { v1.Mount("/", api) })
 	r.Mount("/debug/pprof", pprofDisabled())
