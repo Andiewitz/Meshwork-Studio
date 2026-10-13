@@ -1,0 +1,34 @@
+name: External Health Witness
+
+# Independent of the box: if EC2, nginx, or the app dies completely, the
+# on-box health-watch can't report itself — this scheduled workflow is the
+# outside eye. A red run = production unreachable (check GitHub notifications).
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  probe-production:
+    name: Probe production /health
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check public health endpoint
+        run: |
+          HOST="${{ secrets.EC2_HOST }}"
+          if [ -z "$HOST" ]; then
+            echo "EC2_HOST secret not set — skipping"
+            exit 0
+          fi
+          for i in $(seq 1 5); do
+            STATUS=$(curl -s -m 10 -o /dev/null -w "%{http_code}" "http://$HOST/health" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "Production healthy (attempt $i)"
+              exit 0
+            fi
+            echo "Attempt $i/5 — status $STATUS, retrying in 20s..."
+            sleep 20
+          done
+          echo "FAIL: production /health unreachable after 5 attempts"
+          exit 1

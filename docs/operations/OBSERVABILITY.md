@@ -70,6 +70,15 @@ Client render crashes mint their own incident ID (`req-<24hex>`, shown on the
 crash screen and in the browser console) — those never reach the server, so
 ask the user to read it off the screen.
 
+## Watchdogs (who notices first)
+
+| Watcher                                                               | Where          | What it does                                                                                                                            |
+| --------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/health-watch.sh` (cron, every 5 min — install per header)    | On the box     | Checks `:5000/health` + `:8081/healthz`; restarts a dead PM2 process **once** per incident, then says so in the log instead of looping. |
+| External Health Witness (`.github/workflows/watch.yml`, every 15 min) | GitHub Actions | Pings public `/health` from outside — catches whole-box/network death the on-box script can't see itself. Red run = go look.            |
+
+No email alerts yet: prod SMTP is broken (see `530` errors in auth logs), so alerts would vanish. Fix SMTP creds first, then add a mail step on watch state transitions.
+
 ## First response guide
 
 | Symptom                      | Check                                                 | Safe first action                                                                                   |
