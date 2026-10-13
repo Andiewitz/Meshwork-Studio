@@ -1631,7 +1631,7 @@ const Home = () => {
             >
               <div className="max-w-[1400px] mx-auto px-4 grid gap-4 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
                 <aside className="lg:sticky lg:top-24 lg:self-start">
-                  <div className="flex min-h-[320px] flex-col justify-between rounded-xl border border-white/[0.08] bg-[#0C0C0E] p-6 md:p-8 lg:h-[calc(100vh-8rem)] lg:min-h-[560px]">
+                  <div className="flex min-h-[320px] flex-col justify-between rounded-xl border border-white/[0.08] bg-[#0C0C0E] p-6 md:p-8 lg:min-h-[480px]">
                     <div>
                       <p className="font-mono text-xs tracking-widest text-primary">
                         UPDATE 2.0
@@ -1655,12 +1655,11 @@ const Home = () => {
                     </button>
                   </div>
                 </aside>
-                <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-8">
                   {[
                     {
                       id: "u20-01",
                       title: "Headline one of update 2.0",
-                      body: "One or two sentences on what changed and why it matters. Replace this text.",
                       visual:
                         "bg-[radial-gradient(circle_at_30%_20%,#F59E0B_0%,#E8391A_55%,#7C2D12_100%)]",
                       meta: "Update · TODO(date) · 2 min read",
@@ -1668,7 +1667,6 @@ const Home = () => {
                     {
                       id: "u20-02",
                       title: "Headline two of update 2.0",
-                      body: "One or two sentences on what changed and why it matters. Replace this text.",
                       visual:
                         "bg-[radial-gradient(circle_at_70%_30%,#D946EF_0%,#7C3AED_55%,#1E1B4B_100%)]",
                       meta: "Update · TODO(date) · 3 min read",
@@ -1676,7 +1674,6 @@ const Home = () => {
                     {
                       id: "u20-03",
                       title: "Headline three of update 2.0",
-                      body: "One or two sentences on what changed and why it matters. Replace this text.",
                       visual:
                         "bg-[radial-gradient(circle_at_50%_20%,#2DD4BF_0%,#0E7490_55%,#082F49_100%)]",
                       meta: "Update · TODO(date) · 2 min read",
@@ -1684,15 +1681,13 @@ const Home = () => {
                     {
                       id: "u20-04",
                       title: "Headline four of update 2.0",
-                      body: "One or two sentences on what changed and why it matters. Replace this text.",
                       visual:
-                        "bg-[radial-gradient(circle_at_30%_70%,#60A5FA_0%,#2563EB_55%,#172554_100%)]",
+                        "bg-[radial-gradient(circle_at_60%_60%,#60A5FA_0%,#2563EB_55%,#172554_100%)]",
                       meta: "Update · TODO(date) · 4 min read",
                     },
                     {
                       id: "u20-05",
                       title: "Headline five of update 2.0",
-                      body: "One or two sentences on what changed and why it matters. Replace this text.",
                       visual:
                         "bg-[radial-gradient(circle_at_70%_70%,#F472B6_0%,#E8391A_55%,#450A0A_100%)]",
                       meta: "Update · TODO(date) · 2 min read",
@@ -1700,31 +1695,25 @@ const Home = () => {
                     {
                       id: "u20-06",
                       title: "Headline six of update 2.0",
-                      body: "One or two sentences on what changed and why it matters. Replace this text.",
                       visual:
                         "bg-[radial-gradient(circle_at_50%_50%,#A3E635_0%,#059669_55%,#022C22_100%)]",
                       meta: "Update · TODO(date) · 3 min read",
                     },
                   ].map((f) => (
-                    <article
-                      key={f.id}
-                      id={f.id}
-                      className="scroll-mt-24 overflow-hidden rounded-xl border border-white/[0.08] bg-[#1a1a1d]"
-                    >
-                      <div className={`relative aspect-square ${f.visual}`}>
-                        <span className="absolute bottom-3 left-4 font-mono text-[11px] tracking-widest text-white/70">
+                    <article key={f.id} id={f.id} className="scroll-mt-24">
+                      <div
+                        className={`relative aspect-square rounded-lg ${f.visual}`}
+                      >
+                        <span className="absolute bottom-2 left-3 font-mono text-[10px] tracking-widest text-white/70">
                           TODO(copy)
                         </span>
                       </div>
-                      <div className="p-5">
-                        <h3 className="text-[15px] font-semibold leading-snug text-white">
-                          {f.title}
-                        </h3>
-                        <p className="mt-1 text-[13px] leading-5 text-white/50">
-                          {f.body}
-                        </p>
-                        <p className="mt-3 text-xs text-white/40">{f.meta}</p>
-                      </div>
+                      <h3 className="mt-3 text-sm font-semibold leading-snug text-white">
+                        {f.title}
+                      </h3>
+                      <p className="mt-1.5 text-[11px] text-white/40">
+                        {f.meta}
+                      </p>
                     </article>
                   ))}
                 </div>
