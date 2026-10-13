@@ -25,6 +25,7 @@ export default tseslint.config(
       "server/public/**",
       "playwright-report/**",
       "docs/archive/**",
+      "landing/**",
       "*.cjs",
       "*.js",
     ],

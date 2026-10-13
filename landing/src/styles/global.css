@@ -1,106 +1,20 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 
-/* DESIGN.md §14.1 — role + component tokens. Single source of truth. */
-:root {
-  --bg-window: #1b1b1e;
-  --bg-island: #000000;
-  --bg-tool: #121214;
-  --bg-popup: #232327;
-  --hover: rgba(255, 255, 255, 0.06);
-  --pressed: rgba(255, 255, 255, 0.1);
-  --selection: #2e2f34;
-  --selection-inactive: #1d1e22;
-
-  --border: #2a2b30;
-  --border-strong: #4b4c53;
-  --text: #e8eaed;
-  --text-secondary: #8a8e95;
-  --text-disabled: #4c4f55;
-  --text-on-accent: #ffffff;
-
-  --accent: #1a73e8;
-  --accent-hover: #4285f4;
-  --accent-pressed: #1765cc;
-  --accent-text: #669dff;
-  --accent-subtle: rgba(26, 115, 232, 0.2);
-  --focus-ring: #8ab4f8;
-
-  --error: #ff6b78;
-  --error-subtle: rgba(255, 107, 120, 0.14);
-  --warning: #f2c55c;
-  --warning-subtle: rgba(242, 197, 92, 0.14);
-  --info: var(--accent-text);
-
-  --tab-selected-bg: rgba(255, 255, 255, 0.07);
-  --input-bg: var(--bg-island);
-  --input-border: var(--border-strong);
-
-  --radius: 4px;
-  --radius-island: 8px;
-  --island-gap: 4px;
-
-  --shadow-popup: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.5);
-
-  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono:
-    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --font-size: 13px;
-
-  --ease: cubic-bezier(0.2, 0, 0, 1);
-  --duration: 150ms;
-}
-
-/* Tailwind v4 theme — maps tokens to utilities (bg-window, bg-island,
-   text-fg, border-border, bg-accent, …). Border radius locked to 0/4/8. */
-@theme inline {
-  --color-window: var(--bg-window);
-  --color-island: var(--bg-island);
-  --color-tool: var(--bg-tool);
-  --color-popup: var(--bg-popup);
-  --color-hover: var(--hover);
-  --color-selection: var(--selection);
-  --color-border: var(--border);
-  --color-border-strong: var(--border-strong);
-  --color-fg: var(--text);
-  --color-muted: var(--text-secondary);
-  --color-disabled: var(--text-disabled);
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-pressed: var(--accent-pressed);
-  --color-accent-text: var(--accent-text);
-  --color-accent-subtle: var(--accent-subtle);
-  --color-on-accent: var(--text-on-accent);
-  --color-error: var(--error);
-  --color-warning: var(--warning);
-  /* shadcn compat (DESIGN.md §14.3) — non-colliding aliases only.
-     shadcn's own --accent (a hover wash) is deliberately NOT mapped:
-     it would collide with our blue accent. Adapted components use
-     bg-hover / text-fg for hover states instead. */
-  --color-background: var(--bg-island);
-  --color-foreground: var(--text);
-  --color-card: var(--bg-tool);
-  --color-card-foreground: var(--text);
-  --color-sidebar: var(--bg-tool);
-  --color-popover: var(--bg-popup);
-  --color-popover-foreground: var(--text);
-  --color-muted-foreground: var(--text-secondary);
-  --color-primary: var(--accent);
-  --color-primary-foreground: var(--text-on-accent);
-  --color-secondary: transparent;
-  --color-secondary-foreground: var(--text);
-  --color-destructive: var(--error);
-  --color-destructive-foreground: #000000;
-  --color-input: var(--border-strong);
-  --color-ring: var(--focus-ring);
-  --font-sans: var(--font-ui);
-  --font-mono: var(--font-mono);
-}
-
-/* Radius lock (§5.1): collapse shadcn's 6px md step onto our 4px control
-   radius, so pasted rounded-md classes comply without edits. */
+/* Meshwork Studio landing tokens — mirrors the product design system
+   (DESIGN.md): dark-first, DM Sans UI, Geomini headlines. Buttons are the
+   deliberate exception: pill shape in Inter, copied verbatim from the
+   approved redesign. */
 @theme {
-  --radius-md: 4px;
+  --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
+  --font-headline: "Geomini", "DM Sans", system-ui, sans-serif;
+  --font-button: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  --color-ink: #080911;
+  --color-surface: #0c0c0e;
+  --color-card: #1a1a1d;
+  --color-primary: #e8391a;
+  --color-ai: #2dd4bf;
 }
 
 html {
@@ -108,57 +22,47 @@ html {
 }
 
 body {
-  /* Landing canvas per DESIGN.md §3.2: dark page, tool-surface panels.
-     (Product windows keep the full window model.) */
-  background: var(--bg-island);
-  color: var(--text);
-  font: 400 var(--font-size) / 20px var(--font-ui);
+  background: #080911;
+  color: #fff;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Islands: no border, no shadow, no blur — the gap is the separator. */
-.island {
-  background: var(--bg-island);
-  border-radius: var(--radius-island);
+/* Verbatim redesign buttons — pill, Inter. Do not "fix" to the 8px rule;
+   approved exception (see commit message). */
+.btn-pill {
+  font-family: var(--font-button);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  border-radius: 9999px;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  font-size: 14px;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
-.island--tool {
-  background: var(--bg-tool);
+.btn-pill-outline {
+  border: 1px solid rgb(255 255 255 / 0.2);
+  color: #fff;
+  background: transparent;
 }
-
-.workspace {
-  display: grid;
-  gap: var(--island-gap);
-  padding: var(--island-gap);
+.btn-pill-outline:hover {
+  background: rgb(255 255 255 / 0.06);
 }
-
-::selection {
-  background: var(--selection);
-  color: var(--text);
+.btn-pill-solid {
+  background: #fff;
+  color: #000;
+  font-weight: 500;
 }
-
-:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
+.btn-pill-solid:hover {
+  background: rgb(255 255 255 / 0.9);
 }
-
-.tabular {
-  font-variant-numeric: tabular-nums;
-}
-
-/* Hide scrollbars on horizontal snap rails (carousel) while keeping scroll. */
-@utility scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    transition: none !important;
-    animation: none !important;
-  }
+.btn-pill-lg {
+  height: 44px;
+  padding-left: 1.75rem;
+  padding-right: 1.75rem;
 }

@@ -5,8 +5,8 @@ interface Props {
 }
 
 const {
-  title = 'Meshwork Studio — Clusters, without the guesswork',
-  description = 'Meshwork Studio is a dense, keyboard-first workspace for managing clusters and deployments.',
+  title = 'Meshwork Studio — Design your architecture with AI',
+  description = 'Describe your infrastructure and Meshwork AI generates a complete, interactive cloud diagram — instantly.',
 } = Astro.props;
 
 import '../styles/global.css';
@@ -22,12 +22,12 @@ import '../styles/global.css';
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Geomini:wght@100..800&family=Inter:wght@400;500;600&family=Geist+Mono:wght@100..900&display=swap"
       rel="stylesheet"
     />
     <title>{title}</title>
   </head>
-  <body class="min-h-screen bg-island font-sans text-[13px] leading-5 text-fg antialiased">
+  <body class="min-h-screen bg-ink font-sans text-[15px] leading-relaxed text-white antialiased">
     <slot />
   </body>
 </html>
