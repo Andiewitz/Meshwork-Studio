@@ -5,16 +5,15 @@ behaviour, not a historical design or intended feature.
 
 ## Source-of-truth map
 
-| Subject                       | Authoritative source                                                                                    | Documentation to update                                                                                                                |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Go identity API               | `server/services/auth/api/openapi.yaml`                                                                 | Auth, settings, security, and integration guidance.                                                                                    |
-| Workspace and canvas API      | `server/shared/routes.ts` and route handlers                                                            | Workspace and canvas guides.                                                                                                           |
-| Node types and default frames | `client/src/features/workspace/utils/nodeRegistry.ts`                                                   | Canvas schema, engine guide, and in-app developer copy.                                                                                |
-| Service ownership/migrations  | Service schemas, migrations, and `server/routes.ts`                                                     | Service boundaries guide.                                                                                                              |
-| Deployment and CI             | `.github/workflows`, `scripts/start.sh`, `scripts/deploy.sh`, `scripts/lib/ec2-common.sh`, NGINX config | Scripts guide, CI/CD, deployment, infrastructure, and secrets runbooks.                                                                |
-| Landing page                  | `landing/` (Astro static, own design tokens in `src/styles/global.css`)                                 | Live at exact `/`; app SPA handles all other routes. Buttons are verbatim redesign pills (Inter); everything else follows `DESIGN.md`. |
-| Backup/recovery               | Backup and restore scripts plus AWS configuration evidence                                              | Recovery and observability runbooks.                                                                                                   |
-| Product design                | `DESIGN.md`, tokens, and UI primitives                                                                  | Design system and theming implementation guidance.                                                                                     |
+| Subject                       | Authoritative source                                                                                    | Documentation to update                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Go identity API               | `server/services/auth/api/openapi.yaml`                                                                 | Auth, settings, security, and integration guidance.                     |
+| Workspace and canvas API      | `server/shared/routes.ts` and route handlers                                                            | Workspace and canvas guides.                                            |
+| Node types and default frames | `client/src/features/workspace/utils/nodeRegistry.ts`                                                   | Canvas schema, engine guide, and in-app developer copy.                 |
+| Service ownership/migrations  | Service schemas, migrations, and `server/routes.ts`                                                     | Service boundaries guide.                                               |
+| Deployment and CI             | `.github/workflows`, `scripts/start.sh`, `scripts/deploy.sh`, `scripts/lib/ec2-common.sh`, NGINX config | Scripts guide, CI/CD, deployment, infrastructure, and secrets runbooks. |
+| Backup/recovery               | Backup and restore scripts plus AWS configuration evidence                                              | Recovery and observability runbooks.                                    |
+| Product design                | `DESIGN.md`, tokens, and UI primitives                                                                  | Design system and theming implementation guidance.                      |
 
 ## Documentation change checklist
 

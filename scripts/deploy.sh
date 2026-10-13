@@ -2,9 +2,8 @@
 # ==============================================================================
 # Meshwork Studio — Build locally, deploy live to EC2 (dist swap)
 # ==============================================================================
-# Use when you changed code and want it LIVE. Builds Node dist + Astro
-# landing + Go auth binary on this machine, pushes all three to EC2,
-# atomically swaps, restarts PM2. Static landing needs no restart.
+# Use when you changed code and want it LIVE. Builds Node dist + Go auth
+# binary on this machine, pushes both to EC2, atomically swaps, restarts PM2.
 # For reboot/start without rebuilding use ./scripts/start.sh instead.
 #
 # Usage:
@@ -64,31 +63,10 @@ fi
 tui_ok "Bundle: dist/index.cjs ($(du -sh "$REPO_DIR/dist" | cut -f1))"
 tui_bar 1 5 24; echo ""
 
-# ── [1b] Landing page (Astro static) ──────────────────────────────────────
-if [[ "$SKIP_BUILD" == false ]]; then
-  tui_step "1b/5" "Building landing page (Astro static)..."
-  if [[ ! -d "$REPO_DIR/landing/node_modules" ]]; then
-    tui_info "Installing landing dependencies (first run)..."
-    if [[ -f "$REPO_DIR/landing/package-lock.json" ]]; then
-      (cd "$REPO_DIR/landing" && npm ci --no-audit --no-fund)
-    else
-      (cd "$REPO_DIR/landing" && npm install --no-audit --no-fund)
-    fi
-  fi
-  (cd "$REPO_DIR/landing" && npm run build)
-  tui_ok "Landing: landing/dist ($(du -sh "$REPO_DIR/landing/dist" | cut -f1))"
-else
-  tui_warn "Skipping landing build (--skip-build). Using existing landing/dist/."
-fi
-if [[ ! -f "$REPO_DIR/landing/dist/index.html" ]]; then
-  tui_fail "landing/dist/index.html missing. Run without --skip-build."
-  exit 1
-fi
-
-# ── [1c] Go auth binary ─────────────────────────────────────────────────────
+# ── [1b] Go auth binary ─────────────────────────────────────────────────────
 AUTH_BIN="$REPO_DIR/server/services/auth/meshwork-auth"
 if [[ "$SKIP_AUTH" == false ]]; then
-  tui_step "1c/5" "Building Go auth service (linux/amd64)..."
+  tui_step "1b/5" "Building Go auth service (linux/amd64)..."
   command -v go &>/dev/null || {
     tui_fail "Go toolchain missing. Install Go ≥1.26 or pass --skip-auth."
     exit 1
@@ -149,19 +127,6 @@ else
     | ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" "tar -xzf - -C '$REMOTE_APP_DIR/dist.new'"
 fi
 tui_ok "Dist upload complete."
-
-tui_step "3c/5" "Uploading landing page (static)..."
-ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" "mkdir -p '$REMOTE_APP_DIR/landing.new'"
-if command -v rsync &>/dev/null; then
-  rsync -avz --delete --info=progress2 \
-    -e "ssh -i '$SSH_KEY' -o StrictHostKeyChecking=accept-new" \
-    "$REPO_DIR/landing/dist/" "$SSH_USER@$HOST_TARGET:$REMOTE_APP_DIR/landing.new/" \
-    | stdbuf -o0 tr '\r' '\n' | tail -3
-else
-  tar -czf - -C "$REPO_DIR/landing/dist" . \
-    | ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" "tar -xzf - -C '$REMOTE_APP_DIR/landing.new'"
-fi
-tui_ok "Landing upload complete."
 tui_bar 3 5 24; echo ""
 
 if [[ "$SKIP_AUTH" == false && -f "$AUTH_BIN" ]]; then
@@ -182,15 +147,6 @@ ssh -i "$SSH_KEY" "$SSH_USER@$HOST_TARGET" SKIP_AUTH="$SKIP_AUTH" bash -s "$REMO
     mv "$TARGET_DIR/dist" "$TARGET_DIR/dist.old"
   fi
   mv "$TARGET_DIR/dist.new" "$TARGET_DIR/dist"
-
-  # Landing page (Astro static, no restart needed — nginx reads the files).
-  if [ -d "$TARGET_DIR/landing.new" ]; then
-    rm -rf "$TARGET_DIR/landing.old" 2>/dev/null || true
-    if [ -d "$TARGET_DIR/landing" ]; then
-      mv "$TARGET_DIR/landing" "$TARGET_DIR/landing.old"
-    fi
-    mv "$TARGET_DIR/landing.new" "$TARGET_DIR/landing"
-  fi
 
   set -a; [ -f "$TARGET_DIR/.env" ] && . "$TARGET_DIR/.env"; set +a
   echo "  ⚡ Restarting PM2 meshwork..."

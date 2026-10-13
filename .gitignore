@@ -82,4 +82,3 @@ server/services/*/.env
 # Local AI agent caches
 .kilo/
 
-.astro

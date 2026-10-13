@@ -1,7 +1,0 @@
-dist
-coverage
-playwright-report
-docs/archive
-*.astro
-landing/dist
-landing/node_modules
