@@ -1655,7 +1655,7 @@ const Home = () => {
                     </button>
                   </div>
                 </aside>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-8">
+                <div className="grid grid-cols-3 gap-4">
                   {[
                     {
                       id: "u20-01",
@@ -1678,42 +1678,19 @@ const Home = () => {
                         "bg-[radial-gradient(circle_at_50%_20%,#2DD4BF_0%,#0E7490_55%,#082F49_100%)]",
                       meta: "Update · TODO(date) · 2 min read",
                     },
-                    {
-                      id: "u20-04",
-                      title: "Headline four of update 2.0",
-                      visual:
-                        "bg-[radial-gradient(circle_at_60%_60%,#60A5FA_0%,#2563EB_55%,#172554_100%)]",
-                      meta: "Update · TODO(date) · 4 min read",
-                    },
-                    {
-                      id: "u20-05",
-                      title: "Headline five of update 2.0",
-                      visual:
-                        "bg-[radial-gradient(circle_at_70%_70%,#F472B6_0%,#E8391A_55%,#450A0A_100%)]",
-                      meta: "Update · TODO(date) · 2 min read",
-                    },
-                    {
-                      id: "u20-06",
-                      title: "Headline six of update 2.0",
-                      visual:
-                        "bg-[radial-gradient(circle_at_50%_50%,#A3E635_0%,#059669_55%,#022C22_100%)]",
-                      meta: "Update · TODO(date) · 3 min read",
-                    },
                   ].map((f) => (
                     <article key={f.id} id={f.id} className="scroll-mt-24">
                       <div
                         className={`relative aspect-square rounded-lg ${f.visual}`}
                       >
-                        <span className="absolute bottom-2 left-3 font-mono text-[10px] tracking-widest text-white/70">
+                        <span className="absolute bottom-2 left-2 font-mono text-[9px] tracking-widest text-white/70">
                           TODO(copy)
                         </span>
                       </div>
-                      <h3 className="mt-3 text-sm font-semibold leading-snug text-white">
+                      <h3 className="mt-2 text-[13px] font-semibold leading-snug text-white">
                         {f.title}
                       </h3>
-                      <p className="mt-1.5 text-[11px] text-white/40">
-                        {f.meta}
-                      </p>
+                      <p className="mt-1 text-[10px] text-white/40">{f.meta}</p>
                     </article>
                   ))}
                 </div>
