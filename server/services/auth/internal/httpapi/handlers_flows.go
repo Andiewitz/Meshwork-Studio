@@ -98,17 +98,17 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Reset failed")
+		s.writeInternal(w, r, err, "Reset failed")
 		return
 	}
 
 	newHash, err := password.Hash(body.NewPassword)
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Reset failed")
+		s.writeInternal(w, r, err, "Reset failed")
 		return
 	}
 	if err := s.db.SetPasswordHash(r.Context(), userID, newHash, "argon2id"); err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Reset failed")
+		s.writeInternal(w, r, err, "Reset failed")
 		return
 	}
 	// A reset is a credential compromise response: kill every session.
@@ -151,11 +151,11 @@ func (s *Server) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Verification failed")
+		s.writeInternal(w, r, err, "Verification failed")
 		return
 	}
 	if err := s.db.MarkEmailVerified(r.Context(), userID); err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Verification failed")
+		s.writeInternal(w, r, err, "Verification failed")
 		return
 	}
 	s.auditor.Record(s.auditEntry(r, userID, "", audit.EmailVerified))

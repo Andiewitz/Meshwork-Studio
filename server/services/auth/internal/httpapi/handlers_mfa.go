@@ -128,7 +128,7 @@ func (s *Server) handleMFAChallenge(w http.ResponseWriter, r *http.Request) {
 		UserID: user.ID, UserAgent: ua, IPHash: ipHash,
 	})
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Login failed")
+		s.writeInternal(w, r, err, "Login failed")
 		return
 	}
 	s.setSessionCookie(w, raw)
@@ -162,11 +162,11 @@ func (s *Server) handleMFAEnroll(w http.ResponseWriter, r *http.Request) {
 	}
 	secret, uri, sealed, err := s.mfa.Enroll(info.User.Email)
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Enrollment failed")
+		s.writeInternal(w, r, err, "Enrollment failed")
 		return
 	}
 	if err := s.db.SetMFASecret(r.Context(), info.User.ID, strPtr(sealed)); err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Enrollment failed")
+		s.writeInternal(w, r, err, "Enrollment failed")
 		return
 	}
 	s.auditor.Record(s.auditEntry(r, info.User.ID, info.User.Email, audit.MFAEnrollStart))
@@ -261,7 +261,7 @@ func (s *Server) handleListSessions(w http.ResponseWriter, r *http.Request) {
 	info := authFrom(r)
 	recs, err := s.sessions.ListActiveForUser(r.Context(), info.User.ID)
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Could not list sessions")
+		s.writeInternal(w, r, err, "Could not list sessions")
 		return
 	}
 	out := make([]map[string]any, 0, len(recs))
@@ -292,7 +292,7 @@ func (s *Server) handleRevokeSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Revoke failed")
+		s.writeInternal(w, r, err, "Revoke failed")
 		return
 	}
 	s.auditor.Record(s.auditEntry(r, info.User.ID, info.User.Email, audit.SessionRevoked))

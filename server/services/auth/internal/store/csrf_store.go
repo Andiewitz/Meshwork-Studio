@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/meshwork-studio/auth/internal/audit"
@@ -17,7 +18,7 @@ func (d *DB) Save(ctx context.Context, sessionIDHash, secretHash string, expires
 		VALUES ($1,$2,$3)
 		ON CONFLICT (session_id_hash) DO UPDATE SET secret_hash = $2, expires_at = $3`,
 		sessionIDHash, secretHash, expiresAt)
-	return err
+	return fmt.Errorf("save: %w", err)
 }
 
 func (d *DB) Find(ctx context.Context, sessionIDHash string) (string, time.Time, error) {

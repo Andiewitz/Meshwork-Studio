@@ -2,12 +2,16 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/meshwork-studio/auth/internal/audit"
 	"github.com/meshwork-studio/auth/internal/config"
+	"github.com/meshwork-studio/auth/internal/lockout"
+	"github.com/meshwork-studio/auth/internal/session"
+	"github.com/meshwork-studio/auth/internal/store"
 )
 
 // ─── Responses ──────────────────────────────────────────────────────────────
@@ -24,6 +28,35 @@ func writeError(w http.ResponseWriter, r *http.Request, status int, code, messag
 		"message":   message,
 		"requestId": requestIDFrom(r),
 	})
+}
+
+// statusFor maps domain sentinels to canonical HTTP status + public code.
+// Unknown errors fall back to 500/INTERNAL. Handlers keep their bespoke
+// public messages; this only standardizes the cause-preserving mapping.
+func statusFor(err error) (int, string) {
+	switch {
+	case errors.Is(err, store.ErrNotFound),
+		errors.Is(err, session.ErrNotFound):
+		return http.StatusNotFound, "NOT_FOUND"
+	case errors.Is(err, store.ErrDuplicateEmail),
+		errors.Is(err, store.ErrConflict):
+		return http.StatusConflict, "CONFLICT"
+	case errors.Is(err, session.ErrInvalidSession):
+		return http.StatusUnauthorized, "SESSION_INVALID"
+	case errors.Is(err, lockout.ErrLocked):
+		return http.StatusLocked, "ACCOUNT_LOCKED"
+	default:
+		return http.StatusInternalServerError, "INTERNAL"
+	}
+}
+
+// writeInternal logs the real cause with the request ID, then returns the
+// generic 500/INTERNAL body. The public response is byte-identical to the
+// old hand-rolled sites; debuggability moves into the logs where it belongs.
+func (s *Server) writeInternal(w http.ResponseWriter, r *http.Request, cause error, publicMessage string) {
+	s.log.Error("request failed",
+		"request_id", requestIDFrom(r), "err", cause)
+	writeError(w, r, http.StatusInternalServerError, "INTERNAL", publicMessage)
 }
 
 func readJSON(r *http.Request, dst any) error {

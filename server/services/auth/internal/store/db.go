@@ -40,11 +40,11 @@ func (d *DB) Close() { d.Pool.Close() }
 func (d *DB) WithTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
 	tx, err := d.Pool.Begin(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("withTx: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	if err := fn(tx); err != nil {
-		return err
+		return fmt.Errorf("withTx: %w", err)
 	}
 	return tx.Commit(ctx)
 }

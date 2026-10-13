@@ -54,7 +54,7 @@ func (s *Server) handleGoogleStart(w http.ResponseWriter, r *http.Request) {
 	}
 	state, err := randomToken()
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "OAuth start failed")
+		s.writeInternal(w, r, err, "OAuth start failed")
 		return
 	}
 	returnTo := safeReturnTo(r.URL.Query().Get("returnTo"))
@@ -287,8 +287,8 @@ func (s *Server) handleGoogleLinkConfirm(w http.ResponseWriter, r *http.Request)
 		writeError(w, r, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Password incorrect")
 		return
 	}
-	if err := s.db.LinkIdentity(r.Context(), user.ID, "google", payload["providerAccountId"]); err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Link failed")
+	if lerr := s.db.LinkIdentity(r.Context(), user.ID, "google", payload["providerAccountId"]); lerr != nil {
+		s.writeInternal(w, r, lerr, "Link failed")
 		return
 	}
 	s.auditor.Record(s.auditEntry(r, user.ID, user.Email, audit.OAuthLink))
@@ -297,7 +297,7 @@ func (s *Server) handleGoogleLinkConfirm(w http.ResponseWriter, r *http.Request)
 		UserID: user.ID, UserAgent: uaPtr(r), IPHash: ipHashPtr(s, r),
 	})
 	if serr != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Session creation failed")
+		s.writeInternal(w, r, serr, "Session creation failed")
 		return
 	}
 	s.setSessionCookie(w, rawTok)

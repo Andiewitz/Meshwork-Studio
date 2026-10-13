@@ -72,7 +72,7 @@ func (s *Server) sessionMeta(r *http.Request) (ua, ipHash *string) {
 func (s *Server) handleIssueCSRF(w http.ResponseWriter, r *http.Request) {
 	secret, err := csrf.NewSecret()
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Could not create token")
+		s.writeInternal(w, r, err, "Could not create token")
 		return
 	}
 	var sessionIDHash string
@@ -117,7 +117,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	_, lookupErr := s.db.FindUserByEmail(r.Context(), email)
 	hasExisting := lookupErr == nil
 	if lookupErr != nil && !errors.Is(lookupErr, store.ErrNotFound) {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Registration unavailable")
+		s.writeInternal(w, r, lookupErr, "Registration unavailable")
 		return
 	}
 
@@ -125,7 +125,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	// latency profile (anti-enumeration).
 	hash, herr := password.Hash(body.Password)
 	if herr != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Registration unavailable")
+		s.writeInternal(w, r, herr, "Registration unavailable")
 		return
 	}
 	if hasExisting {
@@ -152,7 +152,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Registration unavailable")
+		s.writeInternal(w, r, err, "Registration unavailable")
 		return
 	}
 
@@ -161,7 +161,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		UserID: user.ID, UserAgent: ua, IPHash: ipHash,
 	})
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Session creation failed")
+		s.writeInternal(w, r, err, "Session creation failed")
 		return
 	}
 	s.setSessionCookie(w, raw)
@@ -195,7 +195,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	locked, err := s.lockouts.Check(r.Context(), email)
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Login unavailable")
+		s.writeInternal(w, r, err, "Login unavailable")
 		return
 	}
 	if locked {
@@ -207,7 +207,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, lookupErr := s.db.FindUserByEmail(r.Context(), email)
 	if lookupErr != nil && !errors.Is(lookupErr, store.ErrNotFound) {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Login unavailable")
+		s.writeInternal(w, r, lookupErr, "Login unavailable")
 		return
 	}
 
@@ -259,7 +259,7 @@ func (s *Server) completeLogin(w http.ResponseWriter, r *http.Request, user *sto
 		UserID: user.ID, UserAgent: ua, IPHash: ipHash,
 	})
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Session creation failed")
+		s.writeInternal(w, r, err, "Session creation failed")
 		return
 	}
 	s.setSessionCookie(w, raw)
@@ -299,7 +299,7 @@ func (s *Server) handleLogoutAll(w http.ResponseWriter, r *http.Request) {
 	info := authFrom(r)
 	n, err := s.sessions.RevokeAllForUser(r.Context(), info.User.ID, "")
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Logout failed")
+		s.writeInternal(w, r, err, "Logout failed")
 		return
 	}
 	s.clearSessionCookies(w)
@@ -361,11 +361,11 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	newHash, err := password.Hash(body.NewPassword)
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Change failed")
+		s.writeInternal(w, r, err, "Change failed")
 		return
 	}
 	if err := s.db.SetPasswordHash(r.Context(), info.User.ID, newHash, "argon2id"); err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Change failed")
+		s.writeInternal(w, r, err, "Change failed")
 		return
 	}
 	// Revoke EVERYTHING including the current session — full re-login everywhere.
@@ -397,7 +397,7 @@ func (s *Server) handleUpdatePreferences(w http.ResponseWriter, r *http.Request)
 	}
 	user, err := s.db.UpdatePreferences(r.Context(), info.User.ID, body.HasNotifiedTeam, body.ReadNotificationIDs)
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Update failed")
+		s.writeInternal(w, r, err, "Update failed")
 		return
 	}
 	writeJSON(w, http.StatusOK, user.Public())

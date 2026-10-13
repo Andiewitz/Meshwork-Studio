@@ -27,7 +27,7 @@ func (s *Server) handleUserStats(w http.ResponseWriter, r *http.Request) {
 			(SELECT COUNT(*) FROM login_attempts WHERE last_attempt >= CURRENT_DATE)
 	`).Scan(&stats.TotalUsers, &stats.NewUsersToday, &stats.ActiveUsers24h, &stats.LoginsToday)
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Stats unavailable")
+		s.writeInternal(w, r, err, "Stats unavailable")
 		return
 	}
 	writeJSON(w, http.StatusOK, stats)

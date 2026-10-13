@@ -4,6 +4,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { csrfProtect } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
+import { errorBody } from "@server/lib/errorEnvelope";
 import type { AppContext } from "@server/lib/registry";
 import { canEditWorkspace, canDeleteWorkspace } from "@server/lib/permissions";
 import type { ITeamStorage } from "@services/team/db/storage";
@@ -314,8 +315,26 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
         workspaceOutbox.wake();
         res.json(retrying);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Retry failed";
-        res.status(409).json({ message });
+        // Raw storage text stays in the logs — clients get a stable code
+        // they can switch on plus the request ID to quote to support.
+        log.error(
+          {
+            err: error,
+            userId,
+            workspaceId: id,
+            requestId: req.requestId ?? "unscoped",
+          },
+          "Canvas copy retry failed",
+        );
+        res
+          .status(409)
+          .json(
+            errorBody(
+              "Canvas copy retry failed. Check copy status and try again.",
+              req.requestId ?? "unscoped",
+              "CANVAS_COPY_RETRY_FAILED",
+            ),
+          );
       }
     },
   );

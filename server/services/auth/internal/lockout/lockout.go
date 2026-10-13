@@ -7,6 +7,7 @@ package lockout
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -45,7 +46,7 @@ func (s *Store) Check(ctx context.Context, emailNormalized string) (bool, error)
 		return false, nil
 	}
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("check: %w", err)
 	}
 	if lockedUntil == nil {
 		return false, nil
@@ -83,7 +84,7 @@ func (s *Store) RecordFailure(ctx context.Context, emailNormalized string) (Resu
 		RETURNING failed, window_started_at`,
 		emailNormalized).Scan(&failures, &windowStart)
 	if err != nil {
-		return Result{}, err
+		return Result{}, fmt.Errorf("register: %w", err)
 	}
 
 	res := Result{Failures: failures}
@@ -95,7 +96,7 @@ func (s *Store) RecordFailure(ctx context.Context, emailNormalized string) (Resu
 			`UPDATE login_attempts SET locked_until = $2 WHERE email = $1`,
 			emailNormalized, res.LockedUntil)
 		if err != nil {
-			return res, err
+			return res, fmt.Errorf("register: %w", err)
 		}
 	}
 	return res, nil
@@ -104,7 +105,7 @@ func (s *Store) RecordFailure(ctx context.Context, emailNormalized string) (Resu
 // Reset clears failures after a successful authentication.
 func (s *Store) Reset(ctx context.Context, emailNormalized string) error {
 	_, err := s.pool.Exec(ctx, `DELETE FROM login_attempts WHERE email = $1`, emailNormalized)
-	return err
+	return fmt.Errorf("reset: %w", err)
 }
 
 // backoffMinutes: 6th failure → 15m, then doubling, capped at 8h.

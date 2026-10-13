@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"log/slog"
+	"runtime/debug"
 	"net"
 	"net/http"
 	"strconv"
@@ -111,9 +112,15 @@ func realIPMiddleware(trustedCIDRs []string) func(http.Handler) http.Handler {
 func recoverMiddleware(log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			defer func() {
+		defer func() {
 				if rec := recover(); rec != nil {
-					log.Error("panic recovered", "panic", rec, "path", r.URL.Path)
+					// Frames only — never variable values (may hold secrets).
+					// request_id joins this to the client's support ID.
+					log.Error("panic recovered",
+						"panic", rec,
+						"path", r.URL.Path,
+						"request_id", requestIDFrom(r),
+						"stack", string(debug.Stack()))
 					writeError(w, r, http.StatusInternalServerError, "INTERNAL", "Internal error")
 				}
 			}()

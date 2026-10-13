@@ -181,7 +181,10 @@ func (s *Store) getFromDB(ctx context.Context, hash string) (*Record, error) {
 		return nil, err
 	}
 	if err != nil {
-		return nil, ErrInvalidSession
+		// Keep the sentinel (callers switch on it) but preserve the
+		// underlying cause for logs — a down database must not look
+		// identical to a bad token when debugging.
+		return nil, fmt.Errorf("%w (getFromDB: %v)", ErrInvalidSession, err)
 	}
 	return &rec, nil
 }
@@ -256,7 +259,7 @@ func (s *Store) Revoke(ctx context.Context, rawToken string) error {
 		`UPDATE auth_sessions SET revoked_at = now() WHERE id_hash = $1 AND revoked_at IS NULL`, hash)
 	s.invalidateCache(ctx, hash)
 	s.publishRevocation(ctx, "", []string{hash})
-	return err
+	return fmt.Errorf("revoke: %w", err)
 }
 
 // RevokeByID revokes a specific session owned by userID.
@@ -269,7 +272,7 @@ func (s *Store) RevokeByID(ctx context.Context, userID, idHash string) error {
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	return err
+	return fmt.Errorf("revokeByID: %w", err)
 }
 
 // RevokeAllForUser revokes every active session of a user except optionally

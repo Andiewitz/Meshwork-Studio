@@ -522,10 +522,12 @@ export function createAIRoutes(context: AppContext) {
           return;
         }
 
+        const requestId = req.requestId ?? "unscoped";
         log.error(
           {
             err: error,
             userId: req.user?.id,
+            requestId,
           },
           "Chat completion failed",
         );
@@ -539,11 +541,12 @@ export function createAIRoutes(context: AppContext) {
           reason instanceof ProviderTimeoutError
             ? reason.status
             : (providerError.status ?? providerError.statusCode ?? 502);
+        // Raw provider text stays in the logs — clients get a stable code
+        // plus the request ID. (Timeout text is ours and safe to forward.)
         const message =
           reason instanceof ProviderTimeoutError
             ? reason.message
-            : (providerError.message ?? "AI provider returned an error");
-        const requestId = req.requestId ?? "unscoped";
+            : "AI provider returned an error. Quote the request ID to support.";
         if (res.headersSent) {
           if (!res.writableEnded && !res.destroyed) {
             writeSse(
