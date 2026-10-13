@@ -1655,7 +1655,7 @@ const Home = () => {
                     </button>
                   </div>
                 </aside>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-8">
                   {[
                     {
                       id: "u20-01",
@@ -1683,14 +1683,16 @@ const Home = () => {
                       <div
                         className={`relative aspect-square rounded-lg ${f.visual}`}
                       >
-                        <span className="absolute bottom-2 left-2 font-mono text-[9px] tracking-widest text-white/70">
+                        <span className="absolute bottom-3 left-4 font-mono text-[11px] tracking-widest text-white/70">
                           TODO(copy)
                         </span>
                       </div>
-                      <h3 className="mt-2 text-[13px] font-semibold leading-snug text-white">
+                      <h3 className="mt-3 text-[17px] font-semibold leading-snug text-white">
                         {f.title}
                       </h3>
-                      <p className="mt-1 text-[10px] text-white/40">{f.meta}</p>
+                      <p className="mt-1.5 text-[13px] text-white/60">
+                        {f.meta}
+                      </p>
                     </article>
                   ))}
                 </div>
