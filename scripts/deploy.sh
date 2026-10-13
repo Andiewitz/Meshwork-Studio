@@ -97,7 +97,8 @@ HOST_TARGET="$(ec2_wait_ssh "$SSH_KEY" "$SSH_USER" "$HOST_TARGET" 30)" || {
   ec2_explain_target "$HOST_TARGET"
   exit 1
 }
-REMOTE_APP_DIR="$(REMOTE_APP_DIR="${REMOTE_APP_DIR:-}" ec2_remote_dir "$SSH_KEY" "$SSH_USER" "$HOST_TARGET")"
+# tail -1: remote login banners (MOTD) must never become the directory.
+REMOTE_APP_DIR="$(REMOTE_APP_DIR="${REMOTE_APP_DIR:-}" ec2_remote_dir "$SSH_KEY" "$SSH_USER" "$HOST_TARGET" | tail -n 1)"
 tui_ok "Remote app dir: $REMOTE_APP_DIR"
 tui_bar 2 5 24; echo ""
 

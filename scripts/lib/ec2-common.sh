@@ -132,6 +132,9 @@ ec2_ensure_running() {
 }
 
 # ec2_wait_ssh KEY USER HOST [max_retries] — spinner + progress bar.
+# Prints ONLY the connected host to stdout (callers capture it). All human
+# chatter goes to stderr so `HOST=$(ec2_wait_ssh …)` never eats UI text —
+# garbage in that variable breaks ssh/rsync with cryptic errors.
 ec2_wait_ssh() {
   local key="$1" user="$2" host="$3" max_retries="${4:-30}"
   local n=0
@@ -139,18 +142,18 @@ ec2_wait_ssh() {
     if ssh -i "$key" -o StrictHostKeyChecking=accept-new \
         -o ConnectTimeout=5 -o BatchMode=yes \
         "$user@$host" "echo ready" &>/dev/null; then
-      printf "\r%80s\r" " "
-      tui_ok "SSH connected to ${user}@${host}"
+      printf "\r%80s\r" " " >&2
+      tui_ok "SSH connected to ${user}@${host}" >&2
       echo "$host"
       return 0
     fi
     n=$(( n + 1 ))
-    printf "\r  ${TUI_CYAN}⠋${TUI_NC} Waiting for SSH %-28s " "$host"
-    tui_bar "$n" "$max_retries" 16
-    printf "  "
+    printf "\r  ${TUI_CYAN}⠋${TUI_NC} Waiting for SSH %-28s " "$host" >&2
+    tui_bar "$n" "$max_retries" 16 >&2
+    printf "  " >&2
     sleep 3
   done
-  printf "\n"
+  printf "\n" >&2
   return 1
 }
 
