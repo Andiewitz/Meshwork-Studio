@@ -102,12 +102,13 @@ function verify(req: Request): AuthUser | null {
 async function authenticate(
   req: Request,
   res: Response,
-): Promise<AuthUser | null> {
+): Promise<AuthUser | { denied: string }> {
   const requestId = req.requestId ?? "unscoped";
-  const deny = (reason: string) => {
-    // 401 stays opaque outside; the reason class lives here in the logs.
+  // The denial reason travels back to requireAuth so the public code says
+  // NO_SESSION (never had credentials) vs SESSION_EXPIRED (had, rejected).
+  const deny = (reason: string): { denied: string } => {
     log.debug({ reason, requestId }, "authenticate denied");
-    return null;
+    return { denied: reason };
   };
 
   const local = verify(req);
@@ -131,10 +132,18 @@ async function authenticate(
   return toUser(claims);
 }
 
-const unauthorized = (req: Request, res: Response) =>
+/**
+ * 401s distinguish "never had credentials" from "had them, rejected":
+ * the client turns the latter into "session expired, log in again"
+ * instead of blaming the user's password.
+ */
+const unauthorized = (req: Request, res: Response, reason?: string) =>
   res.status(401).json({
-    code: "UNAUTHENTICATED",
-    message: "Authentication required",
+    code: reason === "no_session_cookie" ? "NO_SESSION" : "SESSION_EXPIRED",
+    message:
+      reason === "no_session_cookie"
+        ? "Authentication required"
+        : "Session expired or invalid. Please log in again.",
     requestId: req.requestId ?? "unscoped",
   });
 
@@ -167,8 +176,9 @@ export const optionalAuth: RequestHandler = (req, _res, next) => {
 /** Rejects unauthenticated requests with 401. */
 export const requireAuth: RequestHandler = (req, res, next) => {
   void authenticate(req, res)
-    .then((user) => {
-      if (!user) return unauthorized(req, res);
+    .then((result) => {
+      if ("denied" in result) return unauthorized(req, res, result.denied);
+      const user = result;
       (req as Request & { auth?: AuthContext }).auth = {
         userId: user.id,
         sessionId: user.sessionId,

@@ -140,3 +140,23 @@ describe("unprocessable imports (422 with guidance, not jargon)", () => {
     expect(text).toContain("(ref BBBB-BBBB)");
   });
 });
+
+describe("session-expired guidance (regression: misleading 401 toast)", () => {
+  it("tells expired sessions to log in again, not to retype passwords", async () => {
+    const { formatUserErrorMessage, ApiError } =
+      await import("@/lib/error-utils");
+    const expired = new ApiError(401, "Session expired or invalid.", {
+      code: "SESSION_EXPIRED",
+      requestId: "req-cccccccccccccccccccccccc",
+    });
+    expect(formatUserErrorMessage(expired)).toContain(
+      "Your session expired. Please log in again.",
+    );
+    const badPassword = new ApiError(401, "Password incorrect", {
+      code: "INVALID_CREDENTIALS",
+    });
+    expect(formatUserErrorMessage(badPassword)).toContain(
+      "Invalid email or password",
+    );
+  });
+});

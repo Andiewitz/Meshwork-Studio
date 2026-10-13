@@ -124,7 +124,20 @@ function friendlyMessage(
   // Normalize lower-case string for matching
   const lower = rawMessage.toLowerCase();
 
-  // 1. Authentication / Invalid Credentials
+  // 1. Authentication — read the server code before blaming credentials:
+  // SESSION_EXPIRED/NO_SESSION mean "log in again", only a login-endpoint
+  // failure means the password was wrong.
+  const code =
+    error instanceof ApiError
+      ? (error.data as Record<string, unknown> | undefined)?.code
+      : undefined;
+  if (
+    code === "SESSION_EXPIRED" ||
+    lower.includes("session expired") ||
+    lower.includes("log in again")
+  ) {
+    return "Your session expired. Please log in again.";
+  }
   if (
     statusCode === 401 ||
     lower.includes("authentication failed") ||
