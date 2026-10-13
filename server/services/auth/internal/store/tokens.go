@@ -24,7 +24,10 @@ func (d *DB) InsertAudit(ctx context.Context, e audit.Entry) error {
 		nilIfEmpty(e.UserID), nilIfEmpty(e.Email), string(e.Event),
 		nilIfEmpty(e.IPHash), nilIfEmpty(e.UserAgent), meta,
 		nilIfEmpty(e.RequestID))
-	return fmt.Errorf("insertAudit: %w", err)
+	if err != nil {
+		return fmt.Errorf("insertAudit: %w", err)
+	}
+	return nil
 }
 
 // One-time tokens -----------------------------------------------------------
@@ -42,7 +45,10 @@ func (d *DB) CreateOneTimeToken(ctx context.Context, userID string, purpose Toke
 		INSERT INTO one_time_tokens (token_hash, user_id, purpose, expires_at, created_ip_hash)
 		VALUES ($1,$2,$3,$4,$5)`,
 		tokenHash, userID, string(purpose), time.Now().Add(ttl), nilIfEmpty(ipHash))
-	return fmt.Errorf("createOneTimeToken: %w", err)
+	if err != nil {
+		return fmt.Errorf("createOneTimeToken: %w", err)
+	}
+	return nil
 }
 
 // ConsumeOneTimeToken atomically marks a valid, unexpired token as used and
@@ -65,7 +71,10 @@ func (d *DB) InvalidateTokensForUser(ctx context.Context, userID string, purpose
 	_, err := d.Pool.Exec(ctx,
 		`UPDATE one_time_tokens SET used_at = now() WHERE user_id = $1 AND purpose = $2 AND used_at IS NULL`,
 		userID, string(purpose))
-	return fmt.Errorf("invalidateTokensForUser: %w", err)
+	if err != nil {
+		return fmt.Errorf("invalidateTokensForUser: %w", err)
+	}
+	return nil
 }
 
 // CleanupExpired removes stale rows. Invoked periodically by the server loop;
@@ -78,7 +87,10 @@ func (d *DB) CleanupExpired(ctx context.Context) error {
 	}
 	for _, s := range stmts {
 		if _, err := d.Pool.Exec(ctx, s); err != nil {
-			return fmt.Errorf("cleanupExpired: %w", err)
+			if err != nil {
+				return fmt.Errorf("cleanupExpired: %w", err)
+			}
+			return nil
 		}
 	}
 	return nil

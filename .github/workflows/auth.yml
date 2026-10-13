@@ -48,6 +48,8 @@ jobs:
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@v1.2.0
           govulncheck ./...
+      - name: nil-wrap guard
+        run: ./scripts/no-nil-wrap.sh
 
   test:
     name: Test (race)

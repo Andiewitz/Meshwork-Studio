@@ -105,7 +105,10 @@ func (s *Store) RecordFailure(ctx context.Context, emailNormalized string) (Resu
 // Reset clears failures after a successful authentication.
 func (s *Store) Reset(ctx context.Context, emailNormalized string) error {
 	_, err := s.pool.Exec(ctx, `DELETE FROM login_attempts WHERE email = $1`, emailNormalized)
-	return fmt.Errorf("reset: %w", err)
+	if err != nil {
+		return fmt.Errorf("reset: %w", err)
+	}
+	return nil
 }
 
 // backoffMinutes: 6th failure → 15m, then doubling, capped at 8h.

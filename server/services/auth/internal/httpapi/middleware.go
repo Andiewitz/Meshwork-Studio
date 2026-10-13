@@ -5,9 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"log/slog"
-	"runtime/debug"
 	"net"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -112,7 +112,7 @@ func realIPMiddleware(trustedCIDRs []string) func(http.Handler) http.Handler {
 func recoverMiddleware(log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
+			defer func() {
 				if rec := recover(); rec != nil {
 					// Frames only — never variable values (may hold secrets).
 					// request_id joins this to the client's support ID.

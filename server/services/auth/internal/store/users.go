@@ -143,7 +143,10 @@ func (d *DB) SetPasswordHash(ctx context.Context, userID, hash, algo string) err
 	_, err := d.Pool.Exec(ctx,
 		`UPDATE users SET password_hash = $2, password_algo = $3, updated_at = now() WHERE id = $1`,
 		userID, hash, algo)
-	return fmt.Errorf("setPasswordHash: %w", err)
+	if err != nil {
+		return fmt.Errorf("setPasswordHash: %w", err)
+	}
+	return nil
 }
 
 // UpdatePreferences applies an explicit whitelist of user-owned preference
@@ -163,21 +166,30 @@ func (d *DB) MarkEmailVerified(ctx context.Context, userID string) error {
 	_, err := d.Pool.Exec(ctx,
 		`UPDATE users SET email_verified_at = COALESCE(email_verified_at, now()), updated_at = now() WHERE id = $1`,
 		userID)
-	return fmt.Errorf("markEmailVerified: %w", err)
+	if err != nil {
+		return fmt.Errorf("markEmailVerified: %w", err)
+	}
+	return nil
 }
 
 func (d *DB) SetMFASecret(ctx context.Context, userID string, encryptedSecret *string) error {
 	_, err := d.Pool.Exec(ctx,
 		`UPDATE users SET mfa_secret = $2, mfa_enabled = false, updated_at = now() WHERE id = $1`,
 		userID, encryptedSecret)
-	return fmt.Errorf("setMFASecret: %w", err)
+	if err != nil {
+		return fmt.Errorf("setMFASecret: %w", err)
+	}
+	return nil
 }
 
 func (d *DB) ActivateMFA(ctx context.Context, userID string) error {
 	_, err := d.Pool.Exec(ctx,
 		`UPDATE users SET mfa_enabled = true, mfa_secret = mfa_secret, updated_at = now() WHERE id = $1`,
 		userID)
-	return fmt.Errorf("activateMFA: %w", err)
+	if err != nil {
+		return fmt.Errorf("activateMFA: %w", err)
+	}
+	return nil
 }
 
 func (d *DB) DisableMFA(ctx context.Context, userID string) error {
@@ -185,10 +197,16 @@ func (d *DB) DisableMFA(ctx context.Context, userID string) error {
 		`UPDATE users SET mfa_enabled = false, mfa_secret = NULL, updated_at = now() WHERE id = $1`,
 		userID)
 	if err != nil {
-		return fmt.Errorf("disableMFA: %w", err)
+		if err != nil {
+			return fmt.Errorf("disableMFA: %w", err)
+		}
+		return nil
 	}
 	_, err = d.Pool.Exec(ctx, `DELETE FROM mfa_backup_codes WHERE user_id = $1`, userID)
-	return fmt.Errorf("disableMFA: %w", err)
+	if err != nil {
+		return fmt.Errorf("disableMFA: %w", err)
+	}
+	return nil
 }
 
 // MFASecretOrEmpty returns the decrypted-at-rest ciphertext (still sealed);
@@ -204,13 +222,19 @@ func (u *User) MFASecretOrEmpty() string {
 func (d *DB) ReplaceBackupCodes(ctx context.Context, userID string, hashes []string) error {
 	return d.WithTx(ctx, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `DELETE FROM mfa_backup_codes WHERE user_id = $1`, userID); err != nil {
-			return fmt.Errorf("replaceBackupCodes: %w", err)
+			if err != nil {
+				return fmt.Errorf("replaceBackupCodes: %w", err)
+			}
+			return nil
 		}
 		for _, h := range hashes {
 			if _, err := tx.Exec(ctx,
 				`INSERT INTO mfa_backup_codes (user_id, code_hash) VALUES ($1,$2)`,
 				userID, h); err != nil {
-				return fmt.Errorf("replaceBackupCodes: %w", err)
+				if err != nil {
+					return fmt.Errorf("replaceBackupCodes: %w", err)
+				}
+				return nil
 			}
 		}
 		return nil
@@ -290,5 +314,8 @@ func (d *DB) LinkIdentity(ctx context.Context, userID, provider, providerAccount
 		VALUES ($1,$2,$3)
 		ON CONFLICT (provider, provider_account_id) DO NOTHING`,
 		userID, provider, providerAccountID)
-	return fmt.Errorf("linkIdentity: %w", err)
+	if err != nil {
+		return fmt.Errorf("linkIdentity: %w", err)
+	}
+	return nil
 }

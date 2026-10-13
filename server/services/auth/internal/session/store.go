@@ -259,7 +259,10 @@ func (s *Store) Revoke(ctx context.Context, rawToken string) error {
 		`UPDATE auth_sessions SET revoked_at = now() WHERE id_hash = $1 AND revoked_at IS NULL`, hash)
 	s.invalidateCache(ctx, hash)
 	s.publishRevocation(ctx, "", []string{hash})
-	return fmt.Errorf("revoke: %w", err)
+	if err != nil {
+		return fmt.Errorf("revoke: %w", err)
+	}
+	return nil
 }
 
 // RevokeByID revokes a specific session owned by userID.
@@ -272,7 +275,10 @@ func (s *Store) RevokeByID(ctx context.Context, userID, idHash string) error {
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	return fmt.Errorf("revokeByID: %w", err)
+	if err != nil {
+		return fmt.Errorf("revokeByID: %w", err)
+	}
+	return nil
 }
 
 // RevokeAllForUser revokes every active session of a user except optionally
