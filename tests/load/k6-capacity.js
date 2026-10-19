@@ -107,14 +107,17 @@ try {
 }
 const users = state.users;
 const teamSize = state.teamSize || 30;
-if (STAGE_TARGET / 2 > Math.floor(users.length / 2)) {
+// __VU is global across scenarios, so every VU needs its own seeded account.
+// Every seeded user owns a personal workspace and belongs to a team, so the
+// same pool works for both the edit and browse scenarios.
+if (STAGE_TARGET > users.length) {
   fail(
-    `STAGE_TARGET ${STAGE_TARGET} needs ${STAGE_TARGET / 2} VUs per scenario; seeded for ${Math.floor(users.length / 2)}`,
+    `STAGE_TARGET ${STAGE_TARGET} needs ${STAGE_TARGET} unique users; seeded ${users.length}`,
   );
 }
 
-function pickUser(scenario, vu) {
-  return users[(vu - 1) * 2 + (scenario === "browse" ? 1 : 0)];
+function pickUser(_scenario, vu) {
+  return users[(vu - 1) % users.length];
 }
 
 // ─── editor scenario ────────────────────────────────────────────────────────
