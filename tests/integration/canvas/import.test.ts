@@ -5,6 +5,7 @@ import { requestIdMiddleware } from "@server/middleware/requestId";
 
 vi.mock("@services/canvas/db/storage", () => ({
   canvasStorage: {
+    getCanvas: vi.fn(async () => ({ nodes: [], edges: [], revision: 7 })),
     getNodes: vi.fn(async () => []),
     getEdges: vi.fn(async () => []),
     getCanvasRevision: vi.fn(async () => 7),

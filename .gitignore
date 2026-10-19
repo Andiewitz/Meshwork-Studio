@@ -82,3 +82,6 @@ server/services/*/.env
 # Local AI agent caches
 .kilo/
 
+
+# k6 load-test artifacts
+/tests/load/results

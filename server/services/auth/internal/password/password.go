@@ -4,6 +4,7 @@
 package password
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
@@ -26,8 +27,22 @@ const (
 
 var ErrMismatchedHash = errors.New("password does not match hash")
 
-// Hash returns a PHC-formatted argon2id string.
+// Hash returns a PHC-formatted argon2id string. It blocks until a hashing
+// slot is free; HTTP handlers should prefer HashCtx to shed load fast.
 func Hash(plain string) (string, error) {
+	return HashCtx(context.Background(), plain)
+}
+
+// HashCtx is Hash with a bounded wait for a slot in the hashing pool.
+func HashCtx(ctx context.Context, plain string) (string, error) {
+	if err := acquire(ctx); err != nil {
+		return "", err
+	}
+	defer release()
+	return hashArgon2id(plain)
+}
+
+func hashArgon2id(plain string) (string, error) {
 	salt := make([]byte, argonSaltLen)
 	if _, err := rand.Read(salt); err != nil {
 		return "", fmt.Errorf("read salt: %w", err)
@@ -39,8 +54,22 @@ func Hash(plain string) (string, error) {
 		base64.RawStdEncoding.EncodeToString(key)), nil
 }
 
-// Verify checks plain against either argon2id or legacy bcrypt hashes.
+// Verify checks plain against either argon2id or legacy bcrypt hashes. It
+// blocks until a hashing slot is free; HTTP handlers should prefer VerifyCtx.
 func Verify(plain, encoded string) (bool, error) {
+	return VerifyCtx(context.Background(), plain, encoded)
+}
+
+// VerifyCtx is Verify with a bounded wait for a slot in the hashing pool.
+func VerifyCtx(ctx context.Context, plain, encoded string) (bool, error) {
+	if err := acquire(ctx); err != nil {
+		return false, err
+	}
+	defer release()
+	return verifyLocked(plain, encoded)
+}
+
+func verifyLocked(plain, encoded string) (bool, error) {
 	switch {
 	case strings.HasPrefix(encoded, "$argon2id$"):
 		return verifyArgon2id(plain, encoded)
@@ -116,8 +145,10 @@ func NeedsRehash(encoded string) bool {
 // dummy is computed once at process start: a valid argon2id hash of random
 // data. Verifying against it when an account does not exist equalises
 // response timing whether or not an email is registered (anti-enumeration).
+// It deliberately bypasses the pool: initialisation must not depend on
+// runtime configuration.
 var dummy = func() string {
-	h, err := Hash(base64.RawStdEncoding.EncodeToString([]byte("identity-dummy-" + time.Now().Format(time.RFC3339))))
+	h, err := hashArgon2id(base64.RawStdEncoding.EncodeToString([]byte("identity-dummy-" + time.Now().Format(time.RFC3339))))
 	if err != nil {
 		panic("password: cannot build dummy hash: " + err.Error())
 	}
@@ -128,4 +159,10 @@ var dummy = func() string {
 // account. Callers use it on the user-not-found path.
 func VerifyDummy(plain string) {
 	_, _ = Verify(plain, dummy)
+}
+
+// VerifyDummyCtx is VerifyDummy with a bounded wait for a hashing slot.
+func VerifyDummyCtx(ctx context.Context, plain string) error {
+	_, err := VerifyCtx(ctx, plain, dummy)
+	return err
 }

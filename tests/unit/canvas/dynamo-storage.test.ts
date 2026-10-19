@@ -166,6 +166,34 @@ describe("DynamoCanvasStorage", () => {
     ).rejects.toEqual(expect.any(CanvasWriteIncompleteError));
   });
 
+  it("reads nodes, edges, and revision in one partition query", async () => {
+    mocks.send.mockResolvedValueOnce({
+      Items: [
+        {
+          pk: "ws#canvas-5",
+          sk: "edge#e1",
+          body: { source: "a", target: "b" },
+        },
+        { pk: "ws#canvas-5", sk: "meta", revision: 4 },
+        {
+          pk: "ws#canvas-5",
+          sk: "node#n1",
+          body: { position: { x: 0, y: 0 }, data: { label: "N1" } },
+        },
+      ],
+    });
+
+    const snapshot = await new DynamoCanvasStorage().getCanvas("canvas-5");
+
+    expect(snapshot.revision).toBe(4);
+    expect(snapshot.nodes.map((node) => node.id)).toEqual(["n1"]);
+    expect(snapshot.edges.map((edge) => edge.id)).toEqual(["e1"]);
+    expect(mocks.send).toHaveBeenCalledTimes(1);
+    const [command] = mocks.send.mock.calls[0];
+    expect(command).toBeInstanceOf(QueryCommand);
+    expect(command.input.KeyConditionExpression).toBe("#pk = :pk");
+  });
+
   it("rejects a stale revision before it changes canvas items", async () => {
     mocks.send.mockImplementation(async (command: unknown) => {
       if (command instanceof GetCommand) return { Item: { revision: 2 } };

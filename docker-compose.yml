@@ -100,6 +100,12 @@ services:
         condition: service_started
       meshwork-redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # ─── Auth service (Go) — owns users/sessions/MFA/OAuth/audit ──────────
   meshwork-auth:
@@ -132,6 +138,13 @@ services:
       CAPTCHA_PROVIDER: ${CAPTCHA_PROVIDER:-}
       CAPTCHA_SECRET: ${CAPTCHA_SECRET:-}
       BOOTSTRAP_ADMIN_EMAILS: ${BOOTSTRAP_ADMIN_EMAILS:-}
+      # Hash-pool hardening (plans/PERF-AUDIT.md): bounds concurrent argon2id
+      # ops (64 MiB scratch each) so login bursts cannot OOM the container,
+      # and GOMEMLIMIT makes the Go GC act before the cgroup limit does.
+      GOMEMLIMIT: ${AUTH_GOMEMLIMIT:-768MiB}
+      GOGC: ${AUTH_GOGC:-50}
+      AUTH_HASH_CONCURRENCY: ${AUTH_HASH_CONCURRENCY:-4}
+      AUTH_HASH_WAIT_MS: ${AUTH_HASH_WAIT_MS:-2000}
     depends_on:
       meshwork-postgres:
         condition: service_healthy
@@ -150,6 +163,11 @@ services:
     depends_on:
       - meshwork-backend
       - meshwork-auth
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pgdata_postgres:

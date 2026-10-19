@@ -24,7 +24,12 @@ import {
   QueryCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "node:crypto";
-import type { CanvasEdge, CanvasNode, ICanvasStorage } from "./model";
+import type {
+  CanvasEdge,
+  CanvasNode,
+  CanvasSnapshot,
+  ICanvasStorage,
+} from "./model";
 import { createChildLogger } from "@server/lib/logger";
 
 const log = createChildLogger("dynamo-canvas");
@@ -124,6 +129,7 @@ interface Item {
   pk: string;
   sk: string;
   body: Record<string, unknown>;
+  revision?: number;
 }
 
 interface BatchWriteRequest {
@@ -237,6 +243,11 @@ function isCanvasItem(item: Item): boolean {
   return item.sk.startsWith("node#") || item.sk.startsWith("edge#");
 }
 
+function revisionOf(items: Item[]): number {
+  const revision = items.find((item) => item.sk === REVISION_KEY)?.revision;
+  return typeof revision === "number" && revision >= 0 ? revision : 0;
+}
+
 async function getCanvasRevision(workspaceId: string): Promise<number> {
   const { doc } = clients();
   const response = await doc.send(
@@ -338,6 +349,26 @@ async function batchWrite(requests: BatchWriteRequest[]): Promise<void> {
 }
 
 export class DynamoCanvasStorage implements ICanvasStorage {
+  async getCanvas(workspaceId: string): Promise<CanvasSnapshot> {
+    const items = await queryPartition(workspaceId);
+    const nodes: CanvasNode[] = [];
+    const edges: CanvasEdge[] = [];
+    for (const item of items) {
+      if (item.sk.startsWith("node#")) {
+        nodes.push({
+          ...item.body,
+          id: item.sk.slice("node#".length),
+        } as CanvasNode);
+      } else if (item.sk.startsWith("edge#")) {
+        edges.push({
+          ...item.body,
+          id: item.sk.slice("edge#".length),
+        } as CanvasEdge);
+      }
+    }
+    return { nodes, edges, revision: revisionOf(items) };
+  }
+
   async getNodes(workspaceId: string): Promise<CanvasNode[]> {
     const items = await queryPartition(workspaceId, "node#");
     return items.map(

@@ -1,0 +1,66 @@
+name: meshwork-studio
+# Big-box profile — layered ON TOP of docker-compose.loadtest.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.loadtest.yml \
+#     -f docker-compose.loadtest.big.yml ...
+# The t3.small envelope file stays untouched so those numbers remain
+# reproducible; this profile targets the dev box (4 cores, ~8 GB budget).
+#
+# CPU: ~4.5 cores capped (host has 4 — slight oversubscription is intentional,
+# the box is otherwise idle during a run). Memory Σ ≈ 5.8 GiB of 8 GiB.
+
+services:
+  meshwork-frontend:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+
+  meshwork-backend:
+    environment:
+      # 2G cgroup for the Node process; V8 old space capped below it so GC
+      # pressure shows up as latency, not OOM kill. Measured usage at
+      # 10 req/s: ~142 MB — this envelope is deliberately generous.
+      NODE_OPTIONS: "--max-old-space-size=1536"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.50"
+          memory: 2G
+
+  meshwork-auth:
+    environment:
+      # 6 × 64 MiB argon2 scratch + base; GOMEMLIMIT (768MiB from the base
+      # file) keeps the Go heap well below the envelope.
+      AUTH_HASH_CONCURRENCY: "6"
+      # Stage-start login waves queue through the slots instead of 429ing.
+      AUTH_HASH_WAIT_MS: "10000"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          # Login-wave peak measured at ~1 GiB with the pool unbounded;
+          # 1.5G + the semaphore gives headroom without an OOM kill.
+          memory: 1536M
+
+  meshwork-postgres:
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1G
+
+  meshwork-redis:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 512M
+
+  meshwork-dynamodb-local:
+    command: "-Xmx768m -jar DynamoDBLocal.jar -sharedDb -inMemory"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 1G

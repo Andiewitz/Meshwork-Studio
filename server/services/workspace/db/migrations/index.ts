@@ -125,4 +125,15 @@ export const MIGRATIONS: Migration[] = [
         ON workspace_collaborators (user_id);
     `,
   },
+  {
+    version: "0023_perf_indexes",
+    up: `
+      CREATE INDEX IF NOT EXISTS IDX_workspaces_user_collection_created
+        ON workspaces (user_id, collection_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS IDX_workspaces_collection_id
+        ON workspaces (collection_id);
+      CREATE INDEX IF NOT EXISTS IDX_collections_user_parent
+        ON collections (user_id, parent_id);
+    `,
+  },
 ];

@@ -10,6 +10,7 @@ import (
 	"github.com/meshwork-studio/auth/internal/audit"
 	"github.com/meshwork-studio/auth/internal/config"
 	"github.com/meshwork-studio/auth/internal/lockout"
+	"github.com/meshwork-studio/auth/internal/password"
 	"github.com/meshwork-studio/auth/internal/session"
 	"github.com/meshwork-studio/auth/internal/store"
 )
@@ -28,6 +29,18 @@ func writeError(w http.ResponseWriter, r *http.Request, status int, code, messag
 		"message":   message,
 		"requestId": requestIDFrom(r),
 	})
+}
+
+// hashBusy answers 429 when the password-hashing pool is saturated and
+// reports whether it wrote a response (callers must then return).
+func hashBusy(w http.ResponseWriter, r *http.Request, err error) bool {
+	if errors.Is(err, password.ErrBusy) {
+		w.Header().Set("Retry-After", "2")
+		writeError(w, r, http.StatusTooManyRequests, "HASH_BUSY",
+			"Server is busy. Please retry in a moment.")
+		return true
+	}
+	return false
 }
 
 // statusFor maps domain sentinels to canonical HTTP status + public code.

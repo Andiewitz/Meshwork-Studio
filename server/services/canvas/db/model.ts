@@ -29,7 +29,14 @@ export interface CanvasEdge {
   animated?: boolean | number | null;
 }
 
+export interface CanvasSnapshot {
+  nodes: CanvasNode[];
+  edges: CanvasEdge[];
+  revision: number;
+}
+
 export interface ICanvasStorage {
+  getCanvas(workspaceId: string): Promise<CanvasSnapshot>;
   getNodes(workspaceId: string): Promise<CanvasNode[]>;
   getEdges(workspaceId: string): Promise<CanvasEdge[]>;
   getCanvasRevision(workspaceId: string): Promise<number>;

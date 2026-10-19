@@ -20,42 +20,60 @@ import {
 
 import crypto from "node:crypto";
 
-export const collections = pgTable("collections", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  description: text("description"),
-  userId: text("user_id"),
-  parentId: integer("parent_id"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export const collections = pgTable(
+  "collections",
+  {
+    id: serial("id").primaryKey(),
+    title: text("title").notNull(),
+    description: text("description"),
+    userId: text("user_id"),
+    parentId: integer("parent_id"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => ({
+    userParentIdx: index("IDX_collections_user_parent").on(
+      table.userId,
+      table.parentId,
+    ),
+  }),
+);
 
-export const workspaces = pgTable("workspaces", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  title: text("title").notNull(),
-  type: text("type").notNull().default("system"),
-  icon: text("icon").default("box"),
-  isFavorite: boolean("is_favorite").default(false),
-  userId: text("user_id"),
-  collectionId: integer("collection_id").references(() => collections.id),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  description: text("description"),
-  author: text("author"),
-  aiContext: text("ai_context"),
-  groups: jsonb("groups")
-    .$type<string[]>()
-    .default(sql`'[]'::jsonb`),
-  tags: jsonb("tags")
-    .$type<string[]>()
-    .default(sql`'[]'::jsonb`),
-  canvasCopyStatus: text("canvas_copy_status")
-    .$type<"ready" | "copying" | "failed">()
-    .notNull()
-    .default("ready"),
-  canvasCopySourceId: text("canvas_copy_source_id"),
-});
+export const workspaces = pgTable(
+  "workspaces",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    title: text("title").notNull(),
+    type: text("type").notNull().default("system"),
+    icon: text("icon").default("box"),
+    isFavorite: boolean("is_favorite").default(false),
+    userId: text("user_id"),
+    collectionId: integer("collection_id").references(() => collections.id),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+    description: text("description"),
+    author: text("author"),
+    aiContext: text("ai_context"),
+    groups: jsonb("groups")
+      .$type<string[]>()
+      .default(sql`'[]'::jsonb`),
+    tags: jsonb("tags")
+      .$type<string[]>()
+      .default(sql`'[]'::jsonb`),
+    canvasCopyStatus: text("canvas_copy_status")
+      .$type<"ready" | "copying" | "failed">()
+      .notNull()
+      .default("ready"),
+    canvasCopySourceId: text("canvas_copy_source_id"),
+  },
+  (table) => ({
+    userCollectionCreatedIdx: index(
+      "IDX_workspaces_user_collection_created",
+    ).on(table.userId, table.collectionId, table.createdAt.desc()),
+    collectionIdx: index("IDX_workspaces_collection_id").on(table.collectionId),
+  }),
+);
 
 /**
  * Explicit, workspace-scoped grants. The owner remains workspaces.user_id and

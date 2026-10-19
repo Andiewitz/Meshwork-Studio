@@ -8,10 +8,16 @@ function rateLimitedBody(req: Request, message: string) {
 }
 
 // Global API rate limiter - protects against general DoS
-// Limit each IP to 100 requests per 1 minute window
+// Limit each IP to 100 requests per 1 minute window (API_RATE_LIMIT_MAX
+// overrides for load-test rigs; read at boot, so it survives the esbuild
+// NODE_ENV inlining in scripts/build.ts).
+const apiRateLimitMax = (() => {
+  const n = Number(process.env.API_RATE_LIMIT_MAX);
+  return Number.isFinite(n) && n > 0 ? n : 100;
+})();
 export const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // Limit each IP to 100 requests per window
+  max: apiRateLimitMax, // Limit each IP per window (default 100)
   message: (req: Request) =>
     rateLimitedBody(
       req,

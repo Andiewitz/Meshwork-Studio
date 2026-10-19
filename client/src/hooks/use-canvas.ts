@@ -52,10 +52,22 @@ export function useCanvas(workspaceId: string | number | null | undefined) {
       });
       return res.json() as Promise<{ success: boolean; revision: number }>;
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
       if (workspaceId)
         clearCanvasLocalCache(workspaceId, variables.cacheGeneration);
-      queryClient.invalidateQueries({ queryKey: [url] });
+      queryClient.setQueryData<{
+        nodes: Node[];
+        edges: Edge[];
+        revision: number;
+      }>([url], (current) =>
+        current && current.revision > data.revision
+          ? current
+          : {
+              nodes: variables.nodes,
+              edges: variables.edges,
+              revision: data.revision,
+            },
+      );
     },
   });
 
