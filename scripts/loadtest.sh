@@ -41,7 +41,7 @@ RESULTS="$REPO/tests/load/results"
 COMPOSE_ARGS=(-f docker-compose.yml -f docker-compose.loadtest.yml)
 if [[ "${LOADTEST_BIG:-}" == "1" ]]; then
   COMPOSE_ARGS+=(-f docker-compose.loadtest.big.yml)
-  PROFILE="big-box (~4.5 cpu / ~6.25 GiB caps)"
+  PROFILE="big-box (~5.5 cpu / ~6.25 GiB caps)"
 else
   PROFILE="t3.small (Σ 2.0 cpu / ~1.9 GiB caps)"
 fi

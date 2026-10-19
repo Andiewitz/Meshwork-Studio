@@ -5,8 +5,8 @@ name: meshwork-studio
 # The t3.small envelope file stays untouched so those numbers remain
 # reproducible; this profile targets the dev box (4 cores, ~8 GB budget).
 #
-# CPU: ~4.5 cores capped (host has 4 — slight oversubscription is intentional,
-# the box is otherwise idle during a run). Memory Σ ≈ 5.8 GiB of 8 GiB.
+# CPU: ~5.5 cores capped (host has 4 — oversubscription is intentional, the
+# box is otherwise idle during a run). Memory Σ ≈ 6.25 GiB of 8 GiB.
 
 services:
   meshwork-frontend:
@@ -38,7 +38,9 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.00"
+          # Two cores clear the 240-VU cold-login wave (~4–5 Argon2id/s/core);
+          # one core was the measured stage-6 wall.
+          cpus: "2.00"
           # Login-wave peak measured at ~1 GiB with the pool unbounded;
           # 1.5G + the semaphore gives headroom without an OOM kill.
           memory: 1536M

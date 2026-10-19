@@ -232,7 +232,7 @@ http_503;`).
 
 ## 8. Right-sizing the box
 
-Current caps total ≈ 4.5 cpu / 6.25 GB; actual ≈ 11% of a core / 0.7–1.0 GB.
+Current caps total ≈ 5.5 cpu / 6.25 GB; actual ≈ 11% of a core / 0.7–1.0 GB.
 The caps don't reserve memory, but over-cap limits are meaningless and invite
 OOM-kill choices under pressure. Suggested envelope (same safety margins):
 
