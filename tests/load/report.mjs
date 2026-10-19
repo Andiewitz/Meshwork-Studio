@@ -5,6 +5,7 @@
 // results/capacity-report.md and prints the verdict.
 //
 //   node tests/load/report.mjs
+//   LOAD_RESULTS_DIR=/path/to/results node tests/load/report.mjs
 
 import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -12,7 +13,7 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const OUT = resolve(HERE, "results");
+const OUT = resolve(process.env.LOAD_RESULTS_DIR || resolve(HERE, "results"));
 
 const P95_MS = Number(process.env.LOAD_P95_MS || 500);
 const LAG_MS = Number(process.env.LOAD_LAG_MS || 250);
@@ -132,12 +133,10 @@ const table = stages.map((stage) => {
   };
 });
 
-// capacity = the LAST fully-passing stage reached in order
-let capacity = table[0];
-for (const row of table) {
-  if (row.verdict === "PASS") capacity = row;
-  else break;
-}
+// capacity = the LAST fully-passing stage reached in order. If the final
+// tested stage passed, this is a lower bound, not a discovered ceiling.
+const passing = table.filter((row) => row.verdict === "PASS");
+const capacity = passing.at(-1);
 const firstBreak = table.find((r) => r.verdict !== "PASS");
 
 // ─── markdown ───────────────────────────────────────────────────────────────
@@ -152,10 +151,16 @@ md.push(
 md.push("");
 md.push("## Verdict");
 md.push("");
-md.push(
-  `**Capacity: ~${capacity.vus} concurrent active VUs** — last stage with all checks passing (#${capacity.stage}).`,
-);
-if (firstBreak) {
+if (!capacity) {
+  md.push("**No stage met the pass criteria.**");
+} else if (!firstBreak) {
+  md.push(
+    `**Capacity: ≥ ${capacity.vus} concurrent active VUs** — the last tested stage (#${capacity.stage}) passed; no failure boundary was found.`,
+  );
+} else {
+  md.push(
+    `**Capacity: ~${capacity.vus} concurrent active VUs** — last stage with all checks passing (#${capacity.stage}).`,
+  );
   md.push(
     `First failing stage: **#${firstBreak.stage}** — ${firstBreak.verdict}.`,
   );
