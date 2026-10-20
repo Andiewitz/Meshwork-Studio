@@ -66,15 +66,21 @@ mean DynamoDB deletion completed synchronously.
 
 ## Canvas API and copy lifecycle
 
-| Method and path                         | Required access                                      | Response / failure behaviour                                                                          |
-| --------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `GET /workspaces/:id/canvas`            | Viewer or owner                                      | Returns `{ nodes, edges, revision }`. A copying workspace returns `409`; a failed copy returns `503`. |
-| `POST /workspaces/:id/canvas`           | Editor or higher + CSRF                              | Saves `{ nodes, edges, baseRevision }`; responds with `{ success, revision }`.                        |
-| `POST /workspaces/:id/duplicate-canvas` | Editor on source, direct owner of destination + CSRF | Internal-style copy endpoint for a specified destination.                                             |
+| Method and path                         | Required access                                      | Response / failure behaviour                                                                                  |
+| --------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `GET /workspaces/:id/canvas`            | Viewer or owner                                      | Returns `{ nodes, edges, revision }`. A copying workspace returns `409`; a failed copy returns `503`.         |
+| `POST /workspaces/:id/canvas`           | Editor or higher + CSRF                              | Saves `{ nodes, edges, baseRevision }` or `{ changes, baseRevision }`; responds with `{ success, revision }`. |
+| `POST /workspaces/:id/duplicate-canvas` | Editor on source, direct owner of destination + CSRF | Internal-style copy endpoint for a specified destination.                                                     |
 
 Canvas writes are optimistic. A stale `baseRevision` returns `409` with the
 current revision; reload before retrying. Concurrent-write leases and incomplete
 DynamoDB writes return `503`; preserve the browser cache and retry later.
+
+`changes` supports `upsertNodes`, `upsertEdges`, `deleteNodeIds`, and
+`deleteEdgeIds`. The server merges the delta into the stored canvas, removes
+edges attached to deleted nodes, and validates the resulting graph; an invalid
+result returns `400 INVALID_CANVAS`. A full snapshot remains supported and is
+used by import/duplicate and by the editor when a delta is not smaller.
 
 A duplicate begins as `copying`, becomes `ready` when the outbox worker
 finishes, and becomes `failed` if that job cannot complete. The retry endpoint

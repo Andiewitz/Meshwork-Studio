@@ -1,6 +1,8 @@
 // Canonical canvas document types + storage contract.
 // Persistence lives in dynamo.ts (the only implementation).
 
+import type { CanvasChanges } from "@shared/canvas";
+
 export interface CanvasNode {
   id: string;
   workspaceId?: string;
@@ -47,6 +49,12 @@ export interface ICanvasStorage {
     edges: CanvasEdge[],
     expectedRevision?: number,
   ): Promise<number>;
+  /** Apply a client delta and return the full committed snapshot. */
+  syncCanvasChanges(
+    workspaceId: string,
+    changes: CanvasChanges,
+    expectedRevision?: number,
+  ): Promise<CanvasSnapshot>;
   duplicateCanvas(
     fromWorkspaceId: string,
     toWorkspaceId: string,

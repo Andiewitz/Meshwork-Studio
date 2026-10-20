@@ -9,6 +9,7 @@ import {
 } from "../cache";
 import {
   CanvasDocConfigError,
+  CanvasInvalidGraphError,
   CanvasRevisionConflictError,
   CanvasWriteIncompleteError,
   CanvasWriteLockedError,
@@ -16,6 +17,7 @@ import {
 import { api } from "@shared/routes";
 import type { z } from "zod";
 import { canvasEdgeSchema, canvasNodeSchema } from "@shared/canvas";
+import type { CanvasSnapshot } from "../db/model";
 import { csrfProtect } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
@@ -146,18 +148,40 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
           })),
         });
       }
-      const { nodes, edges, baseRevision } = input.data;
+      const { baseRevision } = input.data;
       try {
-        const revision = await canvasStorage.syncCanvas(
-          id,
-          nodes,
-          edges,
-          baseRevision,
-        );
-        await cacheCanvas(id, { nodes, edges, revision }, baseRevision);
-        res.set("ETag", canvasEtag(revision));
-        res.json({ success: true, revision });
+        let snapshot: CanvasSnapshot;
+        if ("changes" in input.data) {
+          snapshot = await canvasStorage.syncCanvasChanges(
+            id,
+            input.data.changes,
+            baseRevision,
+          );
+        } else {
+          const revision = await canvasStorage.syncCanvas(
+            id,
+            input.data.nodes,
+            input.data.edges,
+            baseRevision,
+          );
+          snapshot = {
+            nodes: input.data.nodes,
+            edges: input.data.edges,
+            revision,
+          };
+        }
+        await cacheCanvas(id, snapshot, baseRevision);
+        res.set("ETag", canvasEtag(snapshot.revision));
+        res.json({ success: true, revision: snapshot.revision });
       } catch (err) {
+        if (err instanceof CanvasInvalidGraphError) {
+          return res.status(400).json({
+            code: err.code,
+            requestId: req.requestId ?? "unscoped",
+            message: "Canvas contains invalid nodes or connections.",
+            issues: err.issues,
+          });
+        }
         if (err instanceof CanvasRevisionConflictError) {
           return res.status(409).json({
             code: err.code,

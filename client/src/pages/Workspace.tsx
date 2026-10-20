@@ -36,7 +36,9 @@ import {
   useCanvas,
   saveCanvasToLocalCache,
   getCanvasFromLocalCache,
+  clearCanvasLocalCache,
 } from "@/hooks/use-canvas";
+import { planCanvasSave } from "@/lib/canvas-delta";
 import {
   useWorkspace,
   useDeleteWorkspace,
@@ -777,6 +779,10 @@ function WorkspaceView() {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const saveGenerationRef = useRef(0);
   const canvasRevisionRef = useRef(0);
+  const lastSyncedCanvasRef = useRef<{
+    nodes: Node[];
+    edges: Edge[];
+  } | null>(null);
   const isInitialLoad = useRef(true);
 
   const takeSnapshot = useCallback(() => {
@@ -856,6 +862,10 @@ function WorkspaceView() {
   useEffect(() => {
     if (canvasData && lastLoadedId.current !== workspaceId) {
       canvasRevisionRef.current = canvasData.revision;
+      lastSyncedCanvasRef.current = {
+        nodes: canvasData.nodes || [],
+        edges: canvasData.edges || [],
+      };
       const localCache = getCanvasFromLocalCache(workspaceId);
 
       if (localCache && localCache.nodes && localCache.edges) {
@@ -912,6 +922,20 @@ function WorkspaceView() {
     }
 
     saveTimeoutRef.current = setTimeout(() => {
+      const baseline = lastSyncedCanvasRef.current;
+      const plan = baseline
+        ? planCanvasSave(
+            persistedCanvas.nodes,
+            persistedCanvas.edges,
+            baseline.nodes,
+            baseline.edges,
+          )
+        : ({ kind: "full" } as const);
+      if (plan.kind === "none") {
+        clearCanvasLocalCache(workspaceId, cacheGeneration);
+        setSaveStatus("saved");
+        return;
+      }
       setSaveStatus("saving");
       sync(
         {
@@ -919,10 +943,15 @@ function WorkspaceView() {
           edges: persistedCanvas.edges,
           baseRevision: canvasRevisionRef.current,
           cacheGeneration,
+          ...(plan.kind === "delta" ? { changes: plan.changes } : {}),
         },
         {
           onSuccess: ({ revision }) => {
             canvasRevisionRef.current = revision;
+            lastSyncedCanvasRef.current = {
+              nodes: persistedCanvas.nodes,
+              edges: persistedCanvas.edges,
+            };
             setSaveStatus("saved");
           },
           onError: (err: Error) => {
@@ -1193,6 +1222,20 @@ function WorkspaceView() {
       persistedCanvas.edges,
       cacheGeneration,
     );
+    const baseline = lastSyncedCanvasRef.current;
+    const plan = baseline
+      ? planCanvasSave(
+          persistedCanvas.nodes,
+          persistedCanvas.edges,
+          baseline.nodes,
+          baseline.edges,
+        )
+      : ({ kind: "full" } as const);
+    if (plan.kind === "none") {
+      clearCanvasLocalCache(workspaceId, cacheGeneration);
+      setSaveStatus("saved");
+      return;
+    }
     setSaveStatus("saving");
     sync(
       {
@@ -1200,10 +1243,15 @@ function WorkspaceView() {
         edges: persistedCanvas.edges,
         baseRevision: canvasRevisionRef.current,
         cacheGeneration,
+        ...(plan.kind === "delta" ? { changes: plan.changes } : {}),
       },
       {
         onSuccess: ({ revision }) => {
           canvasRevisionRef.current = revision;
+          lastSyncedCanvasRef.current = {
+            nodes: persistedCanvas.nodes,
+            edges: persistedCanvas.edges,
+          };
           setSaveStatus("saved");
           toast({
             title: "Workspace changes saved",

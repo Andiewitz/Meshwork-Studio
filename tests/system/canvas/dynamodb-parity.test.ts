@@ -26,6 +26,7 @@ vi.hoisted(() => {
  *   - sync REPLACES the set (removed nodes/edges disappear)
  *   - unchanged items are not rewritten (diff, not blind upsert)
  *   - duplicateCanvas copies every item under a new partition
+ *   - deltas merge into the locked snapshot and cascade node deletes
  */
 
 const ENDPOINT = process.env.DYNAMODB_ENDPOINT || "http://127.0.0.1:8000";
@@ -108,6 +109,29 @@ describe("canvas dynamodb parity", () => {
     expect(nodes.map((n) => n.id)).toEqual(["a"]);
     expect(nodes[0].data).toEqual({ label: "a-updated" });
     expect(await storage.getEdges("ws-r")).toEqual([]);
+  });
+
+  it("delta_merges_and_cascades_node_deletes", async () => {
+    await storage.syncCanvas(
+      "ws-delta",
+      [node("a", "a"), node("b", "b")],
+      [{ id: "e1", source: "a", target: "b" }],
+    );
+
+    const snapshot = await storage.syncCanvasChanges(
+      "ws-delta",
+      {
+        upsertNodes: [node("b", "b2")],
+        deleteNodeIds: ["a"],
+      },
+      1,
+    );
+
+    expect(snapshot.nodes).toEqual([node("b", "b2")]);
+    expect(snapshot.edges).toEqual([]);
+    expect(snapshot.revision).toBe(2);
+    expect(await storage.getNodes("ws-delta")).toEqual([node("b", "b2")]);
+    expect(await storage.getEdges("ws-delta")).toEqual([]);
   });
 
   it("duplicate_copies_every_item_to_the_new_partition", async () => {

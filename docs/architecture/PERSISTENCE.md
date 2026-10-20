@@ -80,6 +80,14 @@ script prevents an older writer from moving the cached revision backwards.
 Cache errors fall through to storage. Duplicate and workspace deletion
 invalidate the destination revision pointer.
 
+`POST /canvas` also accepts a delta:
+`{ changes: { upsertNodes, upsertEdges, deleteNodeIds, deleteEdgeIds }, baseRevision }`.
+The server merges it into the current document, cascades node deletes to
+attached edges, revalidates the full graph, and commits with the same revision
+CAS. Document mode reads the document once; legacy mode merges inside the
+existing lock. The client falls back to a full snapshot on reorder or large
+edits, and import/duplicate remain full-snapshot writes.
+
 ## Operational configuration
 
 | Variable                      | Purpose                                       |
@@ -107,6 +115,7 @@ bucket/prefix.
 | `client/src/lib/canvas-cache.ts`                | Local recovery cache                                       |
 | `client/src/pages/Workspace.tsx`                | Debounced autosave and save status                         |
 | `client/src/hooks/use-canvas.ts`                | Canvas API mutation                                        |
+| `client/src/lib/canvas-delta.ts`                | Client-side delta planner and full-save fallback           |
 | `server/services/canvas/routes/canvasRoutes.ts` | Authentication, access, ETag, and role checks              |
 | `server/services/canvas/cache.ts`               | Redis snapshot cache and revision-keyed ETag helpers       |
 | `server/services/canvas/db/dynamo.ts`           | Storage modes, doc CAS, S3 overflow, duplication, deletion |

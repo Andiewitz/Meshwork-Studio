@@ -175,6 +175,75 @@ describe("DynamoCanvasStorage document model", () => {
     );
   });
 
+  it("merges a delta into the document with one CAS write", async () => {
+    mocks.send.mockImplementation(async (command: unknown) => {
+      if (command instanceof GetCommand) {
+        return {
+          Item: docItem(
+            3,
+            [node("a"), node("b")],
+            [{ id: "e1", source: "a", target: "b" }],
+          ),
+        };
+      }
+      return {};
+    });
+
+    const snapshot = await new DynamoCanvasStorage().syncCanvasChanges(
+      "canvas-doc",
+      {
+        upsertNodes: [node("b", "B2")],
+        deleteNodeIds: ["a"],
+      },
+      3,
+    );
+
+    expect(snapshot).toEqual({
+      nodes: [node("b", "B2")],
+      edges: [],
+      revision: 4,
+    });
+    const puts = commands().filter(
+      (command): command is PutCommand => command instanceof PutCommand,
+    );
+    expect(puts).toHaveLength(1);
+    const putItem = puts[0].input.Item as Record<string, unknown>;
+    expect(puts[0].input).toMatchObject({
+      ConditionExpression: "#revision = :base",
+      ExpressionAttributeValues: { ":base": 3 },
+    });
+    expect(putItem).toMatchObject({
+      pk: "ws#canvas-doc",
+      sk: "doc",
+      revision: 4,
+    });
+    expect(
+      JSON.parse(gunzipSync(putItem.body as Buffer).toString("utf8")),
+    ).toEqual({ nodes: [node("b", "B2")], edges: [] });
+  });
+
+  it("rejects a delta with an invalid merged graph", async () => {
+    mocks.send.mockImplementation(async (command: unknown) => {
+      if (command instanceof GetCommand) {
+        return { Item: docItem(3, [node("a")]) };
+      }
+      return {};
+    });
+
+    await expect(
+      new DynamoCanvasStorage().syncCanvasChanges(
+        "canvas-doc",
+        {
+          upsertEdges: [{ id: "bad", source: "a", target: "missing" }],
+        },
+        3,
+      ),
+    ).rejects.toMatchObject({ code: "INVALID_CANVAS" });
+    expect(commands().some((command) => command instanceof PutCommand)).toBe(
+      false,
+    );
+  });
+
   it("stores and reads large canvases through S3", async () => {
     process.env.CANVAS_DOC_INLINE_MAX_BYTES = "16";
     const nodes = [node("n1")];

@@ -197,6 +197,81 @@ describe("DynamoCanvasStorage", () => {
     expect(command.input.KeyConditionExpression).toBe("#pk = :pk");
   });
 
+  it("merges a delta against the locked partition", async () => {
+    process.env.CANVAS_DOC_MODEL = "off";
+    mocks.send.mockImplementation(async (command: unknown) => {
+      if (command instanceof GetCommand) return { Item: { revision: 3 } };
+      if (command instanceof QueryCommand) {
+        return {
+          Items: [
+            { pk: "ws#canvas-delta", sk: "meta", revision: 3 },
+            {
+              pk: "ws#canvas-delta",
+              sk: "node#a",
+              body: { position: { x: 0, y: 0 }, data: { label: "A" } },
+            },
+            {
+              pk: "ws#canvas-delta",
+              sk: "node#b",
+              body: { position: { x: 1, y: 1 }, data: { label: "B" } },
+            },
+            {
+              pk: "ws#canvas-delta",
+              sk: "edge#e1",
+              body: { source: "a", target: "b" },
+            },
+          ],
+        };
+      }
+      return {};
+    });
+
+    const snapshot = await new DynamoCanvasStorage().syncCanvasChanges(
+      "canvas-delta",
+      {
+        upsertNodes: [
+          {
+            id: "b",
+            position: { x: 1, y: 1 },
+            data: { label: "B2" },
+          },
+        ],
+        deleteNodeIds: ["a"],
+      },
+      3,
+    );
+
+    expect(snapshot).toEqual({
+      nodes: [
+        {
+          id: "b",
+          position: { x: 1, y: 1 },
+          data: { label: "B2" },
+        },
+      ],
+      edges: [],
+      revision: 4,
+    });
+    const batch = mocks.send.mock.calls
+      .map(([command]) => command)
+      .find((command) => command instanceof BatchWriteCommand);
+    expect(batch?.input.RequestItems?.["meshwork-canvas"]).toEqual(
+      expect.arrayContaining([
+        {
+          PutRequest: {
+            Item: {
+              pk: "ws#canvas-delta",
+              sk: "node#b",
+              body: { position: { x: 1, y: 1 }, data: { label: "B2" } },
+            },
+          },
+        },
+        { DeleteRequest: { Key: { pk: "ws#canvas-delta", sk: "node#a" } } },
+        { DeleteRequest: { Key: { pk: "ws#canvas-delta", sk: "edge#e1" } } },
+      ]),
+    );
+  });
+
   it("rejects a stale revision before it changes canvas items", async () => {
     mocks.send.mockImplementation(async (command: unknown) => {
       if (command instanceof GetCommand) return { Item: { revision: 2 } };

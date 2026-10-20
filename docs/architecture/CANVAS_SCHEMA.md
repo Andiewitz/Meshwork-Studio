@@ -555,9 +555,12 @@ Demonstrates the container-nesting pattern. Children use positions **relative to
 ## Validation
 
 The server validates persisted writes with the Zod `canvasSyncSchema` in
-[`server/shared/canvas.ts`](../../server/shared/canvas.ts). There is no
-checked-in JSON Schema file. Integrations should either use that contract or
-call the API and handle its `400 INVALID_CANVAS` response.
+[`server/shared/canvas.ts`](../../server/shared/canvas.ts). The schema accepts a
+full `{ nodes, edges, baseRevision }` snapshot or a
+`{ changes, baseRevision }` delta; deltas are merged with the stored canvas and
+the resulting graph is validated again. There is no checked-in JSON Schema
+file. Integrations should either use that contract or call the API and handle
+its `400 INVALID_CANVAS` response.
 
 Before AI or template output enters the editor,
 [`validateAndRepairCanvas`](../../client/src/lib/ai-canvas-utils.ts) performs a

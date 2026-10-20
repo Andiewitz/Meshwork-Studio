@@ -4,7 +4,7 @@ Tracks: [`issue.md`](issue.md) · GitHub
 [#48](https://github.com/Andiewitz/Meshwork-Studio/issues/48) · Parent audit:
 [`plans/SCALE-AUDIT-1M.md`](../../../plans/SCALE-AUDIT-1M.md)
 
-Status: Phase 2a + 2b implemented · pending real-DynamoDB/S3 and load
+Status: Phase 2a + 2b + 2c implemented · pending real-DynamoDB/S3 and load
 verification · Plan commit:
 [`7b2d332`](https://github.com/Andiewitz/Meshwork-Studio/commit/7b2d332) ·
 2b implementation commit:
@@ -240,6 +240,16 @@ Client sends `{changes: {upserts, deletes}, baseRevision}` instead of the whole
 canvas. Server applies the changes to the stored document and still writes one
 revision (the wire payload becomes O(edited nodes); server CPU stays O(N) until
 Phase 4). Keep full-snapshot saves as a fallback for import/duplicate.
+
+Implementation: `POST /canvas` accepts
+`changes: { upsertNodes, upsertEdges, deleteNodeIds, deleteEdgeIds }`.
+`DynamoCanvasStorage.syncCanvasChanges()` merges against the current snapshot
+and validates the full graph before writing. Document mode does one doc read
+plus one CAS write; legacy mode merges inside the existing write lock instead
+of adding a second partition read. Node deletes cascade to attached edges.
+The client sends a delta only when item order is unchanged and the delta is
+smaller than a full save; reorder, large edits, and import/duplicate keep using
+full snapshots. Any invalid merged graph returns `400 INVALID_CANVAS`.
 
 Acceptance: a 2-node edit on a 5,000-node canvas uploads < 20 KB and the server
 does the same 1 CAS write.

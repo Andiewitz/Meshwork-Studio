@@ -37,6 +37,11 @@ import type {
   CanvasSnapshot,
   ICanvasStorage,
 } from "./model";
+import {
+  applyCanvasChanges,
+  canvasSnapshotSyncSchema,
+  type CanvasChanges,
+} from "@shared/canvas";
 import { createChildLogger } from "@server/lib/logger";
 
 const log = createChildLogger("dynamo-canvas");
@@ -272,6 +277,15 @@ export class CanvasDocConfigError extends Error {
   }
 }
 
+export class CanvasInvalidGraphError extends Error {
+  readonly code = "INVALID_CANVAS";
+
+  constructor(readonly issues: { path: string; message: string }[]) {
+    super("Canvas contains invalid nodes or connections");
+    this.name = "CanvasInvalidGraphError";
+  }
+}
+
 function nodeItem(workspaceId: string, n: CanvasNode): Item {
   const body = { ...n } as Record<string, unknown>;
   const id = n.id;
@@ -328,6 +342,49 @@ async function queryPartition(
 
 function isCanvasItem(item: Item): boolean {
   return item.sk.startsWith("node#") || item.sk.startsWith("edge#");
+}
+
+function snapshotFromItems(items: Item[]): CanvasSnapshot {
+  const nodes: CanvasNode[] = [];
+  const edges: CanvasEdge[] = [];
+  for (const item of items) {
+    if (item.sk.startsWith("node#")) {
+      nodes.push({
+        ...item.body,
+        id: item.sk.slice("node#".length),
+      } as CanvasNode);
+    } else if (item.sk.startsWith("edge#")) {
+      edges.push({
+        ...item.body,
+        id: item.sk.slice("edge#".length),
+      } as CanvasEdge);
+    }
+  }
+  return { nodes, edges, revision: revisionOf(items) };
+}
+
+function validateMergedCanvas(
+  nodes: { id: string }[],
+  edges: { id: string; source: string; target: string }[],
+  baseRevision: number,
+): { nodes: CanvasNode[]; edges: CanvasEdge[] } {
+  const parsed = canvasSnapshotSyncSchema.safeParse({
+    nodes,
+    edges,
+    baseRevision,
+  });
+  if (!parsed.success) {
+    throw new CanvasInvalidGraphError(
+      parsed.error.issues.slice(0, 10).map((issue) => ({
+        path: issue.path.join("."),
+        message: issue.message,
+      })),
+    );
+  }
+  return {
+    nodes: parsed.data.nodes,
+    edges: parsed.data.edges,
+  };
 }
 
 function revisionOf(items: Item[]): number {
@@ -470,21 +527,14 @@ async function readCurrentRevision(workspaceId: string): Promise<number> {
   return getCanvasRevisionLegacy(workspaceId);
 }
 
-async function writeDocSnapshot(
+async function commitDocSnapshot(
   workspaceId: string,
+  current: CanvasDocItem | null,
+  currentRevision: number,
+  baseRevision: number,
   nodes: CanvasNode[],
   edges: CanvasEdge[],
-  expectedRevision?: number,
 ): Promise<number> {
-  const current = await getDocMeta(workspaceId);
-  const currentRevision = current
-    ? docRevision(current)
-    : await getCanvasRevisionLegacy(workspaceId);
-  const baseRevision = expectedRevision ?? currentRevision;
-  if (baseRevision !== currentRevision) {
-    throw new CanvasRevisionConflictError(baseRevision, currentRevision);
-  }
-
   const nextRevision = currentRevision + 1;
   const { body, bytes } = encodeCanvas(nodes, edges);
   let s3Key: string | undefined;
@@ -534,6 +584,64 @@ async function writeDocSnapshot(
     "Canvas document committed",
   );
   return nextRevision;
+}
+
+async function writeDocSnapshot(
+  workspaceId: string,
+  nodes: CanvasNode[],
+  edges: CanvasEdge[],
+  expectedRevision?: number,
+): Promise<number> {
+  const current = await getDocMeta(workspaceId);
+  const currentRevision = current
+    ? docRevision(current)
+    : await getCanvasRevisionLegacy(workspaceId);
+  const baseRevision = expectedRevision ?? currentRevision;
+  if (baseRevision !== currentRevision) {
+    throw new CanvasRevisionConflictError(baseRevision, currentRevision);
+  }
+  return commitDocSnapshot(
+    workspaceId,
+    current,
+    currentRevision,
+    baseRevision,
+    nodes,
+    edges,
+  );
+}
+
+async function writeDocChanges(
+  workspaceId: string,
+  changes: CanvasChanges,
+  expectedRevision?: number,
+): Promise<CanvasSnapshot> {
+  const current = await getDocMeta(workspaceId);
+  const currentRevision = current
+    ? docRevision(current)
+    : await getCanvasRevisionLegacy(workspaceId);
+  const baseRevision = expectedRevision ?? currentRevision;
+  if (baseRevision !== currentRevision) {
+    throw new CanvasRevisionConflictError(baseRevision, currentRevision);
+  }
+
+  const base = current
+    ? await readDocSnapshot(workspaceId, current)
+    : await getCanvasLegacy(workspaceId);
+  const merged = applyCanvasChanges(base.nodes, base.edges, changes);
+  const validated = validateMergedCanvas(
+    merged.nodes,
+    merged.edges,
+    currentRevision,
+  );
+  const revision = await commitDocSnapshot(
+    workspaceId,
+    current,
+    currentRevision,
+    baseRevision,
+    validated.nodes,
+    validated.edges,
+  );
+  return { ...validated, revision };
 }
 
 async function getCanvasRevisionLegacy(workspaceId: string): Promise<number> {
@@ -637,23 +745,7 @@ async function batchWrite(requests: BatchWriteRequest[]): Promise<void> {
 }
 
 async function getCanvasLegacy(workspaceId: string): Promise<CanvasSnapshot> {
-  const items = await queryPartition(workspaceId);
-  const nodes: CanvasNode[] = [];
-  const edges: CanvasEdge[] = [];
-  for (const item of items) {
-    if (item.sk.startsWith("node#")) {
-      nodes.push({
-        ...item.body,
-        id: item.sk.slice("node#".length),
-      } as CanvasNode);
-    } else if (item.sk.startsWith("edge#")) {
-      edges.push({
-        ...item.body,
-        id: item.sk.slice("edge#".length),
-      } as CanvasEdge);
-    }
-  }
-  return { nodes, edges, revision: revisionOf(items) };
+  return snapshotFromItems(await queryPartition(workspaceId));
 }
 
 async function getNodesLegacy(workspaceId: string): Promise<CanvasNode[]> {
@@ -670,12 +762,13 @@ async function getEdgesLegacy(workspaceId: string): Promise<CanvasEdge[]> {
   );
 }
 
-async function syncCanvasLegacy(
+async function writeLegacySnapshot(
   workspaceId: string,
   nodes: CanvasNode[],
   edges: CanvasEdge[],
   expectedRevision?: number,
-): Promise<number> {
+  changes?: CanvasChanges,
+): Promise<CanvasSnapshot> {
   const lockOwner = await acquireCanvasLock(workspaceId);
   try {
     const currentRevision = await getCanvasRevisionLegacy(workspaceId);
@@ -686,13 +779,27 @@ async function syncCanvasLegacy(
       throw new CanvasRevisionConflictError(revisionToWrite, currentRevision);
     }
 
+    const existing = (await queryPartition(workspaceId)).filter(isCanvasItem);
+    let nextNodes = nodes;
+    let nextEdges = edges;
+    if (changes) {
+      const current = snapshotFromItems(existing);
+      const merged = applyCanvasChanges(current.nodes, current.edges, changes);
+      const validated = validateMergedCanvas(
+        merged.nodes,
+        merged.edges,
+        currentRevision,
+      );
+      nextNodes = validated.nodes;
+      nextEdges = validated.edges;
+    }
+
     const desired = new Map<string, Item>();
-    for (const n of nodes)
+    for (const n of nextNodes)
       desired.set(`node#${n.id}`, nodeItem(workspaceId, n));
-    for (const e of edges)
+    for (const e of nextEdges)
       desired.set(`edge#${e.id}`, edgeItem(workspaceId, e));
 
-    const existing = (await queryPartition(workspaceId)).filter(isCanvasItem);
     const existingByKey = new Map(existing.map((i) => [i.sk, i]));
 
     const requests: BatchWriteRequest[] = [];
@@ -733,10 +840,21 @@ async function syncCanvasLegacy(
         ExpressionAttributeValues: { ":expectedRevision": currentRevision },
       }),
     );
-    return nextRevision;
+    return { nodes: nextNodes, edges: nextEdges, revision: nextRevision };
   } finally {
     await releaseCanvasLock(workspaceId, lockOwner);
   }
+}
+
+async function syncCanvasLegacy(
+  workspaceId: string,
+  nodes: CanvasNode[],
+  edges: CanvasEdge[],
+  expectedRevision?: number,
+): Promise<number> {
+  return (
+    await writeLegacySnapshot(workspaceId, nodes, edges, expectedRevision)
+  ).revision;
 }
 
 async function duplicateCanvasLegacy(
@@ -830,6 +948,17 @@ export class DynamoCanvasStorage implements ICanvasStorage {
       return writeDocSnapshot(workspaceId, nodes, edges, expectedRevision);
     }
     return syncCanvasLegacy(workspaceId, nodes, edges, expectedRevision);
+  }
+
+  async syncCanvasChanges(
+    workspaceId: string,
+    changes: CanvasChanges,
+    expectedRevision?: number,
+  ): Promise<CanvasSnapshot> {
+    if (canvasDocModelMode() === "on") {
+      return writeDocChanges(workspaceId, changes, expectedRevision);
+    }
+    return writeLegacySnapshot(workspaceId, [], [], expectedRevision, changes);
   }
 
   async duplicateCanvas(
