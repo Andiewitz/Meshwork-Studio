@@ -9,9 +9,10 @@
 **Plan commit:** [`7b2d332`](https://github.com/Andiewitz/Meshwork-Studio/commit/7b2d332)
 **Implementation commits:** [`ae65505`](https://github.com/Andiewitz/Meshwork-Studio/commit/ae65505)
 (2b) · [`f205cb7`](https://github.com/Andiewitz/Meshwork-Studio/commit/f205cb7)
-(2a)
-**Status:** Phase 2a + 2b implemented; real-DynamoDB/S3 and load verification
-pending.
+(2a) · [`2f8e099`](https://github.com/Andiewitz/Meshwork-Studio/commit/2f8e099)
+(2c)
+**Status:** Phase 2a + 2b + 2c implemented; real-DynamoDB/S3 and load
+verification pending.
 
 ## Summary
 
