@@ -8,7 +8,9 @@ Status: Phase 2a + 2b implemented · pending real-DynamoDB/S3 and load
 verification · Plan commit:
 [`7b2d332`](https://github.com/Andiewitz/Meshwork-Studio/commit/7b2d332) ·
 2b implementation commit:
-[`ae65505`](https://github.com/Andiewitz/Meshwork-Studio/commit/ae65505)
+[`ae65505`](https://github.com/Andiewitz/Meshwork-Studio/commit/ae65505) · 2a
+implementation commit:
+[`f205cb7`](https://github.com/Andiewitz/Meshwork-Studio/commit/f205cb7)
 Goal: remove the per-request work that scales with canvas size, then raise the
 verified concurrency ceiling in measurable steps. Phase 0 is config-only and
 unlocks the next measurement; Phase 2 is the actual fix for the issue.

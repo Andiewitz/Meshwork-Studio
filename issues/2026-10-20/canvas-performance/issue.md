@@ -7,7 +7,9 @@
 **GitHub:** [#48](https://github.com/Andiewitz/Meshwork-Studio/issues/48)
 **Companions:** [`solution.md`](solution.md) · [`postmortem.md`](postmortem.md)
 **Plan commit:** [`7b2d332`](https://github.com/Andiewitz/Meshwork-Studio/commit/7b2d332)
-**Implementation commit:** [`ae65505`](https://github.com/Andiewitz/Meshwork-Studio/commit/ae65505)
+**Implementation commits:** [`ae65505`](https://github.com/Andiewitz/Meshwork-Studio/commit/ae65505)
+(2b) · [`f205cb7`](https://github.com/Andiewitz/Meshwork-Studio/commit/f205cb7)
+(2a)
 **Status:** Phase 2a + 2b implemented; real-DynamoDB/S3 and load verification
 pending.
 
