@@ -4,7 +4,8 @@ Tracks: [`issue.md`](issue.md) · GitHub
 [#48](https://github.com/Andiewitz/Meshwork-Studio/issues/48) · Parent audit:
 [`plans/SCALE-AUDIT-1M.md`](../../../plans/SCALE-AUDIT-1M.md)
 
-Status: proposed (no implementation started)
+Status: proposed (no implementation started) · Plan commit:
+[`7b2d332`](https://github.com/Andiewitz/Meshwork-Studio/commit/7b2d332)
 Goal: remove the per-request work that scales with canvas size, then raise the
 verified concurrency ceiling in measurable steps. Phase 0 is config-only and
 unlocks the next measurement; Phase 2 is the actual fix for the issue.

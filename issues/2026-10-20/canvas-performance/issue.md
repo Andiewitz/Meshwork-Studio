@@ -6,6 +6,7 @@
 **Found in:** load test 2026-10-20 (`tests/load/results/capacity-report.md`)
 **GitHub:** [#48](https://github.com/Andiewitz/Meshwork-Studio/issues/48)
 **Companions:** [`solution.md`](solution.md) · [`postmortem.md`](postmortem.md)
+**Plan commit:** [`7b2d332`](https://github.com/Andiewitz/Meshwork-Studio/commit/7b2d332)
 
 ## Summary
 
