@@ -9,6 +9,7 @@ export default defineConfig({
   test: {
     env: {
       NODE_ENV: "test",
+      REDIS_URL: "",
       DYNAMODB_ENDPOINT:
         process.env.DYNAMODB_ENDPOINT ?? "http://127.0.0.1:8000",
     },

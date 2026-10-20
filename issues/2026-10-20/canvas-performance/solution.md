@@ -4,10 +4,10 @@ Tracks: [`issue.md`](issue.md) · GitHub
 [#48](https://github.com/Andiewitz/Meshwork-Studio/issues/48) · Parent audit:
 [`plans/SCALE-AUDIT-1M.md`](../../../plans/SCALE-AUDIT-1M.md)
 
-Status: Phase 2b implemented behind `CANVAS_DOC_MODEL` (default `off`) · pending
-real-DynamoDB/S3 verification · Plan commit:
+Status: Phase 2a + 2b implemented · pending real-DynamoDB/S3 and load
+verification · Plan commit:
 [`7b2d332`](https://github.com/Andiewitz/Meshwork-Studio/commit/7b2d332) ·
-Implementation commit:
+2b implementation commit:
 [`ae65505`](https://github.com/Andiewitz/Meshwork-Studio/commit/ae65505)
 Goal: remove the per-request work that scales with canvas size, then raise the
 verified concurrency ceiling in measurable steps. Phase 0 is config-only and
@@ -104,6 +104,14 @@ calls on a cache hit.
   TTL 10 min, set after a successful save and on first read.
 - `POST` invalidates the previous revision key (new revision is a new key).
 - Keep the existing item model as fallback; this phase changes no data.
+
+Implementation: `server/services/canvas/cache.ts` stores
+`canvas:<workspaceId>:rev` plus `canvas:<workspaceId>:<revision>` with a 10
+minute TTL. Writes use one Redis Lua script so a late writer cannot move the
+cached revision backwards. `GET /canvas` returns `ETag`/304 from cache; on a
+cache miss it reads storage, caches the snapshot, and can still answer 304.
+`POST /canvas` and import update the cache; duplicate and workspace deletion
+invalidate the destination. Redis failure falls through to storage.
 
 Acceptance: a reload of an unchanged canvas performs 0 DynamoDB operations;
 repeat-open p95 < 50 ms.

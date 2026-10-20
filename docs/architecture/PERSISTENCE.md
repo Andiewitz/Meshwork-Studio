@@ -70,6 +70,16 @@ DynamoDB table, not S3 objects. The backfill script is
 after `on`, quiesce writes, run `npm run canvas:migrate-docs -- --to-legacy`
 to rewrite the item model from the document, then set `CANVAS_DOC_MODEL=off`.
 
+## Read cache and ETag
+
+`GET /canvas` returns `ETag: "<revision>"`. The service keeps
+`canvas:<workspaceId>:rev` and `canvas:<workspaceId>:<revision>` in Redis for
+10 minutes, so an unchanged reload with `If-None-Match` returns 304 without a
+DynamoDB or S3 call. Writes update the cache after the durable save; a Lua
+script prevents an older writer from moving the cached revision backwards.
+Cache errors fall through to storage. Duplicate and workspace deletion
+invalidate the destination revision pointer.
+
 ## Operational configuration
 
 | Variable                      | Purpose                                       |
@@ -97,7 +107,8 @@ bucket/prefix.
 | `client/src/lib/canvas-cache.ts`                | Local recovery cache                                       |
 | `client/src/pages/Workspace.tsx`                | Debounced autosave and save status                         |
 | `client/src/hooks/use-canvas.ts`                | Canvas API mutation                                        |
-| `server/services/canvas/routes/canvasRoutes.ts` | Authentication, access, and role checks                    |
+| `server/services/canvas/routes/canvasRoutes.ts` | Authentication, access, ETag, and role checks              |
+| `server/services/canvas/cache.ts`               | Redis snapshot cache and revision-keyed ETag helpers       |
 | `server/services/canvas/db/dynamo.ts`           | Storage modes, doc CAS, S3 overflow, duplication, deletion |
 
 ## Verification

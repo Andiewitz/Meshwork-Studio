@@ -19,6 +19,7 @@ export default defineConfig({
         process.env.CANVAS_DATABASE_URL ||
         "postgresql://test@localhost:5434/workspace_db",
       NODE_ENV: "test",
+      REDIS_URL: "",
     },
     globals: true,
     environment: "node",

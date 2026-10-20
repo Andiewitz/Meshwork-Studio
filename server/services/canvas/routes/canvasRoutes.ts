@@ -1,6 +1,13 @@
 import type { Express, RequestHandler } from "express";
 import { canvasStorage } from "../db/storage";
 import {
+  cacheCanvas,
+  canvasEtag,
+  etagMatches,
+  invalidateCanvas,
+  readCachedCanvas,
+} from "../cache";
+import {
   CanvasDocConfigError,
   CanvasRevisionConflictError,
   CanvasWriteIncompleteError,
@@ -69,8 +76,17 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
         .json({ message: "You do not have access to this workspace" });
 
     try {
-      const { nodes, edges, revision } = await canvasStorage.getCanvas(id);
-      res.json({ nodes, edges, revision });
+      let snapshot = await readCachedCanvas(id);
+      if (!snapshot) {
+        snapshot = await canvasStorage.getCanvas(id);
+        await cacheCanvas(id, snapshot);
+      }
+      res.set("ETag", canvasEtag(snapshot.revision));
+      res.set("Cache-Control", "private, no-cache");
+      if (etagMatches(req.headers["if-none-match"], snapshot.revision)) {
+        return res.status(304).end();
+      }
+      res.json(snapshot);
     } catch (err) {
       if (err instanceof CanvasDocConfigError) {
         return res.status(503).json({
@@ -138,6 +154,8 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
           edges,
           baseRevision,
         );
+        await cacheCanvas(id, { nodes, edges, revision }, baseRevision);
+        res.set("ETag", canvasEtag(revision));
         res.json({ success: true, revision });
       } catch (err) {
         if (err instanceof CanvasRevisionConflictError) {
@@ -308,6 +326,11 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
         validEdges,
         revision,
       );
+      await cacheCanvas(
+        id,
+        { nodes: validNodes, edges: validEdges, revision: nextRevision },
+        revision,
+      );
       log.info(
         {
           workspaceId: id,
@@ -362,6 +385,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
       }
 
       await canvasStorage.duplicateCanvas(id, toWorkspaceId);
+      await invalidateCanvas(toWorkspaceId);
       res.json({ success: true });
     },
   );

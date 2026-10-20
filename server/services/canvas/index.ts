@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { canvasStorage } from "./db/storage";
 import { ensureCanvasTable } from "./db/dynamo";
+import { invalidateCanvas } from "./cache";
 import { registerCanvasRoutes } from "./routes/canvasRoutes";
 import { createChildLogger } from "@server/lib/logger";
 import type { AppContext } from "@server/lib/registry";
@@ -17,6 +18,7 @@ export class CanvasService {
     context.eventBus.on("workspace.deleted", async ({ id }) => {
       try {
         await canvasStorage.deleteWorkspaces([id]);
+        await invalidateCanvas(id);
         log.info({ workspaceId: id }, "Canvas data deleted via event");
       } catch (err) {
         log.error({ err, workspaceId: id }, "Failed to delete canvas data");
@@ -39,6 +41,7 @@ export class CanvasService {
             return;
           }
           await canvasStorage.duplicateCanvas(originalId, newId);
+          await invalidateCanvas(newId);
           log.info({ originalId, newId }, "Canvas data duplicated via event");
         } catch (err) {
           log.error(
@@ -54,6 +57,7 @@ export class CanvasService {
       if (ids.length === 0) return;
       try {
         await canvasStorage.deleteWorkspaces(ids);
+        await Promise.all(ids.map((id) => invalidateCanvas(id)));
         log.info({ count: ids.length }, "User canvas data deleted via event");
       } catch (err) {
         log.error({ err }, "Failed to delete user canvas data");
