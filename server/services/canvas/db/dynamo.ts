@@ -1,13 +1,12 @@
-// DynamoDB persistence for canvas documents — the ONLY storage path.
+// DynamoDB persistence for canvas documents.
 //
-// Design (single table, on-demand billing):
-//   pk = ws#{workspaceId}          (partition = one canvas)
-//   sk = node#{nodeId} | edge#{edgeId}
+// Legacy mode (default): one item per node/edge under pk = ws#{workspaceId}.
+// Document mode: one doc item per workspace, with an S3 object above the
+// inline threshold. CANVAS_DOC_MODEL selects off | read | on.
 //
-// syncCanvas is a diff: existing keys are queried, removed nodes/edges are
-// deleted, changed items are re-put, untouched items are skipped. This keeps
-// consumed capacity proportional to the actual edit, matching the previous
-// Postgres upsert behavior.
+// syncCanvas is a diff in legacy mode: existing keys are queried, removed
+// nodes/edges are deleted, changed items are re-put, untouched items are
+// skipped. Document mode replaces the whole document with one CAS write.
 
 import {
   DynamoDBClient,
@@ -22,7 +21,15 @@ import {
   GetCommand,
   PutCommand,
   QueryCommand,
+  ScanCommand,
 } from "@aws-sdk/lib-dynamodb";
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
+import { gzipSync, gunzipSync } from "node:zlib";
 import { randomUUID } from "node:crypto";
 import type {
   CanvasEdge,
@@ -37,6 +44,25 @@ const log = createChildLogger("dynamo-canvas");
 const TABLE = process.env.CANVAS_DDB_TABLE || "meshwork-canvas";
 const ENDPOINT = process.env.DYNAMODB_ENDPOINT; // dynamo-local in dev
 const REGION = process.env.AWS_REGION || "us-east-1";
+const DOC_KEY = "doc";
+const DEFAULT_INLINE_MAX_BYTES = 350 * 1024;
+const S3_PREFIX_DEFAULT = "canvases";
+
+export type CanvasDocModelMode = "off" | "read" | "on";
+
+export function canvasDocModelMode(): CanvasDocModelMode {
+  const mode = process.env.CANVAS_DOC_MODEL;
+  return mode === "read" || mode === "on" ? mode : "off";
+}
+
+function inlineMaxBytes(): number {
+  const raw = process.env.CANVAS_DOC_INLINE_MAX_BYTES;
+  if (!raw) return DEFAULT_INLINE_MAX_BYTES;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_INLINE_MAX_BYTES;
+}
 
 function ddb() {
   const client = new DynamoDBClient({
@@ -56,6 +82,48 @@ let cached: {
 function clients() {
   cached ??= ddb();
   return cached;
+}
+
+let cachedS3: S3Client | null = null;
+function s3Client(): S3Client {
+  if (cachedS3) return cachedS3;
+  const endpoint = process.env.S3_ENDPOINT;
+  const accessKeyId =
+    process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || "local";
+  const secretAccessKey =
+    process.env.S3_SECRET_ACCESS_KEY ||
+    process.env.AWS_SECRET_ACCESS_KEY ||
+    "local";
+  cachedS3 = new S3Client({
+    region: REGION,
+    endpoint,
+    forcePathStyle: Boolean(endpoint),
+    ...(endpoint ? { credentials: { accessKeyId, secretAccessKey } } : {}),
+  });
+  return cachedS3;
+}
+
+function s3Bucket(): string {
+  const bucket = process.env.CANVAS_S3_BUCKET;
+  if (!bucket) {
+    throw new CanvasDocConfigError(
+      "CANVAS_S3_BUCKET is required when a canvas document exceeds the inline threshold",
+    );
+  }
+  return bucket;
+}
+
+function canvasObjectKey(
+  workspaceId: string,
+  revision: number,
+  writerId: string,
+): string {
+  const prefix = (process.env.CANVAS_S3_PREFIX || S3_PREFIX_DEFAULT).replace(
+    /^\/+|\/+$/g,
+    "",
+  );
+  const object = `${workspaceId}/${revision}-${writerId}.json.gz`;
+  return prefix ? `${prefix}/${object}` : object;
 }
 
 export const partitionKey = (workspaceId: string) => `ws#${workspaceId}`;
@@ -132,6 +200,16 @@ interface Item {
   revision?: number;
 }
 
+interface CanvasDocItem extends Omit<Item, "body"> {
+  sk: typeof DOC_KEY;
+  revision: number;
+  body?: Uint8Array;
+  bytes?: number;
+  s3Key?: string;
+  etag?: string;
+  updatedAt?: string;
+}
+
 interface BatchWriteRequest {
   PutRequest?: { Item: Item };
   DeleteRequest?: { Key: Record<string, unknown> };
@@ -182,6 +260,15 @@ export class CanvasWriteLockedError extends Error {
   constructor() {
     super("Another canvas save is in progress");
     this.name = "CanvasWriteLockedError";
+  }
+}
+
+export class CanvasDocConfigError extends Error {
+  readonly code = "CANVAS_DOC_CONFIG";
+
+  constructor(message: string) {
+    super(message);
+    this.name = "CanvasDocConfigError";
   }
 }
 
@@ -248,7 +335,208 @@ function revisionOf(items: Item[]): number {
   return typeof revision === "number" && revision >= 0 ? revision : 0;
 }
 
-async function getCanvasRevision(workspaceId: string): Promise<number> {
+function docRevision(item: CanvasDocItem): number {
+  return typeof item.revision === "number" && item.revision >= 0
+    ? item.revision
+    : 0;
+}
+
+function encodeCanvas(nodes: CanvasNode[], edges: CanvasEdge[]) {
+  const json = JSON.stringify({ nodes, edges });
+  return {
+    body: gzipSync(Buffer.from(json, "utf8")),
+    bytes: Buffer.byteLength(json, "utf8"),
+  };
+}
+
+function decodeCanvas(body: Uint8Array): {
+  nodes: CanvasNode[];
+  edges: CanvasEdge[];
+} {
+  const parsed = JSON.parse(gunzipSync(Buffer.from(body)).toString("utf8")) as {
+    nodes?: unknown;
+    edges?: unknown;
+  };
+  if (!Array.isArray(parsed.nodes) || !Array.isArray(parsed.edges)) {
+    throw new Error("Canvas document is missing nodes or edges");
+  }
+  return {
+    nodes: parsed.nodes as CanvasNode[],
+    edges: parsed.edges as CanvasEdge[],
+  };
+}
+
+async function getDocMeta(workspaceId: string): Promise<CanvasDocItem | null> {
+  const { doc } = clients();
+  const response = await doc.send(
+    new GetCommand({
+      TableName: TABLE,
+      Key: { pk: partitionKey(workspaceId), sk: DOC_KEY },
+      ConsistentRead: true,
+    }),
+  );
+  return response.Item ? (response.Item as CanvasDocItem) : null;
+}
+
+async function getS3Object(key: string): Promise<Uint8Array> {
+  const response = await s3Client().send(
+    new GetObjectCommand({ Bucket: s3Bucket(), Key: key }),
+  );
+  const body = response.Body as
+    { transformToByteArray?: () => Promise<Uint8Array> } | undefined;
+  if (!body?.transformToByteArray) {
+    throw new Error(`S3 object ${key} has no readable body`);
+  }
+  return body.transformToByteArray();
+}
+
+async function putS3Object(
+  key: string,
+  body: Uint8Array,
+): Promise<string | undefined> {
+  const response = await s3Client().send(
+    new PutObjectCommand({
+      Bucket: s3Bucket(),
+      Key: key,
+      Body: body,
+      ContentType: "application/json",
+      ContentEncoding: "gzip",
+    }),
+  );
+  return response.ETag;
+}
+
+async function deleteS3Object(key: string): Promise<void> {
+  try {
+    await s3Client().send(
+      new DeleteObjectCommand({ Bucket: s3Bucket(), Key: key }),
+    );
+  } catch (err) {
+    log.warn({ err, key }, "Failed to delete orphaned canvas object");
+  }
+}
+
+async function readDocSnapshot(
+  workspaceId: string,
+  meta: CanvasDocItem,
+): Promise<CanvasSnapshot> {
+  let body: Uint8Array | undefined;
+  if (meta.s3Key) {
+    body = await getS3Object(meta.s3Key);
+  } else if (meta.body) {
+    body = Buffer.from(meta.body);
+  }
+  if (!body) {
+    throw new Error(`Canvas document for ${workspaceId} has no body`);
+  }
+  const { nodes, edges } = decodeCanvas(body);
+  return { nodes, edges, revision: docRevision(meta) };
+}
+
+async function readDocSnapshotForMode(
+  workspaceId: string,
+  mode: Exclude<CanvasDocModelMode, "off">,
+): Promise<CanvasSnapshot | null> {
+  const meta = await getDocMeta(workspaceId);
+  if (!meta) return null;
+  if (
+    mode === "read" &&
+    (await getCanvasRevisionLegacy(workspaceId)) > docRevision(meta)
+  ) {
+    return null;
+  }
+  return readDocSnapshot(workspaceId, meta);
+}
+
+async function readDocRevisionForMode(
+  workspaceId: string,
+  mode: Exclude<CanvasDocModelMode, "off">,
+): Promise<number | null> {
+  const meta = await getDocMeta(workspaceId);
+  if (!meta) return null;
+  const revision = docRevision(meta);
+  if (
+    mode === "read" &&
+    (await getCanvasRevisionLegacy(workspaceId)) > revision
+  ) {
+    return null;
+  }
+  return revision;
+}
+
+async function readCurrentRevision(workspaceId: string): Promise<number> {
+  const meta = await getDocMeta(workspaceId);
+  if (meta) return docRevision(meta);
+  return getCanvasRevisionLegacy(workspaceId);
+}
+
+async function writeDocSnapshot(
+  workspaceId: string,
+  nodes: CanvasNode[],
+  edges: CanvasEdge[],
+  expectedRevision?: number,
+): Promise<number> {
+  const current = await getDocMeta(workspaceId);
+  const currentRevision = current
+    ? docRevision(current)
+    : await getCanvasRevisionLegacy(workspaceId);
+  const baseRevision = expectedRevision ?? currentRevision;
+  if (baseRevision !== currentRevision) {
+    throw new CanvasRevisionConflictError(baseRevision, currentRevision);
+  }
+
+  const nextRevision = currentRevision + 1;
+  const { body, bytes } = encodeCanvas(nodes, edges);
+  let s3Key: string | undefined;
+  let etag: string | undefined;
+
+  if (body.byteLength > inlineMaxBytes()) {
+    s3Key = canvasObjectKey(workspaceId, nextRevision, randomUUID());
+    etag = await putS3Object(s3Key, body);
+  }
+
+  const item: Record<string, unknown> = {
+    pk: partitionKey(workspaceId),
+    sk: DOC_KEY,
+    revision: nextRevision,
+    bytes,
+    updatedAt: new Date().toISOString(),
+    ...(s3Key ? { s3Key, etag } : { body }),
+  };
+
+  try {
+    await clients().doc.send(
+      new PutCommand({
+        TableName: TABLE,
+        Item: item,
+        ConditionExpression: current
+          ? "#revision = :base"
+          : "attribute_not_exists(#pk)",
+        ExpressionAttributeNames: current
+          ? { "#revision": "revision" }
+          : { "#pk": "pk" },
+        ...(current
+          ? { ExpressionAttributeValues: { ":base": currentRevision } }
+          : {}),
+      }),
+    );
+  } catch (err) {
+    if (s3Key) await deleteS3Object(s3Key);
+    if ((err as Error).name === "ConditionalCheckFailedException") {
+      const latest = await readCurrentRevision(workspaceId);
+      throw new CanvasRevisionConflictError(baseRevision, latest);
+    }
+    throw err;
+  }
+
+  log.info(
+    { workspaceId, revision: nextRevision, bytes, s3: Boolean(s3Key) },
+    "Canvas document committed",
+  );
+  return nextRevision;
+}
+
+async function getCanvasRevisionLegacy(workspaceId: string): Promise<number> {
   const { doc } = clients();
   const response = await doc.send(
     new GetCommand({
@@ -348,45 +636,188 @@ async function batchWrite(requests: BatchWriteRequest[]): Promise<void> {
   }
 }
 
-export class DynamoCanvasStorage implements ICanvasStorage {
-  async getCanvas(workspaceId: string): Promise<CanvasSnapshot> {
-    const items = await queryPartition(workspaceId);
-    const nodes: CanvasNode[] = [];
-    const edges: CanvasEdge[] = [];
-    for (const item of items) {
-      if (item.sk.startsWith("node#")) {
-        nodes.push({
-          ...item.body,
-          id: item.sk.slice("node#".length),
-        } as CanvasNode);
-      } else if (item.sk.startsWith("edge#")) {
-        edges.push({
-          ...item.body,
-          id: item.sk.slice("edge#".length),
-        } as CanvasEdge);
+async function getCanvasLegacy(workspaceId: string): Promise<CanvasSnapshot> {
+  const items = await queryPartition(workspaceId);
+  const nodes: CanvasNode[] = [];
+  const edges: CanvasEdge[] = [];
+  for (const item of items) {
+    if (item.sk.startsWith("node#")) {
+      nodes.push({
+        ...item.body,
+        id: item.sk.slice("node#".length),
+      } as CanvasNode);
+    } else if (item.sk.startsWith("edge#")) {
+      edges.push({
+        ...item.body,
+        id: item.sk.slice("edge#".length),
+      } as CanvasEdge);
+    }
+  }
+  return { nodes, edges, revision: revisionOf(items) };
+}
+
+async function getNodesLegacy(workspaceId: string): Promise<CanvasNode[]> {
+  const items = await queryPartition(workspaceId, "node#");
+  return items.map(
+    (raw) => ({ ...raw.body, id: raw.sk.slice("node#".length) }) as CanvasNode,
+  );
+}
+
+async function getEdgesLegacy(workspaceId: string): Promise<CanvasEdge[]> {
+  const items = await queryPartition(workspaceId, "edge#");
+  return items.map(
+    (raw) => ({ ...raw.body, id: raw.sk.slice("edge#".length) }) as CanvasEdge,
+  );
+}
+
+async function syncCanvasLegacy(
+  workspaceId: string,
+  nodes: CanvasNode[],
+  edges: CanvasEdge[],
+  expectedRevision?: number,
+): Promise<number> {
+  const lockOwner = await acquireCanvasLock(workspaceId);
+  try {
+    const currentRevision = await getCanvasRevisionLegacy(workspaceId);
+    // The optional value maintains safe compatibility for internal callers;
+    // the public API always supplies the revision returned by GET /canvas.
+    const revisionToWrite = expectedRevision ?? currentRevision;
+    if (revisionToWrite !== currentRevision) {
+      throw new CanvasRevisionConflictError(revisionToWrite, currentRevision);
+    }
+
+    const desired = new Map<string, Item>();
+    for (const n of nodes)
+      desired.set(`node#${n.id}`, nodeItem(workspaceId, n));
+    for (const e of edges)
+      desired.set(`edge#${e.id}`, edgeItem(workspaceId, e));
+
+    const existing = (await queryPartition(workspaceId)).filter(isCanvasItem);
+    const existingByKey = new Map(existing.map((i) => [i.sk, i]));
+
+    const requests: BatchWriteRequest[] = [];
+
+    // deletions: existed but no longer desired
+    for (const [sk] of existingByKey) {
+      if (!desired.has(sk)) {
+        requests.push({
+          DeleteRequest: { Key: { pk: partitionKey(workspaceId), sk } },
+        });
       }
     }
-    return { nodes, edges, revision: revisionOf(items) };
+
+    // puts: new or materially changed
+    for (const [sk, item] of desired) {
+      const prev = existingByKey.get(sk);
+      if (prev && JSON.stringify(prev.body) === JSON.stringify(item.body)) {
+        continue; // unchanged — skip write
+      }
+      requests.push({ PutRequest: { Item: item } });
+    }
+
+    if (requests.length > 0) await batchWrite(requests);
+
+    const nextRevision = currentRevision + 1;
+    const { doc } = clients();
+    await doc.send(
+      new PutCommand({
+        TableName: TABLE,
+        Item: {
+          pk: partitionKey(workspaceId),
+          sk: REVISION_KEY,
+          revision: nextRevision,
+        },
+        ConditionExpression:
+          "attribute_not_exists(#revision) OR #revision = :expectedRevision",
+        ExpressionAttributeNames: { "#revision": "revision" },
+        ExpressionAttributeValues: { ":expectedRevision": currentRevision },
+      }),
+    );
+    return nextRevision;
+  } finally {
+    await releaseCanvasLock(workspaceId, lockOwner);
+  }
+}
+
+async function duplicateCanvasLegacy(
+  fromWorkspaceId: string,
+  toWorkspaceId: string,
+): Promise<void> {
+  const source = (await queryPartition(fromWorkspaceId)).filter(isCanvasItem);
+  const requests = source.map((item) => ({
+    PutRequest: {
+      Item: { ...item, pk: partitionKey(toWorkspaceId) },
+    },
+  }));
+  if (requests.length > 0) await batchWrite(requests);
+}
+
+export async function scanCanvasWorkspaceIds(): Promise<string[]> {
+  const { doc } = clients();
+  const ids = new Set<string>();
+  let lastKey: Record<string, unknown> | undefined;
+  do {
+    const response = await doc.send(
+      new ScanCommand({
+        TableName: TABLE,
+        FilterExpression:
+          "#sk = :meta OR #sk = :doc OR begins_with(#sk, :node) OR begins_with(#sk, :edge)",
+        ExpressionAttributeNames: { "#sk": "sk" },
+        ExpressionAttributeValues: {
+          ":meta": REVISION_KEY,
+          ":doc": DOC_KEY,
+          ":node": "node#",
+          ":edge": "edge#",
+        },
+        ProjectionExpression: "pk",
+        ExclusiveStartKey: lastKey,
+        ConsistentRead: true,
+      }),
+    );
+    for (const item of response.Items ?? []) {
+      const pk = String(item.pk ?? "");
+      if (pk.startsWith("ws#")) ids.add(pk.slice("ws#".length));
+    }
+    lastKey = response.LastEvaluatedKey;
+  } while (lastKey);
+  return [...ids];
+}
+
+export class DynamoCanvasStorage implements ICanvasStorage {
+  async getCanvas(workspaceId: string): Promise<CanvasSnapshot> {
+    const mode = canvasDocModelMode();
+    if (mode !== "off") {
+      const snapshot = await readDocSnapshotForMode(workspaceId, mode);
+      if (snapshot) return snapshot;
+    }
+    return getCanvasLegacy(workspaceId);
   }
 
   async getNodes(workspaceId: string): Promise<CanvasNode[]> {
-    const items = await queryPartition(workspaceId, "node#");
-    return items.map(
-      (raw) =>
-        ({ ...raw.body, id: raw.sk.slice("node#".length) }) as CanvasNode,
-    );
+    const mode = canvasDocModelMode();
+    if (mode !== "off") {
+      const snapshot = await readDocSnapshotForMode(workspaceId, mode);
+      if (snapshot) return snapshot.nodes;
+    }
+    return getNodesLegacy(workspaceId);
   }
 
   async getEdges(workspaceId: string): Promise<CanvasEdge[]> {
-    const items = await queryPartition(workspaceId, "edge#");
-    return items.map(
-      (raw) =>
-        ({ ...raw.body, id: raw.sk.slice("edge#".length) }) as CanvasEdge,
-    );
+    const mode = canvasDocModelMode();
+    if (mode !== "off") {
+      const snapshot = await readDocSnapshotForMode(workspaceId, mode);
+      if (snapshot) return snapshot.edges;
+    }
+    return getEdgesLegacy(workspaceId);
   }
 
   async getCanvasRevision(workspaceId: string): Promise<number> {
-    return getCanvasRevision(workspaceId);
+    const mode = canvasDocModelMode();
+    if (mode !== "off") {
+      const revision = await readDocRevisionForMode(workspaceId, mode);
+      if (revision !== null) return revision;
+    }
+    return getCanvasRevisionLegacy(workspaceId);
   }
 
   async syncCanvas(
@@ -395,80 +826,22 @@ export class DynamoCanvasStorage implements ICanvasStorage {
     edges: CanvasEdge[],
     expectedRevision?: number,
   ): Promise<number> {
-    const lockOwner = await acquireCanvasLock(workspaceId);
-    try {
-      const currentRevision = await getCanvasRevision(workspaceId);
-      // The optional value maintains safe compatibility for internal callers;
-      // the public API always supplies the revision returned by GET /canvas.
-      const revisionToWrite = expectedRevision ?? currentRevision;
-      if (revisionToWrite !== currentRevision) {
-        throw new CanvasRevisionConflictError(revisionToWrite, currentRevision);
-      }
-
-      const desired = new Map<string, Item>();
-      for (const n of nodes)
-        desired.set(`node#${n.id}`, nodeItem(workspaceId, n));
-      for (const e of edges)
-        desired.set(`edge#${e.id}`, edgeItem(workspaceId, e));
-
-      const existing = (await queryPartition(workspaceId)).filter(isCanvasItem);
-      const existingByKey = new Map(existing.map((i) => [i.sk, i]));
-
-      const requests: BatchWriteRequest[] = [];
-
-      // deletions: existed but no longer desired
-      for (const [sk] of existingByKey) {
-        if (!desired.has(sk)) {
-          requests.push({
-            DeleteRequest: { Key: { pk: partitionKey(workspaceId), sk } },
-          });
-        }
-      }
-
-      // puts: new or materially changed
-      for (const [sk, item] of desired) {
-        const prev = existingByKey.get(sk);
-        if (prev && JSON.stringify(prev.body) === JSON.stringify(item.body)) {
-          continue; // unchanged — skip write
-        }
-        requests.push({ PutRequest: { Item: item } });
-      }
-
-      if (requests.length > 0) await batchWrite(requests);
-
-      const nextRevision = currentRevision + 1;
-      const { doc } = clients();
-      await doc.send(
-        new PutCommand({
-          TableName: TABLE,
-          Item: {
-            pk: partitionKey(workspaceId),
-            sk: REVISION_KEY,
-            revision: nextRevision,
-          },
-          ConditionExpression:
-            "attribute_not_exists(#revision) OR #revision = :expectedRevision",
-          ExpressionAttributeNames: { "#revision": "revision" },
-          ExpressionAttributeValues: { ":expectedRevision": currentRevision },
-        }),
-      );
-      return nextRevision;
-    } finally {
-      await releaseCanvasLock(workspaceId, lockOwner);
+    if (canvasDocModelMode() === "on") {
+      return writeDocSnapshot(workspaceId, nodes, edges, expectedRevision);
     }
+    return syncCanvasLegacy(workspaceId, nodes, edges, expectedRevision);
   }
 
   async duplicateCanvas(
     fromWorkspaceId: string,
     toWorkspaceId: string,
   ): Promise<void> {
-    const source = (await queryPartition(fromWorkspaceId)).filter(isCanvasItem);
-    const requests = source.map((item) => ({
-      PutRequest: {
-        Item: { ...item, pk: partitionKey(toWorkspaceId) },
-      },
-    }));
-    if (requests.length > 0) await batchWrite(requests);
+    if (canvasDocModelMode() !== "off") {
+      const source = await this.getCanvas(fromWorkspaceId);
+      await this.syncCanvas(toWorkspaceId, source.nodes, source.edges);
+      return;
+    }
+    await duplicateCanvasLegacy(fromWorkspaceId, toWorkspaceId);
   }
 
   /** Bulk cleanup keyed by explicit workspace ids (ownership resolved by the
@@ -476,10 +849,127 @@ export class DynamoCanvasStorage implements ICanvasStorage {
   async deleteWorkspaces(workspaceIds: string[]): Promise<void> {
     for (const id of workspaceIds) {
       const existing = await queryPartition(id);
+      for (const item of existing) {
+        if (item.sk === DOC_KEY) {
+          const meta = item as unknown as CanvasDocItem;
+          if (meta.s3Key) await deleteS3Object(meta.s3Key);
+        }
+      }
       const requests = existing.map((item) => ({
         DeleteRequest: { Key: { pk: item.pk, sk: item.sk } },
       }));
       if (requests.length > 0) await batchWrite(requests);
     }
+  }
+
+  async backfillCanvas(
+    workspaceId: string,
+  ): Promise<"created" | "updated" | "exists" | "empty"> {
+    const existing = await getDocMeta(workspaceId);
+    const snapshot = await getCanvasLegacy(workspaceId);
+    if (
+      snapshot.nodes.length === 0 &&
+      snapshot.edges.length === 0 &&
+      snapshot.revision === 0
+    ) {
+      return existing ? "exists" : "empty";
+    }
+    if (existing && existing.revision >= snapshot.revision) return "exists";
+
+    const { body, bytes } = encodeCanvas(snapshot.nodes, snapshot.edges);
+    let s3Key: string | undefined;
+    let etag: string | undefined;
+    if (body.byteLength > inlineMaxBytes()) {
+      s3Key = canvasObjectKey(workspaceId, snapshot.revision, randomUUID());
+      etag = await putS3Object(s3Key, body);
+    }
+
+    try {
+      await clients().doc.send(
+        new PutCommand({
+          TableName: TABLE,
+          Item: {
+            pk: partitionKey(workspaceId),
+            sk: DOC_KEY,
+            revision: snapshot.revision,
+            bytes,
+            updatedAt: new Date().toISOString(),
+            ...(s3Key ? { s3Key, etag } : { body }),
+          },
+          ConditionExpression: existing
+            ? "#revision = :base"
+            : "attribute_not_exists(#pk)",
+          ExpressionAttributeNames: {
+            "#pk": "pk",
+            ...(existing ? { "#revision": "revision" } : {}),
+          },
+          ...(existing
+            ? {
+                ExpressionAttributeValues: {
+                  ":base": existing.revision,
+                },
+              }
+            : {}),
+        }),
+      );
+    } catch (err) {
+      if (s3Key) await deleteS3Object(s3Key);
+      if ((err as Error).name === "ConditionalCheckFailedException") {
+        return "exists";
+      }
+      throw err;
+    }
+
+    log.info(
+      {
+        workspaceId,
+        revision: snapshot.revision,
+        bytes,
+        s3: Boolean(s3Key),
+        reconciled: Boolean(existing),
+      },
+      existing ? "Canvas document reconciled" : "Canvas document backfilled",
+    );
+    return existing ? "updated" : "created";
+  }
+
+  /** One-way rollback helper: rewrite the legacy item model from the document
+   *  and align the legacy revision before switching back to `off`. */
+  async restoreLegacyFromDoc(
+    workspaceId: string,
+  ): Promise<"restored" | "skipped" | "empty"> {
+    const meta = await getDocMeta(workspaceId);
+    if (!meta) return "empty";
+    const snapshot = await readDocSnapshot(workspaceId, meta);
+
+    const legacyRevision = await getCanvasRevisionLegacy(workspaceId);
+    if (snapshot.revision <= legacyRevision) return "skipped";
+
+    const writtenRevision = await syncCanvasLegacy(
+      workspaceId,
+      snapshot.nodes,
+      snapshot.edges,
+    );
+    if (writtenRevision !== snapshot.revision) {
+      await clients().doc.send(
+        new PutCommand({
+          TableName: TABLE,
+          Item: {
+            pk: partitionKey(workspaceId),
+            sk: REVISION_KEY,
+            revision: snapshot.revision,
+          },
+          ConditionExpression: "#revision = :current",
+          ExpressionAttributeNames: { "#revision": "revision" },
+          ExpressionAttributeValues: { ":current": writtenRevision },
+        }),
+      );
+    }
+
+    log.info(
+      { workspaceId, revision: snapshot.revision },
+      "Canvas legacy model restored from document",
+    );
+    return "restored";
   }
 }

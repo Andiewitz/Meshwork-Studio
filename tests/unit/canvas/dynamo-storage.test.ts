@@ -31,6 +31,9 @@ vi.mock("@aws-sdk/lib-dynamodb", () => ({
   QueryCommand: class QueryCommand {
     constructor(readonly input: Record<string, unknown>) {}
   },
+  ScanCommand: class ScanCommand {
+    constructor(readonly input: Record<string, unknown>) {}
+  },
 }));
 
 import {

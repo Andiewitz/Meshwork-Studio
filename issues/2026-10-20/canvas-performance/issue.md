@@ -7,6 +7,8 @@
 **GitHub:** [#48](https://github.com/Andiewitz/Meshwork-Studio/issues/48)
 **Companions:** [`solution.md`](solution.md) · [`postmortem.md`](postmortem.md)
 **Plan commit:** [`7b2d332`](https://github.com/Andiewitz/Meshwork-Studio/commit/7b2d332)
+**Status:** Phase 2b implemented behind `CANVAS_DOC_MODEL` (default `off`);
+system/load verification pending.
 
 ## Summary
 

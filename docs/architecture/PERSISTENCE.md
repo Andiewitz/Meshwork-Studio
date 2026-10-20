@@ -1,6 +1,6 @@
 # Canvas persistence (reference)
 
-> Status: active · Updated: 2026-10-12 · Context: where your diagram goes
+> Status: active · Updated: 2026-10-20 · Context: where your diagram goes
 > when you draw it, and how it survives reloads. Data shapes:
 > [`CANVAS_SCHEMA.md`](./CANVAS_SCHEMA.md); backups:
 > [`../operations/RECOVERY.md`](../operations/RECOVERY.md).
@@ -18,17 +18,25 @@ Canvas change
   -> 3-second idle debounce
   -> POST /api/v1/workspaces/:id/canvas
   -> direct-owner or shared editor-role check
-  -> DynamoDB diff write
+  -> DynamoDB diff write (off/read) or document CAS + S3 (on)
 ```
 
 The browser cache key is `meshwork-canvas-cache-{workspaceId}`. It is cleared
 only after the API confirms the durable write. On a failed sync, the cache is
 kept for the next edit or reload.
 
-## DynamoDB document model
+## DynamoDB storage modes
 
-The canvas service stores one item per node or edge in the `CANVAS_DDB_TABLE`
-table (default `meshwork-canvas`):
+`CANVAS_DOC_MODEL` selects the storage layout:
+
+| Mode   | Reads                              | Writes                           |
+| ------ | ---------------------------------- | -------------------------------- |
+| `off`  | Legacy item-per-node query         | Legacy diff write                |
+| `read` | Document when present, else legacy | Legacy diff write                |
+| `on`   | Document when present, else legacy | Document write with revision CAS |
+
+Legacy mode stores one item per node or edge in `CANVAS_DDB_TABLE` (default
+`meshwork-canvas`):
 
 | Attribute | Value                              |
 | --------- | ---------------------------------- |
@@ -43,18 +51,44 @@ and never acknowledged if retries are exhausted. A per-workspace revision and
 short write lease reject stale snapshots with a visible conflict instead of a
 silent last-writer-wins overwrite.
 
+Document mode stores one item plus an optional S3 object per workspace:
+
+| Location | Value                                                                      |
+| -------- | -------------------------------------------------------------------------- |
+| DynamoDB | `pk = ws#{workspaceId}`, `sk = doc`                                        |
+| Inline   | `body` (gzip JSON), used at or below 350 KB compressed                     |
+| Overflow | `s3Key`, `etag`, `bytes`; object is `canvases/<ws>/<rev>-<writer>.json.gz` |
+
+Reads are one consistent `GetItem`, plus one S3 `GetObject` for a large
+document. Writes replace the document and commit with
+`ConditionExpression: revision = :base`; a stale writer gets a 409 and never
+acquires a lock. S3 objects are immutable per write, so old revisions can be
+retained by bucket versioning/lifecycle policy. Enable S3 versioning and
+lifecycle before turning document mode on; `db:backup` only archives the
+DynamoDB table, not S3 objects. The backfill script is
+`npm run canvas:migrate-docs` (add `-- --dry-run` to list only). To roll back
+after `on`, quiesce writes, run `npm run canvas:migrate-docs -- --to-legacy`
+to rewrite the item model from the document, then set `CANVAS_DOC_MODEL=off`.
+
 ## Operational configuration
 
-| Variable            | Purpose                                      |
-| ------------------- | -------------------------------------------- |
-| `CANVAS_DDB_TABLE`  | Canvas table name                            |
-| `AWS_REGION`        | AWS region for DynamoDB                      |
-| `DYNAMODB_ENDPOINT` | Local DynamoDB endpoint for development only |
+| Variable                      | Purpose                                       |
+| ----------------------------- | --------------------------------------------- |
+| `CANVAS_DDB_TABLE`            | Canvas table name                             |
+| `CANVAS_DOC_MODEL`            | `off`, `read`, or `on` (default `off`)        |
+| `CANVAS_S3_BUCKET`            | Bucket for documents above the inline limit   |
+| `CANVAS_S3_PREFIX`            | Object key prefix (default `canvases`)        |
+| `CANVAS_DOC_INLINE_MAX_BYTES` | Inline threshold for tests/ops (default 350K) |
+| `AWS_REGION`                  | AWS region for DynamoDB and S3                |
+| `DYNAMODB_ENDPOINT`           | Local DynamoDB endpoint for development only  |
+| `S3_ENDPOINT`                 | Optional S3-compatible endpoint for dev       |
 
 The service can create a missing table with on-demand billing. In production,
 provision it through deployment automation and restrict the application IAM
 role to that one table. Table creation at application boot is convenient for
-local development but should not be a production permission.
+local development but should not be a production permission. Document mode
+needs `s3:GetObject`, `s3:PutObject`, and `s3:DeleteObject` on the configured
+bucket/prefix.
 
 ## Key implementation files
 
@@ -64,14 +98,14 @@ local development but should not be a production permission.
 | `client/src/pages/Workspace.tsx`                | Debounced autosave and save status                         |
 | `client/src/hooks/use-canvas.ts`                | Canvas API mutation                                        |
 | `server/services/canvas/routes/canvasRoutes.ts` | Authentication, access, and role checks                    |
-| `server/services/canvas/db/dynamo.ts`           | DynamoDB schema, reads, diff writes, duplication, deletion |
+| `server/services/canvas/db/dynamo.ts`           | Storage modes, doc CAS, S3 overflow, duplication, deletion |
 
 ## Verification
 
 Run the canvas-focused unit and integration suites after changing this flow:
 
 ```bash
-npm run test:run -- tests/unit/workspace/canvas-cache.test.ts
+npx vitest run tests/unit/canvas tests/integration/canvas
 npm run test:system
 ```
 

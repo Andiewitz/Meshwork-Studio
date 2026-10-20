@@ -75,6 +75,10 @@ services:
       JENKOS_DATABASE_URL: postgresql://jenkos_app:${JENKOS_DB_PASSWORD:-${AI_DB_PASSWORD}}@meshwork-postgres:5432/jenkos_db
       METRICS_DATABASE_URL: postgresql://metrics_app:${METRICS_DB_PASSWORD}@meshwork-postgres:5432/metrics_db
       CANVAS_DDB_TABLE: ${CANVAS_DDB_TABLE:-meshwork-canvas}
+      CANVAS_DOC_MODEL: ${CANVAS_DOC_MODEL:-off}
+      CANVAS_S3_BUCKET: ${CANVAS_S3_BUCKET:-}
+      CANVAS_S3_PREFIX: ${CANVAS_S3_PREFIX:-canvases}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       DYNAMODB_ENDPOINT: http://meshwork-dynamodb-local:8000
       AWS_ACCESS_KEY_ID: local
@@ -101,7 +105,13 @@ services:
       meshwork-redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 15s
       timeout: 5s
       retries: 5

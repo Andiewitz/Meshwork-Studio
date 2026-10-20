@@ -570,12 +570,12 @@ dimensions are retained.
 
 ## Key Source Files
 
-| File                                                                                                                                           | Purpose                                                                    |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| [`client/src/lib/ai-canvas-utils.ts`](../../client/src/lib/ai-canvas-utils.ts)                                                                 | Runtime type normalisation, repair, and ID deduplication                   |
-| [`client/src/features/workspace/utils/nodeRegistry.ts`](../../client/src/features/workspace/utils/nodeRegistry.ts)                             | Authoritative node types, aliases, and default sizes                       |
-| [`server/shared/schema/index.ts`](../../server/shared/schema/index.ts)                                                                         | Client/server contract types                                               |
-| [`server/services/canvas/db/dynamo.ts`](../../server/services/canvas/db/dynamo.ts)                                                             | `syncCanvas()` — persistence layer that writes nodes and edges to DynamoDB |
-| [`client/src/features/workspace/components/WorkspaceLeftSidebar.tsx`](../../client/src/features/workspace/components/WorkspaceLeftSidebar.tsx) | Jenkos AI drawer and canvas actions                                        |
-| [`../features/JENKOS_AI.md`](../features/JENKOS_AI.md)                                                                                         | How Jenkos uses canvas context in prompts and responses                    |
-| [`../features/WORKSPACES.md`](../features/WORKSPACES.md)                                                                                       | Workspace and collection API reference                                     |
+| File                                                                                                                                           | Purpose                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [`client/src/lib/ai-canvas-utils.ts`](../../client/src/lib/ai-canvas-utils.ts)                                                                 | Runtime type normalisation, repair, and ID deduplication           |
+| [`client/src/features/workspace/utils/nodeRegistry.ts`](../../client/src/features/workspace/utils/nodeRegistry.ts)                             | Authoritative node types, aliases, and default sizes               |
+| [`server/shared/schema/index.ts`](../../server/shared/schema/index.ts)                                                                         | Client/server contract types                                       |
+| [`server/services/canvas/db/dynamo.ts`](../../server/services/canvas/db/dynamo.ts)                                                             | `syncCanvas()` — legacy item writes or document CAS/S3 persistence |
+| [`client/src/features/workspace/components/WorkspaceLeftSidebar.tsx`](../../client/src/features/workspace/components/WorkspaceLeftSidebar.tsx) | Jenkos AI drawer and canvas actions                                |
+| [`../features/JENKOS_AI.md`](../features/JENKOS_AI.md)                                                                                         | How Jenkos uses canvas context in prompts and responses            |
+| [`../features/WORKSPACES.md`](../features/WORKSPACES.md)                                                                                       | Workspace and collection API reference                             |

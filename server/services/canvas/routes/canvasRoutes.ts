@@ -1,6 +1,7 @@
 import type { Express, RequestHandler } from "express";
 import { canvasStorage } from "../db/storage";
 import {
+  CanvasDocConfigError,
   CanvasRevisionConflictError,
   CanvasWriteIncompleteError,
   CanvasWriteLockedError,
@@ -67,8 +68,19 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
         .status(403)
         .json({ message: "You do not have access to this workspace" });
 
-    const { nodes, edges, revision } = await canvasStorage.getCanvas(id);
-    res.json({ nodes, edges, revision });
+    try {
+      const { nodes, edges, revision } = await canvasStorage.getCanvas(id);
+      res.json({ nodes, edges, revision });
+    } catch (err) {
+      if (err instanceof CanvasDocConfigError) {
+        return res.status(503).json({
+          code: err.code,
+          requestId: req.requestId ?? "unscoped",
+          message: "Canvas storage is not configured for this document size.",
+        });
+      }
+      throw err;
+    }
   });
 
   app.post(
@@ -148,6 +160,13 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
             code: err.code,
             requestId: req.requestId ?? "unscoped",
             message: "Canvas save was not fully written. Retry shortly.",
+          });
+        }
+        if (err instanceof CanvasDocConfigError) {
+          return res.status(503).json({
+            code: err.code,
+            requestId: req.requestId ?? "unscoped",
+            message: "Canvas storage is not configured for this document size.",
           });
         }
         throw err;

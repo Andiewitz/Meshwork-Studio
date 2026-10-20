@@ -4,7 +4,8 @@ Tracks: [`issue.md`](issue.md) · GitHub
 [#48](https://github.com/Andiewitz/Meshwork-Studio/issues/48) · Parent audit:
 [`plans/SCALE-AUDIT-1M.md`](../../../plans/SCALE-AUDIT-1M.md)
 
-Status: proposed (no implementation started) · Plan commit:
+Status: Phase 2b implemented behind `CANVAS_DOC_MODEL` (default `off`) · pending
+real-DynamoDB/S3 verification · Plan commit:
 [`7b2d332`](https://github.com/Andiewitz/Meshwork-Studio/commit/7b2d332)
 Goal: remove the per-request work that scales with canvas size, then raise the
 verified concurrency ceiling in measurable steps. Phase 0 is config-only and
@@ -111,19 +112,20 @@ repeat-open p95 < 50 ms.
 overflow/archive tier. Do not use S3 as the hot read/write path.**
 
 ```
-Small canvas (serialized ≤ ~350 KB)
+Small canvas (gzip-compressed document ≤ ~350 KB)
 pk = ws#<workspaceId>
 sk = doc          { revision, nodes, edges, bytes, updatedAt }
 
-Large canvas (serialized > ~350 KB)
+Large canvas (gzip-compressed document > ~350 KB)
 pk = ws#<workspaceId>
 sk = doc          { revision, s3Key, etag, bytes, updatedAt }
-S3: canvases/<workspaceId>/<revision>.json.gz   // immutable per revision
+S3: canvases/<workspaceId>/<revision>-<writerId>.json.gz   // immutable per write
 ```
 
 - **Why DynamoDB for the live doc:** single-digit-ms reads, conditional writes
   give conflict-free CAS on `revision`, no per-object HTTP overhead. The 400 KB
-  item cap is why the threshold is 350 KB (headroom for DDB metadata).
+  item cap is why the compressed inline threshold is 350 KB (headroom for DDB
+  metadata).
 - **Why S3 for overflow:** no item-size limit, cheap durable storage
   (~$0.023/GB-month), versioning gives history, and one GET/PUT request works
   at any object size. It is the cold tier, not the interaction path.
@@ -135,10 +137,12 @@ S3: canvases/<workspaceId>/<revision>.json.gz   // immutable per revision
 - **Write**:
   - read `doc`; validate `baseRevision` against `revision`;
   - small: conditional `PutItem(doc, ConditionExpression: revision = :base)`;
-  - large: `PutObject` to `canvases/<ws>/<rev+1>.json.gz`, then conditional
+  - large: `PutObject` to
+    `canvases/<ws>/<rev+1>-<writerId>.json.gz`, then conditional
     `PutItem(doc, { revision, s3Key, etag, bytes }, revision = :base)`;
   - CAS failure → delete the orphan S3 object best-effort and return 409 with
-    the current revision; an S3 lifecycle rule sweeps stragglers;
+    the current revision; an S3 lifecycle rule sweeps stragglers. Keys include
+    a writer UUID so a losing writer never deletes the winner's object;
   - no lock, no full-partition re-read, no per-item diff.
 - **Cache/ETag (2a)** sits in front: Redis `canvas:<id>:<rev>` stores the
   serialized bytes; unchanged reads return 304 without touching DDB or S3.
@@ -172,28 +176,51 @@ shrink the wire payload to O(C), but the server still rewrites the document
 
 Implementation touch points:
 
-- `server/services/canvas/db/dynamo.ts` — `getCanvas`, `syncCanvas`,
-  `getCanvasRevision`, `acquireCanvasLock`/`releaseCanvasLock` (remove from the
-  new path), `canvasTableReady`.
-- `server/services/canvas/db/s3.ts` (new) — `GetObject`/`PutObject`, gzip,
-  immutable key per revision, best-effort delete for CAS losers.
-- `server/services/canvas/routes/canvasRoutes.ts` — ETag handling; error
-  mapping unchanged.
-- `server/services/canvas/db/model.ts` — add the doc/meta types and keep
-  `CanvasRevisionConflictError`.
+- `server/services/canvas/db/dynamo.ts` — storage modes, doc CAS, gzip
+  `GetObject`/`PutObject`, isolated writer keys, best-effort delete for CAS
+  losers; `getCanvas`, `syncCanvas`, `getCanvasRevision`, `canvasTableReady`.
+  S3 helpers stay in this module rather than a separate `s3.ts`.
+- `server/services/canvas/routes/canvasRoutes.ts` — 503 mapping for
+  `CanvasDocConfigError`; ETag handling lands in 2a.
+- `server/services/canvas/db/model.ts` — storage contract unchanged.
 - `server/shared/canvas.ts` — unchanged caps; validate before serializing.
 
 Acceptance (re-run the heavy profile):
 
-- `GET` performs exactly **1 DDB `GetItem`** (≤350 KB) or **1 `GetItem` + 1 S3
-  `GetObject`** (larger); zero partition queries.
-- `POST` performs exactly **1 conditional DDB write** (≤350 KB) or **1 S3
-  `PutObject` + 1 conditional DDB write** (larger); zero partition re-reads.
+- `GET` performs exactly **1 DDB `GetItem`** (≤350 KB compressed) or **1
+  `GetItem` + 1 S3 `GetObject`** (larger); zero partition queries.
+- `POST` performs exactly **1 conditional DDB write** (≤350 KB compressed) or
+  **1 S3 `PutObject` + 1 conditional DDB write** (larger); zero partition
+  re-reads.
 - 400 VUs with `CANVAS_NODES=400 CANVAS_EDGES=500` passes p95 ≤ 250 ms.
 - Canvas RCU per run drops ≥ 10× vs the item model; S3 cost is 1 GET/PUT per
   large read/save plus storage.
 - Existing conflict test suite passes; new tests for CAS, the 350 KB overflow
   boundary, orphan cleanup, ETag, and rollback flag.
+
+### 2b implementation notes
+
+- Code: `server/services/canvas/db/dynamo.ts` (modes, gzip doc, S3 overflow,
+  CAS), `server/services/canvas/routes/canvasRoutes.ts` (503 on missing S3
+  config), `scripts/migrate-canvas-docs.ts` (backfill).
+- Flag: `CANVAS_DOC_MODEL=off|read|on` (default `off`).
+- Config: `CANVAS_S3_BUCKET`, `CANVAS_S3_PREFIX` (default `canvases`),
+  `CANVAS_DOC_INLINE_MAX_BYTES` (default 350 KB), optional `S3_ENDPOINT`.
+- In `read` mode, doc reads are only served when the legacy revision is not
+  newer; otherwise reads fall back to the item model.
+- Rollout: `off` → backfill (`npm run canvas:migrate-docs -- --dry-run`, then
+  for real) → `read` → verify → `on`. Backfill preserves the legacy revision;
+  rerunning it reconciles a doc that is behind legacy by CAS on the doc
+  revision. Quiesce writes before the final reconcile and `on` flip. Rollback:
+  quiesce, run `npm run canvas:migrate-docs -- --to-legacy` to rewrite the item
+  model from the doc, then set `off`.
+- Tests: `tests/unit/canvas/dynamo-doc.test.ts` covers CAS, overflow, fallback,
+  read mode, backfill, and S3 deletion; system parity adds document-mode cases.
+- Ops: enable S3 versioning + lifecycle (and replication if S3 is the only copy
+  of large canvases). The existing `db:backup` archive covers DynamoDB items,
+  not S3 objects.
+- Pending: run the system parity suite against DynamoDB Local and the heavy
+  400-VU profile against real DynamoDB + S3 before flipping `on`.
 
 ### 2c. Delta saves (optional, after 2b)
 
