@@ -169,11 +169,11 @@ Atomic per-account counters in Postgres with a sliding 15-minute window:
 
 ### Rate Limiting
 
-| Limiter        | Scope                             | Limit                   | Store                      |
-| -------------- | --------------------------------- | ----------------------- | -------------------------- |
-| API Limiter    | All `/api/` routes (monolith)     | 100 req / min           | in-memory per instance     |
-| Auth endpoints | login/register/reset (Go service) | IP-keyed sliding window | Redis (shared, atomic Lua) |
-| AI endpoints   | BYOK vs free-tier split           | 30 / 10 req/min         | keyed by user ID           |
+| Limiter        | Scope                             | Limit                   | Store                                            |
+| -------------- | --------------------------------- | ----------------------- | ------------------------------------------------ |
+| API Limiter    | All `/api/` routes (monolith)     | 100 req / min per user  | Redis, per-IP for anonymous, in-process fallback |
+| Auth endpoints | login/register/reset (Go service) | IP-keyed sliding window | Redis (shared, atomic Lua)                       |
+| AI endpoints   | BYOK vs free-tier split           | 30 / 10 req/min         | keyed by user ID                                 |
 
 ---
 

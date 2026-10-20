@@ -17,7 +17,6 @@ import { WorkspaceService } from "@services/workspace";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import { apiLimiter } from "./middleware/rateLimit";
 import { requestIdMiddleware } from "./middleware/requestId";
 import {
   errorBody,
@@ -93,9 +92,6 @@ app.set("trust proxy", 1);
 // Traceability: mint/adopt a request ID first so every log line and error
 // body downstream can carry it. See server/middleware/requestId.ts.
 app.use(requestIdMiddleware);
-
-// SECURITY: Apply global rate limiting to all API routes
-app.use("/api/", apiLimiter);
 
 declare module "http" {
   interface IncomingMessage {

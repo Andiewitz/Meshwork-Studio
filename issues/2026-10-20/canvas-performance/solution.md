@@ -4,8 +4,8 @@ Tracks: [`issue.md`](issue.md) · GitHub
 [#48](https://github.com/Andiewitz/Meshwork-Studio/issues/48) · Parent audit:
 [`plans/SCALE-AUDIT-1M.md`](../../../plans/SCALE-AUDIT-1M.md)
 
-Status: Phase 2a + 2b + 2c implemented · pending real-DynamoDB/S3 and load
-verification · Plan commit:
+Status: Phase 1 + 2a + 2b + 2c implemented · pending real-DynamoDB/S3 and
+load verification · Plan commit:
 [`7b2d332`](https://github.com/Andiewitz/Meshwork-Studio/commit/7b2d332) ·
 2b implementation commit:
 [`ae65505`](https://github.com/Andiewitz/Meshwork-Studio/commit/ae65505) · 2a
@@ -97,6 +97,19 @@ Changes:
 Acceptance: cache hit rate > 95% on the 400-VU run; backend mean CPU per RPS
 down ≥ 20%; p95 at 400 VUs ≤ 180 ms; workspace list makes 0 internal HTTP
 calls on a cache hit.
+
+**Implemented:** `server/services/team/db/access-cache.ts` caches
+`access:role:<workspaceId>:<userId>` and `access:sharedws:<userId>` for 60 s.
+Every team mutation (join, leave, role change, share/unshare, team delete,
+owned-team account deletion) invalidates the affected cross-product; Redis
+errors or a non-ready client fall through to the existing database/internal
+HTTP paths. The shared-workspace fetch caches successful responses (an internal
+call failure is never cached), and `/internal/workspaces/lookup` now resolves
+all requested ids with one `inArray` query. The global API limiter now runs
+after optional auth, keys authenticated traffic by user and anonymous traffic
+by IP, and uses a Redis store with an in-process fallback so a Redis outage
+does not fail requests closed. Host-side hit-rate, CPU, and p95 acceptance still
+require the 400-VU run.
 
 ## Phase 2 — Canvas storage v2
 

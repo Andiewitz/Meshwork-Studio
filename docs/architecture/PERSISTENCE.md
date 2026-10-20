@@ -88,6 +88,29 @@ CAS. Document mode reads the document once; legacy mode merges inside the
 existing lock. The client falls back to a full snapshot on reorder or large
 edits, and import/duplicate remain full-snapshot writes.
 
+## Authorization and rate-limit caches
+
+Team access checks use short-lived Redis entries so canvas and workspace
+requests do not repeat the workspace-row → team-membership → internal-HTTP
+chain on every call:
+
+| Key                                  | Value                              | TTL |
+| ------------------------------------ | ---------------------------------- | --- |
+| `access:role:<workspaceId>:<userId>` | Role or `null` for non-members     | 60s |
+| `access:sharedws:<userId>`           | Workspace ids shared through teams | 60s |
+
+`server/services/team/db/access-cache.ts` owns the keys. Team membership
+mutations, role changes, workspace share/unshare, team deletion, and account
+deletion invalidate the affected role keys and shared-workspace lists. A Redis
+miss or an unavailable/non-ready client falls through to PostgreSQL and the
+internal workspace/team APIs; Redis never makes an authorization decision on
+its own. The internal workspace lookup endpoint resolves a batch of ids with
+one query instead of one query per id.
+
+The global `/api/` limiter uses `RedisRateLimitStore` after optional auth:
+authenticated requests are keyed by user id, anonymous requests by IP, and the
+store falls back to an in-process counter if Redis is unavailable.
+
 ## Operational configuration
 
 | Variable                      | Purpose                                       |

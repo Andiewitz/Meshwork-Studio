@@ -3,6 +3,10 @@
 // read-through mirror so role checks stay one local query.
 
 import { internalGet } from "@server/lib/internal";
+import {
+  cacheSharedWorkspaceIds,
+  readCachedSharedWorkspaceIds,
+} from "./access-cache";
 
 export interface WorkspaceOwnership {
   id: string;
@@ -28,9 +32,15 @@ export async function fetchWorkspaceOwners(
 export async function fetchSharedWorkspaceIds(
   userId: string,
 ): Promise<string[]> {
+  const cached = await readCachedSharedWorkspaceIds(userId);
+  if (cached !== null) return cached;
+
   const res = await internalGet<{ workspaceIds: string[] }>(
     "team",
     `/internal/users/${encodeURIComponent(userId)}/shared-workspace-ids`,
   );
-  return res?.workspaceIds ?? [];
+  if (!res) return [];
+  const workspaceIds = res.workspaceIds.filter((id) => typeof id === "string");
+  await cacheSharedWorkspaceIds(userId, workspaceIds);
+  return workspaceIds;
 }

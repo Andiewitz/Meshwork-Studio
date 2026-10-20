@@ -41,6 +41,7 @@ export interface IWorkspaceStorage {
     collectionId?: number | null,
   ): Promise<Workspace[]>;
   getWorkspace(id: string): Promise<Workspace | undefined>;
+  getWorkspacesByIds(ids: string[]): Promise<Workspace[]>;
   listWorkspaceCollaborators(
     workspaceId: string,
   ): Promise<WorkspaceCollaborator[]>;
@@ -195,6 +196,11 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
       .from(workspaces)
       .where(eq(workspaces.id, id));
     return workspace;
+  }
+
+  async getWorkspacesByIds(ids: string[]): Promise<Workspace[]> {
+    if (ids.length === 0) return [];
+    return db.select().from(workspaces).where(inArray(workspaces.id, ids));
   }
 
   async listWorkspaceCollaborators(
@@ -525,6 +531,11 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
 
   async getWorkspace(id: string): Promise<Workspace | undefined> {
     return this.workspaces.find((w) => w.id === id);
+  }
+
+  async getWorkspacesByIds(ids: string[]): Promise<Workspace[]> {
+    const wanted = new Set(ids);
+    return this.workspaces.filter((workspace) => wanted.has(workspace.id));
   }
 
   async listWorkspaceCollaborators(

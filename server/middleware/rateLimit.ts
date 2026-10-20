@@ -1,6 +1,7 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import type { Request } from "express";
 import { errorBody } from "../lib/errorEnvelope";
+import { RedisRateLimitStore } from "./redisRateLimitStore";
 
 /** 429 body with a stable code clients can switch on + the request ID. */
 function rateLimitedBody(req: Request, message: string) {
@@ -17,14 +18,16 @@ const apiRateLimitMax = (() => {
 })();
 export const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: apiRateLimitMax, // Limit each IP per window (default 100)
+  max: apiRateLimitMax,
   message: (req: Request) =>
-    rateLimitedBody(
-      req,
-      "Too many requests from this IP, please try again after a minute.",
-    ),
+    rateLimitedBody(req, "Too many requests, please try again after a minute."),
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  store: new RedisRateLimitStore("ratelimit:api"),
+  // Count authenticated traffic per user across replicas; anonymous traffic
+  // stays IP-keyed. IPv6 is grouped with express-rate-limit's helper.
+  keyGenerator: (req: Request) =>
+    req.user?.id ? `user:${req.user.id}` : `ip:${ipKeyGenerator(req.ip ?? "")}`,
   skip: () => process.env.NODE_ENV === "test",
 });
 

@@ -21,7 +21,10 @@ vi.mock("@services/workspace/db", () => ({
   pool: {},
 }));
 
-import { WorkspaceDatabaseStorage } from "@services/workspace/db/storage";
+import {
+  WorkspaceDatabaseStorage,
+  WorkspaceInMemoryStorage,
+} from "@services/workspace/db/storage";
 import { db } from "@services/workspace/db/connection";
 
 describe("WorkspaceDatabaseStorage (Unit)", () => {
@@ -160,5 +163,28 @@ describe("WorkspaceDatabaseStorage (Unit)", () => {
       expect(result.title).toBe("Original (Copy)");
       expect(result.id).not.toBe(original.id);
     });
+  });
+});
+
+describe("WorkspaceInMemoryStorage.getWorkspacesByIds", () => {
+  it("returns only requested workspaces without duplicates", async () => {
+    const storage = new WorkspaceInMemoryStorage();
+    const first = await storage.createWorkspace({
+      title: "One",
+      userId: "u1",
+      tags: [],
+      groups: [],
+    });
+    const second = await storage.createWorkspace({
+      title: "Two",
+      userId: "u1",
+      tags: [],
+      groups: [],
+    });
+
+    await expect(
+      storage.getWorkspacesByIds([second.id, first.id, second.id]),
+    ).resolves.toEqual([first, second]);
+    await expect(storage.getWorkspacesByIds([])).resolves.toEqual([]);
   });
 });

@@ -23,16 +23,19 @@ export function registerWorkspaceInternalRoutes(app: Express) {
       .filter(Boolean)
       .slice(0, 200);
 
-    const found = await Promise.all(
-      parsed.map(async (id) => {
-        const ws = await workspaceStorage.getWorkspace(id);
-        return ws
-          ? { id: ws.id, ownerId: ws.userId ?? "", title: ws.title }
-          : null;
-      }),
-    );
+    const ids = [...new Set(parsed)];
+    const rows = await workspaceStorage.getWorkspacesByIds(ids);
+    const byId = new Map(rows.map((workspace) => [workspace.id, workspace]));
+    const found = ids
+      .map((id) => byId.get(id))
+      .filter((workspace) => workspace !== undefined)
+      .map((workspace) => ({
+        id: workspace.id,
+        ownerId: workspace.userId ?? "",
+        title: workspace.title,
+      }));
 
-    res.json({ workspaces: found.filter(Boolean) });
+    res.json({ workspaces: found });
   });
 
   // GET /internal/stats — counters for the metrics collector.
