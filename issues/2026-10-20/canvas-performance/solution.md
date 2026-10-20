@@ -12,7 +12,9 @@ load verification · Plan commit:
 implementation commit:
 [`f205cb7`](https://github.com/Andiewitz/Meshwork-Studio/commit/f205cb7) · 2c
 implementation commit:
-[`2f8e099`](https://github.com/Andiewitz/Meshwork-Studio/commit/2f8e099)
+[`2f8e099`](https://github.com/Andiewitz/Meshwork-Studio/commit/2f8e099) · 1
+implementation commit:
+[`e074b86`](https://github.com/Andiewitz/Meshwork-Studio/commit/e074b86)
 Goal: remove the per-request work that scales with canvas size, then raise the
 verified concurrency ceiling in measurable steps. Phase 0 is config-only and
 unlocks the next measurement; Phase 2 is the actual fix for the issue.
