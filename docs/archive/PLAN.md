@@ -24,7 +24,7 @@ multi-service fleet until the measured growth triggers are met.
 - Removed the committed 21 MB Go executable. Binaries are CI artifacts, not source.
 - Removed the unreferenced archived AI-skill dump (62 files, 22 exact duplicate
   pairs) and the obsolete test README that documented removed test suites.
-- Moved runbooks to docs/operations, incident history to docs/archive/incidents,
+- Moved runbooks to docs/operations, incident history to `issues/`,
   and made docs/README.md the documentation index.
 - Removed two unreferenced legacy AI sidebars. Jenkos is now the canonical client
   AI module and the active design event is jenkos:designing.

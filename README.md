@@ -193,7 +193,7 @@ Every major system has its own deep-dive guide:
 | **[Observability](./docs/operations/OBSERVABILITY.md)**                | Health, metrics, logs, alert policy, and first response                                                   |
 | **[Recovery](./docs/operations/RECOVERY.md)**                          | Off-host archive, restore drills, and production recovery safeguards                                      |
 | **[Credential Response](./docs/operations/CREDENTIAL-RESPONSE.md)**    | Private rotation and verification procedure for an exposed secret                                         |
-| **[Post-Mortem Log](./docs/archive/process/post-mortem.md)**           | Production bugs found and fixed, with root cause analysis                                                 |
+| **[Issue & Post-Mortem Log](./issues/README.md)**                      | Capacity, incidents, root causes, and fixes                                                               |
 
 Historical documents (tickets, investigations, older audits) live in
 [`docs/archive/`](./docs/archive).
