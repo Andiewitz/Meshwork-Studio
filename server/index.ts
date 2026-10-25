@@ -21,6 +21,7 @@ import { requestIdMiddleware } from "./middleware/requestId";
 import { fail, failStatus } from "./lib/errorEnvelope";
 import { apiErrorHandler, apiNotFoundHandler } from "./middleware/errorHandler";
 import { JSON_BODY_LIMIT } from "./lib/bodyLimits";
+import { logTraceback } from "./lib/traceback";
 import { disconnectRedis, isRedisAvailable } from "./lib/redis";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import { startMetricsServer } from "./lib/metricsServer";
@@ -264,7 +265,7 @@ async function dependencyChecks() {
     await workspaceDb.execute(sql`SELECT 1`);
     checks.postgres = true;
   } catch (err) {
-    log.error({ err }, "Postgres health check failed");
+    logTraceback(log, "Postgres health check failed", err);
   }
   checks.redis = await isRedisAvailable();
   return checks;
@@ -293,7 +294,9 @@ app.get(["/health", "/healthz"], async (_req, res) => {
       checks,
     });
   } catch (err) {
-    log.error({ err }, "Health check endpoint error");
+    logTraceback(log, "Health check endpoint error", err, {
+      requestId: _req.requestId ?? "unscoped",
+    });
     res.status(500).json({
       status: "error",
       message: "Internal health check error",
@@ -344,7 +347,9 @@ app.get("/admin", requireAuth, (_req, res) => {
       });
     }
   } catch (err) {
-    log.error({ err }, "Admin dashboard load failed");
+    logTraceback(log, "Admin dashboard load failed", err, {
+      requestId: _req.requestId ?? "unscoped",
+    });
     failStatus(_req, res, 500, "Error loading dashboard", {
       code: "INTERNAL",
     });

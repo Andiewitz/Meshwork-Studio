@@ -57,10 +57,10 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
         });
         res.status(201).json(collection);
       } catch (err) {
-        log.error(
-          { err, userId: getUserId(req) },
-          "Failed to create collection",
-        );
+        logTraceback(log, "Failed to create collection", err, {
+          userId: getUserId(req),
+          requestId: req.requestId ?? "unscoped",
+        });
         fail(req, res, "WORKSPACE_UNAVAILABLE", "Failed to create collection");
       }
     },

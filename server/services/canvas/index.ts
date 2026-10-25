@@ -4,6 +4,7 @@ import { ensureCanvasTable } from "./db/dynamo";
 import { invalidateCanvas } from "./cache";
 import { registerCanvasRoutes } from "./routes/canvasRoutes";
 import { createChildLogger } from "@server/lib/logger";
+import { logTraceback } from "@server/lib/traceback";
 import type { AppContext } from "@server/lib/registry";
 import type { IWorkspaceStorage } from "@services/workspace/db/storage";
 
@@ -21,7 +22,9 @@ export class CanvasService {
         await invalidateCanvas(id);
         log.info({ workspaceId: id }, "Canvas data deleted via event");
       } catch (err) {
-        log.error({ err, workspaceId: id }, "Failed to delete canvas data");
+        logTraceback(log, "Failed to delete canvas data", err, {
+          workspaceId: id,
+        });
         throw err;
       }
     });
@@ -44,10 +47,10 @@ export class CanvasService {
           await invalidateCanvas(newId);
           log.info({ originalId, newId }, "Canvas data duplicated via event");
         } catch (err) {
-          log.error(
-            { err, originalId, newId },
-            "Failed to duplicate canvas data",
-          );
+          logTraceback(log, "Failed to duplicate canvas data", err, {
+            originalId,
+            newId,
+          });
           throw err;
         }
       },
@@ -60,7 +63,7 @@ export class CanvasService {
         await Promise.all(ids.map((id) => invalidateCanvas(id)));
         log.info({ count: ids.length }, "User canvas data deleted via event");
       } catch (err) {
-        log.error({ err }, "Failed to delete user canvas data");
+        logTraceback(log, "Failed to delete user canvas data", err);
         throw err;
       }
     });

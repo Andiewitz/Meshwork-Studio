@@ -6,6 +6,7 @@ import { pool } from "./db/connection";
 import { startCollector } from "./collector/collector";
 import { registerMetricsRoutes } from "./routes/metricsRoutes";
 import { createChildLogger } from "@server/lib/logger";
+import { logTraceback } from "@server/lib/traceback";
 
 const log = createChildLogger("metrics-service");
 
@@ -15,9 +16,10 @@ export class MetricsService {
       await ensureSchema("metrics", pool, MIGRATIONS);
       startCollector(30000);
     } catch (err) {
-      log.error(
-        { err },
+      logTraceback(
+        log,
         "Metrics schema migration failed — collector disabled",
+        err,
       );
       throw err;
     }
