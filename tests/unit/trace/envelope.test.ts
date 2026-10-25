@@ -192,6 +192,12 @@ describe("session-expired guidance (regression: misleading 401 toast)", () => {
     expect(formatUserErrorMessage(expired)).toContain(
       "Your session expired. Please log in again.",
     );
+    for (const code of ["SESSION_INVALID", "NO_SESSION", "UNAUTHENTICATED"]) {
+      const aliased = new ApiError(401, "Authentication required", { code });
+      expect(formatUserErrorMessage(aliased)).toContain(
+        "Your session expired. Please log in again.",
+      );
+    }
     const badPassword = new ApiError(401, "Password incorrect", {
       code: "INVALID_CREDENTIALS",
     });
