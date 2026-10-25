@@ -3,23 +3,25 @@ import { insertWorkspaceSchema } from "./schema";
 import { canvasSyncSchema } from "./canvas";
 import type { Collection, Workspace } from "./schema";
 
+// Canonical error envelope (see server/lib/errorEnvelope.ts). Fields beyond
+// `message` are additive so older clients that only read `message` still work.
+const errorEnvelope = z.object({
+  message: z.string(),
+  code: z.string().optional(),
+  requestId: z.string().optional(),
+  issues: z
+    .array(z.object({ path: z.string(), message: z.string() }))
+    .optional(),
+});
+
 export const errorSchemas = {
-  validation: z.object({
-    message: z.string(),
+  validation: errorEnvelope.extend({
     field: z.string().optional(),
   }),
-  notFound: z.object({
-    message: z.string(),
-  }),
-  internal: z.object({
-    message: z.string(),
-  }),
-  unauthorized: z.object({
-    message: z.string(),
-  }),
-  forbidden: z.object({
-    message: z.string(),
-  }),
+  notFound: errorEnvelope,
+  internal: errorEnvelope,
+  unauthorized: errorEnvelope,
+  forbidden: errorEnvelope,
 };
 
 export const api = {

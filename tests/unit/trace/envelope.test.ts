@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   errorBody,
+  fail,
   isPublicCode,
   resolvePublicCode,
 } from "@server/lib/errorEnvelope";
@@ -16,31 +17,70 @@ describe("error envelope (additive: message text never changes)", () => {
 
   it("maps pg codes to public tokens, never leaks driver codes", () => {
     expect(resolvePublicCode("23505")).toEqual({
-      status: 400,
+      status: 409,
       code: "DUPLICATE_VALUE",
     });
     expect(resolvePublicCode("23503")).toEqual({
-      status: 400,
-      code: "REFERENCE_NOT_FOUND",
+      status: 409,
+      code: "REFERENCE_CONFLICT",
     });
     expect(resolvePublicCode("22P02")).toEqual({
       status: 400,
       code: "INVALID_FORMAT",
     });
     expect(resolvePublicCode("UNAUTHENTICATED")).toEqual({
+      status: 401,
       code: "UNAUTHENTICATED",
     });
-    // errno strings, pg codes with no mapping, non-strings: no public code
+    // errno strings, unregistered tokens, non-strings: no public code
     expect(resolvePublicCode("ECONNREFUSED")).toEqual({});
     expect(resolvePublicCode("25P01")).toEqual({});
+    expect(resolvePublicCode("SOME_LIBRARY_CODE")).toEqual({});
     expect(resolvePublicCode(undefined)).toEqual({});
   });
 
   it("rejects non-public code shapes", () => {
     expect(isPublicCode("RATE_LIMITED")).toBe(true);
+    expect(isPublicCode("SOME_LIBRARY_CODE")).toBe(false);
     expect(isPublicCode("23505")).toBe(false);
     expect(isPublicCode("econnrefused")).toBe(false);
     expect(isPublicCode("")).toBe(false);
+  });
+
+  it("fail() is the single write path: canonical status + full envelope", () => {
+    const json = vi.fn();
+    const status = vi.fn(() => ({ json }));
+    fail(
+      { requestId: "req-x" } as never,
+      { status, json } as never,
+      "NOT_FOUND",
+      "Missing",
+    );
+    expect(status).toHaveBeenCalledWith(404);
+    expect(json).toHaveBeenCalledWith({
+      message: "Missing",
+      requestId: "req-x",
+      code: "NOT_FOUND",
+    });
+  });
+
+  it("fail() carries field-level issues without renaming them", () => {
+    const json = vi.fn();
+    const status = vi.fn(() => ({ json }));
+    fail(
+      { requestId: "req-y" } as never,
+      { status, json } as never,
+      "VALIDATION_FAILED",
+      "Invalid input",
+      { issues: [{ path: "title", message: "Required" }] },
+    );
+    expect(status).toHaveBeenCalledWith(400);
+    expect(json).toHaveBeenCalledWith({
+      message: "Invalid input",
+      requestId: "req-y",
+      code: "VALIDATION_FAILED",
+      issues: [{ path: "title", message: "Required" }],
+    });
   });
 
   it("mints stable-format IDs and adopts inbound ones verbatim", async () => {
