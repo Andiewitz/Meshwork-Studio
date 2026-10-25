@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
@@ -180,11 +181,11 @@ func (s *Store) getFromDB(ctx context.Context, hash string) (*Record, error) {
 	if errors.Is(err, context.Canceled) {
 		return nil, err
 	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrInvalidSession
+	}
 	if err != nil {
-		// Keep the sentinel (callers switch on it) but preserve the
-		// underlying cause for logs — a down database must not look
-		// identical to a bad token when debugging.
-		return nil, fmt.Errorf("%w (getFromDB: %v)", ErrInvalidSession, err)
+		return nil, fmt.Errorf("getFromDB: %w", err)
 	}
 	return &rec, nil
 }

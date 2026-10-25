@@ -24,6 +24,9 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 }
 
 func writeError(w http.ResponseWriter, r *http.Request, status int, code, message string) {
+	if canonical, ok := statusForPublicCode(code); ok {
+		status = canonical
+	}
 	writeJSON(w, status, map[string]any{
 		"code":      code,
 		"message":   message,

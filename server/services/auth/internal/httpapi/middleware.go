@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"log/slog"
 	"net"
 	"net/http"
@@ -74,6 +75,7 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 			id = hex.EncodeToString(b)
 		}
 		w.Header().Set("X-Request-Id", id)
+		r.Header.Set("X-Request-Id", id)
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxRequestID, id)))
 	})
 }
@@ -184,17 +186,32 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw := s.sessionCookieValue(r)
 		if raw == "" {
-			writeError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+			writeError(w, r, http.StatusUnauthorized, "NO_SESSION", "Authentication required")
 			return
 		}
 		rec, err := s.sessions.Validate(r.Context(), raw)
 		if err != nil {
-			writeError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Session invalid or expired")
+			if !errors.Is(err, session.ErrInvalidSession) {
+				s.log.Error("session validation unavailable",
+					"request_id", requestIDFrom(r), "err", err)
+				writeError(w, r, http.StatusServiceUnavailable,
+					"AUTH_SERVICE_UNAVAILABLE", "Authentication temporarily unavailable")
+				return
+			}
+			writeError(w, r, http.StatusUnauthorized, "SESSION_EXPIRED",
+				"Session expired or invalid. Please log in again.")
 			return
 		}
 		user, err := s.db.FindUserByID(r.Context(), rec.UserID)
 		if err != nil {
-			writeError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Account unavailable")
+			if !errors.Is(err, store.ErrNotFound) {
+				s.log.Error("user lookup unavailable",
+					"request_id", requestIDFrom(r), "err", err)
+				writeError(w, r, http.StatusServiceUnavailable,
+					"AUTH_SERVICE_UNAVAILABLE", "Authentication temporarily unavailable")
+				return
+			}
+			writeError(w, r, http.StatusUnauthorized, "SESSION_EXPIRED", "Account unavailable")
 			return
 		}
 		info := &AuthInfo{User: user, Session: rec, RawToken: raw}

@@ -2,8 +2,12 @@ package httpapi
 
 import (
 	"crypto/subtle"
+	"errors"
 	"net/http"
 	"time"
+
+	"github.com/meshwork-studio/auth/internal/session"
+	"github.com/meshwork-studio/auth/internal/store"
 )
 
 // internalKeyMatches is a constant-time comparison of the shared secret
@@ -51,10 +55,13 @@ func (s *Server) handleIntrospect(w http.ResponseWriter, r *http.Request) {
 
 	rec, err := s.sessions.Validate(r.Context(), body.Token)
 	if err != nil {
-		// Inactive is a normal outcome (expired/revoked), not an error —
-		// but log the reason class so monolith-side mysteries are joinable
-		// by request ID instead of undebuggable. Never log the token.
-		// `reason` is additive: old monoliths ignore it.
+		if !errors.Is(err, session.ErrInvalidSession) {
+			s.log.Error("introspect unavailable: session validation failed",
+				"request_id", requestIDFrom(r), "err", err)
+			writeError(w, r, http.StatusServiceUnavailable,
+				"AUTH_SERVICE_UNAVAILABLE", "Authentication temporarily unavailable")
+			return
+		}
 		s.log.Info("introspect inactive: session invalid",
 			"request_id", requestIDFrom(r), "err", err)
 		writeJSON(w, http.StatusOK, map[string]any{"active": false, "reason": "session_invalid"})
@@ -62,7 +69,14 @@ func (s *Server) handleIntrospect(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := s.db.FindUserByID(r.Context(), rec.UserID)
 	if err != nil {
-		s.log.Warn("introspect inactive: user lookup failed",
+		if !errors.Is(err, store.ErrNotFound) {
+			s.log.Error("introspect unavailable: user lookup failed",
+				"request_id", requestIDFrom(r), "err", err)
+			writeError(w, r, http.StatusServiceUnavailable,
+				"AUTH_SERVICE_UNAVAILABLE", "Authentication temporarily unavailable")
+			return
+		}
+		s.log.Warn("introspect inactive: user missing",
 			"request_id", requestIDFrom(r), "err", err)
 		writeJSON(w, http.StatusOK, map[string]any{"active": false, "reason": "user_missing"})
 		return

@@ -7,6 +7,7 @@ package ratelimit
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -58,6 +59,20 @@ func (l *Limiter) Allow(ctx context.Context, key string, limit int, window time.
 	return true, int(res), nil
 }
 
+func writeLimitError(w http.ResponseWriter, r *http.Request, status int, code, message string) {
+	id := r.Header.Get("X-Request-Id")
+	if id == "" {
+		id = "unscoped"
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"code":      code,
+		"message":   message,
+		"requestId": id,
+	})
+}
+
 // Middleware enforces limit per key over window on sensitive routes,
 // failing closed when Redis is configured but erroring.
 func (l *Limiter) Middleware(keyFn func(*http.Request) string, limit int, window time.Duration) func(http.Handler) http.Handler {
@@ -66,18 +81,16 @@ func (l *Limiter) Middleware(keyFn func(*http.Request) string, limit int, window
 			if l.rdb != nil {
 				ok, remaining, err := l.Allow(r.Context(), keyFn(r), limit, window)
 				if err != nil {
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(http.StatusServiceUnavailable)
-					_, _ = w.Write([]byte(`{"code":"RATE_LIMIT_UNAVAILABLE","message":"Try again shortly"}`))
+					writeLimitError(w, r, http.StatusServiceUnavailable,
+						"RATE_LIMIT_UNAVAILABLE", "Try again shortly")
 					return
 				}
 				w.Header().Set("RateLimit-Limit", strconv.Itoa(limit))
 				w.Header().Set("RateLimit-Remaining", strconv.Itoa(remaining))
 				if !ok {
 					w.Header().Set("Retry-After", strconv.Itoa(int(window.Seconds())))
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(http.StatusTooManyRequests)
-					_, _ = w.Write([]byte(`{"code":"RATE_LIMITED","message":"Too many requests"}`))
+					writeLimitError(w, r, http.StatusTooManyRequests,
+						"RATE_LIMITED", "Too many requests")
 					return
 				}
 			}

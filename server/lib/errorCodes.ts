@@ -40,7 +40,7 @@ export const ERROR_CODES = {
 
   // ── Server / dependency failures ────────────────────────────────────────
   INTERNAL: 500,
-  INTERNAL_AUTH: 500,
+  INTERNAL_AUTH: 401,
   BYOK_DECRYPT_FAILED: 500,
   AUTH_SERVICE_UNAVAILABLE: 502,
   PROVIDER_ERROR: 502,
