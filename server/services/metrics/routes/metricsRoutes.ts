@@ -8,7 +8,8 @@ import { requireAuth } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
 import { metricsRegistry } from "@server/lib/metrics";
 import { internalGet } from "@server/lib/internal";
-import { errorBody } from "@server/lib/errorEnvelope";
+import { fail } from "@server/lib/errorEnvelope";
+import { logTraceback } from "@server/lib/traceback";
 
 const log = createChildLogger("metrics-routes");
 
@@ -21,7 +22,7 @@ export function registerMetricsRoutes(app: Express) {
     next: import("express").NextFunction,
   ) {
     if (!req.user?.isAdmin) {
-      return res.status(404).json({ message: "Not Found" });
+      return fail(req, res, "NOT_FOUND", "Not Found");
     }
     next();
   }
@@ -40,8 +41,15 @@ export function registerMetricsRoutes(app: Express) {
         const rows = await getMetricsHistory(limit);
         res.json(rows);
       } catch (err) {
-        log.error({ err }, "Failed to query metrics history");
-        res.status(500).json({ message: "Failed to query metrics history" });
+        logTraceback(log, "Failed to query metrics history", err, {
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(
+          req,
+          res,
+          "SERVICE_UNAVAILABLE",
+          "Failed to query metrics history",
+        );
       }
     },
   );
@@ -53,20 +61,20 @@ export function registerMetricsRoutes(app: Express) {
     "/api/v1/metrics/live",
     requireAuth,
     requireAdmin,
-    async (_req, res) => {
+    async (req, res) => {
       try {
         const metrics = await metricsRegistry.getMetricsAsJSON();
         const byName = new Map(metrics.map((m) => [m.name, m.values ?? []]));
         const sumStatus = (prefix: string) => {
           let total = 0;
-          for (const v of byName.get("http_requests_total") ?? []) {
+          for (const v of byName.get("httprequests_total") ?? []) {
             const code = (v.labels as Record<string, string>).status_code ?? "";
             if (code.startsWith(prefix)) total += v.value;
           }
           return total;
         };
         const byEndpoint = new Map<string, { count: number; errors: number }>();
-        for (const v of byName.get("http_requests_total") ?? []) {
+        for (const v of byName.get("httprequests_total") ?? []) {
           const labels = v.labels as Record<string, string>;
           const key = `${labels.method ?? "?"} ${labels.path ?? "?"} ${labels.status_code ?? "?"}`;
           const slot = byEndpoint.get(key) ?? { count: 0, errors: 0 };
@@ -80,7 +88,7 @@ export function registerMetricsRoutes(app: Express) {
           return vals.reduce((sum, v) => sum + v.value, 0);
         };
         res.json({
-          totalRequests: gauge("http_requests_total"),
+          totalRequests: gauge("httprequests_total"),
           requests2xx: sumStatus("2"),
           requests4xx: sumStatus("4"),
           requests5xx: sumStatus("5"),
@@ -90,17 +98,19 @@ export function registerMetricsRoutes(app: Express) {
             .slice(0, 15),
           wsConnections: gauge("websocket_connections_active"),
           wsRooms: gauge("websocket_rooms_active"),
-          aiRequests: gauge("ai_chat_requests_total"),
+          aiRequests: gauge("ai_chatrequests_total"),
           eventLoopLagMs: gauge("meshwork_eventloop_lag_seconds") * 1000,
           memoryMb: gauge("meshwork_process_resident_memory_bytes") / 1048576,
           startedAt: new Date(
             Date.now() - process.uptime() * 1000,
           ).toISOString(),
-          requestId: _req.requestId ?? "unscoped",
+          requestId: req.requestId ?? "unscoped",
         });
       } catch (err) {
-        log.error({ err }, "Failed to build live metrics");
-        res.status(500).json({ message: "Failed to build live metrics" });
+        logTraceback(log, "Failed to build live metrics", err, {
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "SERVICE_UNAVAILABLE", "Failed to build live metrics");
       }
     },
   );
@@ -116,15 +126,12 @@ export function registerMetricsRoutes(app: Express) {
       const requestId = req.requestId ?? "unscoped";
       const q = String(req.query.requestId ?? "");
       if (!/^[0-9a-fA-F-]{2,64}$/.test(q)) {
-        return res
-          .status(400)
-          .json(
-            errorBody(
-              "Give part of a request ID (hex characters and dashes).",
-              requestId,
-              "VALIDATION_FAILED",
-            ),
-          );
+        return fail(
+          req,
+          res,
+          "VALIDATION_FAILED",
+          "Give part of a request ID (hex characters and dashes).",
+        );
       }
       try {
         const hits = await internalGet<{ hits: unknown[] }>(
@@ -135,16 +142,13 @@ export function registerMetricsRoutes(app: Express) {
         );
         res.json({ ...(hits ?? { hits: [] }), requestId });
       } catch (err) {
-        log.error({ err, requestId }, "Audit lookup failed");
-        res
-          .status(503)
-          .json(
-            errorBody(
-              "Audit lookup is temporarily unavailable.",
-              requestId,
-              "AUDIT_UNAVAILABLE",
-            ),
-          );
+        logTraceback(log, "Audit lookup failed", err, { requestId });
+        fail(
+          req,
+          res,
+          "AUDIT_UNAVAILABLE",
+          "Audit lookup is temporarily unavailable.",
+        );
       }
     },
   );
@@ -154,13 +158,20 @@ export function registerMetricsRoutes(app: Express) {
     "/api/v1/metrics/summary",
     requireAuth,
     requireAdmin,
-    async (_req: Request, res: Response) => {
+    async (req: Request, res: Response) => {
       try {
         const summary = await getMetricsSummary();
         res.json(summary);
       } catch (err) {
-        log.error({ err }, "Failed to query metrics summary");
-        res.status(500).json({ message: "Failed to query metrics summary" });
+        logTraceback(log, "Failed to query metrics summary", err, {
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(
+          req,
+          res,
+          "SERVICE_UNAVAILABLE",
+          "Failed to query metrics summary",
+        );
       }
     },
   );
@@ -171,19 +182,19 @@ export function registerMetricsRoutes(app: Express) {
     requireAuth,
     (req: Request, res: Response, next: import("express").NextFunction) => {
       if (!req.user?.isAdmin) {
-        return res
-          .status(403)
-          .json({ code: "FORBIDDEN", message: "Admin access required" });
+        return fail(req, res, "FORBIDDEN", "Admin access required");
       }
       next();
     },
-    async (_req: Request, res: Response) => {
+    async (req: Request, res: Response) => {
       try {
         const deleted = await cleanupOldSnapshots(7);
         res.json({ deleted });
       } catch (err) {
-        log.error({ err }, "Failed to cleanup metrics");
-        res.status(500).json({ message: "Failed to cleanup metrics" });
+        logTraceback(log, "Failed to cleanup metrics", err, {
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "SERVICE_UNAVAILABLE", "Failed to cleanup metrics");
       }
     },
   );

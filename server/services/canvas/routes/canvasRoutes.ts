@@ -20,6 +20,7 @@ import { canvasEdgeSchema, canvasNodeSchema } from "@shared/canvas";
 import type { CanvasSnapshot } from "../db/model";
 import { csrfProtect } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
+import { fail } from "@server/lib/errorEnvelope";
 import type { AppContext } from "@server/lib/registry";
 import type { IWorkspaceStorage } from "@services/workspace/db/storage";
 import type { ITeamStorage } from "@services/team/db/storage";
@@ -50,22 +51,22 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
   app.get(api.workspaces.getCanvas.path, isAuthenticated, async (req, res) => {
     const id = getParamId(req);
     const workspace = await workspaceStorage.getWorkspace(id);
-    if (!workspace)
-      return res.status(404).json({ message: "Workspace not found" });
+    if (!workspace) return fail(req, res, "NOT_FOUND", "Workspace not found");
     if (workspace.canvasCopyStatus === "copying") {
-      return res.status(409).json({
-        code: "CANVAS_COPY_IN_PROGRESS",
-        requestId: req.requestId ?? "unscoped",
-        message: "This workspace canvas is still being copied.",
-      });
+      return fail(
+        req,
+        res,
+        "CANVAS_COPY_IN_PROGRESS",
+        "This workspace canvas is still being copied.",
+      );
     }
     if (workspace.canvasCopyStatus === "failed") {
-      return res.status(503).json({
-        code: "CANVAS_COPY_FAILED",
-        requestId: req.requestId ?? "unscoped",
-        message:
-          "This workspace canvas copy failed. Retry it from the dashboard.",
-      });
+      return fail(
+        req,
+        res,
+        "CANVAS_COPY_FAILED",
+        "This workspace canvas copy failed. Retry it from the dashboard.",
+      );
     }
 
     const userId = req.user!.id;
@@ -73,9 +74,12 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
       isWorkspaceOwner(workspace, userId) ||
       (await teamStorage.canAccessWorkspace(userId, workspace.id));
     if (!hasAccess)
-      return res
-        .status(403)
-        .json({ message: "You do not have access to this workspace" });
+      return fail(
+        req,
+        res,
+        "FORBIDDEN",
+        "You do not have access to this workspace",
+      );
 
     try {
       let snapshot = await readCachedCanvas(id);
@@ -91,11 +95,12 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
       res.json(snapshot);
     } catch (err) {
       if (err instanceof CanvasDocConfigError) {
-        return res.status(503).json({
-          code: err.code,
-          requestId: req.requestId ?? "unscoped",
-          message: "Canvas storage is not configured for this document size.",
-        });
+        return fail(
+          req,
+          res,
+          err.code,
+          "Canvas storage is not configured for this document size.",
+        );
       }
       throw err;
     }
@@ -108,22 +113,22 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
     async (req, res) => {
       const id = getParamId(req);
       const workspace = await workspaceStorage.getWorkspace(id);
-      if (!workspace)
-        return res.status(404).json({ message: "Workspace not found" });
+      if (!workspace) return fail(req, res, "NOT_FOUND", "Workspace not found");
       if (workspace.canvasCopyStatus === "copying") {
-        return res.status(409).json({
-          code: "CANVAS_COPY_IN_PROGRESS",
-          requestId: req.requestId ?? "unscoped",
-          message: "This workspace canvas is still being copied.",
-        });
+        return fail(
+          req,
+          res,
+          "CANVAS_COPY_IN_PROGRESS",
+          "This workspace canvas is still being copied.",
+        );
       }
       if (workspace.canvasCopyStatus === "failed") {
-        return res.status(503).json({
-          code: "CANVAS_COPY_FAILED",
-          requestId: req.requestId ?? "unscoped",
-          message:
-            "This workspace canvas copy failed. Retry it from the dashboard.",
-        });
+        return fail(
+          req,
+          res,
+          "CANVAS_COPY_FAILED",
+          "This workspace canvas copy failed. Retry it from the dashboard.",
+        );
       }
 
       const userId = req.user!.id;
@@ -131,22 +136,28 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
         ? "workspace-owner"
         : await teamStorage.getWorkspaceRole(workspace.id, userId);
       if (!canEditWorkspace(role)) {
-        return res.status(403).json({
-          message: "Forbidden: Insufficient permissions to modify canvas",
-        });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "Forbidden: Insufficient permissions to modify canvas",
+        );
       }
 
       const input = api.workspaces.syncCanvas.input.safeParse(req.body);
       if (!input.success) {
-        return res.status(400).json({
-          code: "INVALID_CANVAS",
-          requestId: req.requestId ?? "unscoped",
-          message: "Canvas contains invalid nodes or connections.",
-          issues: input.error.issues.slice(0, 10).map((issue) => ({
-            path: issue.path.join("."),
-            message: issue.message,
-          })),
-        });
+        return fail(
+          req,
+          res,
+          "INVALID_CANVAS",
+          "Canvas contains invalid nodes or connections.",
+          {
+            issues: input.error.issues.slice(0, 10).map((issue) => ({
+              path: issue.path.join("."),
+              message: issue.message,
+            })),
+          },
+        );
       }
       const { baseRevision } = input.data;
       try {
@@ -175,41 +186,46 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
         res.json({ success: true, revision: snapshot.revision });
       } catch (err) {
         if (err instanceof CanvasInvalidGraphError) {
-          return res.status(400).json({
-            code: err.code,
-            requestId: req.requestId ?? "unscoped",
-            message: "Canvas contains invalid nodes or connections.",
-            issues: err.issues,
-          });
+          return fail(
+            req,
+            res,
+            err.code,
+            "Canvas contains invalid nodes or connections.",
+            { issues: err.issues },
+          );
         }
         if (err instanceof CanvasRevisionConflictError) {
-          return res.status(409).json({
-            code: err.code,
-            requestId: req.requestId ?? "unscoped",
-            message: "Canvas changed elsewhere. Reload before saving again.",
-            revision: err.currentRevision,
-          });
+          return fail(
+            req,
+            res,
+            err.code,
+            "Canvas changed elsewhere. Reload before saving again.",
+            { extra: { revision: err.currentRevision } },
+          );
         }
         if (err instanceof CanvasWriteLockedError) {
-          return res.status(503).json({
-            code: err.code,
-            requestId: req.requestId ?? "unscoped",
-            message: "Another canvas save is in progress. Retry shortly.",
-          });
+          return fail(
+            req,
+            res,
+            err.code,
+            "Another canvas save is in progress. Retry shortly.",
+          );
         }
         if (err instanceof CanvasWriteIncompleteError) {
-          return res.status(503).json({
-            code: err.code,
-            requestId: req.requestId ?? "unscoped",
-            message: "Canvas save was not fully written. Retry shortly.",
-          });
+          return fail(
+            req,
+            res,
+            err.code,
+            "Canvas save was not fully written. Retry shortly.",
+          );
         }
         if (err instanceof CanvasDocConfigError) {
-          return res.status(503).json({
-            code: err.code,
-            requestId: req.requestId ?? "unscoped",
-            message: "Canvas storage is not configured for this document size.",
-          });
+          return fail(
+            req,
+            res,
+            err.code,
+            "Canvas storage is not configured for this document size.",
+          );
         }
         throw err;
       }
@@ -230,17 +246,19 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
       const requestId = req.requestId ?? "unscoped";
       const id = getParamId(req);
       const workspace = await workspaceStorage.getWorkspace(id);
-      if (!workspace)
-        return res.status(404).json({ message: "Workspace not found" });
+      if (!workspace) return fail(req, res, "NOT_FOUND", "Workspace not found");
 
       const userId = req.user!.id;
       const role = isWorkspaceOwner(workspace, userId)
         ? "workspace-owner"
         : await teamStorage.getWorkspaceRole(workspace.id, userId);
       if (!canEditWorkspace(role)) {
-        return res.status(403).json({
-          message: "Forbidden: Insufficient permissions to import canvas",
-        });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "Forbidden: Insufficient permissions to import canvas",
+        );
       }
 
       const body = req.body as unknown;
@@ -257,20 +275,20 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
           ? (body as { edges: unknown[] }).edges
           : undefined;
       if (!rawNodes || !rawEdges) {
-        return res.status(422).json({
-          code: "NOT_A_CANVAS_FILE",
-          message:
-            "That file doesn't look like a canvas — it needs a nodes list and an edges list.",
-          requestId,
-        });
+        return fail(
+          req,
+          res,
+          "NOT_A_CANVAS_FILE",
+          "That file doesn't look like a canvas — it needs a nodes list and an edges list.",
+        );
       }
       if (rawNodes.length > 5_000 || rawEdges.length > 10_000) {
-        return res.status(422).json({
-          code: "IMPORT_TOO_LARGE",
-          message:
-            "That file is too big to import (max 5,000 nodes / 10,000 edges). Split it and try again.",
-          requestId,
-        });
+        return fail(
+          req,
+          res,
+          "IMPORT_TOO_LARGE",
+          "That file is too big to import (max 5,000 nodes / 10,000 edges). Split it and try again.",
+        );
       }
 
       interface ImportWarning {
@@ -334,13 +352,19 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
           { workspaceId: id, userId, requestId },
           "Canvas import rejected: nothing usable in file",
         );
-        return res.status(422).json({
-          code: "NOTHING_IMPORTABLE",
-          message:
-            "Nothing in that file could be used — every node and edge failed validation. Check the warnings and try again.",
-          warnings,
-          requestId,
-        });
+        return fail(
+          req,
+          res,
+          "NOTHING_IMPORTABLE",
+          "Nothing in that file could be used — every node and edge failed validation. Check the warnings and try again.",
+          {
+            issues: warnings.map((w) => ({
+              path: `${w.kind}[${w.index}]`,
+              message: w.reasons.join("; "),
+            })),
+            extra: { warnings },
+          },
+        );
       }
 
       const revision = await canvasStorage.getCanvasRevision(id);
@@ -389,23 +413,29 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
 
       const workspace = await workspaceStorage.getWorkspace(id);
       if (!workspace)
-        return res.status(404).json({ message: "Source workspace not found" });
+        return fail(req, res, "NOT_FOUND", "Source workspace not found");
 
       const userId = req.user!.id;
       const role = isWorkspaceOwner(workspace, userId)
         ? "workspace-owner"
         : await teamStorage.getWorkspaceRole(workspace.id, userId);
       if (!canEditWorkspace(role)) {
-        return res.status(403).json({
-          message: "Forbidden: Insufficient permissions to duplicate canvas",
-        });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "Forbidden: Insufficient permissions to duplicate canvas",
+        );
       }
 
       const destWorkspace = await workspaceStorage.getWorkspace(toWorkspaceId);
       if (!destWorkspace || destWorkspace.userId !== userId) {
-        return res
-          .status(403)
-          .json({ message: "Cannot write to destination workspace" });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "Cannot write to destination workspace",
+        );
       }
 
       await canvasStorage.duplicateCanvas(id, toWorkspaceId);

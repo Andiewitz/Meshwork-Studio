@@ -4,7 +4,8 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { csrfProtect } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
-import { errorBody } from "@server/lib/errorEnvelope";
+import { fail } from "@server/lib/errorEnvelope";
+import { firstIssueMessage, zodIssues } from "@server/lib/validation";
 import { logTraceback } from "@server/lib/traceback";
 import type { AppContext } from "@server/lib/registry";
 import { canEditWorkspace, canDeleteWorkspace } from "@server/lib/permissions";
@@ -60,7 +61,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
           { err, userId: getUserId(req) },
           "Failed to create collection",
         );
-        res.status(400).json({ message: "Failed to create collection" });
+        fail(req, res, "WORKSPACE_UNAVAILABLE", "Failed to create collection");
       }
     },
   );
@@ -68,14 +69,16 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
   app.get("/api/v1/collections/:id", isAuthenticated, async (req, res) => {
     const id = Number(req.params.id);
     const collection = await workspaceStorage.getCollectionById(id);
-    if (!collection)
-      return res.status(404).json({ message: "Collection not found" });
+    if (!collection) return fail(req, res, "NOT_FOUND", "Collection not found");
 
     const userId = getUserId(req);
     if (collection.userId !== userId)
-      return res
-        .status(403)
-        .json({ message: "You do not have access to this collection" });
+      return fail(
+        req,
+        res,
+        "FORBIDDEN",
+        "You do not have access to this collection",
+      );
 
     res.json(collection);
   });
@@ -87,14 +90,16 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     async (req, res) => {
       const id = Number(req.params.id);
       const existing = await workspaceStorage.getCollectionById(id);
-      if (!existing)
-        return res.status(404).json({ message: "Collection not found" });
+      if (!existing) return fail(req, res, "NOT_FOUND", "Collection not found");
 
       const userId = getUserId(req);
       if (existing.userId !== userId)
-        return res
-          .status(403)
-          .json({ message: "You do not have access to this collection" });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "You do not have access to this collection",
+        );
 
       const updated = await workspaceStorage.updateCollection(
         id,
@@ -115,14 +120,16 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     async (req, res) => {
       const id = Number(req.params.id);
       const existing = await workspaceStorage.getCollectionById(id);
-      if (!existing)
-        return res.status(404).json({ message: "Collection not found" });
+      if (!existing) return fail(req, res, "NOT_FOUND", "Collection not found");
 
       const userId = getUserId(req);
       if (existing.userId !== userId)
-        return res
-          .status(403)
-          .json({ message: "You do not have access to this collection" });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "You do not have access to this collection",
+        );
 
       await workspaceStorage.deleteCollection(id);
       res.status(204).send();
@@ -148,24 +155,22 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
   }
 
   app.get(api.workspaces.get.path, isAuthenticated, async (req, res) => {
-    const requestId = req.requestId ?? "unscoped";
     const id = getParamId(req);
     try {
       const workspace = await workspaceStorage.getWorkspace(id);
-      if (!workspace)
-        return res
-          .status(404)
-          .json({ message: "Workspace not found", requestId });
+      if (!workspace) return fail(req, res, "NOT_FOUND", "Workspace not found");
 
       const userId = getUserId(req);
       const hasAccess =
         isWorkspaceOwner(workspace, userId) ||
         (await teamStorage.canAccessWorkspace(userId, workspace.id));
       if (!hasAccess)
-        return res.status(403).json({
-          message: "You do not have access to this workspace",
-          requestId,
-        });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "You do not have access to this workspace",
+        );
 
       res.json(workspace);
     } catch (error) {
@@ -175,17 +180,14 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
       logTraceback(log, "Failed to load workspace", error, {
         userId: req.user?.id,
         workspaceId: id,
-        requestId,
+        requestId: req.requestId ?? "unscoped",
       });
-      res
-        .status(503)
-        .json(
-          errorBody(
-            "Workspace service is temporarily unavailable. Try again shortly.",
-            requestId,
-            "WORKSPACE_UNAVAILABLE",
-          ),
-        );
+      fail(
+        req,
+        res,
+        "WORKSPACE_UNAVAILABLE",
+        "Workspace service is temporarily unavailable. Try again shortly.",
+      );
     }
   });
 
@@ -204,13 +206,20 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
         res.status(201).json(workspace);
       } catch (err) {
         if (err instanceof z.ZodError) {
-          return res.status(400).json({ message: err.errors[0].message });
+          return fail(req, res, "VALIDATION_FAILED", firstIssueMessage(err), {
+            issues: zodIssues(err),
+          });
         }
-        log.error(
-          { err, userId: getUserId(req) },
-          "Failed to create workspace",
+        logTraceback(log, "Failed to create workspace", err, {
+          userId: getUserId(req),
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(
+          req,
+          res,
+          "WORKSPACE_UNAVAILABLE",
+          "Workspace could not be created. Try again shortly.",
         );
-        throw err;
       }
     },
   );
@@ -224,29 +233,40 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
         const input = api.workspaces.update.input.parse(req.body);
         const id = getParamId(req);
         const existing = await workspaceStorage.getWorkspace(id);
-        if (!existing) return res.status(404).json({ message: "Not found" });
+        if (!existing) return fail(req, res, "NOT_FOUND", "Not found");
 
         const userId = getUserId(req);
         const role = isWorkspaceOwner(existing, userId)
           ? "workspace-owner"
           : await teamStorage.getWorkspaceRole(id, userId);
         if (!canEditWorkspace(role)) {
-          return res.status(403).json({
-            message: "Forbidden: Insufficient permissions to modify workspace",
-          });
+          return fail(
+            req,
+            res,
+            "FORBIDDEN",
+            "Forbidden: Insufficient permissions to modify workspace",
+          );
         }
 
         const updated = await workspaceStorage.updateWorkspace(id, input);
         res.json(updated);
       } catch (err) {
         if (err instanceof z.ZodError) {
-          return res.status(400).json({ message: err.errors[0].message });
+          return fail(req, res, "VALIDATION_FAILED", firstIssueMessage(err), {
+            issues: zodIssues(err),
+          });
         }
-        log.error(
-          { err, userId: getUserId(req), workspaceId: getParamId(req) },
-          "Failed to update workspace",
+        logTraceback(log, "Failed to update workspace", err, {
+          userId: getUserId(req),
+          workspaceId: getParamId(req),
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(
+          req,
+          res,
+          "WORKSPACE_UNAVAILABLE",
+          "Workspace could not be updated. Try again shortly.",
         );
-        throw err;
       }
     },
   );
@@ -258,7 +278,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     async (req, res) => {
       const id = getParamId(req);
       const existing = await workspaceStorage.getWorkspace(id);
-      if (!existing) return res.status(404).json({ message: "Not found" });
+      if (!existing) return fail(req, res, "NOT_FOUND", "Not found");
 
       const userId = getUserId(req);
 
@@ -266,16 +286,18 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
         isWorkspaceOwner(existing, userId) ||
         (await teamStorage.canAccessWorkspace(userId, id));
       if (!hasAccess)
-        return res.status(403).json({ message: "No access to this workspace" });
+        return fail(req, res, "FORBIDDEN", "No access to this workspace");
 
       const role = isWorkspaceOwner(existing, userId)
         ? "workspace-owner"
         : await teamStorage.getWorkspaceRole(id, userId);
       if (!canDeleteWorkspace(role)) {
-        return res.status(403).json({
-          message:
-            "Forbidden: Only admins and owners can delete this workspace",
-        });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "Forbidden: Only admins and owners can delete this workspace",
+        );
       }
 
       await workspaceStorage.deleteWorkspaceAndEnqueueCleanup(id);
@@ -291,17 +313,19 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     async (req, res) => {
       const id = getParamId(req);
       const existing = await workspaceStorage.getWorkspace(id);
-      if (!existing) return res.status(404).json({ message: "Not found" });
+      if (!existing) return fail(req, res, "NOT_FOUND", "Not found");
 
       const userId = getUserId(req);
       const role = isWorkspaceOwner(existing, userId)
         ? "workspace-owner"
         : await teamStorage.getWorkspaceRole(id, userId);
       if (!canDeleteWorkspace(role)) {
-        return res.status(403).json({
-          message:
-            "Forbidden: Only admins and owners can duplicate this workspace",
-        });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "Forbidden: Only admins and owners can duplicate this workspace",
+        );
       }
 
       const { title } = req.body;
@@ -323,16 +347,19 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     async (req, res) => {
       const id = getParamId(req);
       const workspace = await workspaceStorage.getWorkspace(id);
-      if (!workspace) return res.status(404).json({ message: "Not found" });
+      if (!workspace) return fail(req, res, "NOT_FOUND", "Not found");
 
       const userId = getUserId(req);
       const role = isWorkspaceOwner(workspace, userId)
         ? "workspace-owner"
         : await teamStorage.getWorkspaceRole(id, userId);
       if (!canDeleteWorkspace(role)) {
-        return res.status(403).json({
-          message: "Forbidden: Only admins and owners can retry a canvas copy",
-        });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "Forbidden: Only admins and owners can retry a canvas copy",
+        );
       }
 
       try {
@@ -347,15 +374,12 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
           workspaceId: id,
           requestId: req.requestId ?? "unscoped",
         });
-        res
-          .status(409)
-          .json(
-            errorBody(
-              "Canvas copy retry failed. Check copy status and try again.",
-              req.requestId ?? "unscoped",
-              "CANVAS_COPY_RETRY_FAILED",
-            ),
-          );
+        fail(
+          req,
+          res,
+          "CANVAS_COPY_RETRY_FAILED",
+          "Canvas copy retry failed. Check copy status and try again.",
+        );
       }
     },
   );

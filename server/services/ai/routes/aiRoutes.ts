@@ -1,5 +1,9 @@
 import { Router, Request, Response, RequestHandler } from "express";
+import { ZodError } from "zod";
 import { createChildLogger } from "@server/lib/logger";
+import { fail } from "@server/lib/errorEnvelope";
+import { firstIssueMessage, zodIssues } from "@server/lib/validation";
+import { logTraceback } from "@server/lib/traceback";
 import {
   createApiKey,
   deleteApiKey,
@@ -75,22 +79,20 @@ function handleResolutionError(
   req: Request,
   res: Response,
 ) {
-  const requestId = req.requestId ?? "unscoped";
   switch (error.code) {
     case "BYOK_DECRYPT_FAILED":
-      return res
-        .status(500)
-        .json({ code: error.code, message: error.message, requestId });
+      return fail(req, res, "BYOK_DECRYPT_FAILED", error.message);
     case "NO_ACTIVE_KEY":
-      return res
-        .status(404)
-        .json({ code: error.code, message: error.message, requestId });
+      return fail(req, res, "NO_ACTIVE_KEY", error.message);
     case "FALLBACK_NOT_CONFIGURED":
-      return res
-        .status(503)
-        .json({ code: error.code, message: error.message, requestId });
+      return fail(req, res, "FALLBACK_NOT_CONFIGURED", error.message);
     default:
-      return res.status(500).json({ message: error.message, requestId });
+      return fail(
+        req,
+        res,
+        "INTERNAL",
+        "AI provider selection failed. Try again.",
+      );
   }
 }
 
@@ -129,8 +131,11 @@ export function createAIRoutes(context: AppContext) {
         })),
       );
     } catch (error) {
-      log.error({ err: error, userId: req.user?.id }, "Failed to list keys");
-      res.status(500).json({ message: "Failed to retrieve API keys" });
+      logTraceback(log, "Failed to list keys", error, {
+        userId: req.user?.id,
+        requestId: req.requestId ?? "unscoped",
+      });
+      fail(req, res, "AI_UNAVAILABLE", "Failed to retrieve API keys");
     }
   });
 
@@ -145,15 +150,21 @@ export function createAIRoutes(context: AppContext) {
         const { provider, apiKey } = req.body;
 
         if (!provider || !apiKey) {
-          return res
-            .status(400)
-            .json({ message: "Provider and apiKey are required" });
+          return fail(
+            req,
+            res,
+            "VALIDATION_FAILED",
+            "Provider and apiKey are required",
+          );
         }
 
         if (!validateKeyFormat(provider, apiKey)) {
-          return res.status(400).json({
-            message: `Invalid API key format for ${provider}`,
-          });
+          return fail(
+            req,
+            res,
+            "VALIDATION_FAILED",
+            `Invalid API key format for ${provider}`,
+          );
         }
 
         const key = await createApiKey({ userId, provider, apiKey });
@@ -166,11 +177,12 @@ export function createAIRoutes(context: AppContext) {
           createdAt: key.createdAt,
         });
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id, provider: req.body?.provider },
-          "Failed to create key",
-        );
-        res.status(500).json({ message: "Failed to store API key" });
+        logTraceback(log, "Failed to create key", error, {
+          userId: req.user?.id,
+          provider: req.body?.provider,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to store API key");
       }
     },
   );
@@ -184,15 +196,21 @@ export function createAIRoutes(context: AppContext) {
         const { provider, apiKey } = req.body;
 
         if (!provider || !apiKey) {
-          return res
-            .status(400)
-            .json({ message: "Provider and apiKey are required" });
+          return fail(
+            req,
+            res,
+            "VALIDATION_FAILED",
+            "Provider and apiKey are required",
+          );
         }
 
         if (!validateKeyFormat(provider, apiKey)) {
-          return res.status(400).json({
-            message: `Invalid API key format for ${provider}`,
-          });
+          return fail(
+            req,
+            res,
+            "VALIDATION_FAILED",
+            `Invalid API key format for ${provider}`,
+          );
         }
 
         let valid = false;
@@ -214,15 +232,18 @@ export function createAIRoutes(context: AppContext) {
               await import("../providers/openrouter");
             valid = await validateOpenRouterKey(apiKey);
           } else {
-            return res
-              .status(400)
-              .json({ message: `Unsupported provider: ${provider}` });
+            return fail(
+              req,
+              res,
+              "VALIDATION_FAILED",
+              `Unsupported provider: ${provider}`,
+            );
           }
         } catch (validationErr: unknown) {
-          log.error(
-            { err: validationErr, provider },
-            "Key validation call failed",
-          );
+          logTraceback(log, "Key validation call failed", validationErr, {
+            provider,
+            requestId: req.requestId ?? "unscoped",
+          });
           validationError = "Could not reach provider to validate key";
         }
 
@@ -235,11 +256,11 @@ export function createAIRoutes(context: AppContext) {
           message: valid ? "API key is valid and working" : validationError,
         });
       } catch (error) {
-        log.error(
-          { err: error, provider: req.body?.provider },
-          "Failed to test key",
-        );
-        res.status(500).json({ message: "Failed to test API key" });
+        logTraceback(log, "Failed to test key", error, {
+          provider: req.body?.provider,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to test API key");
       }
     },
   );
@@ -257,16 +278,17 @@ export function createAIRoutes(context: AppContext) {
         const deleted = await deleteApiKey(userId, keyId);
 
         if (!deleted) {
-          return res.status(404).json({ message: "API key not found" });
+          return fail(req, res, "NOT_FOUND", "API key not found");
         }
 
         res.json({ success: true });
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id, keyId: req.params.id },
-          "Failed to delete key",
-        );
-        res.status(500).json({ message: "Failed to delete API key" });
+        logTraceback(log, "Failed to delete key", error, {
+          userId: req.user?.id,
+          keyId: req.params.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to delete API key");
       }
     },
   );
@@ -306,9 +328,12 @@ export function createAIRoutes(context: AppContext) {
         };
 
         if (!messages || !Array.isArray(messages)) {
-          return res
-            .status(400)
-            .json({ message: "messages array is required" });
+          return fail(
+            req,
+            res,
+            "VALIDATION_FAILED",
+            "messages array is required",
+          );
         }
         const boundedMaxTokens = Math.min(
           MAX_CHAT_TOKENS,
@@ -511,9 +536,12 @@ export function createAIRoutes(context: AppContext) {
             res.json(response);
           }
         } else {
-          return res
-            .status(400)
-            .json({ message: `Unsupported provider: ${resolvedProvider}` });
+          return fail(
+            req,
+            res,
+            "VALIDATION_FAILED",
+            `Unsupported provider: ${resolvedProvider}`,
+          );
         }
       } catch (error: unknown) {
         const reason = abortReason(providerAbortScope?.signal);
@@ -523,14 +551,10 @@ export function createAIRoutes(context: AppContext) {
         }
 
         const requestId = req.requestId ?? "unscoped";
-        log.error(
-          {
-            err: error,
-            userId: req.user?.id,
-            requestId,
-          },
-          "Chat completion failed",
-        );
+        logTraceback(log, "Chat completion failed", error, {
+          userId: req.user?.id,
+          requestId,
+        });
 
         const providerError = error as {
           status?: number;
@@ -547,21 +571,27 @@ export function createAIRoutes(context: AppContext) {
           reason instanceof ProviderTimeoutError
             ? reason.message
             : "AI provider returned an error. Quote the request ID to support.";
+        const upstreamRateLimited = statusCode === 429;
+        const publicCode = upstreamRateLimited
+          ? ("RATE_LIMITED" as const)
+          : ("PROVIDER_ERROR" as const);
         if (res.headersSent) {
           if (!res.writableEnded && !res.destroyed) {
-            writeSse(
-              res,
-              { code: "PROVIDER_ERROR", message, requestId },
-              "error",
-            );
+            writeSse(res, { code: publicCode, message, requestId }, "error");
             res.end();
           }
           return;
         }
         res
-          .status(statusCode >= 400 && statusCode < 600 ? statusCode : 502)
+          .status(
+            upstreamRateLimited
+              ? 429
+              : statusCode >= 400 && statusCode < 600
+                ? statusCode
+                : 502,
+          )
           .json({
-            code: "PROVIDER_ERROR",
+            code: publicCode,
             message,
             requestId,
           });
@@ -593,12 +623,12 @@ export function createAIRoutes(context: AppContext) {
         // Suggestions should be cheap hints, never a way to turn a large
         // document into an unbounded provider prompt.
         if (canvasNodes.length > 100 || canvasEdges.length > 150) {
-          return res.status(413).json({
-            code: "CANVAS_TOO_LARGE",
-            message:
-              "Canvas is too large for AI suggestions. Split it or slim it below 100 nodes / 150 edges.",
-            requestId: req.requestId ?? "unscoped",
-          });
+          return fail(
+            req,
+            res,
+            "CANVAS_TOO_LARGE",
+            "Canvas is too large for AI suggestions. Split it or slim it below 100 nodes / 150 edges.",
+          );
         }
 
         let resolved;
@@ -632,9 +662,12 @@ export function createAIRoutes(context: AppContext) {
         } else if (provider === "openrouter") {
           suggestionsModel = "meta-llama/llama-3-8b-instruct:free";
         } else {
-          return res.status(400).json({
-            message: `Unsupported provider for suggestions: ${provider}`,
-          });
+          return fail(
+            req,
+            res,
+            "VALIDATION_FAILED",
+            `Unsupported provider for suggestions: ${provider}`,
+          );
         }
 
         const prompt = `You are Jenkos, the expert cloud architecture co-pilot for Meshwork Studio. 
@@ -733,7 +766,10 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         ) {
           return;
         }
-        log.error({ err: error, userId: req.user?.id }, "Suggestions failed");
+        logTraceback(log, "Suggestions failed", error, {
+          userId: req.user?.id,
+          requestId: req.requestId ?? "unscoped",
+        });
         return res.json([
           "Design a scalable Kubernetes microservices architecture",
           "Set up a high-availability Postgres cluster",
@@ -761,11 +797,11 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         const list = await getConversations(userId, { workspaceId, scope });
         res.json(list);
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id },
-          "Failed to list conversations",
-        );
-        res.status(500).json({ message: "Failed to list conversations" });
+        logTraceback(log, "Failed to list conversations", error, {
+          userId: req.user?.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to list conversations");
       }
     },
   );
@@ -786,11 +822,16 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         const created = await createConversation(parsed);
         res.status(201).json(created);
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id },
-          "Failed to create conversation",
-        );
-        res.status(400).json({ message: "Failed to create conversation" });
+        if (error instanceof ZodError) {
+          return fail(req, res, "VALIDATION_FAILED", firstIssueMessage(error), {
+            issues: zodIssues(error),
+          });
+        }
+        logTraceback(log, "Failed to create conversation", error, {
+          userId: req.user?.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to create conversation");
       }
     },
   );
@@ -806,16 +847,16 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         const conversation = await getConversationById(conversationId, userId);
 
         if (!conversation) {
-          return res.status(404).json({ message: "Conversation not found" });
+          return fail(req, res, "NOT_FOUND", "Conversation not found");
         }
 
         res.json(conversation);
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id },
-          "Failed to get conversation",
-        );
-        res.status(500).json({ message: "Failed to get conversation" });
+        logTraceback(log, "Failed to get conversation", error, {
+          userId: req.user?.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to get conversation");
       }
     },
   );
@@ -836,16 +877,16 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         );
 
         if (!updated) {
-          return res.status(404).json({ message: "Conversation not found" });
+          return fail(req, res, "NOT_FOUND", "Conversation not found");
         }
 
         res.json(updated);
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id },
-          "Failed to update conversation",
-        );
-        res.status(500).json({ message: "Failed to update conversation" });
+        logTraceback(log, "Failed to update conversation", error, {
+          userId: req.user?.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to update conversation");
       }
     },
   );
@@ -862,16 +903,16 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         const deleted = await deleteConversation(conversationId, userId);
 
         if (!deleted) {
-          return res.status(404).json({ message: "Conversation not found" });
+          return fail(req, res, "NOT_FOUND", "Conversation not found");
         }
 
         res.json({ success: true });
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id },
-          "Failed to delete conversation",
-        );
-        res.status(500).json({ message: "Failed to delete conversation" });
+        logTraceback(log, "Failed to delete conversation", error, {
+          userId: req.user?.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to delete conversation");
       }
     },
   );
@@ -887,7 +928,7 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         const conversation = await getConversationById(conversationId, userId);
 
         if (!conversation) {
-          return res.status(404).json({ message: "Conversation not found" });
+          return fail(req, res, "NOT_FOUND", "Conversation not found");
         }
 
         const limit = req.query.limit
@@ -899,11 +940,11 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         );
         res.json(messageList);
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id },
-          "Failed to get messages",
-        );
-        res.status(500).json({ message: "Failed to get messages" });
+        logTraceback(log, "Failed to get messages", error, {
+          userId: req.user?.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to get messages");
       }
     },
   );
@@ -920,7 +961,7 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         const conversation = await getConversationById(conversationId, userId);
 
         if (!conversation) {
-          return res.status(404).json({ message: "Conversation not found" });
+          return fail(req, res, "NOT_FOUND", "Conversation not found");
         }
 
         const parsed = insertMessageSchema.parse({
@@ -931,11 +972,16 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         const created = await createMessage(parsed);
         res.status(201).json(created);
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id },
-          "Failed to create message",
-        );
-        res.status(400).json({ message: "Failed to create message" });
+        if (error instanceof ZodError) {
+          return fail(req, res, "VALIDATION_FAILED", firstIssueMessage(error), {
+            issues: zodIssues(error),
+          });
+        }
+        logTraceback(log, "Failed to create message", error, {
+          userId: req.user?.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to create message");
       }
     },
   );
@@ -964,11 +1010,11 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         });
         res.json(memoryList);
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id },
-          "Failed to list memories",
-        );
-        res.status(500).json({ message: "Failed to list memories" });
+        logTraceback(log, "Failed to list memories", error, {
+          userId: req.user?.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to list memories");
       }
     },
   );
@@ -984,19 +1030,22 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         const workspaceId = req.query.workspaceId as string | undefined;
 
         if (!query) {
-          return res
-            .status(400)
-            .json({ message: "Search query 'q' is required" });
+          return fail(
+            req,
+            res,
+            "VALIDATION_FAILED",
+            "Search query 'q' is required",
+          );
         }
 
         const results = await searchMemories(userId, query, { workspaceId });
         res.json(results);
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id },
-          "Failed to search memories",
-        );
-        res.status(500).json({ message: "Failed to search memories" });
+        logTraceback(log, "Failed to search memories", error, {
+          userId: req.user?.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to search memories");
       }
     },
   );
@@ -1017,11 +1066,16 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         const created = await createMemory(parsed);
         res.status(201).json(created);
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id },
-          "Failed to create memory",
-        );
-        res.status(400).json({ message: "Failed to create memory" });
+        if (error instanceof ZodError) {
+          return fail(req, res, "VALIDATION_FAILED", firstIssueMessage(error), {
+            issues: zodIssues(error),
+          });
+        }
+        logTraceback(log, "Failed to create memory", error, {
+          userId: req.user?.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to create memory");
       }
     },
   );
@@ -1038,16 +1092,16 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         const memory = await recallMemory(memoryId, userId);
 
         if (!memory) {
-          return res.status(404).json({ message: "Memory not found" });
+          return fail(req, res, "NOT_FOUND", "Memory not found");
         }
 
         res.json(memory);
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id },
-          "Failed to recall memory",
-        );
-        res.status(500).json({ message: "Failed to recall memory" });
+        logTraceback(log, "Failed to recall memory", error, {
+          userId: req.user?.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to recall memory");
       }
     },
   );
@@ -1064,16 +1118,16 @@ Do NOT wrap the output in markdown code blocks like \`\`\`json. Return only the 
         const deleted = await deleteMemory(memoryId, userId);
 
         if (!deleted) {
-          return res.status(404).json({ message: "Memory not found" });
+          return fail(req, res, "NOT_FOUND", "Memory not found");
         }
 
         res.json({ success: true });
       } catch (error) {
-        log.error(
-          { err: error, userId: req.user?.id },
-          "Failed to delete memory",
-        );
-        res.status(500).json({ message: "Failed to delete memory" });
+        logTraceback(log, "Failed to delete memory", error, {
+          userId: req.user?.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(req, res, "AI_UNAVAILABLE", "Failed to delete memory");
       }
     },
   );

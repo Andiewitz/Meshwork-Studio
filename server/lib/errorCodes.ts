@@ -55,6 +55,7 @@ export const ERROR_CODES = {
 
   // ── Canvas ──────────────────────────────────────────────────────────────
   CANVAS_COPY_IN_PROGRESS: 409,
+  CANVAS_COPY_RETRY_FAILED: 409,
   CANVAS_REVISION_CONFLICT: 409,
   INVALID_CANVAS: 400,
   NOT_A_CANVAS_FILE: 422,

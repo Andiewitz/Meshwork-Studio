@@ -6,6 +6,7 @@ import { Verifier, type AssertionClaims } from "./assertion";
 import { revokedSessions, startRevocationListener } from "./denylist";
 import { introspectSession } from "./introspect";
 import { createChildLogger } from "../lib/logger";
+import { fail } from "../lib/errorEnvelope";
 
 const log = createChildLogger("auth-middleware");
 
@@ -137,15 +138,17 @@ async function authenticate(
  * the client turns the latter into "session expired, log in again"
  * instead of blaming the user's password.
  */
-const unauthorized = (req: Request, res: Response, reason?: string) =>
-  res.status(401).json({
-    code: reason === "no_session_cookie" ? "NO_SESSION" : "SESSION_EXPIRED",
-    message:
-      reason === "no_session_cookie"
-        ? "Authentication required"
-        : "Session expired or invalid. Please log in again.",
-    requestId: req.requestId ?? "unscoped",
-  });
+const unauthorized = (req: Request, res: Response, reason?: string) => {
+  const noSession = reason === "no_session_cookie";
+  return fail(
+    req,
+    res,
+    noSession ? "NO_SESSION" : "SESSION_EXPIRED",
+    noSession
+      ? "Authentication required"
+      : "Session expired or invalid. Please log in again.",
+  );
+};
 
 /** Populates req.user when a valid assertion exists; never rejects. */
 export const optionalAuth: RequestHandler = (req, _res, next) => {

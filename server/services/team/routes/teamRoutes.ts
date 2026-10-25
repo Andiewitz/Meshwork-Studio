@@ -1,9 +1,12 @@
 import type { Express, RequestHandler, Request } from "express";
-import { teamStorage } from "../db/storage";
+import { TeamJoinError, teamStorage } from "../db/storage";
 import { joinTeamSchema, updateMemberRoleSchema } from "../db/schema";
 import { csrfProtect } from "../../../auth";
 import { z } from "zod";
 import { createChildLogger } from "@server/lib/logger";
+import { fail } from "@server/lib/errorEnvelope";
+import { firstIssueMessage, zodIssues } from "@server/lib/validation";
+import { logTraceback } from "@server/lib/traceback";
 import type { AppContext } from "@server/lib/registry";
 import type { IWorkspaceStorage } from "@services/workspace/db/storage";
 
@@ -27,20 +30,34 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
     try {
       const { name } = req.body as { name?: unknown };
       if (!name || typeof name !== "string" || name.trim().length === 0) {
-        return res.status(400).json({ message: "Team name is required" });
+        return fail(req, res, "VALIDATION_FAILED", "Team name is required", {
+          status: 400,
+        });
       }
       if (name.length > 64) {
-        return res
-          .status(400)
-          .json({ message: "Team name must be 64 characters or less" });
+        return fail(
+          req,
+          res,
+          "VALIDATION_FAILED",
+          "Team name must be 64 characters or less",
+          { status: 400 },
+        );
       }
 
       const userId = getUserId(req);
       const team = await teamStorage.createTeam(name.trim(), userId);
       res.status(201).json(team);
     } catch (err) {
-      log.error({ err, userId: getUserId(req) }, "Failed to create team");
-      res.status(400).json({ message: "Failed to create team" });
+      logTraceback(log, "Failed to create team", err, {
+        userId: getUserId(req),
+        requestId: req.requestId ?? "unscoped",
+      });
+      fail(
+        req,
+        res,
+        "TEAM_UNAVAILABLE",
+        "Team could not be created. Try again shortly.",
+      );
     }
   });
 
@@ -60,10 +77,10 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
 
     const isMember = await teamStorage.isTeamMember(teamId, userId);
     if (!isMember)
-      return res.status(403).json({ message: "Not a member of this team" });
+      return fail(req, res, "FORBIDDEN", "Not a member of this team");
 
     const team = await teamStorage.getTeam(teamId);
-    if (!team) return res.status(404).json({ message: "Team not found" });
+    if (!team) return fail(req, res, "NOT_FOUND", "Team not found");
 
     const members = await teamStorage.getTeamMembers(teamId);
     res.json({ ...team, members });
@@ -85,10 +102,29 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
         res.status(201).json(result);
       } catch (err) {
         if (err instanceof z.ZodError) {
-          return res.status(400).json({ message: err.errors[0].message });
+          return fail(req, res, "VALIDATION_FAILED", firstIssueMessage(err), {
+            issues: zodIssues(err),
+          });
         }
-        log.error({ err, userId: getUserId(req) }, "Failed to join team");
-        res.status(400).json({ message: "Failed to join team" });
+        if (err instanceof TeamJoinError) {
+          return fail(
+            req,
+            res,
+            err.reason === "invalid_invite" ? "NOT_FOUND" : "CONFLICT",
+            err.message,
+            { status: err.reason === "invalid_invite" ? 404 : 409 },
+          );
+        }
+        logTraceback(log, "Failed to join team", err, {
+          userId: getUserId(req),
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(
+          req,
+          res,
+          "TEAM_UNAVAILABLE",
+          "Team could not be joined. Try again shortly.",
+        );
       }
     },
   );
@@ -109,15 +145,22 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
 
       const isOwner = await teamStorage.isTeamOwner(teamId, requesterId);
       if (requesterId !== targetUserId && !isOwner) {
-        return res
-          .status(403)
-          .json({ message: "Only the team owner can remove other members" });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "Only the team owner can remove other members",
+          { status: 403 },
+        );
       }
 
       if (isOwner && requesterId === targetUserId) {
-        return res
-          .status(400)
-          .json({ message: "Owner cannot leave. Delete the team instead." });
+        return fail(
+          req,
+          res,
+          "CONFLICT",
+          "Owner cannot leave. Delete the team instead.",
+        );
       }
 
       await teamStorage.leaveTeam(teamId, targetUserId);
@@ -139,27 +182,45 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
         const { workspaceId } = req.body as { workspaceId?: unknown };
 
         if (!workspaceId || typeof workspaceId !== "string") {
-          return res.status(400).json({ message: "workspaceId is required" });
+          return fail(
+            req,
+            res,
+            "VALIDATION_FAILED",
+            "workspaceId is required",
+            {
+              status: 400,
+            },
+          );
         }
 
         const isMember = await teamStorage.isTeamMember(teamId, userId);
-        if (!isMember) return res.status(403).json({ message: "Not a member" });
+        if (!isMember) return fail(req, res, "FORBIDDEN", "Not a member");
 
         const ws = await workspaceStorage.getWorkspace(workspaceId);
         if (ws?.userId !== userId) {
-          return res
-            .status(403)
-            .json({ message: "You can only share workspaces you own" });
+          return fail(
+            req,
+            res,
+            "FORBIDDEN",
+            "You can only share workspaces you own",
+            { status: 403 },
+          );
         }
 
         const tw = await teamStorage.shareWorkspace(teamId, workspaceId);
         res.status(201).json(tw);
       } catch (err) {
-        log.error(
-          { err, userId: getUserId(req), teamId: req.params.id },
-          "Failed to share workspace",
+        logTraceback(log, "Failed to share workspace", err, {
+          userId: getUserId(req),
+          teamId: req.params.id,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(
+          req,
+          res,
+          "TEAM_UNAVAILABLE",
+          "Workspace could not be shared. Try again shortly.",
         );
-        res.status(400).json({ message: "Failed to share workspace" });
       }
     },
   );
@@ -172,7 +233,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
     const userId = getUserId(req);
 
     const isMember = await teamStorage.isTeamMember(teamId, userId);
-    if (!isMember) return res.status(403).json({ message: "Not a member" });
+    if (!isMember) return fail(req, res, "FORBIDDEN", "Not a member");
 
     const workspaces = await teamStorage.getTeamWorkspaces(teamId);
     res.json(workspaces);
@@ -194,14 +255,18 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
       const userId = getUserId(req);
 
       const isMember = await teamStorage.isTeamMember(teamId, userId);
-      if (!isMember) return res.status(403).json({ message: "Not a member" });
+      if (!isMember) return fail(req, res, "FORBIDDEN", "Not a member");
 
       const ws = await workspaceStorage.getWorkspace(workspaceId);
       const isOwner = await teamStorage.isTeamOwner(teamId, userId);
       if (ws?.userId !== userId && !isOwner) {
-        return res.status(403).json({
-          message: "Only the workspace owner or team owner can unshare",
-        });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "Only the workspace owner or team owner can unshare",
+          { status: 403 },
+        );
       }
 
       await teamStorage.unshareWorkspace(teamId, workspaceId);
@@ -222,9 +287,13 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
 
       const isOwner = await teamStorage.isTeamOwner(teamId, userId);
       if (!isOwner)
-        return res
-          .status(403)
-          .json({ message: "Only the owner can regenerate the invite code" });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "Only the owner can regenerate the invite code",
+          { status: 403 },
+        );
 
       const team = await teamStorage.regenerateInviteCode(teamId);
       res.json(team);
@@ -244,9 +313,13 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
 
       const isOwner = await teamStorage.isTeamOwner(teamId, userId);
       if (!isOwner)
-        return res
-          .status(403)
-          .json({ message: "Only the owner can delete the team" });
+        return fail(
+          req,
+          res,
+          "FORBIDDEN",
+          "Only the owner can delete the team",
+          { status: 403 },
+        );
 
       await teamStorage.deleteTeam(teamId);
       res.status(204).send();
@@ -272,9 +345,13 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
 
         const actorRole = await teamStorage.getMemberRole(teamId, actorId);
         if (!actorRole || (actorRole !== "owner" && actorRole !== "admin")) {
-          return res
-            .status(403)
-            .json({ message: "Only owners and admins can change roles" });
+          return fail(
+            req,
+            res,
+            "FORBIDDEN",
+            "Only owners and admins can change roles",
+            { status: 403 },
+          );
         }
 
         const targetRole = await teamStorage.getMemberRole(
@@ -282,15 +359,19 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
           targetUserId,
         );
         if (targetRole === "owner") {
-          return res
-            .status(403)
-            .json({ message: "Cannot change the owner's role" });
+          return fail(req, res, "FORBIDDEN", "Cannot change the owner's role", {
+            status: 403,
+          });
         }
 
         if (actorRole === "admin" && newRole === "admin") {
-          return res
-            .status(403)
-            .json({ message: "Only the owner can promote to admin" });
+          return fail(
+            req,
+            res,
+            "FORBIDDEN",
+            "Only the owner can promote to admin",
+            { status: 403 },
+          );
         }
 
         const updated = await teamStorage.updateMemberRole(
@@ -301,20 +382,26 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
         res.json(updated);
       } catch (err) {
         if (err instanceof z.ZodError) {
-          return res
-            .status(400)
-            .json({ message: err.errors[0]?.message || "Invalid role" });
+          return fail(
+            req,
+            res,
+            "VALIDATION_FAILED",
+            firstIssueMessage(err, "Invalid role"),
+            { issues: zodIssues(err) },
+          );
         }
-        log.error(
-          {
-            err,
-            userId: getUserId(req),
-            teamId: req.params.id,
-            targetUserId: req.params.userId,
-          },
-          "Failed to update member role",
+        logTraceback(log, "Failed to update member role", err, {
+          userId: getUserId(req),
+          teamId: req.params.id,
+          targetUserId: req.params.userId,
+          requestId: req.requestId ?? "unscoped",
+        });
+        fail(
+          req,
+          res,
+          "TEAM_UNAVAILABLE",
+          "Member role could not be updated. Try again shortly.",
         );
-        res.status(400).json({ message: "Failed to update role" });
       }
     },
   );
@@ -325,7 +412,9 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
     const userId = getUserId(req);
 
     if (!workspaceId)
-      return res.status(400).json({ message: "Invalid workspace ID" });
+      return fail(req, res, "VALIDATION_FAILED", "Invalid workspace ID", {
+        status: 400,
+      });
 
     const role = await teamStorage.getWorkspaceRole(workspaceId, userId);
     res.json({ role: role ?? "none" });
@@ -340,7 +429,9 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
       const userId = getUserId(req);
 
       if (!workspaceId)
-        return res.status(400).json({ message: "Invalid workspace ID" });
+        return fail(req, res, "VALIDATION_FAILED", "Invalid workspace ID", {
+          status: 400,
+        });
 
       const hasAccess = await teamStorage.canAccessWorkspace(
         userId,
@@ -348,7 +439,9 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
       );
       const ws = await workspaceStorage.getWorkspace(workspaceId);
       if (!hasAccess && ws?.userId !== userId) {
-        return res.status(403).json({ message: "No access to this workspace" });
+        return fail(req, res, "FORBIDDEN", "No access to this workspace", {
+          status: 403,
+        });
       }
 
       const teams = await teamStorage.getTeamsForWorkspace(workspaceId);

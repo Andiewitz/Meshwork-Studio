@@ -105,12 +105,17 @@ export function fail(
   res: Pick<Response, "status" | "json">,
   code: ApiErrorCode,
   message: string,
-  options: { status?: number; issues?: ApiIssue[] } = {},
+  options: {
+    status?: number;
+    issues?: ApiIssue[];
+    extra?: Record<string, unknown>;
+  } = {},
 ): Response {
   const status = options.status ?? statusForCode(code);
-  return res
-    .status(status)
-    .json(errorBody(message, requestIdOf(req), code, options.issues));
+  return res.status(status).json({
+    ...options.extra,
+    ...errorBody(message, requestIdOf(req), code, options.issues),
+  });
 }
 
 /** Envelope for statuses with no specific code (middleware-thrown errors). */

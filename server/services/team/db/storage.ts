@@ -81,6 +81,17 @@ export interface ITeamStorage {
   deleteAllUserData(userId: string, tx?: DrizzleTx): Promise<void>;
 }
 
+/** Domain rejection for joins: a missing invite vs an existing membership. */
+export class TeamJoinError extends Error {
+  constructor(
+    public readonly reason: "invalid_invite" | "already_member",
+    message: string,
+  ) {
+    super(message);
+    this.name = "TeamJoinError";
+  }
+}
+
 export class TeamDatabaseStorage implements ITeamStorage {
   async createTeam(name: string, ownerId: string): Promise<Team> {
     let inviteCode = generateInviteCode();
@@ -165,7 +176,7 @@ export class TeamDatabaseStorage implements ITeamStorage {
       .select()
       .from(teams)
       .where(eq(teams.inviteCode, inviteCode));
-    if (!team) throw new Error("Invalid invite code");
+    if (!team) throw new TeamJoinError("invalid_invite", "Invalid invite code");
 
     const [existing] = await db
       .select()
@@ -173,7 +184,11 @@ export class TeamDatabaseStorage implements ITeamStorage {
       .where(
         and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, userId)),
       );
-    if (existing) throw new Error("Already a member of this team");
+    if (existing)
+      throw new TeamJoinError(
+        "already_member",
+        "Already a member of this team",
+      );
 
     const color = await pickCursorColor(team.id);
 

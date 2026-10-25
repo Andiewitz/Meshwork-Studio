@@ -269,7 +269,7 @@ describe("Team Routes - Full Coverage", () => {
       const res = await request(app)
         .delete("/api/v1/teams/t1/members/u1")
         .set("x-test-user-id", "u1");
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(409);
       expect(mockLeaveTeam).not.toHaveBeenCalled();
     });
   });

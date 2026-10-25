@@ -18,7 +18,7 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { requestIdMiddleware } from "./middleware/requestId";
-import { failStatus } from "./lib/errorEnvelope";
+import { fail, failStatus } from "./lib/errorEnvelope";
 import { apiErrorHandler, apiNotFoundHandler } from "./middleware/errorHandler";
 import { JSON_BODY_LIMIT } from "./lib/bodyLimits";
 import { disconnectRedis, isRedisAvailable } from "./lib/redis";
@@ -223,11 +223,12 @@ if (process.env.NODE_ENV !== "production") {
       },
     );
     upstream.on("error", () => {
-      res.status(502).json({
-        code: "AUTH_SERVICE_UNAVAILABLE",
-        message:
-          "Auth service is not running. Start it with: make -C server/services/auth run",
-      });
+      fail(
+        req,
+        res,
+        "AUTH_SERVICE_UNAVAILABLE",
+        "Auth service is not running. Start it with: make -C server/services/auth run",
+      );
     });
     req.pipe(upstream);
   });
