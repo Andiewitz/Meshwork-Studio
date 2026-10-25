@@ -18,12 +18,9 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { requestIdMiddleware } from "./middleware/requestId";
-import {
-  errorBody,
-  isPayloadTooLarge,
-  resolvePublicCode,
-} from "./lib/errorEnvelope";
-import { logTraceback } from "./lib/traceback";
+import { failStatus } from "./lib/errorEnvelope";
+import { apiErrorHandler, apiNotFoundHandler } from "./middleware/errorHandler";
+import { JSON_BODY_LIMIT } from "./lib/bodyLimits";
 import { disconnectRedis, isRedisAvailable } from "./lib/redis";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import { startMetricsServer } from "./lib/metricsServer";
@@ -179,7 +176,12 @@ if (frontendUrl) {
       origin: frontendUrl,
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "X-CSRF-Token",
+        "X-Request-Id",
+      ],
     }),
   );
 } else if (process.env.NODE_ENV !== "production") {
@@ -233,9 +235,7 @@ if (process.env.NODE_ENV !== "production") {
 
 // SECURITY: Add request size limits to prevent DoS.
 // Single source of truth — the 413 message in the global error handler
-// below derives its "under X" wording from this constant.
-const JSON_BODY_LIMIT = "5mb";
-export const JSON_BODY_LIMIT_DISPLAY = "5 MB";
+// derives its "under X" wording from server/lib/bodyLimits.ts.
 app.use(
   express.json({
     limit: JSON_BODY_LIMIT,
@@ -293,9 +293,12 @@ app.get(["/health", "/healthz"], async (_req, res) => {
     });
   } catch (err) {
     log.error({ err }, "Health check endpoint error");
-    res
-      .status(500)
-      .json({ status: "error", message: "Internal health check error" });
+    res.status(500).json({
+      status: "error",
+      message: "Internal health check error",
+      code: "INTERNAL",
+      requestId: _req.requestId ?? "unscoped",
+    });
   }
 });
 
@@ -329,17 +332,21 @@ const adminHtmlPath = fs.existsSync(path.resolve(moduleDir, "admin.html"))
 app.get("/admin", requireAuth, (_req, res) => {
   const user = (_req as { user?: { isAdmin?: boolean } }).user;
   if (!user?.isAdmin) {
-    return res.status(404).send("Not Found");
+    return failStatus(_req, res, 404, "Not Found", { code: "NOT_FOUND" });
   }
   try {
     if (fs.existsSync(adminHtmlPath)) {
       res.type("html").send(fs.readFileSync(adminHtmlPath, "utf-8"));
     } else {
-      res.status(404).send("Admin dashboard not found");
+      failStatus(_req, res, 404, "Admin dashboard not found", {
+        code: "NOT_FOUND",
+      });
     }
   } catch (err) {
     log.error({ err }, "Admin dashboard load failed");
-    res.status(500).send("Error loading dashboard");
+    failStatus(_req, res, 500, "Error loading dashboard", {
+      code: "INTERNAL",
+    });
   }
 });
 
@@ -354,6 +361,10 @@ app.get("/admin", requireAuth, (_req, res) => {
     await registerRoutes(httpServer, app);
     log.info("All modules initialized successfully");
 
+    // Unmatched API paths must never fall through to the SPA shell: a client
+    // asking for a typoed endpoint gets JSON 404, not 200 text/html.
+    app.use("/api", apiNotFoundHandler);
+
     // Initialize WebSocket presence server for real-time cursors
     const { initializeWebSocket } = await import("@services/team/websocket");
     initializeWebSocket(httpServer);
@@ -367,94 +378,11 @@ app.get("/admin", requireAuth, (_req, res) => {
       await setupVite(httpServer, app);
     }
 
-    // Global error handler — MUST be registered AFTER all routes.
-    // Additive envelope: historically `{message}` only; now also `code`
-    // (stable token, safe to switch on) and `requestId` (joins to logs).
-    // `message` text is unchanged so old clients keep working.
-    app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
-      const httpErr = err as {
-        status?: number;
-        statusCode?: number;
-        message?: string;
-        code?: string;
-      };
-      const requestId = req.requestId ?? "unscoped";
-      const resolved = resolvePublicCode(httpErr.code);
-      const status =
-        resolved.status ?? httpErr.status ?? httpErr.statusCode ?? 500;
-      const code = resolved.code;
-
-      logTraceback(log, "Unhandled error reached global handler", err, {
-        status,
-        requestId,
-      });
-
-      if (res.headersSent) {
-        return next(err);
-      }
-
-      // Handle Postgres database constraint errors (mapped to public codes)
-      if (httpErr.code === "23505") {
-        return res
-          .status(400)
-          .json(
-            errorBody(
-              "A record with this value already exists. Please use a unique value.",
-              requestId,
-              "DUPLICATE_VALUE",
-            ),
-          );
-      }
-      if (httpErr.code === "23503") {
-        return res
-          .status(400)
-          .json(
-            errorBody(
-              "Referenced record does not exist or cannot be deleted.",
-              requestId,
-              "REFERENCE_NOT_FOUND",
-            ),
-          );
-      }
-      if (httpErr.code === "22P02") {
-        return res
-          .status(400)
-          .json(
-            errorBody(
-              "Invalid data format provided.",
-              requestId,
-              "INVALID_FORMAT",
-            ),
-          );
-      }
-
-      // Uploads bigger than the JSON body limit (currently 5mb) die in the
-      // body parser before any route runs. Give them a code + plain words
-      // instead of the parser's raw "request entity too large" sentence.
-      if (isPayloadTooLarge(err)) {
-        log.error(
-          { err, status: 413, requestId },
-          "Upload rejected: body exceeds size limit",
-        );
-        return res
-          .status(413)
-          .json(
-            errorBody(
-              `That file is too large to upload. Try a file under ${JSON_BODY_LIMIT_DISPLAY}.`,
-              requestId,
-              "PAYLOAD_TOO_LARGE",
-            ),
-          );
-      }
-
-      // SECURITY: Never forward raw error messages to clients in production
-      const clientMessage =
-        process.env.NODE_ENV === "production"
-          ? "An unexpected error occurred"
-          : (httpErr.message ?? "Internal Server Error");
-
-      return res.status(status).json(errorBody(clientMessage, requestId, code));
-    });
+    // Global error boundary — MUST be registered AFTER all routes (and after
+    // Vite in dev so its middleware errors are caught too). It normalizes
+    // middleware/body-parser/driver failures into the same envelope every
+    // route writes. See server/middleware/errorHandler.ts.
+    app.use(apiErrorHandler);
 
     // Serve static files LAST so the SPA catch-all doesn't swallow API routes.
     if (process.env.NODE_ENV === "production") {
