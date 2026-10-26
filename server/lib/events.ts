@@ -15,6 +15,42 @@ export interface AppEvents {
 }
 
 export class EventBus extends EventEmitter {
+  private readonly requiredHandlers = new Map<
+    RequiredWorkspaceEvent,
+    RequiredHandler<RequiredWorkspaceEvent>
+  >();
+
+  /** Required work has one explicit owner. Notification listeners cannot ack it. */
+  registerRequired<K extends RequiredWorkspaceEvent>(
+    eventName: K,
+    handler: RequiredHandler<K>,
+  ): void {
+    if (this.requiredHandlers.has(eventName)) {
+      throw new Error(`Required handler already registered: ${eventName}`);
+    }
+    this.requiredHandlers.set(
+      eventName,
+      handler as RequiredHandler<RequiredWorkspaceEvent>,
+    );
+  }
+
+  async executeRequired<K extends RequiredWorkspaceEvent>(
+    eventName: K,
+    payload: Omit<AppEvents[K], "tx">,
+    context: CommandContext,
+  ): Promise<DeliveryReceipt> {
+    const handler = this.requiredHandlers.get(eventName);
+    if (!handler) throw new Error(`Required handler unavailable: ${eventName}`);
+    const receipt = await handler(payload, context);
+    if (
+      receipt?.operationId !== context.operationId ||
+      (receipt.status !== "completed" && receipt.status !== "published")
+    ) {
+      throw new Error(`Invalid delivery receipt: ${eventName}`);
+    }
+    return receipt;
+  }
+
   emit<K extends keyof AppEvents>(
     eventName: K,
     payload: AppEvents[K],
@@ -44,3 +80,21 @@ export class EventBus extends EventEmitter {
 
 // Export singleton instance for app-wide internal events
 export const eventBus = new EventBus();
+
+export type RequiredWorkspaceEvent =
+  "workspace.deleted" | "workspaces.deleted" | "workspace.duplicated";
+
+export interface DeliveryReceipt {
+  operationId: string;
+  status: "published" | "completed";
+}
+
+export interface CommandContext {
+  /** Stable across retries and process restarts; never use the claim token. */
+  operationId: string;
+}
+
+type RequiredHandler<K extends RequiredWorkspaceEvent> = (
+  payload: Omit<AppEvents[K], "tx">,
+  context: CommandContext,
+) => Promise<DeliveryReceipt>;

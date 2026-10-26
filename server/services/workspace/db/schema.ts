@@ -8,6 +8,7 @@ import {
   boolean,
   index,
   primaryKey,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -103,6 +104,8 @@ export const workspaceOutboxEvents = pgTable("workspace_outbox_events", {
     .notNull()
     .defaultNow(),
   lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  claimToken: uuid("claim_token"),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
   processedAt: timestamp("processed_at", { withTimezone: true }),
   deadLetteredAt: timestamp("dead_lettered_at", { withTimezone: true }),
   lastError: text("last_error"),

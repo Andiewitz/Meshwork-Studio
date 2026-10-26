@@ -103,6 +103,7 @@ jobs:
       DATABASE_URL: postgresql://user:password@localhost:5432/test_db
       AUTH_DATABASE_URL: postgresql://user:password@localhost:5432/test_auth_db
       WORKSPACE_DATABASE_URL: postgresql://user:password@localhost:5432/test_workspace_db
+      OUTBOX_TEST_DATABASE_URL: postgresql://user:password@localhost:5432/test_workspace_db
       TEAM_DATABASE_URL: postgresql://user:password@localhost:5432/test_team_db
       AI_DATABASE_URL: postgresql://user:password@localhost:5432/test_ai_db
       METRICS_DATABASE_URL: postgresql://user:password@localhost:5432/test_metrics_db
@@ -131,7 +132,7 @@ jobs:
           echo "DynamoDB Local did not become reachable"
           exit 1
       - run: npm run test:coverage
-      - name: Run DynamoDB and WebSocket system tests
+      - name: Run PostgreSQL, DynamoDB and WebSocket system tests
         run: npm run test:system
       # SECURITY GUARD: forbid auth bypass flags in runtime code
       - run: ./scripts/no-auth-bypass.sh

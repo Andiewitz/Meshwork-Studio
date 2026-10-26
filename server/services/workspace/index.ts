@@ -33,8 +33,8 @@ export class WorkspaceService {
 
   static storage = workspaceStorage;
 
-  static shutdown() {
-    workspaceOutbox.stop();
+  static async shutdown(): Promise<void> {
+    await workspaceOutbox.stop();
   }
 }
 

@@ -1,252 +1,194 @@
-import type { Pool } from "pg";
-import type { EventBus } from "@server/lib/events";
+import type { EventBus, DeliveryReceipt } from "@server/lib/events";
 import { createChildLogger } from "@server/lib/logger";
+import {
+  OUTBOX_MAX_ATTEMPTS,
+  type ClaimedWorkspaceOutboxEvent,
+  type WorkspaceOutboxStore,
+} from "./outbox-store";
 
+export {
+  outboxRetryDelayMs,
+  type ClaimedWorkspaceOutboxEvent,
+} from "./outbox-store";
 const log = createChildLogger("workspace-outbox");
+type RequiredTransport = Pick<EventBus, "executeRequired">;
 
-const BATCH_SIZE = 25;
-const MAX_ATTEMPTS = 12;
-const LEASE_SECONDS = 60;
-
-type WorkspaceOutboxEventType =
-  "workspace.deleted" | "workspaces.deleted" | "workspace.duplicated";
-
-export interface ClaimedWorkspaceOutboxEvent {
-  id: string;
-  eventType: WorkspaceOutboxEventType;
-  payload: unknown;
-  attempts: number;
-}
-
-function assertPayload(
+export async function deliverWorkspaceOutboxEvent(
   event: ClaimedWorkspaceOutboxEvent,
-): asserts event is ClaimedWorkspaceOutboxEvent & {
-  payload:
-    { id: string } | { ids: string[] } | { originalId: string; newId: string };
-} {
+  transport: RequiredTransport,
+): Promise<DeliveryReceipt> {
+  const context = { operationId: event.id };
+  const payload = event.payload as Record<string, unknown> | null;
+  let receipt: DeliveryReceipt;
   if (
     event.eventType === "workspace.deleted" &&
-    typeof (event.payload as { id?: unknown })?.id === "string"
+    typeof payload?.id === "string"
   ) {
-    return;
-  }
-  if (
+    receipt = await transport.executeRequired(
+      "workspace.deleted",
+      { id: payload.id },
+      context,
+    );
+  } else if (
     event.eventType === "workspaces.deleted" &&
-    Array.isArray((event.payload as { ids?: unknown })?.ids) &&
-    (event.payload as { ids: unknown[] }).ids.every(
-      (id) => typeof id === "string",
-    )
+    Array.isArray(payload?.ids) &&
+    payload.ids.every((id) => typeof id === "string")
   ) {
-    return;
+    receipt = await transport.executeRequired(
+      "workspaces.deleted",
+      { ids: payload.ids },
+      context,
+    );
+  } else if (
+    event.eventType === "workspace.duplicated" &&
+    typeof payload?.originalId === "string" &&
+    typeof payload?.newId === "string"
+  ) {
+    receipt = await transport.executeRequired(
+      "workspace.duplicated",
+      {
+        originalId: payload.originalId,
+        newId: payload.newId,
+      },
+      context,
+    );
+  } else {
+    throw new Error(`Invalid payload for outbox event ${event.eventType}`);
   }
   if (
-    event.eventType === "workspace.duplicated" &&
-    typeof (event.payload as { originalId?: unknown })?.originalId ===
-      "string" &&
-    typeof (event.payload as { newId?: unknown })?.newId === "string"
+    receipt?.operationId !== event.id ||
+    (receipt.status !== "completed" && receipt.status !== "published")
   ) {
-    return;
+    throw new Error("Invalid outbox delivery receipt");
   }
-  throw new Error(`Invalid payload for outbox event ${event.eventType}`);
-}
-
-/** Exponential retry delay, bounded so a bad dependency does not create a hot loop. */
-export function outboxRetryDelayMs(attempt: number): number {
-  return Math.min(5 * 60_000, 1_000 * 2 ** Math.max(0, attempt - 1));
-}
-
-export async function deliverWorkspaceOutboxEvents(
-  events: ClaimedWorkspaceOutboxEvent[],
-  eventBus: Pick<EventBus, "emitAsync">,
-  markProcessed: (event: ClaimedWorkspaceOutboxEvent) => Promise<void>,
-  markFailed: (
-    event: ClaimedWorkspaceOutboxEvent,
-    error: unknown,
-  ) => Promise<void>,
-): Promise<void> {
-  for (const event of events) {
-    try {
-      assertPayload(event);
-      if (event.eventType === "workspace.deleted") {
-        const payload = event.payload as { id: string };
-        await eventBus.emitAsync("workspace.deleted", { id: payload.id });
-      } else if (event.eventType === "workspaces.deleted") {
-        const payload = event.payload as { ids: string[] };
-        await eventBus.emitAsync("workspaces.deleted", { ids: payload.ids });
-      } else {
-        const payload = event.payload as { originalId: string; newId: string };
-        await eventBus.emitAsync("workspace.duplicated", payload);
-      }
-      await markProcessed(event);
-    } catch (error) {
-      await markFailed(event, error);
-    }
-  }
+  return receipt;
 }
 
 export class WorkspaceOutboxDispatcher {
   private timer?: NodeJS.Timeout;
-  private dispatching = false;
+  private inFlight?: Promise<void>;
+  private stopping = false;
 
   constructor(
-    private readonly pool: Pool,
-    private readonly eventBus: Pick<EventBus, "emitAsync">,
+    private readonly store: WorkspaceOutboxStore,
+    private readonly transport: RequiredTransport,
+    private readonly heartbeatMs = 20_000,
   ) {}
 
   start(intervalMs = 10_000): void {
     if (this.timer) return;
-    this.timer = setInterval(() => void this.dispatch(), intervalMs);
+    this.stopping = false;
+    this.timer = setInterval(() => void this.wake(), intervalMs);
     this.timer.unref();
-    void this.dispatch();
+    void this.wake();
     log.info({ intervalMs }, "Workspace outbox dispatcher started");
   }
 
-  stop(): void {
-    if (!this.timer) return;
-    clearInterval(this.timer);
+  /** Keep renewing the active claim while draining. The process has a global deadline. */
+  async stop(): Promise<void> {
+    this.stopping = true;
+    if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
+    await this.inFlight;
   }
 
-  wake(): void {
-    void this.dispatch();
+  wake(): Promise<void> {
+    if (this.stopping) return Promise.resolve();
+    if (!this.inFlight) {
+      this.inFlight = this.dispatch().finally(() => {
+        this.inFlight = undefined;
+      });
+    }
+    return this.inFlight;
   }
 
-  private async claim(): Promise<ClaimedWorkspaceOutboxEvent[]> {
-    const { rows } = await this.pool.query<{
-      id: string;
-      event_type: WorkspaceOutboxEventType;
-      payload: unknown;
-      attempts: number;
-    }>(
-      `WITH candidates AS (
-         SELECT id
-         FROM workspace_outbox_events
-         WHERE processed_at IS NULL
-           AND dead_lettered_at IS NULL
-           AND available_at <= NOW()
-           AND (locked_until IS NULL OR locked_until < NOW())
-         ORDER BY created_at
-         LIMIT $1
-         FOR UPDATE SKIP LOCKED
-       )
-       UPDATE workspace_outbox_events AS outbox
-       SET locked_until = NOW() + ($2 * INTERVAL '1 second'),
-           attempts = outbox.attempts + 1
-       FROM candidates
-       WHERE outbox.id = candidates.id
-       RETURNING outbox.id, outbox.event_type, outbox.payload, outbox.attempts`,
-      [BATCH_SIZE, LEASE_SECONDS],
-    );
-    return rows.map((row) => ({
-      id: row.id,
-      eventType: row.event_type,
-      payload: row.payload,
-      attempts: row.attempts,
-    }));
-  }
+  private async deliver(event: ClaimedWorkspaceOutboxEvent): Promise<void> {
+    let lostLease = false;
+    let renewal: Promise<void> | undefined;
+    const heartbeat = setInterval(() => {
+      if (renewal || lostLease) return;
+      renewal = this.store
+        .renew(event)
+        .then((owned) => {
+          if (!owned) lostLease = true;
+        })
+        .catch((error: unknown) => {
+          lostLease = true;
+          log.error(
+            { err: error, operationId: event.id },
+            "Outbox claim renewal failed",
+          );
+        })
+        .finally(() => {
+          renewal = undefined;
+        });
+    }, this.heartbeatMs);
+    heartbeat.unref();
 
-  private async markProcessed(
-    event: ClaimedWorkspaceOutboxEvent,
-  ): Promise<void> {
-    if (event.eventType === "workspace.duplicated") {
-      const { newId } = event.payload as { newId: string };
-      await this.pool.query(
-        `WITH marked_event AS (
-           UPDATE workspace_outbox_events
-           SET processed_at = NOW(), locked_until = NULL, last_error = NULL
-           WHERE id = $1
-           RETURNING id
-         )
-         UPDATE workspaces
-         SET canvas_copy_status = 'ready', updated_at = NOW()
-         FROM marked_event
-         WHERE workspaces.id = $2 AND workspaces.canvas_copy_status = 'copying'`,
-        [event.id, newId],
+    let receipt: DeliveryReceipt | undefined;
+    let failure: unknown;
+    try {
+      // Crash on the final attempt cannot cause unlimited deliveries after restart.
+      if (event.attempts > OUTBOX_MAX_ATTEMPTS)
+        throw new Error("Outbox attempts exhausted before delivery");
+      receipt = await deliverWorkspaceOutboxEvent(event, this.transport);
+    } catch (error) {
+      failure = error;
+    } finally {
+      clearInterval(heartbeat);
+      await renewal;
+    }
+    if (lostLease) {
+      log.warn(
+        { operationId: event.id, claimToken: event.claimToken },
+        "Outbox lease lost; settlement skipped",
       );
       return;
     }
-    await this.pool.query(
-      `UPDATE workspace_outbox_events
-       SET processed_at = NOW(), locked_until = NULL, last_error = NULL
-       WHERE id = $1`,
-      [event.id],
-    );
-  }
-
-  private async markFailed(
-    event: ClaimedWorkspaceOutboxEvent,
-    error: unknown,
-  ): Promise<void> {
-    const message = error instanceof Error ? error.message : String(error);
-    const deadLetter = event.attempts >= MAX_ATTEMPTS;
-    if (deadLetter && event.eventType === "workspace.duplicated") {
-      const { newId } = event.payload as { newId: string };
-      await this.pool.query(
-        `WITH marked_event AS (
-           UPDATE workspace_outbox_events
-           SET locked_until = NULL,
-               last_error = $2,
-               dead_lettered_at = NOW()
-           WHERE id = $1
-           RETURNING id
-         )
-         UPDATE workspaces
-         SET canvas_copy_status = 'failed', updated_at = NOW()
-         FROM marked_event
-         WHERE workspaces.id = $3 AND workspaces.canvas_copy_status = 'copying'`,
-        [event.id, message.slice(0, 1_000), newId],
+    // SQL checks ownership again: lease expiry can happen after the last heartbeat.
+    const settled = receipt
+      ? await this.store.settle(event, receipt)
+      : await this.store.fail(event, failure);
+    const fields = {
+      operationId: event.id,
+      eventType: event.eventType,
+      attempts: event.attempts,
+    };
+    if (!settled) {
+      log.warn(fields, "Stale outbox settlement rejected");
+    } else if (!receipt) {
+      log.error(
+        {
+          ...fields,
+          err: failure,
+          deadLetter: event.attempts >= OUTBOX_MAX_ATTEMPTS,
+        },
+        "Required outbox work failed",
       );
     } else {
-      await this.pool.query(
-        `UPDATE workspace_outbox_events
-       SET locked_until = NULL,
-           last_error = $2,
-           dead_lettered_at = CASE WHEN $3 THEN NOW() ELSE NULL END,
-           available_at = CASE
-             WHEN $3 THEN available_at
-             ELSE NOW() + ($4 * INTERVAL '1 millisecond')
-           END
-       WHERE id = $1`,
-        [
-          event.id,
-          message.slice(0, 1_000),
-          deadLetter,
-          outboxRetryDelayMs(event.attempts),
-        ],
+      log.info(
+        { ...fields, deliveryStatus: receipt.status },
+        "Required outbox delivery confirmed",
       );
     }
-    log.error(
-      {
-        err: error,
-        outboxEventId: event.id,
-        eventType: event.eventType,
-        attempts: event.attempts,
-        deadLetter,
-      },
-      deadLetter
-        ? "Workspace outbox event dead-lettered after repeated failures"
-        : "Workspace outbox event failed; it will be retried",
-    );
   }
 
   private async dispatch(): Promise<void> {
-    if (this.dispatching) return;
-    this.dispatching = true;
     try {
-      while (true) {
-        const events = await this.claim();
-        if (events.length === 0) return;
-        await deliverWorkspaceOutboxEvents(
-          events,
-          this.eventBus,
-          (event) => this.markProcessed(event),
-          (event, error) => this.markFailed(event, error),
-        );
+      const health = await this.store.inspect();
+      if (health.pendingCount || health.deadLetterCount) {
+        log.info(health, "Workspace outbox backlog");
+      }
+      while (!this.stopping) {
+        // Claim only the job about to execute; no serial batch ages on its lease.
+        const event = await this.store.claim();
+        if (!event) return;
+        await this.deliver(event);
       }
     } catch (error) {
+      // A failed settlement query leaves the claim to expire; never turn an
+      // ambiguous commit into a second, contradictory failure settlement.
       log.error({ err: error }, "Workspace outbox dispatch query failed");
-    } finally {
-      this.dispatching = false;
     }
   }
 }

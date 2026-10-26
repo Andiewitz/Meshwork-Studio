@@ -1,11 +1,15 @@
 import type { EventBus } from "@server/lib/events";
 import { pool } from "./db/connection";
 import { WorkspaceOutboxDispatcher } from "./outbox";
+import { PostgresWorkspaceOutboxStore } from "./outbox-store";
 
 let dispatcher: WorkspaceOutboxDispatcher | undefined;
 
 function getDispatcher(eventBus: EventBus): WorkspaceOutboxDispatcher {
-  dispatcher ??= new WorkspaceOutboxDispatcher(pool, eventBus);
+  dispatcher ??= new WorkspaceOutboxDispatcher(
+    new PostgresWorkspaceOutboxStore(pool),
+    eventBus,
+  );
   return dispatcher;
 }
 
@@ -16,8 +20,8 @@ export const workspaceOutbox = {
   wake(): void {
     dispatcher?.wake();
   },
-  stop(): void {
-    dispatcher?.stop();
+  async stop(): Promise<void> {
+    await dispatcher?.stop();
     dispatcher = undefined;
   },
 };

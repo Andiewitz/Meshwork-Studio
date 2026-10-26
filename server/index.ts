@@ -69,8 +69,7 @@ async function shutdown(reason: string, exitCode: number): Promise<void> {
     process.exit(exitCode || 1);
   }, 15_000);
   forceTimer.unref();
-  await closeHttpServer();
-  WorkspaceService.shutdown();
+  await Promise.all([closeHttpServer(), WorkspaceService.shutdown()]);
   await Promise.allSettled([disconnectRedis(), workspacePool.end()]);
   log.info({ reason }, "Graceful shutdown complete");
   process.exit(exitCode);

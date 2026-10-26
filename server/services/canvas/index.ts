@@ -14,19 +14,26 @@ export class CanvasService {
     void ensureCanvasTable();
 
     // Listen to external events
-    context.eventBus.on("workspace.deleted", async ({ id }) => {
-      try {
-        await canvasStorage.deleteWorkspaces([id]);
-        log.info({ workspaceId: id }, "Canvas data deleted via event");
-      } catch (err) {
-        log.error({ err, workspaceId: id }, "Failed to delete canvas data");
-        throw err;
-      }
-    });
+    context.eventBus.registerRequired(
+      "workspace.deleted",
+      async ({ id }, { operationId }) => {
+        try {
+          await canvasStorage.deleteWorkspaces([id]);
+          log.info(
+            { workspaceId: id, operationId },
+            "Canvas data deleted via event",
+          );
+          return { operationId, status: "completed" };
+        } catch (err) {
+          log.error({ err, workspaceId: id }, "Failed to delete canvas data");
+          throw err;
+        }
+      },
+    );
 
-    context.eventBus.on(
+    context.eventBus.registerRequired(
       "workspace.duplicated",
-      async ({ originalId, newId }) => {
+      async ({ originalId, newId }, { operationId }) => {
         try {
           const workspaceStorage =
             context.registry.get<IWorkspaceStorage>("workspaceStorage");
@@ -36,10 +43,14 @@ export class CanvasService {
               { originalId, newId },
               "Skipped obsolete canvas copy event",
             );
-            return;
+            return { operationId, status: "completed" };
           }
           await canvasStorage.duplicateCanvas(originalId, newId);
-          log.info({ originalId, newId }, "Canvas data duplicated via event");
+          log.info(
+            { originalId, newId, operationId },
+            "Canvas data duplicated via event",
+          );
+          return { operationId, status: "completed" };
         } catch (err) {
           log.error(
             { err, originalId, newId },
@@ -50,16 +61,23 @@ export class CanvasService {
       },
     );
 
-    context.eventBus.on("workspaces.deleted", async ({ ids }) => {
-      if (ids.length === 0) return;
-      try {
-        await canvasStorage.deleteWorkspaces(ids);
-        log.info({ count: ids.length }, "User canvas data deleted via event");
-      } catch (err) {
-        log.error({ err }, "Failed to delete user canvas data");
-        throw err;
-      }
-    });
+    context.eventBus.registerRequired(
+      "workspaces.deleted",
+      async ({ ids }, { operationId }) => {
+        if (ids.length === 0) return { operationId, status: "completed" };
+        try {
+          await canvasStorage.deleteWorkspaces(ids);
+          log.info(
+            { count: ids.length, operationId },
+            "User canvas data deleted via event",
+          );
+          return { operationId, status: "completed" };
+        } catch (err) {
+          log.error({ err }, "Failed to delete user canvas data");
+          throw err;
+        }
+      },
+    );
 
     log.info("Canvas service initialized");
   }

@@ -125,4 +125,13 @@ export const MIGRATIONS: Migration[] = [
         ON workspace_collaborators (user_id);
     `,
   },
+  {
+    version: "0023_outbox_claim_fencing",
+    up: `
+      ALTER TABLE workspace_outbox_events
+        ADD COLUMN IF NOT EXISTS claim_token UUID;
+      ALTER TABLE workspace_outbox_events
+        ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+    `,
+  },
 ];

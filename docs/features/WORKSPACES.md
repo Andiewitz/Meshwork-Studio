@@ -64,6 +64,9 @@ All paths are rooted at `/api/v1`.
 `DELETE` returning `204` means the cleanup event was committed. It does not
 mean DynamoDB deletion completed synchronously.
 
+Required delivery, claim fencing, and dead-letter recovery are documented in
+[Workspace outbox operations](../operations/WORKSPACE_OUTBOX.md).
+
 Listing also includes team-shared workspaces at the root. If the sharing lookup
 fails, it returns `503 WORKSPACE_LIST_UNAVAILABLE` with a request ID instead of
 silently omitting shared items. The dashboard offers Retry and labels cached
