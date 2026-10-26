@@ -13,7 +13,9 @@ import {
 } from "./schema";
 // Team membership rows are NOT queryable from workspace_db — the shared
 // workspace ids arrive via the team service's internal HTTP API.
-import { fetchSharedWorkspaceIds } from "@services/team/db/ownership-client";
+import type { SharedWorkspaceReader } from "@services/team/public";
+import { sharedWorkspacesHttp } from "../adapters/team-http";
+import { readQuery } from "@server/lib/module-outcomes";
 import { eq, desc, and, isNull, or, inArray, sql } from "drizzle-orm";
 import type { DrizzleTx } from "@server/lib/events";
 import type {
@@ -86,6 +88,10 @@ export interface IWorkspaceStorage {
 }
 
 export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
+  constructor(
+    private readonly sharing: SharedWorkspaceReader = sharedWorkspacesHttp,
+  ) {}
+
   private async assertNotWorkspaceOwner(
     workspaceId: string,
     userId: string,
@@ -153,7 +159,9 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
     collectionId: number | null = null,
     requestId?: string,
   ): Promise<Workspace[]> {
-    const sharedWorkspaceIds = await fetchSharedWorkspaceIds(userId, requestId);
+    const sharedWorkspaceIds = readQuery(
+      await this.sharing.listIds(userId, requestId),
+    );
 
     // 3. Build query: owned workspaces respect collection filter,
     //    shared workspaces always appear at root level (no collection filter)

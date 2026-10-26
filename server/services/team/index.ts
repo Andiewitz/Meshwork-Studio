@@ -3,12 +3,12 @@ import { teamStorage } from "./db/storage";
 import { registerTeamRoutes } from "./routes/teamRoutes";
 import { registerTeamInternalRoutes } from "./db/internal-routes";
 import { createChildLogger } from "@server/lib/logger";
-import type { AppContext } from "@server/lib/registry";
+import type { TeamDependencies } from "./dependencies";
 
 const log = createChildLogger("team-service");
 
 export class TeamService {
-  static initialize(app: Express, context: AppContext) {
+  static initialize(app: Express, context: TeamDependencies) {
     registerTeamRoutes(app, context);
     registerTeamInternalRoutes(app);
 

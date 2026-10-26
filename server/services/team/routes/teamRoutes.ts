@@ -1,11 +1,11 @@
-import type { Express, RequestHandler, Request } from "express";
+import type { Express, Request } from "express";
 import { teamStorage } from "../db/storage";
 import { joinTeamSchema, updateMemberRoleSchema } from "../db/schema";
 import { csrfProtect } from "../../../auth";
 import { z } from "zod";
 import { createChildLogger } from "@server/lib/logger";
-import type { AppContext } from "@server/lib/registry";
-import type { IWorkspaceStorage } from "@services/workspace/db/storage";
+import type { TeamRouteDependencies } from "../dependencies";
+import { getWorkspaceSummary } from "@services/workspace/public";
 
 const log = createChildLogger("team-routes");
 
@@ -16,11 +16,13 @@ function getUserId(req: Request): string {
   return req.user.id;
 }
 
-export function registerTeamRoutes(app: Express, context: AppContext) {
-  const isAuthenticated =
-    context.registry.get<RequestHandler>("isAuthenticated");
-  const workspaceStorage =
-    context.registry.get<IWorkspaceStorage>("workspaceStorage");
+export function registerTeamRoutes(
+  app: Express,
+  context: TeamRouteDependencies,
+) {
+  const { isAuthenticated } = context;
+  const getWorkspace = (id: string) =>
+    getWorkspaceSummary(context.workspaces, id);
 
   // ── Create a team ────────────────────────────────────────────────
   app.post("/api/v1/teams", csrfProtect, isAuthenticated, async (req, res) => {
@@ -145,7 +147,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
         const isMember = await teamStorage.isTeamMember(teamId, userId);
         if (!isMember) return res.status(403).json({ message: "Not a member" });
 
-        const ws = await workspaceStorage.getWorkspace(workspaceId);
+        const ws = await getWorkspace(workspaceId);
         if (ws?.userId !== userId) {
           return res
             .status(403)
@@ -196,7 +198,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
       const isMember = await teamStorage.isTeamMember(teamId, userId);
       if (!isMember) return res.status(403).json({ message: "Not a member" });
 
-      const ws = await workspaceStorage.getWorkspace(workspaceId);
+      const ws = await getWorkspace(workspaceId);
       const isOwner = await teamStorage.isTeamOwner(teamId, userId);
       if (ws?.userId !== userId && !isOwner) {
         return res.status(403).json({
@@ -346,7 +348,7 @@ export function registerTeamRoutes(app: Express, context: AppContext) {
         userId,
         workspaceId,
       );
-      const ws = await workspaceStorage.getWorkspace(workspaceId);
+      const ws = await getWorkspace(workspaceId);
       if (!hasAccess && ws?.userId !== userId) {
         return res.status(403).json({ message: "No access to this workspace" });
       }

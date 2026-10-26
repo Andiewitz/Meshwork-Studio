@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
+import type { WorkspaceRole } from "@shared/permissions";
+import { createWorkspaceSummaryReader } from "@services/workspace/public";
+import { createTeamWorkspaceAccess } from "@services/team/public";
+import type { CanvasRouteDependencies } from "@services/canvas/dependencies";
 
 /**
  * Authorization matrix: proves the post-refactor route guards behave exactly
@@ -17,7 +21,7 @@ const STRANGER = "stranger-1";
 const WS_ID = "ws-1";
 
 function makeRoleMock(
-  roleByUser: Record<string, string | null>,
+  roleByUser: Record<string, WorkspaceRole | null>,
   ownerOfWs: string,
   ownershipMirrorAvailable = true,
 ) {
@@ -27,7 +31,7 @@ function makeRoleMock(
     //   canAccessWorkspace(userId, workspaceId)
     getWorkspaceRole: vi.fn(async (_wsId: string, userId: string) => {
       if (ownershipMirrorAvailable && userId === ownerOfWs)
-        return "workspace-owner";
+        return "workspace-owner" as const;
       return roleByUser[userId] ?? null;
     }),
     canAccessWorkspace: vi.fn(async (userId: string, _wsId: string) => {
@@ -122,48 +126,32 @@ vi.mock("@server/middleware/rateLimit", () => ({
 // ─── build one app with both services mounted ──────────────────────────────
 
 async function buildApp(
-  roles: Record<string, string | null>,
+  roles: Record<string, WorkspaceRole | null>,
   ownershipMirrorAvailable = true,
 ) {
   const teamMock = makeRoleMock(roles, OWNER, ownershipMirrorAvailable);
-  const [
-    { registerWorkspaceRoutes },
-    { registerCanvasRoutes },
-    wsMod,
-    canvasMod,
-  ] = await Promise.all([
-    import("@services/workspace/routes"),
-    import("@services/canvas/routes/canvasRoutes"),
-    import("@services/workspace/db/storage"),
-    import("@services/canvas/db/storage"),
-  ]);
+  const [{ registerWorkspaceRoutes }, { registerCanvasRoutes }, wsMod] =
+    await Promise.all([
+      import("@services/workspace/routes"),
+      import("@services/canvas/routes/canvasRoutes"),
+      import("@services/workspace/db/storage"),
+    ]);
 
   const app = express();
   app.use(express.json());
-  const registryGet = (key: string) => {
-    if (key === "isAuthenticated")
-      return (req: any, res: any, next: any) => {
-        const id = req.headers["x-test-user-id"];
-        if (!id)
-          return res
-            .status(401)
-            .json({ code: "UNAUTHENTICATED", message: "no user" });
-        req.user = { id };
-        req.auth = { userId: id, sessionId: "test", user: { id } };
-        next();
-      };
-    if (key === "teamStorage") return teamMock;
-    if (key === "workspaceStorage") return wsMod.workspaceStorage;
-    if (key === "canvasStorage") return canvasMod.canvasStorage;
-    return null;
-  };
-  const context = {
-    registry: { get: registryGet },
-    eventBus: {
-      emit: vi.fn() as unknown as (...a: unknown[]) => void,
-      emitAsync: vi.fn() as unknown as (...a: unknown[]) => Promise<void>,
+  const context: CanvasRouteDependencies = {
+    isAuthenticated: (req, res, next) => {
+      const id = req.headers["x-test-user-id"];
+      if (!id)
+        return res
+          .status(401)
+          .json({ code: "UNAUTHENTICATED", message: "no user" });
+      req.user = { id } as typeof req.user;
+      next();
     },
-  } as unknown as any;
+    teamAccess: createTeamWorkspaceAccess(teamMock),
+    workspaces: createWorkspaceSummaryReader(wsMod.workspaceStorage),
+  };
 
   registerWorkspaceRoutes(app, context);
   registerCanvasRoutes(app, context);

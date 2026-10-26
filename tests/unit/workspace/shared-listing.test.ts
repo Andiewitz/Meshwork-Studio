@@ -6,7 +6,7 @@ vi.mock("@services/workspace/db/connection", () => ({
   pool: {},
 }));
 import { WorkspaceDatabaseStorage } from "@services/workspace/db/storage";
-import { fetchWorkspaceOwners } from "@services/team/db/ownership-client";
+import { workspaceOwnershipHttp } from "@services/team/adapters/workspace-http";
 
 const fetchMock = vi.fn<typeof fetch>();
 beforeEach(() => {
@@ -58,7 +58,10 @@ describe("workspace listing dependency semantics", () => {
   it("does not treat an unavailable ownership source as missing ownership", async () => {
     fetchMock.mockRejectedValue(new Error("offline"));
     await expect(
-      fetchWorkspaceOwners(["project"], "aabb-ccdd"),
-    ).rejects.toMatchObject({ status: 503, service: "workspace" });
+      workspaceOwnershipHttp.lookupOwners(["project"], "aabb-ccdd"),
+    ).resolves.toMatchObject({
+      status: "unavailable",
+      cause: { status: 503, service: "workspace" },
+    });
   });
 });

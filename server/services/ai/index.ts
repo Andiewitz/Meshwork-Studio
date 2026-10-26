@@ -1,8 +1,7 @@
 import type { Express } from "express";
 import { createAIRoutes } from "./routes/aiRoutes";
-import { pool } from "./db/connection";
 import { createChildLogger } from "@server/lib/logger";
-import type { AppContext } from "@server/lib/registry";
+import type { AIRouteDependencies } from "./dependencies";
 
 const log = createChildLogger("ai-service");
 
@@ -16,7 +15,7 @@ const log = createChildLogger("ai-service");
  * - Key management endpoints
  */
 export class AIService {
-  static initialize(app: Express, context: AppContext) {
+  static initialize(app: Express, context: AIRouteDependencies) {
     const aiRouter = createAIRoutes(context);
     // Mount Jenkos AI routes under /api/v1/jenkos and legacy /api/v1/ai
     app.use("/api/v1/jenkos", aiRouter);

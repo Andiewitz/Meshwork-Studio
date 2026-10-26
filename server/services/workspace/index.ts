@@ -3,13 +3,13 @@ import { workspaceStorage } from "./db/storage";
 import { registerWorkspaceRoutes } from "./routes/workspaceRoutes";
 import { registerWorkspaceInternalRoutes } from "./db/internal-routes";
 import { createChildLogger } from "@server/lib/logger";
-import type { AppContext } from "@server/lib/registry";
+import type { WorkspaceDependencies } from "./dependencies";
 import { workspaceOutbox } from "./outbox-service";
 
 const log = createChildLogger("workspace-service");
 
 export class WorkspaceService {
-  static initialize(app: Express, context: AppContext) {
+  static initialize(app: Express, context: WorkspaceDependencies) {
     registerWorkspaceRoutes(app, context);
     registerWorkspaceInternalRoutes(app);
     workspaceOutbox.start(context.eventBus);

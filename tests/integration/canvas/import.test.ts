@@ -2,6 +2,9 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
 import { requestIdMiddleware } from "@server/middleware/requestId";
+import { createWorkspaceSummaryReader } from "@services/workspace/public";
+import { createTeamWorkspaceAccess } from "@services/team/public";
+import type { CanvasRouteDependencies } from "@services/canvas/dependencies";
 
 vi.mock("@services/canvas/db/storage", () => ({
   canvasStorage: {
@@ -27,11 +30,12 @@ const workspaceStorage = {
   getWorkspace: vi.fn(async (id: string) => ({
     id,
     userId: "user-1",
-    canvasCopyStatus: "ok",
+    canvasCopyStatus: "ready" as const,
   })),
 };
 const teamStorage = {
-  getWorkspaceRole: vi.fn(async () => "owner"),
+  getWorkspaceRole: vi.fn(async () => "owner" as const),
+  canAccessWorkspace: vi.fn(async () => true),
 };
 
 async function buildApp() {
@@ -40,21 +44,14 @@ async function buildApp() {
   const app = express();
   app.use(requestIdMiddleware);
   app.use(express.json({ limit: "5mb" }));
-  const context = {
-    registry: {
-      get: (key: string) => {
-        if (key === "isAuthenticated")
-          return (req: any, res: any, next: any) => {
-            req.user = { id: "user-1" };
-            next();
-          };
-        if (key === "workspaceStorage") return workspaceStorage;
-        if (key === "teamStorage") return teamStorage;
-        return null;
-      },
+  const context: CanvasRouteDependencies = {
+    isAuthenticated: (req, _res, next) => {
+      req.user = { id: "user-1" } as typeof req.user;
+      next();
     },
-    eventBus: { emit: vi.fn(), emitAsync: vi.fn() },
-  } as any;
+    workspaces: createWorkspaceSummaryReader(workspaceStorage),
+    teamAccess: createTeamWorkspaceAccess(teamStorage),
+  };
   registerCanvasRoutes(app, context);
   return app;
 }

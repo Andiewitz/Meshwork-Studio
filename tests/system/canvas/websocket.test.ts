@@ -33,7 +33,9 @@ const { initializeWebSocket } =
 import { registerCanvasRoutes } from "../../../server/services/canvas/routes/canvasRoutes";
 import { teamStorage } from "@services/team/db/storage";
 import { workspaceStorage } from "@services/workspace/db/storage";
-import { canvasStorage as realCanvasStorage } from "@services/canvas/db/storage";
+import { createWorkspaceSummaryReader } from "@services/workspace/public";
+import { createTeamWorkspaceAccess } from "@services/team/public";
+import type { CanvasRouteDependencies } from "@services/canvas/dependencies";
 
 // Workspace ownership: alice owns ws-shared; outsider knows nothing.
 vi.mock("@services/workspace/db/storage", () => ({
@@ -120,18 +122,11 @@ describe("canvas + websocket e2e", () => {
     app.use(express.json());
     app.use(cookieParser());
 
-    const ctx = {
-      registry: {
-        get: (key: string) => {
-          if (key === "isAuthenticated") return requireAuth;
-          if (key === "teamStorage") return teamStorage;
-          if (key === "workspaceStorage") return workspaceStorage;
-          if (key === "canvasStorage") return realCanvasStorage;
-          return null;
-        },
-      },
-      eventBus: { emit: vi.fn(), emitAsync: vi.fn(), on: vi.fn() },
-    } as unknown as Parameters<typeof registerCanvasRoutes>[1];
+    const ctx: CanvasRouteDependencies = {
+      isAuthenticated: requireAuth,
+      teamAccess: createTeamWorkspaceAccess(teamStorage),
+      workspaces: createWorkspaceSummaryReader(workspaceStorage),
+    };
 
     app.use(optionalAuth); // populate req.user from assertions
     registerCanvasRoutes(app, ctx);

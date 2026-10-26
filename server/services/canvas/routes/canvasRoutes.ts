@@ -1,4 +1,4 @@
-import type { Express, RequestHandler } from "express";
+import type { Express } from "express";
 import { canvasStorage } from "../db/storage";
 import {
   CanvasRevisionConflictError,
@@ -10,9 +10,9 @@ import type { z } from "zod";
 import { canvasEdgeSchema, canvasNodeSchema } from "@shared/canvas";
 import { csrfProtect } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
-import type { AppContext } from "@server/lib/registry";
-import type { IWorkspaceStorage } from "@services/workspace/db/storage";
-import type { ITeamStorage } from "@services/team/db/storage";
+import type { CanvasRouteDependencies } from "../dependencies";
+import { getWorkspaceSummary } from "@services/workspace/public";
+import { workspaceAccess } from "@server/lib/team-access";
 import { canEditWorkspace } from "@server/lib/permissions";
 
 const log = createChildLogger("canvas-routes");
@@ -29,17 +29,19 @@ function isWorkspaceOwner(
   return workspace.userId === userId;
 }
 
-export function registerCanvasRoutes(app: Express, context: AppContext) {
-  const isAuthenticated =
-    context.registry.get<RequestHandler>("isAuthenticated");
-  const workspaceStorage =
-    context.registry.get<IWorkspaceStorage>("workspaceStorage");
-  const teamStorage = context.registry.get<ITeamStorage>("teamStorage");
+export function registerCanvasRoutes(
+  app: Express,
+  context: CanvasRouteDependencies,
+) {
+  const { isAuthenticated } = context;
+  const getWorkspace = (id: string) =>
+    getWorkspaceSummary(context.workspaces, id);
+  const teamAccess = workspaceAccess(context.teamAccess);
 
   // Canvas logic routes
   app.get(api.workspaces.getCanvas.path, isAuthenticated, async (req, res) => {
     const id = getParamId(req);
-    const workspace = await workspaceStorage.getWorkspace(id);
+    const workspace = await getWorkspace(id);
     if (!workspace)
       return res.status(404).json({ message: "Workspace not found" });
     if (workspace.canvasCopyStatus === "copying") {
@@ -61,7 +63,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
     const userId = req.user!.id;
     const hasAccess =
       isWorkspaceOwner(workspace, userId) ||
-      (await teamStorage.canAccessWorkspace(userId, workspace.id));
+      (await teamAccess.canAccessWorkspace(userId, workspace.id));
     if (!hasAccess)
       return res
         .status(403)
@@ -77,7 +79,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
     isAuthenticated,
     async (req, res) => {
       const id = getParamId(req);
-      const workspace = await workspaceStorage.getWorkspace(id);
+      const workspace = await getWorkspace(id);
       if (!workspace)
         return res.status(404).json({ message: "Workspace not found" });
       if (workspace.canvasCopyStatus === "copying") {
@@ -99,7 +101,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
       const userId = req.user!.id;
       const role = isWorkspaceOwner(workspace, userId)
         ? "workspace-owner"
-        : await teamStorage.getWorkspaceRole(workspace.id, userId);
+        : await teamAccess.getWorkspaceRole(workspace.id, userId);
       if (!canEditWorkspace(role)) {
         return res.status(403).json({
           message: "Forbidden: Insufficient permissions to modify canvas",
@@ -168,14 +170,14 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
     async (req, res) => {
       const requestId = req.requestId ?? "unscoped";
       const id = getParamId(req);
-      const workspace = await workspaceStorage.getWorkspace(id);
+      const workspace = await getWorkspace(id);
       if (!workspace)
         return res.status(404).json({ message: "Workspace not found" });
 
       const userId = req.user!.id;
       const role = isWorkspaceOwner(workspace, userId)
         ? "workspace-owner"
-        : await teamStorage.getWorkspaceRole(workspace.id, userId);
+        : await teamAccess.getWorkspaceRole(workspace.id, userId);
       if (!canEditWorkspace(role)) {
         return res.status(403).json({
           message: "Forbidden: Insufficient permissions to import canvas",
@@ -321,21 +323,21 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
       const id = getParamId(req);
       const { toWorkspaceId } = req.body;
 
-      const workspace = await workspaceStorage.getWorkspace(id);
+      const workspace = await getWorkspace(id);
       if (!workspace)
         return res.status(404).json({ message: "Source workspace not found" });
 
       const userId = req.user!.id;
       const role = isWorkspaceOwner(workspace, userId)
         ? "workspace-owner"
-        : await teamStorage.getWorkspaceRole(workspace.id, userId);
+        : await teamAccess.getWorkspaceRole(workspace.id, userId);
       if (!canEditWorkspace(role)) {
         return res.status(403).json({
           message: "Forbidden: Insufficient permissions to duplicate canvas",
         });
       }
 
-      const destWorkspace = await workspaceStorage.getWorkspace(toWorkspaceId);
+      const destWorkspace = await getWorkspace(toWorkspaceId);
       if (!destWorkspace || destWorkspace.userId !== userId) {
         return res
           .status(403)

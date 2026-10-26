@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import express from "express";
 import { EventBus } from "@server/lib/events";
-import { AppRegistry } from "@server/lib/registry";
+import { createWorkspaceSummaryReader } from "@services/workspace/public";
 
 const { deleteWorkspaces, duplicateCanvas, getWorkspace } = vi.hoisted(() => ({
   deleteWorkspaces: vi.fn(),
@@ -19,9 +19,15 @@ import { CanvasService } from "@services/canvas";
 
 function wiredBus() {
   const eventBus = new EventBus();
-  const registry = new AppRegistry();
-  registry.register("workspaceStorage", { getWorkspace });
-  CanvasService.initialize(express(), { eventBus, registry });
+  CanvasService.initialize(express(), {
+    eventBus,
+    isAuthenticated: (_req, _res, next) => next(),
+    workspaces: createWorkspaceSummaryReader({ getWorkspace }),
+    teamAccess: {
+      checkAccess: async () => ({ status: "denied" }),
+      lookupRole: async () => ({ status: "missing" }),
+    },
+  });
   return eventBus;
 }
 
@@ -99,6 +105,19 @@ describe("Canvas required delivery owner", () => {
         ),
       ).resolves.toEqual({ operationId, status: "completed" });
     }
+    expect(duplicateCanvas).not.toHaveBeenCalled();
+  });
+
+  it("does not acknowledge a copy when Workspace is unavailable", async () => {
+    const bus = wiredBus();
+    getWorkspace.mockRejectedValueOnce(new Error("Workspace offline"));
+    await expect(
+      bus.executeRequired(
+        "workspace.duplicated",
+        { originalId: "src", newId: "dest" },
+        { operationId: "copy-op" },
+      ),
+    ).rejects.toThrow("Workspace offline");
     expect(duplicateCanvas).not.toHaveBeenCalled();
   });
 });

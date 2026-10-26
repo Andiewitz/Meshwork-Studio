@@ -5,7 +5,9 @@ import { PostgresWorkspaceOutboxStore } from "./outbox-store";
 
 let dispatcher: WorkspaceOutboxDispatcher | undefined;
 
-function getDispatcher(eventBus: EventBus): WorkspaceOutboxDispatcher {
+function getDispatcher(
+  eventBus: Pick<EventBus, "executeRequired">,
+): WorkspaceOutboxDispatcher {
   dispatcher ??= new WorkspaceOutboxDispatcher(
     new PostgresWorkspaceOutboxStore(pool),
     eventBus,
@@ -14,7 +16,7 @@ function getDispatcher(eventBus: EventBus): WorkspaceOutboxDispatcher {
 }
 
 export const workspaceOutbox = {
-  start(eventBus: EventBus): void {
+  start(eventBus: Pick<EventBus, "executeRequired">): void {
     getDispatcher(eventBus).start();
   },
   wake(): void {

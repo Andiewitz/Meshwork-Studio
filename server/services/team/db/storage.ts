@@ -11,7 +11,9 @@ import {
 } from "./schema";
 import type { Workspace } from "@shared/schema";
 import { workspaceOwners, type WorkspaceOwner } from "./schema";
-import { fetchWorkspaceOwners } from "./ownership-client";
+import type { WorkspaceOwnershipReader } from "@services/workspace/public";
+import { workspaceOwnershipHttp } from "../adapters/workspace-http";
+import { readQuery } from "@server/lib/module-outcomes";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import type { DrizzleTx } from "@server/lib/events";
 import crypto from "crypto";
@@ -76,6 +78,10 @@ export interface ITeamStorage {
 }
 
 export class TeamDatabaseStorage implements ITeamStorage {
+  constructor(
+    private readonly ownership: WorkspaceOwnershipReader = workspaceOwnershipHttp,
+  ) {}
+
   async createTeam(name: string, ownerId: string): Promise<Team> {
     let inviteCode = generateInviteCode();
     let attempts = 0;
@@ -274,7 +280,7 @@ export class TeamDatabaseStorage implements ITeamStorage {
     const missing = workspaceIds.filter((id) => !knownSet.has(id));
     if (missing.length === 0) return;
 
-    const owners = await fetchWorkspaceOwners(missing);
+    const owners = readQuery(await this.ownership.lookupOwners(missing));
     if (owners.length > 0) {
       await db
         .insert(workspaceOwners)

@@ -32,32 +32,15 @@ describe("service boundary enforcement", () => {
       const dir = path.join(SERVER_DIR, "services", svc);
       const files = [...listFiles(dir, ".ts"), ...listFiles(dir, ".tsx")];
       for (const file of files) {
-        // Type-only imports of another service's PORT interface are allowed
-        // (that's how routes type their registry lookups). Everything else —
-        // runtime imports of schema/storage/connection — is a violation.
-        // Sanctioned client adapters (db/*-client) are also exempt.
-        const content = fs
-          .readFileSync(file, "utf-8")
-          .split("\n")
-          .filter((line) => !line.trim().startsWith("import type"))
-          .join("\n");
+        // Contracts live outside db/. Type-only imports and HTTP clients no
+        // longer justify reaching into a foreign persistence directory.
+        // Resolved alias/relative/re-export enforcement is tracked in SB-03.
+        const content = fs.readFileSync(file, "utf-8");
         for (const other of SERVICES) {
           if (other === svc) continue;
-          const pattern = new RegExp(
-            `from ["']@services/${other}/db(?![a-z-]+-[a-z-]+-client)(?!.*-client)["']`,
-          );
-          const runtimeImport =
-            new RegExp(`from ["']@services/${other}/db/storage`).test(
-              content,
-            ) ||
-            new RegExp(`from ["']@services/${other}/db/schema`).test(content) ||
-            new RegExp(`from ["']@services/${other}/db/connection`).test(
-              content,
-            );
-          const clientImport = new RegExp(
-            `from ["']@services/${other}/db/[a-z-]+-client`,
-          ).test(content);
-          if (runtimeImport && !clientImport) {
+          if (
+            new RegExp(`from ["']@services/${other}/db(?:/|["'])`).test(content)
+          ) {
             violations.push(
               `${path.relative(SERVER_DIR, file)} → @services/${other}/db`,
             );

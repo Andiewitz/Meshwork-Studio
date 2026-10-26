@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
 import { registerTeamRoutes } from "@services/team/routes";
+import { createWorkspaceSummaryReader } from "@services/workspace/public";
+import type { TeamRouteDependencies } from "@services/team/dependencies";
 
 // ─── Mocks ───────────────────────────────────────────────────────────
 
@@ -77,32 +79,19 @@ const setupApp = () => {
   const app = express();
   app.use(express.json());
 
-  const mockContext = {
-    registry: {
-      get: (key: string) => {
-        if (key === "isAuthenticated") {
-          return (req: any, res: any, next: any) => {
-            if (req.headers["x-test-user-id"]) {
-              req.user = { id: req.headers["x-test-user-id"] };
-              next();
-            } else {
-              res.status(401).json({ message: "Not authenticated" });
-            }
-          };
-        }
-        if (key === "workspaceStorage") {
-          return {
-            getWorkspace: mockGetWorkspace,
-          };
-        }
-        return null;
-      },
+  const mockContext: TeamRouteDependencies = {
+    isAuthenticated: (req, res, next) => {
+      if (req.headers["x-test-user-id"]) {
+        req.user = { id: req.headers["x-test-user-id"] } as typeof req.user;
+        next();
+      } else {
+        res.status(401).json({ message: "Not authenticated" });
+      }
     },
-    eventBus: {
-      emit: vi.fn(),
-      emitAsync: vi.fn(),
-    },
-  } as any;
+    workspaces: createWorkspaceSummaryReader({
+      getWorkspace: mockGetWorkspace,
+    }),
+  };
 
   registerTeamRoutes(app, mockContext);
   return app;

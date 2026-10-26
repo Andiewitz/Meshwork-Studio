@@ -11,12 +11,13 @@ import { MIGRATIONS as aiMigrations } from "@services/ai/db/migrations";
 import { pool as metricsPool } from "@services/metrics/db/connection";
 import { MIGRATIONS as metricsMigrations } from "@services/metrics/db/migrations";
 import { WorkspaceService, workspaceStorage } from "@services/workspace";
-import { CanvasService, canvasStorage } from "@services/canvas";
+import { CanvasService } from "@services/canvas";
 import { AIService } from "@services/ai";
 import { TeamService, teamStorage } from "@services/team";
 import { MetricsService } from "@services/metrics";
 import { createChildLogger } from "./lib/logger";
-import { AppRegistry } from "./lib/registry";
+import { createWorkspaceSummaryReader } from "@services/workspace/public";
+import { createTeamWorkspaceAccess } from "@services/team/public";
 import { eventBus } from "./lib/events";
 
 const log = createChildLogger("server");
@@ -32,13 +33,10 @@ export async function registerRoutes(
   // Auth: verify the Go-signed assertion locally (no auth_db access).
   initAuth();
 
-  // Setup Service Registry and Event Bus
-  const registry = new AppRegistry();
-  registry.register("workspaceStorage", workspaceStorage);
-  registry.register("teamStorage", teamStorage);
-  registry.register("canvasStorage", canvasStorage);
-
-  const context = { registry, eventBus };
+  // Only the composition root sees private implementations. Consumers receive
+  // projected, read-only capabilities rather than each other's repositories.
+  const workspaces = createWorkspaceSummaryReader(workspaceStorage);
+  const teamAccess = createTeamWorkspaceAccess(teamStorage);
 
   // Apply every domain service's schema migrations BEFORE mounting routes.
   await Promise.all([
@@ -50,22 +48,34 @@ export async function registerRoutes(
 
   // Populate req.user early when a valid assertion cookie exists
   app.use(optionalAuth);
-  registry.register("isAuthenticated", requireAuth);
 
   // Initialize Canvas Service (handles nodes and edges) - must listen before WorkspaceService for user.deleted
-  CanvasService.initialize(app, context);
+  CanvasService.initialize(app, {
+    isAuthenticated: requireAuth,
+    workspaces,
+    teamAccess,
+    eventBus,
+  });
 
   // Initialize Workspace Service (handles collections and workspaces)
-  WorkspaceService.initialize(app, context);
+  WorkspaceService.initialize(app, {
+    isAuthenticated: requireAuth,
+    teamAccess,
+    eventBus,
+  });
 
   // Initialize AI Service (handles BYOK and free tier AI service)
-  AIService.initialize(app, context);
+  AIService.initialize(app, { isAuthenticated: requireAuth });
 
   // Initialize Team Service (handles teams, members, and shared workspaces)
-  TeamService.initialize(app, context);
+  TeamService.initialize(app, {
+    isAuthenticated: requireAuth,
+    workspaces,
+    eventBus,
+  });
 
   // Initialize Metrics Service (background collector + history API)
-  await MetricsService.initialize(app, context);
+  await MetricsService.initialize(app);
 
   log.info("All modular services initialized");
 

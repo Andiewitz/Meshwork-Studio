@@ -1,4 +1,4 @@
-import { Router, Request, Response, RequestHandler } from "express";
+import { Router, Request, Response } from "express";
 import { createChildLogger } from "@server/lib/logger";
 import {
   createApiKey,
@@ -37,7 +37,7 @@ import {
   ProviderResolutionError,
   DEFAULT_PROVIDER,
 } from "../resolver";
-import type { AppContext } from "@server/lib/registry";
+import type { AIRouteDependencies } from "../dependencies";
 import {
   abortReason,
   ClientDisconnectedError,
@@ -105,10 +105,9 @@ function writeSse(
   return !res.destroyed && !res.writableEnded;
 }
 
-export function createAIRoutes(context: AppContext) {
+export function createAIRoutes(context: AIRouteDependencies) {
   const router = Router();
-  const isAuthenticated =
-    context.registry.get<RequestHandler>("isAuthenticated");
+  const { isAuthenticated } = context;
 
   // Use the new session-bound CSRF guard from the auth rewrite
   const conditionalCsrf = csrfProtect;

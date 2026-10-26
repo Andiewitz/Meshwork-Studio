@@ -10,6 +10,9 @@ immediate recovery and DynamoDB for the durable source of truth. PostgreSQL
 owns workspace metadata, teams, AI data, and metrics; it does not store canvas
 nodes or edges.
 
+Cross-module ownership and copy operations use the narrow capabilities
+described in [Internal module APIs](./MODULE_APIS.md), not foreign repositories.
+
 ## Write path
 
 ```text

@@ -3,6 +3,7 @@ import request from "supertest";
 import express from "express";
 import aiRoutes from "@services/ai/routes";
 import { requestIdMiddleware } from "@server/middleware/requestId";
+import type { AIRouteDependencies } from "@services/ai/dependencies";
 
 const { mockGeminiCompletion } = vi.hoisted(() => ({
   mockGeminiCompletion: vi.fn(),
@@ -53,27 +54,16 @@ const setupTestApp = () => {
   app.use(requestIdMiddleware);
   app.use(express.json());
 
-  const mockContext = {
-    registry: {
-      get: (key: string) => {
-        if (key === "isAuthenticated") {
-          return (req: any, res: any, next: any) => {
-            if (req.headers["x-test-user-id"]) {
-              req.user = { id: req.headers["x-test-user-id"] };
-              next();
-            } else {
-              res.status(401).json({ message: "Not authenticated" });
-            }
-          };
-        }
-        return null;
-      },
+  const mockContext: AIRouteDependencies = {
+    isAuthenticated: (req, res, next) => {
+      if (req.headers["x-test-user-id"]) {
+        req.user = { id: req.headers["x-test-user-id"] } as typeof req.user;
+        next();
+      } else {
+        res.status(401).json({ message: "Not authenticated" });
+      }
     },
-    eventBus: {
-      emit: vi.fn(),
-      emitAsync: vi.fn(),
-    },
-  } as any;
+  };
 
   app.use("/api/v1/ai", aiRoutes(mockContext));
   return app;

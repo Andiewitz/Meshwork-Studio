@@ -2,6 +2,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
 import { requestIdMiddleware } from "@server/middleware/requestId";
+import { createTeamWorkspaceAccess } from "@services/team/public";
+import type { WorkspaceRouteDependencies } from "@services/workspace/dependencies";
 
 vi.mock("@services/workspace/db/storage", () => ({
   workspaceStorage: {
@@ -30,21 +32,13 @@ async function buildApp() {
   const app = express();
   app.use(requestIdMiddleware);
   app.use(express.json());
-  const context = {
-    registry: {
-      get: (key: string) => {
-        if (key === "isAuthenticated")
-          return (req: any, _res: any, next: any) => {
-            req.user = { id: "user-1" };
-            next();
-          };
-        if (key === "workspaceStorage") return workspaceStorage;
-        if (key === "teamStorage") return teamStorage;
-        return null;
-      },
+  const context: WorkspaceRouteDependencies = {
+    isAuthenticated: (req, _res, next) => {
+      req.user = { id: "user-1" } as typeof req.user;
+      next();
     },
-    eventBus: { emit: vi.fn(), emitAsync: vi.fn() },
-  } as any;
+    teamAccess: createTeamWorkspaceAccess(teamStorage),
+  };
   registerWorkspaceRoutes(app, context);
   return app;
 }
@@ -88,5 +82,26 @@ describe("GET /api/v1/workspaces/:id open path (regression: opaque 500s)", () =>
 
     expect(res.status).toBe(200);
     expect(res.body.id).toBe("w1");
+  });
+
+  it("preserves a Team outage as 503, not a misleading 403", async () => {
+    getWorkspace.mockResolvedValueOnce({ id: "w1", userId: "someone-else" });
+    teamStorage.canAccessWorkspace.mockRejectedValueOnce(
+      new Error("Team offline"),
+    );
+    const res = await request(await buildApp()).get("/api/v1/workspaces/w1");
+    expect(res.status).toBe(503);
+    expect(res.body).toMatchObject({
+      code: "WORKSPACE_UNAVAILABLE",
+      requestId: expect.stringMatching(/^req-/),
+    });
+  });
+
+  it("does not consult Team for a direct owner", async () => {
+    getWorkspace.mockResolvedValueOnce({ id: "w1", userId: "user-1" });
+    const res = await request(await buildApp()).get("/api/v1/workspaces/w1");
+    expect(res.status).toBe(200);
+    expect(teamStorage.canAccessWorkspace).not.toHaveBeenCalled();
+    expect(teamStorage.getWorkspaceRole).not.toHaveBeenCalled();
   });
 });

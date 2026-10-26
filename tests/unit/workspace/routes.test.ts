@@ -3,6 +3,8 @@ import request from "supertest";
 import express from "express";
 // We use relative or @server imports properly now
 import { registerWorkspaceRoutes } from "@services/workspace/routes";
+import { createTeamWorkspaceAccess } from "@services/team/public";
+import type { WorkspaceRouteDependencies } from "@services/workspace/dependencies";
 
 // Mock dependencies
 const mockGetWorkspace = vi.fn();
@@ -57,33 +59,20 @@ const setupTestApp = () => {
   const app = express();
   app.use(express.json());
 
-  const mockContext = {
-    registry: {
-      get: (key: string) => {
-        if (key === "isAuthenticated") {
-          return (req: any, res: any, next: any) => {
-            if (req.headers["x-test-user-id"]) {
-              req.user = { id: req.headers["x-test-user-id"] };
-              next();
-            } else {
-              res.status(401).json({ message: "Not authenticated" });
-            }
-          };
-        }
-        if (key === "teamStorage") {
-          return {
-            getWorkspaceRole: mockGetWorkspaceRole,
-            canAccessWorkspace: vi.fn(),
-          };
-        }
-        return null;
-      },
+  const mockContext: WorkspaceRouteDependencies = {
+    isAuthenticated: (req, res, next) => {
+      if (req.headers["x-test-user-id"]) {
+        req.user = { id: req.headers["x-test-user-id"] } as typeof req.user;
+        next();
+      } else {
+        res.status(401).json({ message: "Not authenticated" });
+      }
     },
-    eventBus: {
-      emit: vi.fn(),
-      emitAsync: vi.fn(),
-    },
-  } as any;
+    teamAccess: createTeamWorkspaceAccess({
+      getWorkspaceRole: mockGetWorkspaceRole,
+      canAccessWorkspace: vi.fn(),
+    }),
+  };
 
   registerWorkspaceRoutes(app, mockContext);
   return app;

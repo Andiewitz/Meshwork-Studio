@@ -1,4 +1,4 @@
-import type { Express, RequestHandler, Request } from "express";
+import type { Express, Request } from "express";
 import { workspaceStorage } from "../db/storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
@@ -6,9 +6,9 @@ import { csrfProtect } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
 import { errorBody } from "@server/lib/errorEnvelope";
 import { logTraceback } from "@server/lib/traceback";
-import type { AppContext } from "@server/lib/registry";
+import type { WorkspaceRouteDependencies } from "../dependencies";
+import { workspaceAccess } from "@server/lib/team-access";
 import { canEditWorkspace, canDeleteWorkspace } from "@server/lib/permissions";
-import type { ITeamStorage } from "@services/team/db/storage";
 import { workspaceOutbox } from "../outbox-service";
 
 const log = createChildLogger("workspace-routes");
@@ -27,10 +27,12 @@ function isWorkspaceOwner(
   return workspace.userId === userId;
 }
 
-export function registerWorkspaceRoutes(app: Express, context: AppContext) {
-  const isAuthenticated =
-    context.registry.get<RequestHandler>("isAuthenticated");
-  const teamStorage = context.registry.get<ITeamStorage>("teamStorage");
+export function registerWorkspaceRoutes(
+  app: Express,
+  context: WorkspaceRouteDependencies,
+) {
+  const { isAuthenticated } = context;
+  const teamAccess = workspaceAccess(context.teamAccess);
   // Collections (Subcollections)
   app.get("/api/v1/collections", isAuthenticated, async (req, res) => {
     const userId = getUserId(req);
@@ -178,7 +180,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
       const userId = getUserId(req);
       const hasAccess =
         isWorkspaceOwner(workspace, userId) ||
-        (await teamStorage.canAccessWorkspace(userId, workspace.id));
+        (await teamAccess.canAccessWorkspace(userId, workspace.id));
       if (!hasAccess)
         return res.status(403).json({
           message: "You do not have access to this workspace",
@@ -247,7 +249,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
         const userId = getUserId(req);
         const role = isWorkspaceOwner(existing, userId)
           ? "workspace-owner"
-          : await teamStorage.getWorkspaceRole(id, userId);
+          : await teamAccess.getWorkspaceRole(id, userId);
         if (!canEditWorkspace(role)) {
           return res.status(403).json({
             message: "Forbidden: Insufficient permissions to modify workspace",
@@ -282,13 +284,13 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
 
       const hasAccess =
         isWorkspaceOwner(existing, userId) ||
-        (await teamStorage.canAccessWorkspace(userId, id));
+        (await teamAccess.canAccessWorkspace(userId, id));
       if (!hasAccess)
         return res.status(403).json({ message: "No access to this workspace" });
 
       const role = isWorkspaceOwner(existing, userId)
         ? "workspace-owner"
-        : await teamStorage.getWorkspaceRole(id, userId);
+        : await teamAccess.getWorkspaceRole(id, userId);
       if (!canDeleteWorkspace(role)) {
         return res.status(403).json({
           message:
@@ -314,7 +316,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
       const userId = getUserId(req);
       const role = isWorkspaceOwner(existing, userId)
         ? "workspace-owner"
-        : await teamStorage.getWorkspaceRole(id, userId);
+        : await teamAccess.getWorkspaceRole(id, userId);
       if (!canDeleteWorkspace(role)) {
         return res.status(403).json({
           message:
@@ -346,7 +348,7 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
       const userId = getUserId(req);
       const role = isWorkspaceOwner(workspace, userId)
         ? "workspace-owner"
-        : await teamStorage.getWorkspaceRole(id, userId);
+        : await teamAccess.getWorkspaceRole(id, userId);
       if (!canDeleteWorkspace(role)) {
         return res.status(403).json({
           message: "Forbidden: Only admins and owners can retry a canvas copy",

@@ -1,5 +1,4 @@
 import type { Express } from "express";
-import type { AppContext } from "@server/lib/registry";
 import { ensureSchema } from "@server/lib/migrate";
 import { MIGRATIONS } from "./db/migrations";
 import { pool } from "./db/connection";
@@ -10,7 +9,7 @@ import { createChildLogger } from "@server/lib/logger";
 const log = createChildLogger("metrics-service");
 
 export class MetricsService {
-  static async initialize(app: Express, _context: AppContext) {
+  static async initialize(app: Express) {
     try {
       await ensureSchema("metrics", pool, MIGRATIONS);
       startCollector(30000);
