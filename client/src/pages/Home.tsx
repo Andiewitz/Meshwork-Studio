@@ -8,6 +8,7 @@ import {
 } from "@/hooks/use-workspaces";
 import { useAuth } from "@/hooks/use-auth";
 import { secureFetch } from "@/lib/secure-fetch";
+import { formatUserErrorMessage } from "@/lib/error-utils";
 import { WorkspaceCard } from "@/features/workspace/components/WorkspaceCard";
 import { CreateWorkspaceDialog } from "@/features/workspace/components/CreateWorkspaceDialog";
 import {
@@ -26,7 +27,14 @@ type Tab = (typeof TABS)[number];
 export default function Home() {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
-  const { data: workspaces, isLoading: isWorkspacesLoading } = useWorkspaces();
+  const {
+    data: workspaces,
+    isLoading: isWorkspacesLoading,
+    isError: isWorkspacesError,
+    error: workspacesError,
+    isFetching: isWorkspacesFetching,
+    refetch: refetchWorkspaces,
+  } = useWorkspaces();
   const deleteWorkspace = useDeleteWorkspace();
   const createWorkspace = useCreateWorkspace();
 
@@ -287,6 +295,34 @@ export default function Home() {
 
             {/* Grid / Content Container */}
             <div className="overflow-y-auto flex-1 pr-1">
+              {isWorkspacesError && (
+                <div
+                  role="alert"
+                  className="mb-3 rounded-lg border border-white/10 p-3 text-xs text-white/70"
+                >
+                  <p>
+                    {formatUserErrorMessage(
+                      workspacesError,
+                      "Workspace listing is temporarily unavailable.",
+                    )}
+                  </p>
+                  {workspaces && (
+                    <p className="mt-1">
+                      Previously loaded workspaces may be out of date.
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    disabled={isWorkspacesFetching}
+                    onClick={() => {
+                      void refetchWorkspaces();
+                    }}
+                    className="mt-2 rounded-lg bg-white/10 px-3 py-1 text-white hover:bg-white/15 disabled:opacity-50"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
               {isWorkspacesLoading ? (
                 <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {[1, 2, 3, 4, 5].map((i) => (
@@ -296,7 +332,9 @@ export default function Home() {
                     />
                   ))}
                 </div>
-              ) : filteredWorkspaces.length === 0 && !searchTerm ? (
+              ) : isWorkspacesError &&
+                !workspaces ? null : filteredWorkspaces.length === 0 &&
+                !searchTerm ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
                   <Package className="h-6 w-6 text-white/20" />
                   <p className="text-xs font-medium text-white/60">

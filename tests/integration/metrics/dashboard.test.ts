@@ -2,6 +2,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
 import { requestIdMiddleware } from "@server/middleware/requestId";
+import { InternalCallError } from "@server/lib/internal";
+
+const { searchAudit } = vi.hoisted(() => ({ searchAudit: vi.fn() }));
+vi.mock("@server/auth/internal-client", () => ({
+  searchIdentityAudit: searchAudit,
+}));
 
 vi.mock("@services/metrics/db/storage", () => ({
   getMetricsHistory: vi.fn(async () => []),
@@ -39,7 +45,10 @@ async function buildApp(isAdmin: boolean | undefined) {
 }
 
 describe("admin metrics surface (lockdown: admins only, JSON not text)", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    searchAudit.mockReset();
+  });
 
   it("live aggregates serve JSON with error split + uptime, no exposition text", async () => {
     const app = await buildApp(true);
@@ -67,18 +76,31 @@ describe("admin metrics surface (lockdown: admins only, JSON not text)", () => {
     );
   });
 
-  it("audit-lookup validates input and degrades to 503 without Go", async () => {
+  it("audit-lookup validates input and returns 503 when Go is unavailable", async () => {
     const app = await buildApp(true);
     const bad = await request(app).get(
       "/api/v1/metrics/audit-lookup?requestId=***",
     );
     expect(bad.status).toBe(400);
     expect(bad.body.code).toBe("VALIDATION_FAILED");
-    // No auth service in tests → internal call fails closed, never 500s raw.
+    expect(searchAudit).not.toHaveBeenCalled();
+    searchAudit.mockRejectedValue(new InternalCallError("auth", "http", 401));
     const res = await request(app).get(
       "/api/v1/metrics/audit-lookup?requestId=7c77",
     );
-    expect([200, 503]).toContain(res.status);
-    if (res.status === 503) expect(res.body.code).toBe("AUDIT_UNAVAILABLE");
+    expect(res.status).toBe(503);
+    expect(res.body.code).toBe("AUDIT_UNAVAILABLE");
+    expect(searchAudit).toHaveBeenCalledWith("7c77", {
+      requestId: res.body.requestId,
+    });
+  });
+
+  it("preserves a valid empty audit search as a successful result", async () => {
+    searchAudit.mockResolvedValue({ hits: [] });
+    const res = await request(await buildApp(true))
+      .get("/api/v1/metrics/audit-lookup?requestId=7c77")
+      .set("X-Request-Id", "aabb-ccdd");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ hits: [], requestId: "aabb-ccdd" });
   });
 });

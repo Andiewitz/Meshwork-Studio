@@ -39,6 +39,7 @@ export interface IWorkspaceStorage {
   getWorkspaces(
     userId: string,
     collectionId?: number | null,
+    requestId?: string,
   ): Promise<Workspace[]>;
   getWorkspace(id: string): Promise<Workspace | undefined>;
   listWorkspaceCollaborators(
@@ -150,8 +151,9 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
   async getWorkspaces(
     userId: string,
     collectionId: number | null = null,
+    requestId?: string,
   ): Promise<Workspace[]> {
-    const sharedWorkspaceIds = await fetchSharedWorkspaceIds(userId);
+    const sharedWorkspaceIds = await fetchSharedWorkspaceIds(userId, requestId);
 
     // 3. Build query: owned workspaces respect collection filter,
     //    shared workspaces always appear at root level (no collection filter)

@@ -135,11 +135,29 @@ export function registerWorkspaceRoutes(app: Express, context: AppContext) {
     const collectionId = req.query.collectionId
       ? Number(req.query.collectionId)
       : null;
-    const workspaces = await workspaceStorage.getWorkspaces(
-      userId,
-      collectionId,
-    );
-    res.json(workspaces);
+    const requestId = req.requestId ?? "unscoped";
+    try {
+      const workspaces = await workspaceStorage.getWorkspaces(
+        userId,
+        collectionId,
+        requestId,
+      );
+      res.json(workspaces);
+    } catch (error) {
+      logTraceback(log, "Failed to list workspaces", error, {
+        userId,
+        requestId,
+      });
+      res
+        .status(503)
+        .json(
+          errorBody(
+            "Workspace listing is temporarily unavailable. Try again shortly.",
+            requestId,
+            "WORKSPACE_LIST_UNAVAILABLE",
+          ),
+        );
+    }
   });
 
   function getParamId(req: Request, param = "id"): string {

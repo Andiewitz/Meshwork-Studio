@@ -17,14 +17,14 @@ the authority when a contract and runtime response differ.
 All endpoints require an authenticated session. Mutating endpoints also require
 the CSRF token supplied by the application.
 
-| Status | Meaning                                                                    |
-| ------ | -------------------------------------------------------------------------- |
-| `401`  | Missing or invalid session.                                                |
-| `403`  | Authenticated caller does not have the required access.                    |
-| `404`  | Workspace or collection does not exist.                                    |
-| `400`  | Request body fails validation.                                             |
-| `409`  | Canvas revision conflict, copy still running, or an ineligible copy retry. |
-| `503`  | Canvas copy failed or the durable write is temporarily unavailable.        |
+| Status | Meaning                                                                                     |
+| ------ | ------------------------------------------------------------------------------------------- |
+| `401`  | Missing or invalid session.                                                                 |
+| `403`  | Authenticated caller does not have the required access.                                     |
+| `404`  | Workspace or collection does not exist.                                                     |
+| `400`  | Request body fails validation.                                                              |
+| `409`  | Canvas revision conflict, copy still running, or an ineligible copy retry.                  |
+| `503`  | Workspace listing/dependency unavailable, canvas copy failed, or durable write unavailable. |
 
 ## Workspace permissions
 
@@ -63,6 +63,12 @@ All paths are rooted at `/api/v1`.
 
 `DELETE` returning `204` means the cleanup event was committed. It does not
 mean DynamoDB deletion completed synchronously.
+
+Listing also includes team-shared workspaces at the root. If the sharing lookup
+fails, it returns `503 WORKSPACE_LIST_UNAVAILABLE` with a request ID instead of
+silently omitting shared items. The dashboard offers Retry and labels cached
+items as potentially out of date. See
+[internal query contracts](../architecture/INTERNAL_API.md).
 
 ## Canvas API and copy lifecycle
 

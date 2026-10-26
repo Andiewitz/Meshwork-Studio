@@ -40,6 +40,16 @@ Authenticated users can access stored application history through:
 | `GET /api/v1/metrics/summary`        | Admin session | Latest snapshot and aggregates.                        |
 | `POST /api/v1/metrics/cleanup`       | Admin + CSRF  | Destructively removes snapshots older than seven days. |
 
+## Domain counts and audit lookup
+
+Domain counts in new metrics snapshots are nullable: `0` means a validated zero
+and `null` means the owning service was unavailable. Admin cards display
+**Unavailable**, and history charts retain gaps. Earlier recorded zeros are not
+rewritten. Audit lookup failures return `503 AUDIT_UNAVAILABLE`, rather than
+pretending there were no audit hits. See the
+[internal query contracts](../architecture/INTERNAL_API.md) for credential
+selection, failure states, and the nullable-count migration/rollback procedure.
+
 ## Log sources
 
 | Source              | Command                                                   | Use it for                                                    |

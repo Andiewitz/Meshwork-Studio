@@ -30,6 +30,7 @@ export const api = {
       responses: {
         200: z.array(z.custom<Workspace>()),
         401: errorSchemas.unauthorized,
+        503: errorSchemas.internal,
       },
     },
     create: {

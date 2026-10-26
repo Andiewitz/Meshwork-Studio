@@ -15,7 +15,7 @@ export function registerTeamInternalRoutes(app: Express) {
   const internal = Router();
   internal.use(requireInternalKey);
 
-  // GET /internal/users/:userId/shared-workspace-ids
+  // GET /internal/v1/team/users/:userId/shared-workspace-ids
   // THROWAWAY: replaced by the collaborators/permissions revamp.
   internal.get(
     "/users/:userId/shared-workspace-ids",
@@ -45,7 +45,7 @@ export function registerTeamInternalRoutes(app: Express) {
     },
   );
 
-  // GET /internal/stats — counter for the metrics collector.
+  // GET /internal/v1/team/stats — counter for the metrics collector.
   internal.get("/stats", async (_req: Request, res: Response) => {
     const [row] = await db
       .select({ n: sql<number>`count(*)::int` })
@@ -53,5 +53,5 @@ export function registerTeamInternalRoutes(app: Express) {
     res.json({ totalTeams: row?.n ?? 0 });
   });
 
-  app.use("/internal", internal);
+  app.use("/internal/v1/team", internal);
 }

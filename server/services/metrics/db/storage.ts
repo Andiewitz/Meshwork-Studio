@@ -1,59 +1,75 @@
 import { pool } from "./connection";
+import { z } from "zod";
+import { randomUUID } from "node:crypto";
+import { getIdentityStats } from "@server/auth/internal-client";
+import { internalGet, InternalCallError } from "@server/lib/internal";
+import { createChildLogger } from "@server/lib/logger";
+
+const log = createChildLogger("metrics-counts");
+const count = z.number().int().nonnegative();
+const workspaceStatsSchema = z.object({ totalWorkspaces: count });
+const teamStatsSchema = z.object({ totalTeams: count });
 
 export interface MetricCounts {
-  total_users?: number;
-  new_users_today?: number;
-  active_users_24h?: number;
-  logins_today?: number;
-  total_workspaces?: number;
-  total_teams?: number;
+  total_users: number | null;
+  new_users_today: number | null;
+  active_users_24h: number | null;
+  logins_today: number | null;
+  total_workspaces: number | null;
+  total_teams: number | null;
 }
 
-// Cross-service counters arrive over the internal API — users live in
-// auth_db, workspaces in workspace_db, teams in team_db. A service that
-// fails to answer contributes zeros rather than breaking collection.
-async function fetchCount<T>(service: string, path: string): Promise<T | null> {
-  const key = process.env.INTERNAL_API_KEY || "";
-  const base =
-    process.env[`${service.toUpperCase()}_SERVICE_URL`] ||
-    "http://127.0.0.1:5000";
-  if (!key) return null;
+// Keep partial collection useful without inventing values for unavailable
+// sources. A NULL domain count is a gap; a validated zero is a real sample.
+async function availableCount<T>(
+  service: string,
+  requestId: string,
+  load: () => Promise<T>,
+): Promise<T | null> {
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`${base}${path}`, {
-      headers: { "X-Internal-Key": key },
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
+    return await load();
+  } catch (error) {
+    log.warn(
+      {
+        service,
+        requestId,
+        reason:
+          error instanceof InternalCallError ? error.reason : "unexpected",
+        upstreamStatus:
+          error instanceof InternalCallError ? error.upstreamStatus : undefined,
+      },
+      "Domain metrics unavailable; storing a gap",
+    );
     return null;
   }
 }
 
-interface AuthUserStats {
-  totalUsers: number;
-  newUsersToday: number;
-  activeUsers24h: number;
-  loginsToday: number;
-}
-
-export async function queryMetricsCounts(): Promise<MetricCounts> {
+export async function queryMetricsCounts(
+  requestId: string = randomUUID(),
+): Promise<MetricCounts> {
+  const options = { requestId };
   const [auth, workspace, team] = await Promise.all([
-    fetchCount<AuthUserStats>("auth", "/internal/stats/users"),
-    fetchCount<{ totalWorkspaces: number }>("workspace", "/internal/stats"),
-    fetchCount<{ totalTeams: number }>("team", "/internal/stats"),
+    availableCount("auth", requestId, () => getIdentityStats(options)),
+    availableCount("workspace", requestId, () =>
+      internalGet(
+        "workspace",
+        "/internal/v1/workspace/stats",
+        workspaceStatsSchema,
+        options,
+      ),
+    ),
+    availableCount("team", requestId, () =>
+      internalGet("team", "/internal/v1/team/stats", teamStatsSchema, options),
+    ),
   ]);
 
   return {
-    total_users: auth?.totalUsers ?? 0,
-    new_users_today: auth?.newUsersToday ?? 0,
-    active_users_24h: auth?.activeUsers24h ?? 0,
-    logins_today: auth?.loginsToday ?? 0,
-    total_workspaces: workspace?.totalWorkspaces ?? 0,
-    total_teams: team?.totalTeams ?? 0,
+    total_users: auth?.totalUsers ?? null,
+    new_users_today: auth?.newUsersToday ?? null,
+    active_users_24h: auth?.activeUsers24h ?? null,
+    logins_today: auth?.loginsToday ?? null,
+    total_workspaces: workspace?.totalWorkspaces ?? null,
+    total_teams: team?.totalTeams ?? null,
   };
 }
 
@@ -67,12 +83,12 @@ export async function insertSnapshot(values: {
   wsConnections: number;
   wsRooms: number;
   aiRequests: number;
-  totalUsers: number;
-  newUsersToday: number;
-  activeUsers24h: number;
-  loginsToday: number;
-  totalWorkspaces: number;
-  totalTeams: number;
+  totalUsers: number | null;
+  newUsersToday: number | null;
+  activeUsers24h: number | null;
+  loginsToday: number | null;
+  totalWorkspaces: number | null;
+  totalTeams: number | null;
 }) {
   await pool.query(
     `INSERT INTO metrics_snapshots
@@ -128,6 +144,7 @@ export async function getMetricsHistory(limit: number) {
 export async function getMetricsSummary() {
   const result = await pool.query(`
     SELECT
+      (SELECT captured_at FROM metrics_snapshots ORDER BY captured_at DESC LIMIT 1) as "capturedAt",
       (SELECT total_requests FROM metrics_snapshots ORDER BY captured_at DESC LIMIT 1) as "totalRequests",
       (SELECT SUM(request_rate) FROM metrics_snapshots WHERE captured_at > NOW() - INTERVAL '1 hour') as "requestsLastHour",
       (SELECT AVG(avg_duration_ms) FROM metrics_snapshots WHERE captured_at > NOW() - INTERVAL '1 hour') as "avgDurationLastHour",

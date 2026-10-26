@@ -79,12 +79,12 @@ export async function snapshotMetrics() {
       wsConnections,
       wsRooms,
       aiRequests: aiRate,
-      totalUsers: c.total_users ?? 0,
-      newUsersToday: c.new_users_today ?? 0,
-      activeUsers24h: c.active_users_24h ?? 0,
-      loginsToday: c.logins_today ?? 0,
-      totalWorkspaces: c.total_workspaces ?? 0,
-      totalTeams: c.total_teams ?? 0,
+      totalUsers: c.total_users,
+      newUsersToday: c.new_users_today,
+      activeUsers24h: c.active_users_24h,
+      loginsToday: c.logins_today,
+      totalWorkspaces: c.total_workspaces,
+      totalTeams: c.total_teams,
     });
 
     log.debug(

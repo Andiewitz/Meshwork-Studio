@@ -10,10 +10,10 @@ export function registerWorkspaceInternalRoutes(app: Express) {
   const internal = Router();
   internal.use(requireInternalKey);
 
-  // GET /internal/workspaces/lookup?ids=a,b,c
+  // GET /internal/v1/workspace/lookup?ids=a,b,c
   // Ownership + title for arbitrary ids — consumed by the team service's
   // read-through mirror so its role checks stay local queries.
-  internal.get("/workspaces/lookup", async (req: Request, res: Response) => {
+  internal.get("/lookup", async (req: Request, res: Response) => {
     const parsed = z
       .string()
       .max(4096)
@@ -35,11 +35,11 @@ export function registerWorkspaceInternalRoutes(app: Express) {
     res.json({ workspaces: found.filter(Boolean) });
   });
 
-  // GET /internal/stats — counters for the metrics collector.
+  // GET /internal/v1/workspace/stats — counters for the metrics collector.
   internal.get("/stats", async (_req: Request, res: Response) => {
     const rows = await workspaceStorage.countWorkspaces();
     res.json({ totalWorkspaces: rows });
   });
 
-  app.use("/internal", internal);
+  app.use("/internal/v1/workspace", internal);
 }

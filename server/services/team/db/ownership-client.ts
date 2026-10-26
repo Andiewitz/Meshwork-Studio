@@ -3,6 +3,20 @@
 // read-through mirror so role checks stay one local query.
 
 import { internalGet } from "@server/lib/internal";
+import { z } from "zod";
+
+const ownershipResponse = z.object({
+  workspaces: z.array(
+    z.object({
+      id: z.string().min(1),
+      ownerId: z.string(),
+      title: z.string(),
+    }),
+  ),
+});
+const sharedIdsResponse = z.object({
+  workspaceIds: z.array(z.string().min(1)),
+});
 
 export interface WorkspaceOwnership {
   id: string;
@@ -14,23 +28,29 @@ export interface WorkspaceOwnership {
  *  workspace service knows about; unknown ids are simply absent. */
 export async function fetchWorkspaceOwners(
   ids: string[],
+  requestId?: string,
 ): Promise<WorkspaceOwnership[]> {
   if (ids.length === 0) return [];
   const qs = encodeURIComponent(ids.join(","));
-  const res = await internalGet<{ workspaces: WorkspaceOwnership[] }>(
+  const res = await internalGet(
     "workspace",
-    `/internal/workspaces/lookup?ids=${qs}`,
+    `/internal/v1/workspace/lookup?ids=${qs}`,
+    ownershipResponse,
+    { requestId },
   );
-  return res?.workspaces ?? [];
+  return res.workspaces;
 }
 
 /** Shared-workspace ids for a user, per the team↔workspace links. */
 export async function fetchSharedWorkspaceIds(
   userId: string,
+  requestId?: string,
 ): Promise<string[]> {
-  const res = await internalGet<{ workspaceIds: string[] }>(
+  const res = await internalGet(
     "team",
-    `/internal/users/${encodeURIComponent(userId)}/shared-workspace-ids`,
+    `/internal/v1/team/users/${encodeURIComponent(userId)}/shared-workspace-ids`,
+    sharedIdsResponse,
+    { requestId },
   );
-  return res?.workspaceIds ?? [];
+  return res.workspaceIds;
 }

@@ -27,4 +27,22 @@ export const MIGRATIONS: Migration[] = [
         ON metrics_snapshots (captured_at DESC);
     `,
   },
+  {
+    version: "0002_nullable_domain_counts",
+    up: `
+      ALTER TABLE metrics_snapshots
+        ALTER COLUMN total_users DROP NOT NULL,
+        ALTER COLUMN total_users DROP DEFAULT,
+        ALTER COLUMN new_users_today DROP NOT NULL,
+        ALTER COLUMN new_users_today DROP DEFAULT,
+        ALTER COLUMN active_users_24h DROP NOT NULL,
+        ALTER COLUMN active_users_24h DROP DEFAULT,
+        ALTER COLUMN logins_today DROP NOT NULL,
+        ALTER COLUMN logins_today DROP DEFAULT,
+        ALTER COLUMN total_workspaces DROP NOT NULL,
+        ALTER COLUMN total_workspaces DROP DEFAULT,
+        ALTER COLUMN total_teams DROP NOT NULL,
+        ALTER COLUMN total_teams DROP DEFAULT;
+    `,
+  },
 ];

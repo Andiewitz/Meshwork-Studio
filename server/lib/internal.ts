@@ -1,67 +1,109 @@
-// Server-to-server HTTP client for monolith-internal service calls
-// (workspace ⇄ team ⇄ metrics). Guarded by the shared INTERNAL_API_KEY.
+// Node domain calls use INTERNAL_API_KEY. Go identity calls are configured
+// separately in auth/internal-client.ts with AUTH_INTERNAL_KEY.
 //
 // Loopback-only by default: services live in one process behind NGINX, and
 // NGINX never routes /internal/* — so these paths are unreachable externally.
 
 import crypto from "node:crypto";
+import type { z } from "zod";
 
 const INTERNAL_KEY = () => process.env.INTERNAL_API_KEY || "";
 
 export class InternalCallError extends Error {
+  readonly status = 503;
+  readonly code = "DEPENDENCY_UNAVAILABLE";
+
   constructor(
     public readonly service: string,
-    public readonly status: number,
-    message?: string,
+    public readonly reason:
+      "unconfigured" | "timeout" | "transport" | "http" | "invalid_response",
+    public readonly upstreamStatus?: number,
   ) {
-    super(message || `${service} internal call failed (${status})`);
+    // Never include an upstream body, URL, credential, or raw transport error.
+    super(`${service} dependency unavailable (${reason})`);
+    this.name = "InternalCallError";
   }
 }
 
-/**
- * Base URL per service. The Go auth service listens on :8081 in every
- * topology (host, compose, EC2); the in-process domain services answer on
- * the monolith's own port. Env overrides win when set.
- */
-const SERVICE_DEFAULT_PORT: Record<string, number> = { auth: 8081 };
-
-function baseUrl(service: string): string {
-  const key = `${service.toUpperCase()}_SERVICE_URL`;
-  const fallback = `http://127.0.0.1:${SERVICE_DEFAULT_PORT[service] ?? 5000}`;
-  return (process.env[key] || fallback).replace(/\/$/, "");
+export interface InternalRequestOptions {
+  timeoutMs?: number;
+  requestId?: string;
 }
 
+type NodeInternalService = "workspace" | "team";
+
 /**
- * GET an internal endpoint, returning parsed JSON or null on failure.
- * Pass the inbound requestId so the downstream service joins the same
- * trace (it adopts X-Request-Id verbatim); omitted = downstream mints one.
+ * Shared transport, not a service credential selector. Validate every response
+ * and keep failures distinct from successful empty results. The timeout covers
+ * both response headers and JSON body consumption.
  */
-export async function internalGet<T>(
+export async function requestInternal<T>(
   service: string,
+  baseUrl: string,
+  key: string,
   path: string,
-  timeoutMs = 3000,
-  requestId?: string,
-): Promise<T | null> {
-  const key = INTERNAL_KEY();
-  if (!key) return null; // unconfigured → callers use their fallback path
+  responseSchema: z.ZodType<T>,
+  { timeoutMs = 3000, requestId }: InternalRequestOptions = {},
+): Promise<T> {
+  if (!key) throw new InternalCallError(service, "unconfigured");
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${baseUrl(service)}${path}`, {
+    const res = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, {
       headers: {
         "X-Internal-Key": key,
         ...(requestId ? { "X-Request-Id": requestId } : {}),
       },
       signal: controller.signal,
+      redirect: "error",
     });
-    if (!res.ok) throw new InternalCallError(service, res.status);
-    return (await res.json()) as T;
-  } catch {
-    return null;
+    if (!res.ok) {
+      await res.body?.cancel();
+      throw new InternalCallError(service, "http", res.status);
+    }
+    let body: unknown;
+    try {
+      body = await res.json();
+    } catch {
+      throw new InternalCallError(
+        service,
+        controller.signal.aborted ? "timeout" : "invalid_response",
+      );
+    }
+    const parsed = responseSchema.safeParse(body);
+    if (!parsed.success)
+      throw new InternalCallError(service, "invalid_response");
+    return parsed.data;
+  } catch (error) {
+    if (error instanceof InternalCallError) throw error;
+    throw new InternalCallError(
+      service,
+      controller.signal.aborted ? "timeout" : "transport",
+    );
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Domain client. Identity consumers must use auth/internal-client instead. */
+export function internalGet<T>(
+  service: NodeInternalService,
+  path: string,
+  responseSchema: z.ZodType<T>,
+  options?: InternalRequestOptions,
+): Promise<T> {
+  const baseUrl =
+    process.env[`${service.toUpperCase()}_SERVICE_URL`] ||
+    `http://127.0.0.1:${process.env.PORT || "5000"}`;
+  return requestInternal(
+    service,
+    baseUrl,
+    INTERNAL_KEY(),
+    path,
+    responseSchema,
+    options,
+  );
 }
 
 /** Express middleware: rejects internal calls without the shared key. */
@@ -70,12 +112,12 @@ export function requireInternalKey(
   res: import("express").Response,
   next: import("express").NextFunction,
 ): void {
-  const expected = INTERNAL_KEY();
-  const presented = req.header("X-Internal-Key") || "";
+  const expected = Buffer.from(INTERNAL_KEY());
+  const presented = Buffer.from(req.header("X-Internal-Key") || "");
   if (
-    !expected ||
+    !expected.length ||
     presented.length !== expected.length ||
-    !crypto.timingSafeEqual(Buffer.from(presented), Buffer.from(expected))
+    !crypto.timingSafeEqual(presented, expected)
   ) {
     // Deliberately opaque (no code — must not confirm the route exists),
     // but the request ID still joins to server logs.

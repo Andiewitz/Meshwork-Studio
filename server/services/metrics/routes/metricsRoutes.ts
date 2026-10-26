@@ -7,7 +7,7 @@ import {
 import { requireAuth } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
 import { metricsRegistry } from "@server/lib/metrics";
-import { internalGet } from "@server/lib/internal";
+import { searchIdentityAudit } from "@server/auth/internal-client";
 import { errorBody } from "@server/lib/errorEnvelope";
 
 const log = createChildLogger("metrics-routes");
@@ -127,13 +127,8 @@ export function registerMetricsRoutes(app: Express) {
           );
       }
       try {
-        const hits = await internalGet<{ hits: unknown[] }>(
-          "auth",
-          `/internal/audit-search?request_id=${encodeURIComponent(q)}`,
-          3000,
-          requestId,
-        );
-        res.json({ ...(hits ?? { hits: [] }), requestId });
+        const hits = await searchIdentityAudit(q, { requestId });
+        res.json({ ...hits, requestId });
       } catch (err) {
         log.error({ err, requestId }, "Audit lookup failed");
         res

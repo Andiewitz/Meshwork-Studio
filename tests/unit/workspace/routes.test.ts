@@ -7,10 +7,12 @@ import { registerWorkspaceRoutes } from "@services/workspace/routes";
 // Mock dependencies
 const mockGetWorkspace = vi.fn();
 const mockUpdateWorkspace = vi.fn();
+const mockGetWorkspaces = vi.fn();
 
 // We mock the storage module directly
 vi.mock("@services/workspace/db/storage", () => ({
   workspaceStorage: {
+    getWorkspaces: (...args: any[]) => mockGetWorkspaces(...args),
     getWorkspace: (...args: any[]) => mockGetWorkspace(...args),
     updateWorkspace: (...args: any[]) => mockUpdateWorkspace(...args),
   },
@@ -88,6 +90,19 @@ const setupTestApp = () => {
 };
 
 describe("Workspace route handlers (IDOR & Zod)", () => {
+  it("returns a dependency error instead of an empty list when sharing lookup fails", async () => {
+    mockGetWorkspaces.mockRejectedValueOnce(new Error("sharing unavailable"));
+    const response = await request(setupTestApp())
+      .get("/api/v1/workspaces")
+      .set("x-test-user-id", "owner");
+    expect(response.status).toBe(503);
+    expect(response.body).toMatchObject({
+      code: "WORKSPACE_LIST_UNAVAILABLE",
+      requestId: "unscoped",
+    });
+    expect(mockGetWorkspaces).toHaveBeenCalledWith("owner", null, "unscoped");
+  });
+
   let app: express.Express;
 
   beforeEach(() => {

@@ -245,6 +245,7 @@ function toggleRaw(){
 // (Live view consumes /api/v1/metrics/live JSON — exposition text never
 // reaches the browser by design. See updateLiveJson above.)
 function fmt(n){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n.toFixed(0);}
+function countText(n){return typeof n==='number'&&Number.isFinite(n)?n.toLocaleString():'Unavailable';}
 
 // ─── Charts ─────────────────────────────────────────────────────────
 
@@ -352,14 +353,17 @@ async function loadHistory(){
       fetch('/api/v1/metrics/history?limit=240'),
       fetch('/api/v1/metrics/summary')
     ]);
-    historyData=await r1.json();
-    const summary=await r2.json();
+    if(!r1.ok||!r2.ok)throw new Error('Metrics history is temporarily unavailable.');
+    const nextHistory=await r1.json();
+    const summary=(await r2.json())||{};
+    if(!Array.isArray(nextHistory))throw new Error('Metrics history is temporarily unavailable.');
+    historyData=nextHistory;
 
     // Summary
     document.getElementById('summary').innerHTML=[
       `<div class="summary-item"><strong>${fmt(summary.totalRequests||0)}</strong> total requests</div>`,
-      `<div class="summary-item"><strong>${summary.totalUsers||0}</strong> registered users</div>`,
-      `<div class="summary-item"><strong>${summary.activeUsers24h||0}</strong> active (24h)</div>`,
+      `<div class="summary-item"><strong>${countText(summary.totalUsers)}</strong> registered users</div>`,
+      `<div class="summary-item"><strong>${countText(summary.activeUsers24h)}</strong> active (24h)</div>`,
       `<div class="summary-item"><strong>${summary.totalSnapshots||0}</strong> snapshots stored</div>`,
     ].join('');
 
@@ -378,12 +382,12 @@ async function loadHistory(){
 
     // User stat cards
     document.getElementById('userCards').innerHTML=[
-      {l:'Registered Users',v:(latest.totalUsers||0).toString(),s:'all time'},
-      {l:'Signups Today',v:(latest.newUsersToday||0).toString(),s:'new accounts'},
-      {l:'Active 24h',v:(latest.activeUsers24h||0).toString(),s:'unique users'},
-      {l:'Logins Today',v:(latest.loginsToday||0).toString(),s:'total logins'},
-      {l:'Workspaces',v:(latest.totalWorkspaces||0).toString(),s:'created'},
-      {l:'Teams',v:(latest.totalTeams||0).toString(),s:'created'},
+      {l:'Registered Users',v:countText(latest.totalUsers),s:'all time'},
+      {l:'Signups Today',v:countText(latest.newUsersToday),s:'new accounts'},
+      {l:'Active 24h',v:countText(latest.activeUsers24h),s:'unique users'},
+      {l:'Logins Today',v:countText(latest.loginsToday),s:'total logins'},
+      {l:'Workspaces',v:countText(latest.totalWorkspaces),s:'created'},
+      {l:'Teams',v:countText(latest.totalTeams),s:'created'},
     ].map(s=>`<div class="stat"><div class="stat-label">${s.l}</div><div class="stat-value">${s.v}</div><div class="stat-sub">${s.s}</div></div>`).join('');
 
     // Request rate chart (stored)
@@ -422,6 +426,8 @@ async function loadHistory(){
 
   }catch(e){
     console.error('Failed to load history:',e);
+    document.getElementById('summary').textContent='Metrics history is temporarily unavailable. Previously loaded charts may be stale.';
+    document.getElementById('userCards').textContent='Counts unavailable. Retry when metrics history recovers.';
   }
 }
 
