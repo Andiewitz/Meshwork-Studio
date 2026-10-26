@@ -45,7 +45,7 @@ export class CanvasService {
             );
             return { operationId, status: "completed" };
           }
-          await canvasStorage.duplicateCanvas(originalId, newId);
+          await canvasStorage.duplicateCanvas(originalId, newId, operationId);
           log.info(
             { originalId, newId, operationId },
             "Canvas data duplicated via event",

@@ -67,11 +67,7 @@ export function registerCanvasRoutes(app: Express, context: AppContext) {
         .status(403)
         .json({ message: "You do not have access to this workspace" });
 
-    const [nodes, edges, revision] = await Promise.all([
-      canvasStorage.getNodes(id),
-      canvasStorage.getEdges(id),
-      canvasStorage.getCanvasRevision(id),
-    ]);
+    const { nodes, edges, revision } = await canvasStorage.getCanvas(id);
     res.json({ nodes, edges, revision });
   });
 

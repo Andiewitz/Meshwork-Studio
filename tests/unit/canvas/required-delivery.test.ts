@@ -82,7 +82,7 @@ describe("Canvas required delivery owner", () => {
         { operationId: "copy-op" },
       ),
     ).resolves.toEqual({ operationId: "copy-op", status: "completed" });
-    expect(duplicateCanvas).toHaveBeenCalledWith("src", "dest");
+    expect(duplicateCanvas).toHaveBeenCalledWith("src", "dest", "copy-op");
   });
 
   it("does not reapply an obsolete copy to a ready or deleted destination", async () => {

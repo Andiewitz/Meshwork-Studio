@@ -74,6 +74,7 @@ const canvasState: Record<string, { nodes: unknown[]; edges: unknown[] }> = {};
 
 vi.mock("@services/canvas/db/storage", () => ({
   canvasStorage: {
+    getCanvas: vi.fn(async () => ({ nodes: [], edges: [], revision: 0 })),
     getNodes: vi.fn(async () => []),
     getEdges: vi.fn(async () => []),
     getCanvasRevision: vi.fn(async () => 0),
@@ -261,6 +262,7 @@ describe("authorization matrix — no 403 on your own data", () => {
       .get(`/api/v1/workspaces/${WS_ID}/canvas`)
       .set("x-test-user-id", VIEWER);
     expect(read.status).toBe(200);
+    expect(read.body).toEqual({ nodes: [], edges: [], revision: 0 });
 
     const viewerSync = await request(app)
       .post(`/api/v1/workspaces/${WS_ID}/canvas`)

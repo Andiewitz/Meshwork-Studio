@@ -26,12 +26,13 @@ mark a newer claim completed or failed. An ambiguous settlement query is left
 for lease recovery, never followed by a contradictory failure update.
 
 Delivery is at least once. Deletion is repeatable for the same workspace IDs.
-Canvas copy still needs the snapshot and effect-level fencing work tracked in
-[#55](https://github.com/Andiewitz/Meshwork-Studio/issues/55): retry currently
-reads a potentially changed source, and SQL claim fencing does not cancel an
-already running DynamoDB write. Operation IDs enable a future durable Canvas
-inbox; they alone do not make the current copy implementation exactly once.
-Keep required copy execution in the existing process until that work is done.
+Canvas now pins copy snapshots by operation ID and records its completion in
+the same DynamoDB transaction as document publication. The document head fences
+stale writes and deletion, independently of SQL claim ownership. See
+[Canvas persistence](../architecture/PERSISTENCE.md) for the local implementation,
+its required migration window, and pending DynamoDB-backed verification for
+[#55](https://github.com/Andiewitz/Meshwork-Studio/issues/55).
+Keep required copy execution in the existing process until those gates pass.
 
 ## Monitoring and exhaustion
 
@@ -66,9 +67,11 @@ Do not place command payloads or database credentials in public support reports.
    continues renewing active work, awaits settlement, then closes the pool. The
    existing 15-second process deadline can force exit; expired work is reclaimed
    after restart. A forced exit can repeat an external side effect.
-3. Review the destination for a copy before replay. Until #55, source edits and
-   partial writes may require separate document repair. Do not blindly replay
-   copies into live, editable documents.
+3. Review the destination for a copy before replay. The Canvas operation intent
+   preserves its selected source snapshot. Replaying an already completed
+   operation only confirms completion; it does not rewrite the document. An
+   edited destination with a pending intent fails its generation check rather
+   than overwriting those edits. Repair that conflict before retrying SQL work.
 4. From the server runtime, call the internal administrative method
    `new PostgresWorkspaceOutboxStore(workspacePool).replayDeadLetter(operationId)`.
    This is not a public HTTP route. It returns `false` for completed, active,
@@ -117,5 +120,5 @@ npx vitest run --config vitest.system.config.ts tests/system/workspace/outbox-po
 
 CI supplies this DSN for the existing PostgreSQL service. Local verification used
 a temporary PostgreSQL instance because Docker's engine was unavailable. Live
-deployment, forced process termination against DynamoDB, and #55 document
-consistency remain separate verification gates.
+deployment, forced process termination against DynamoDB, and real-DynamoDB
+verification of #55 document consistency remain separate verification gates.

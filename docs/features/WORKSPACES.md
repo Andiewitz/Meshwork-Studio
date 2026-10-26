@@ -82,8 +82,10 @@ items as potentially out of date. See
 | `POST /workspaces/:id/duplicate-canvas` | Editor on source, direct owner of destination + CSRF | Internal-style copy endpoint for a specified destination.                                             |
 
 Canvas writes are optimistic. A stale `baseRevision` returns `409` with the
-current revision; reload before retrying. Concurrent-write leases and incomplete
-DynamoDB writes return `503`; preserve the browser cache and retry later.
+current revision; reload before retrying. Incomplete DynamoDB writes return
+`503`; preserve the browser cache and retry later. Snapshot publication and
+copy replay use the generation fencing described in
+[Canvas persistence](../architecture/PERSISTENCE.md).
 
 A duplicate begins as `copying`, becomes `ready` when the outbox worker
 finishes, and becomes `failed` if that job cannot complete. The retry endpoint

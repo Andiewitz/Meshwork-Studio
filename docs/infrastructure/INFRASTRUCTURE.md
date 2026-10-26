@@ -34,7 +34,7 @@ application directory before reloading NGINX.
 | ---------- | --------------------------------------------------------- | ---------------------------------------------------- |
 | PostgreSQL | Separate auth, workspace, team, AI, and metrics databases | Not publicly exposed; each service uses its own DSN. |
 | Redis      | Auth/session support, rate limits, and WebSocket pub/sub  | Not publicly exposed.                                |
-| DynamoDB   | Durable canvas nodes, edges, revision, and write lease    | App IAM is limited to the canvas table.              |
+| DynamoDB   | Durable canvas snapshots, revision, and deletion fencing  | App IAM is limited to the canvas table.              |
 
 The repository's Docker Compose setup is the supported local stack. It is not
 a production disaster-recovery plan. Production uses managed DynamoDB with

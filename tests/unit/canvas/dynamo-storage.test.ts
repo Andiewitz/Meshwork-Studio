@@ -1,192 +1,413 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const mocks = vi.hoisted(() => ({
-  send: vi.fn(),
-  documentFrom: vi.fn(),
-}));
-
-vi.mock("@aws-sdk/client-dynamodb", () => ({
-  DynamoDBClient: class DynamoDBClient {},
-  DescribeTableCommand: class DescribeTableCommand {},
-  CreateTableCommand: class CreateTableCommand {},
-  waitUntilTableExists: vi.fn(),
-}));
-
-vi.mock("@aws-sdk/lib-dynamodb", () => ({
-  DynamoDBDocumentClient: {
-    from: mocks.documentFrom,
-  },
-  BatchWriteCommand: class BatchWriteCommand {
-    constructor(readonly input: Record<string, unknown>) {}
-  },
-  DeleteCommand: class DeleteCommand {
-    constructor(readonly input: Record<string, unknown>) {}
-  },
-  GetCommand: class GetCommand {
-    constructor(readonly input: Record<string, unknown>) {}
-  },
-  PutCommand: class PutCommand {
-    constructor(readonly input: Record<string, unknown>) {}
-  },
-  QueryCommand: class QueryCommand {
-    constructor(readonly input: Record<string, unknown>) {}
-  },
-}));
-
+import { randomBytes } from "node:crypto";
+import { describe, expect, it } from "vitest";
 import {
-  CanvasRevisionConflictError,
-  CanvasWriteIncompleteError,
-  DynamoCanvasStorage,
-} from "@services/canvas/db/dynamo";
-import {
-  BatchWriteCommand,
-  DeleteCommand,
   GetCommand,
   PutCommand,
   QueryCommand,
+  TransactWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { AtomicCanvasStorage } from "@services/canvas/db/snapshots";
+import {
+  CanvasDeletedError,
+  CanvasRevisionConflictError,
+} from "@services/canvas/db/errors";
+import { MemoryDynamo } from "../../helpers/memory-dynamo";
 
-describe("DynamoCanvasStorage", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.documentFrom.mockReturnValue({ send: mocks.send });
-    mocks.send.mockImplementation(async (command: unknown) => {
-      if (command instanceof QueryCommand) return { Items: [] };
-      if (command instanceof GetCommand) return {};
-      return {};
-    });
+const node = (id: string, label = id) => ({
+  id,
+  position: { x: 0, y: 0 },
+  data: { label },
+});
+const largeNode = () => node("large", randomBytes(340_000).toString("base64"));
+const fixture = () => {
+  const db = new MemoryDynamo();
+  return { db, store: new AtomicCanvasStorage(db, "test") };
+};
+function gate() {
+  let release!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
   });
+  return { promise, release };
+}
+const isPublish = (command: any) =>
+  command instanceof PutCommand &&
+  command.input.Item?.sk === "doc" &&
+  !command.input.Item.deleted;
+const isCopyCommit = (command: any) =>
+  command instanceof TransactWriteCommand &&
+  command.input.TransactItems?.some((op) => op.Update);
 
-  it("follows LastEvaluatedKey until every node page is read", async () => {
-    mocks.send
-      .mockResolvedValueOnce({
-        Items: [
-          {
-            pk: "ws#canvas-1",
-            sk: "node#first",
-            body: { position: { x: 0, y: 0 }, data: { label: "First" } },
-          },
-        ],
-        LastEvaluatedKey: { pk: "ws#canvas-1", sk: "node#first" },
-      })
-      .mockResolvedValueOnce({
-        Items: [
-          {
-            pk: "ws#canvas-1",
-            sk: "node#second",
-            body: { position: { x: 1, y: 1 }, data: { label: "Second" } },
-          },
-        ],
-      });
-
-    const nodes = await new DynamoCanvasStorage().getNodes("canvas-1");
-
-    expect(nodes.map((node) => node.id)).toEqual(["first", "second"]);
-    expect(mocks.send).toHaveBeenCalledTimes(2);
-    expect(mocks.send.mock.calls[1][0]).toBeInstanceOf(QueryCommand);
-    expect(mocks.send.mock.calls[1][0].input).toMatchObject({
-      ExclusiveStartKey: { pk: "ws#canvas-1", sk: "node#first" },
-    });
-  });
-
-  it("retries only DynamoDB writes returned as unprocessed", async () => {
-    const unprocessed = {
-      PutRequest: {
-        Item: {
-          pk: "ws#canvas-2",
-          sk: "node#n1",
-          body: { position: { x: 0, y: 0 }, data: { label: "N1" } },
-        },
-      },
-    };
-    let writeAttempts = 0;
-    mocks.send.mockImplementation(async (command: unknown) => {
-      if (command instanceof QueryCommand) return { Items: [] };
-      if (command instanceof GetCommand) return {};
-      if (command instanceof BatchWriteCommand) {
-        writeAttempts += 1;
-        return writeAttempts === 1
-          ? { UnprocessedItems: { "meshwork-canvas": [unprocessed] } }
-          : { UnprocessedItems: {} };
-      }
-      return {};
-    });
-
-    await new DynamoCanvasStorage().syncCanvas(
-      "canvas-2",
-      [
-        {
-          id: "n1",
-          position: { x: 0, y: 0 },
-          data: { label: "N1" },
-        },
-      ],
-      [],
-    );
-
-    const batchCalls = mocks.send.mock.calls
-      .map(([command]) => command)
-      .filter((command) => command instanceof BatchWriteCommand);
-    expect(batchCalls).toHaveLength(2);
-    expect(batchCalls[1].input).toMatchObject({
-      RequestItems: { "meshwork-canvas": [unprocessed] },
-    });
-  });
-
-  it("fails instead of acknowledging exhausted unprocessed writes", async () => {
-    const unprocessed = {
-      PutRequest: {
-        Item: {
-          pk: "ws#canvas-3",
-          sk: "node#n1",
-          body: { position: { x: 0, y: 0 }, data: { label: "N1" } },
-        },
-      },
-    };
-    mocks.send.mockImplementation(async (command: unknown) => {
-      if (command instanceof QueryCommand) return { Items: [] };
-      if (command instanceof GetCommand) return {};
-      if (command instanceof BatchWriteCommand)
-        return { UnprocessedItems: { "meshwork-canvas": [unprocessed] } };
-      return { UnprocessedItems: { "meshwork-canvas": [unprocessed] } };
-    });
-
-    await expect(
-      new DynamoCanvasStorage().syncCanvas(
-        "canvas-3",
-        [
-          {
-            id: "n1",
-            position: { x: 0, y: 0 },
-            data: { label: "N1" },
-          },
-        ],
-        [],
-      ),
-    ).rejects.toEqual(expect.any(CanvasWriteIncompleteError));
-  });
-
-  it("rejects a stale revision before it changes canvas items", async () => {
-    mocks.send.mockImplementation(async (command: unknown) => {
-      if (command instanceof GetCommand) return { Item: { revision: 2 } };
-      if (command instanceof QueryCommand)
-        throw new Error("stale writes must not query canvas items");
-      return {};
-    });
-
-    await expect(
-      new DynamoCanvasStorage().syncCanvas("canvas-4", [], [], 1),
-    ).rejects.toEqual(expect.any(CanvasRevisionConflictError));
-
-    const commands = mocks.send.mock.calls.map(([command]) => command);
+describe("atomic Canvas snapshots", () => {
+  it("publishes the same public nodes/edges/revision shape and reads a small canvas in one GetItem", async () => {
+    const { db, store } = fixture();
     expect(
-      commands.some((command) => command instanceof BatchWriteCommand),
-    ).toBe(false);
-    expect(commands.some((command) => command instanceof PutCommand)).toBe(
-      true,
+      await store.syncCanvas(
+        "ws",
+        [node("b"), { ...node("a"), workspaceId: "ignored" }],
+        [{ id: "edge", source: "a", target: "b" }],
+        0,
+      ),
+    ).toBe(1);
+    db.send.mockClear();
+    expect(await store.getCanvas("ws")).toEqual({
+      nodes: [node("a"), node("b")],
+      edges: [{ id: "edge", source: "a", target: "b" }],
+      revision: 1,
+    });
+    expect(db.send).toHaveBeenCalledOnce();
+    expect(db.send.mock.calls[0][0]).toBeInstanceOf(GetCommand);
+  });
+
+  it("reads paginated legacy data, then lazily migrates without changing its revision", async () => {
+    const { db, store } = fixture();
+    db.pageSize = 1;
+    db.items.set("ws#ws|node#a", {
+      pk: "ws#ws",
+      sk: "node#a",
+      body: { position: { x: 0, y: 0 }, data: { label: "old" } },
+    });
+    db.items.set("ws#ws|meta", { pk: "ws#ws", sk: "meta", revision: 7 });
+    expect(await store.getCanvas("ws")).toEqual({
+      nodes: [node("a", "old")],
+      edges: [],
+      revision: 7,
+    });
+    expect(await store.syncCanvas("ws", [node("a", "new")], [], 7)).toBe(8);
+    expect(await store.getCanvas("ws")).toEqual({
+      nodes: [node("a", "new")],
+      edges: [],
+      revision: 8,
+    });
+    expect(db.items.has("ws#ws|node#a")).toBe(false);
+  });
+
+  it("rejects stale revisions before staging any payload", async () => {
+    const { db, store } = fixture();
+    await store.syncCanvas("ws", [node("a")], [], 0);
+    db.send.mockClear();
+    await expect(
+      store.syncCanvas("ws", [node("b")], [], 0),
+    ).rejects.toBeInstanceOf(CanvasRevisionConflictError);
+    expect(
+      db.send.mock.calls.every(([command]) => command instanceof GetCommand),
+    ).toBe(true);
+    expect((await store.getCanvas("ws")).nodes).toEqual([node("a")]);
+  });
+
+  it("keeps the previous complete revision visible if publication fails", async () => {
+    const { db, store } = fixture();
+    await store.syncCanvas("ws", [node("a")], [], 0);
+    db.before = async (command) => {
+      if (isPublish(command)) throw new Error("storage offline");
+    };
+    await expect(store.syncCanvas("ws", [largeNode()], [], 1)).rejects.toThrow(
+      "storage offline",
     );
-    expect(commands.some((command) => command instanceof DeleteCommand)).toBe(
-      true,
+    expect(await store.getCanvas("ws")).toEqual({
+      nodes: [node("a")],
+      edges: [],
+      revision: 1,
+    });
+    db.before = undefined;
+    await store.syncCanvas("ws", [node("c")], [], 1);
+    expect((await store.getCanvas("ws")).nodes).toEqual([node("c")]);
+  });
+
+  it("keeps a large snapshot and its revision together across paginated chunk reads", async () => {
+    const { db, store } = fixture();
+    const large = largeNode();
+    db.pageSize = 1;
+    await store.syncCanvas(
+      "ws",
+      [large],
+      [{ id: "self", source: "large", target: "large" }],
+      0,
     );
+    expect(await store.getCanvas("ws")).toEqual({
+      nodes: [large],
+      edges: [{ id: "self", source: "large", target: "large" }],
+      revision: 1,
+    });
+  });
+
+  it("retries a read if a concurrent publication retires its old chunks", async () => {
+    const { db, store } = fixture();
+    await store.syncCanvas("ws", [largeNode()], [], 0);
+    const entered = gate(),
+      resume = gate();
+    let paused = false;
+    db.before = async (command) => {
+      if (
+        !paused &&
+        command instanceof QueryCommand &&
+        command.input.ExpressionAttributeValues?.[":prefix"]
+      ) {
+        paused = true;
+        entered.release();
+        await resume.promise;
+      }
+    };
+    const read = store.getCanvas("ws");
+    await entered.promise;
+    await store.syncCanvas("ws", [node("new")], [], 1);
+    resume.release();
+    expect(await read).toEqual({
+      nodes: [node("new")],
+      edges: [],
+      revision: 2,
+    });
+  });
+
+  it("fences a paused old save after another writer publishes", async () => {
+    const { db, store } = fixture();
+    await store.syncCanvas("ws", [node("a")], [], 0);
+    const entered = gate(),
+      resume = gate();
+    let paused = false;
+    db.before = async (command) => {
+      if (!paused && isPublish(command)) {
+        paused = true;
+        entered.release();
+        await resume.promise;
+      }
+    };
+    const old = store.syncCanvas("ws", [node("old")], [], 1);
+    const rejected = expect(old).rejects.toBeInstanceOf(
+      CanvasRevisionConflictError,
+    );
+    await entered.promise;
+    await store.syncCanvas("ws", [node("winner")], [], 1);
+    resume.release();
+    await rejected;
+    expect(await store.getCanvas("ws")).toEqual({
+      nodes: [node("winner")],
+      edges: [],
+      revision: 2,
+    });
+  });
+
+  it("does not expose a pointer whose immutable payload is incomplete", async () => {
+    const { db, store } = fixture();
+    await store.syncCanvas("ws", [largeNode()], [], 0);
+    const chunk = [...db.items.keys()].find((key) =>
+      key.includes("snapshot#"),
+    )!;
+    db.items.delete(chunk);
+    await expect(store.getCanvas("ws")).rejects.toMatchObject({
+      code: "CANVAS_WRITE_INCOMPLETE",
+    });
+  });
+});
+
+describe("copy replay and deletion fencing", () => {
+  it("retains a pinned overflow copy even if the source is later deleted", async () => {
+    const { db, store } = fixture();
+    const large = largeNode();
+    await store.syncCanvas("src", [large], [], 0);
+    db.before = async (command) => {
+      if (isCopyCommit(command)) throw new Error("interrupted after pin");
+    };
+    await expect(
+      store.duplicateCanvas("src", "dest", "large-op"),
+    ).rejects.toThrow("after pin");
+    await store.deleteWorkspaces(["src"]);
+    db.before = undefined;
+    await store.duplicateCanvas("src", "dest", "large-op");
+    expect(await store.getCanvas("dest")).toEqual({
+      nodes: [large],
+      edges: [],
+      revision: 1,
+    });
+  });
+
+  it("does not expose partial multi-transaction copy staging", async () => {
+    const { db, store } = fixture();
+    const large = node("huge", randomBytes(3_000_000).toString("base64"));
+    await store.syncCanvas("src", [large], [], 0);
+    let stages = 0;
+    db.before = async (command) => {
+      if (
+        command instanceof TransactWriteCommand &&
+        command.input.TransactItems?.some(
+          (operation) => operation.Put?.Item?.chunk,
+        )
+      ) {
+        if (++stages === 2) throw new Error("second chunk transaction failed");
+      }
+    };
+    await expect(
+      store.duplicateCanvas("src", "dest", "multi-op"),
+    ).rejects.toThrow("second chunk");
+    expect(await store.getCanvas("dest")).toEqual({
+      nodes: [],
+      edges: [],
+      revision: 0,
+    });
+    db.before = undefined;
+    await store.syncCanvas("src", [node("new-source")], [], 1);
+    await store.duplicateCanvas("src", "dest", "multi-op");
+    expect(await store.getCanvas("dest")).toEqual({
+      nodes: [node("new-source")],
+      edges: [],
+      revision: 1,
+    });
+  });
+
+  it("pins a source revision before copy completion; retry replaces the whole destination", async () => {
+    const { db, store } = fixture();
+    await store.syncCanvas("src", [node("old")], [], 0);
+    await store.syncCanvas("dest", [node("remnant")], [], 0);
+    db.before = async (command) => {
+      if (isCopyCommit(command)) throw new Error("copy interrupted");
+    };
+    await expect(store.duplicateCanvas("src", "dest", "op")).rejects.toThrow(
+      "copy interrupted",
+    );
+    expect((await store.getCanvas("dest")).nodes).toEqual([node("remnant")]);
+    await store.syncCanvas("src", [node("changed-source")], [], 1);
+    db.before = undefined;
+    await store.duplicateCanvas("src", "dest", "op");
+    expect(await store.getCanvas("dest")).toEqual({
+      nodes: [node("old")],
+      edges: [],
+      revision: 2,
+    });
+  });
+
+  it("does not repeat a completed copy after destination edits", async () => {
+    const { store } = fixture();
+    await store.syncCanvas("src", [node("source")], [], 0);
+    await store.duplicateCanvas("src", "dest", "op");
+    await store.syncCanvas("dest", [node("edited")], [], 1);
+    await store.duplicateCanvas("src", "dest", "op");
+    expect(await store.getCanvas("dest")).toEqual({
+      nodes: [node("edited")],
+      edges: [],
+      revision: 2,
+    });
+  });
+
+  it("does not overwrite an edit made after a pending copy pinned its destination", async () => {
+    const { db, store } = fixture();
+    await store.syncCanvas("src", [node("source")], [], 0);
+    db.before = async (command) => {
+      if (isCopyCommit(command)) throw new Error("interrupted");
+    };
+    await expect(store.duplicateCanvas("src", "dest", "op")).rejects.toThrow(
+      "interrupted",
+    );
+    db.before = undefined;
+    await store.syncCanvas("dest", [node("edited")], [], 0);
+    await expect(
+      store.duplicateCanvas("src", "dest", "op"),
+    ).rejects.toBeInstanceOf(CanvasRevisionConflictError);
+    expect((await store.getCanvas("dest")).nodes).toEqual([node("edited")]);
+  });
+
+  it("deduplicates simultaneous deliveries of one operation", async () => {
+    const { store } = fixture();
+    await store.syncCanvas("src", [node("source")], [], 0);
+    await Promise.all([
+      store.duplicateCanvas("src", "dest", "op"),
+      store.duplicateCanvas("src", "dest", "op"),
+    ]);
+    expect((await store.getCanvas("dest")).revision).toBe(1);
+  });
+
+  it("recognizes a completion after an ambiguous committed transaction", async () => {
+    const { db, store } = fixture();
+    await store.syncCanvas("src", [node("source")], [], 0);
+    db.after = async (command) => {
+      if (isCopyCommit(command)) throw new Error("response lost after commit");
+    };
+    await expect(store.duplicateCanvas("src", "dest", "op")).rejects.toThrow(
+      "response lost",
+    );
+    db.after = undefined;
+    await store.syncCanvas("dest", [node("edited")], [], 1);
+    await store.duplicateCanvas("src", "dest", "op");
+    expect((await store.getCanvas("dest")).nodes).toEqual([node("edited")]);
+  });
+
+  it.each([false, true])(
+    "permanently fences a paused %s save after deletion",
+    async (large) => {
+      const { db, store } = fixture();
+      await store.syncCanvas("ws", [node("a")], [], 0);
+      const entered = gate(),
+        resume = gate();
+      let paused = false;
+      db.before = async (command) => {
+        const staging =
+          command instanceof TransactWriteCommand &&
+          command.input.TransactItems?.some((op) => op.Put?.Item?.chunk);
+        if (!paused && (large ? staging : isPublish(command))) {
+          paused = true;
+          entered.release();
+          await resume.promise;
+        }
+      };
+      const write = store.syncCanvas(
+        "ws",
+        [large ? largeNode() : node("delayed")],
+        [],
+        1,
+      );
+      const rejected = expect(write).rejects.toBeInstanceOf(CanvasDeletedError);
+      await entered.promise;
+      await store.deleteWorkspaces(["ws"]);
+      resume.release();
+      await rejected;
+      expect(await store.getCanvas("ws")).toEqual({
+        nodes: [],
+        edges: [],
+        revision: 0,
+      });
+      expect(
+        [...db.items.keys()].filter((key) => key.startsWith("ws#ws|")),
+      ).toEqual(["ws#ws|doc"]);
+      await expect(store.syncCanvas("ws", [], [], 0)).rejects.toBeInstanceOf(
+        CanvasDeletedError,
+      );
+    },
+  );
+
+  it("fences a pending copy after destination deletion", async () => {
+    const { db, store } = fixture();
+    await store.syncCanvas("src", [node("a")], [], 0);
+    const entered = gate(),
+      resume = gate();
+    let paused = false;
+    db.before = async (command) => {
+      if (!paused && isCopyCommit(command)) {
+        paused = true;
+        entered.release();
+        await resume.promise;
+      }
+    };
+    const copy = store.duplicateCanvas("src", "dest", "op");
+    const rejected = expect(copy).rejects.toBeInstanceOf(CanvasDeletedError);
+    await entered.promise;
+    await store.deleteWorkspaces(["dest"]);
+    resume.release();
+    await rejected;
+    expect((await store.getCanvas("dest")).nodes).toEqual([]);
+    expect(db.items.get("ws#dest|doc")).toMatchObject({ deleted: true });
+  });
+
+  it("retries incomplete deletion without ever removing the tombstone", async () => {
+    const { db, store } = fixture();
+    await store.syncCanvas("ws", [largeNode()], [], 0);
+    db.batchFailures = 6;
+    await expect(store.deleteWorkspaces(["ws"])).rejects.toMatchObject({
+      code: "CANVAS_WRITE_INCOMPLETE",
+    });
+    expect((await store.getCanvas("ws")).nodes).toEqual([]);
+    await expect(
+      store.syncCanvas("ws", [node("late")], [], 0),
+    ).rejects.toBeInstanceOf(CanvasDeletedError);
+    await store.deleteWorkspaces(["ws"]);
+    expect([...db.items.keys()]).toEqual(["ws#ws|doc"]);
   });
 });
