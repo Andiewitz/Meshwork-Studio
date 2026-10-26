@@ -84,13 +84,7 @@ export class CanvasService {
 
     log.info("Canvas service initialized");
   }
-
-  static storage = canvasStorage;
 }
 
 // Backward compatibility alias
 export const CanvasModule = CanvasService;
-
-export * from "./db";
-export * from "./routes";
-export { canvasStorage };

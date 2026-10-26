@@ -1,12 +1,6 @@
 import { internalGet } from "@server/lib/internal";
 import type { WorkspaceOwnershipReader } from "@services/workspace/public";
-import { z } from "zod";
-
-const ownershipResponse = z.object({
-  workspaces: z.array(
-    z.object({ id: z.string().min(1), ownerId: z.string(), title: z.string() }),
-  ),
-});
+import { workspaceOwnershipResponseSchema } from "@services/workspace/public";
 
 /** Read-through mirror transport; unknown IDs and an unavailable owner are distinct. */
 export const workspaceOwnershipHttp: WorkspaceOwnershipReader = {
@@ -16,7 +10,7 @@ export const workspaceOwnershipHttp: WorkspaceOwnershipReader = {
       const result = await internalGet(
         "workspace",
         `/internal/v1/workspace/lookup?ids=${encodeURIComponent(ids.join(","))}`,
-        ownershipResponse,
+        workspaceOwnershipResponseSchema,
         { requestId },
       );
       return { status: "available", value: result.workspaces };

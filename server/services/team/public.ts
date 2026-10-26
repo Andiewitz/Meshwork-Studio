@@ -4,6 +4,7 @@ import type {
   QueryResult,
 } from "@server/lib/module-outcomes";
 import type { WorkspaceRole } from "@shared/permissions";
+export { sharedWorkspaceIdsResponseSchema } from "@shared/contracts/team-queries";
 
 export interface TeamWorkspaceAccess {
   checkAccess(userId: string, workspaceId: string): Promise<Decision>;

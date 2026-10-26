@@ -23,11 +23,4 @@ export class TeamService {
 
     log.info("Team service initialized");
   }
-
-  static storage = teamStorage;
 }
-
-export * from "./db";
-export * from "./websocket";
-export * from "./routes";
-export { teamStorage };

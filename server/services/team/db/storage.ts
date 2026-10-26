@@ -15,7 +15,7 @@ import type { WorkspaceOwnershipReader } from "@services/workspace/public";
 import { workspaceOwnershipHttp } from "../adapters/workspace-http";
 import { readQuery } from "@server/lib/module-outcomes";
 import { eq, and, inArray, sql } from "drizzle-orm";
-import type { DrizzleTx } from "@server/lib/events";
+import type { DrizzleTx } from "@server/lib/db-types";
 import crypto from "crypto";
 
 function generateInviteCode(): string {
@@ -322,8 +322,8 @@ export class TeamDatabaseStorage implements ITeamStorage {
       icon: null,
       isFavorite: false,
       collectionId: null,
-      createdAt: o.syncedAt,
-      updatedAt: o.syncedAt,
+      createdAt: o.syncedAt.toISOString(),
+      updatedAt: o.syncedAt.toISOString(),
       description: null,
       author: null,
       aiContext: null,

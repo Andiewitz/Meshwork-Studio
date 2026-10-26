@@ -1,6 +1,6 @@
 # Internal module APIs
 
-Status: implemented locally for SB-02 / issue #51; not a deployment claim.
+Status: implemented locally for SB-02 / #51 and SB-03 / #52; not a deployment claim.
 
 The Node services remain a modular monolith. The string-based `AppRegistry`
 has been removed. [The composition root](../../server/routes.ts) constructs
@@ -57,10 +57,10 @@ receives authentication alone and Metrics receives no dependency bag.
 - [Compile-time assertions](../../tests/types/module-ports.ts), included in
   `npm run check`, reject missing/swapped adapters, boolean-only outcomes, and
   attempted foreign mutations.
-- The direct-import architecture check no longer exempts foreign `db/` types
-  or HTTP clients. Full resolved-import/re-export enforcement and public DTO
-  cleanup remain SB-03 / #52; current root barrels and shared schema types
-  are not yet a complete isolation boundary.
+- The [resolved-import guard](./CONTRACT_BOUNDARIES.md) checks aliases, relative
+  imports, types, dynamic imports, root barrels, and transitive contract graphs.
+  Service bootstraps no longer re-export persistence or expose `.storage`.
+  The shared schema hub exports plain validators and JSON DTOs, not ORM types.
 - DynamoDB-backed system tests remain pending until a real test backend is
   available; the socket system-test fixture is migrated but not claimed run.
 

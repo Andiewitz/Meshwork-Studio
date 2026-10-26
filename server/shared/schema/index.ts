@@ -5,8 +5,7 @@
 // this file is imported by the client bundle, and after the
 // database-per-service split no module outside a service may touch its
 // tables. Everything below is the client↔server contract: hand-written
-// interfaces mirroring each database's columns, plus plain zod request
-// contracts.
+// JSON DTOs with string timestamps, plus plain Zod request contracts.
 
 // ─── auth_db (owned by server/services/auth) ────────────────────────────────
 
@@ -21,39 +20,16 @@ export interface User {
   isActive?: boolean | null;
   hasNotifiedTeam?: boolean | null;
   readNotificationIds?: unknown;
-  createdAt?: Date | string | null;
-  updatedAt?: Date | string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 // ─── workspace_db ────────────────────────────────────────────────────────────
 
-export interface Collection {
-  id: number;
-  title: string;
-  description: string | null;
-  userId: string | null;
-  parentId: number | null;
-  createdAt: Date | string | null;
-}
-
-export interface Workspace {
-  id: string;
-  title: string;
-  type: string;
-  icon: string | null;
-  isFavorite: boolean | null;
-  userId: string | null;
-  collectionId: number | null;
-  createdAt: Date | string | null;
-  updatedAt: Date | string | null;
-  description: string | null;
-  author: string | null;
-  aiContext: string | null;
-  groups: string[] | null;
-  tags: string[] | null;
-  canvasCopyStatus: "ready" | "copying" | "failed";
-  canvasCopySourceId: string | null;
-}
+export type {
+  CollectionDto as Collection,
+  WorkspaceDto as Workspace,
+} from "../contracts/dtos";
 
 export {
   insertWorkspaceSchema,
@@ -70,29 +46,11 @@ export {
 
 // ─── team_db (throwaway surface pending collaborators revamp) ───────────────
 
-export interface Team {
-  id: string;
-  name: string;
-  inviteCode: string;
-  ownerId: string;
-  createdAt: Date | string | null;
-}
-
-export interface TeamMember {
-  id: string;
-  teamId: string;
-  userId: string;
-  role: string;
-  color: string;
-  joinedAt: Date | string | null;
-}
-
-export interface TeamWorkspace {
-  id: string;
-  teamId: string;
-  workspaceId: string;
-  sharedAt: Date | string | null;
-}
+export type {
+  TeamDto as Team,
+  TeamMemberDto as TeamMember,
+  TeamWorkspaceDto as TeamWorkspace,
+} from "../contracts/dtos";
 
 export {
   insertTeamSchema,
@@ -102,13 +60,13 @@ export {
   updateMemberRoleSchema,
   TEAM_ROLES,
   CURSOR_COLORS,
-} from "@services/team/db/schema";
+} from "./team-contract";
 export type {
   InsertTeam,
   InsertTeamMember,
   InsertTeamWorkspace,
   TeamRole,
-} from "@services/team/db/schema";
+} from "./team-contract";
 
 // ─── canvas (DynamoDB documents; shapes mirror the wire format) ────────────
 
@@ -151,8 +109,8 @@ export interface Conversation {
   scope: JenkosScope | string;
   title: string;
   context?: Record<string, unknown> | null;
-  createdAt?: Date | string | null;
-  updatedAt?: Date | string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface Message {
@@ -163,7 +121,7 @@ export interface Message {
   toolCalls?: Record<string, unknown>[] | null;
   toolResults?: Record<string, unknown>[] | null;
   metadata?: Record<string, unknown> | null;
-  createdAt?: Date | string | null;
+  createdAt?: string | null;
 }
 
 export type MemoryCategory =
@@ -180,9 +138,9 @@ export interface Memory {
   tags?: string[] | null;
   confidence?: number | null;
   sourceMessageId?: string | null;
-  lastRecalledAt?: Date | string | null;
-  createdAt?: Date | string | null;
-  updatedAt?: Date | string | null;
+  lastRecalledAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface UserApiKeyPublic {
@@ -190,5 +148,5 @@ export interface UserApiKeyPublic {
   provider: string;
   keyHint?: string | null;
   isActive: boolean;
-  createdAt?: Date | string | null;
+  createdAt?: string | null;
 }

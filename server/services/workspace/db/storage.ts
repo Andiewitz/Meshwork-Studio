@@ -17,7 +17,7 @@ import type { SharedWorkspaceReader } from "@services/team/public";
 import { sharedWorkspacesHttp } from "../adapters/team-http";
 import { readQuery } from "@server/lib/module-outcomes";
 import { eq, desc, and, isNull, or, inArray, sql } from "drizzle-orm";
-import type { DrizzleTx } from "@server/lib/events";
+import type { DrizzleTx } from "@server/lib/db-types";
 import type {
   WorkspaceAccess,
   WorkspaceCollaboratorPermission,

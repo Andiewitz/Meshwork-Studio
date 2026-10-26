@@ -2,7 +2,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { db } from "./connection";
 import { userApiKeys, type UserApiKey } from "./schema";
 import { encryptApiKey, decryptApiKey, generateKeyHint } from "../encryption";
-import type { DrizzleTx } from "@server/lib/events";
+import type { DrizzleTx } from "@server/lib/db-types";
 
 export interface CreateKeyInput {
   userId: string;

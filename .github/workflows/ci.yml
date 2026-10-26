@@ -45,6 +45,8 @@ jobs:
           cache: "npm"
       - run: npm ci
       - run: npm run check
+      - name: Enforce resolved service boundaries
+        run: npx tsx scripts/check-service-boundaries.ts
 
   # ── Security (parallel) ─────────────────────────────────────────────────
   dependency-audit:

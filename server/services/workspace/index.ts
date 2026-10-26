@@ -31,8 +31,6 @@ export class WorkspaceService {
     log.info("Workspace service initialized");
   }
 
-  static storage = workspaceStorage;
-
   static async shutdown(): Promise<void> {
     await workspaceOutbox.stop();
   }
@@ -40,7 +38,3 @@ export class WorkspaceService {
 
 // Backward compatibility alias
 export const WorkspaceModule = WorkspaceService;
-
-export * from "./db";
-export * from "./routes";
-export { workspaceStorage };

@@ -7,8 +7,6 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
 import { sql } from "drizzle-orm";
 
 export const teams = pgTable(
@@ -71,53 +69,25 @@ export const teamWorkspaces = pgTable(
   ],
 );
 
-export const CURSOR_COLORS = [
-  "#FF6600",
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#EC4899",
-  "#14B8A6",
-  "#F97316",
-  "#6366F1",
-  "#84CC16",
-  "#06B6D4",
-] as const;
-
-export const insertTeamSchema = createInsertSchema(teams).omit({
-  id: true,
-  createdAt: true,
-  inviteCode: true,
-});
-
-export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
-  id: true,
-  joinedAt: true,
-});
-
-export const insertTeamWorkspaceSchema = createInsertSchema(
-  teamWorkspaces,
-).omit({ id: true, sharedAt: true });
-
-export const joinTeamSchema = z.object({
-  inviteCode: z.string().min(1, "Invite code is required").max(8),
-});
-
-export const TEAM_ROLES = ["owner", "admin", "editor", "viewer"] as const;
-export type TeamRole = (typeof TEAM_ROLES)[number];
-
-export const updateMemberRoleSchema = z.object({
-  role: z.enum(["admin", "editor", "viewer"]),
-});
+export {
+  CURSOR_COLORS,
+  TEAM_ROLES,
+  insertTeamSchema,
+  insertTeamMemberSchema,
+  insertTeamWorkspaceSchema,
+  joinTeamSchema,
+  updateMemberRoleSchema,
+} from "@shared/schema/team-contract";
+export type {
+  TeamRole,
+  InsertTeam,
+  InsertTeamMember,
+  InsertTeamWorkspace,
+} from "@shared/schema/team-contract";
 
 export type Team = typeof teams.$inferSelect;
-export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type TeamMember = typeof teamMembers.$inferSelect;
-export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
 export type TeamWorkspace = typeof teamWorkspaces.$inferSelect;
-export type InsertTeamWorkspace = z.infer<typeof insertTeamWorkspaceSchema>;
 
 // Read-through ownership mirror (populated via the workspace service's
 // lookup endpoint). THROWAWAY with the collaborators revamp.

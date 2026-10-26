@@ -1,5 +1,8 @@
 import type { Lookup, QueryResult } from "@server/lib/module-outcomes";
 import { readLookup } from "@server/lib/module-outcomes";
+import { workspaceOwnershipResponseSchema } from "@shared/contracts/workspace-queries";
+import type { z } from "zod";
+export { workspaceOwnershipResponseSchema };
 
 export interface WorkspaceSummary {
   id: string;
@@ -19,11 +22,9 @@ export async function getWorkspaceSummary(
   return readLookup(await reader.lookup(id));
 }
 
-export interface WorkspaceOwnership {
-  id: string;
-  ownerId: string;
-  title: string;
-}
+export type WorkspaceOwnership = z.infer<
+  typeof workspaceOwnershipResponseSchema
+>["workspaces"][number];
 
 export interface WorkspaceOwnershipReader {
   lookupOwners(

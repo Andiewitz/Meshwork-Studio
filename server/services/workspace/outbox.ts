@@ -1,4 +1,5 @@
 import type { EventBus, DeliveryReceipt } from "@server/lib/events";
+import { deliveryReceiptSchema } from "@shared/contracts/events";
 import { createChildLogger } from "@server/lib/logger";
 import {
   OUTBOX_MAX_ATTEMPTS,
@@ -55,13 +56,11 @@ export async function deliverWorkspaceOutboxEvent(
   } else {
     throw new Error(`Invalid payload for outbox event ${event.eventType}`);
   }
-  if (
-    receipt?.operationId !== event.id ||
-    (receipt.status !== "completed" && receipt.status !== "published")
-  ) {
+  const parsedReceipt = deliveryReceiptSchema.safeParse(receipt);
+  if (!parsedReceipt.success || parsedReceipt.data.operationId !== event.id) {
     throw new Error("Invalid outbox delivery receipt");
   }
-  return receipt;
+  return parsedReceipt.data;
 }
 
 export class WorkspaceOutboxDispatcher {

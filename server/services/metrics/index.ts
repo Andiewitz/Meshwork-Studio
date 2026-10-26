@@ -29,7 +29,3 @@ export class MetricsService {
 
 // Backward compatibility alias
 export const MetricsModule = MetricsService;
-
-export * from "./db";
-export * from "./collector";
-export * from "./routes";
