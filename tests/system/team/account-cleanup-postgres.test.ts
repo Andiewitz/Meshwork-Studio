@@ -47,7 +47,7 @@ describe("team account cleanup with PostgreSQL", () => {
   });
   it("deletes owned teams and memberships in other teams; replay is safe", async () => {
     await pool.query(
-      `INSERT INTO teams(id,name,owner_id) VALUES ('owned','Owned','user'),('other','Other','owner')`,
+      `INSERT INTO teams(id,name,owner_id,invite_code) VALUES ('owned','Owned','user','MX-AAAA'),('other','Other','owner','MX-BBBB')`,
     );
     await pool.query(
       `INSERT INTO team_members(id,team_id,user_id,color) VALUES ('m1','owned','member','#FFFFFF'),('m2','other','user','#FFFFFF'),('m3','other','member','#FFFFFF')`,
