@@ -122,3 +122,13 @@ CI supplies this DSN for the existing PostgreSQL service. Local verification use
 a temporary PostgreSQL instance because Docker's engine was unavailable. Live
 deployment, forced process termination against DynamoDB, and real-DynamoDB
 verification of #55 document consistency remain separate verification gates.
+
+To verify migration locking with two separate processes, use a disposable
+PostgreSQL database (the test creates and drops a randomly named schema):
+
+```powershell
+$env:MIGRATION_TEST_DATABASE_URL = '<disposable PostgreSQL connection string>'
+npx vitest run --config vitest.system.config.ts tests/system/arch/migration-postgres.test.ts
+```
+
+Do not point this test at a production database.

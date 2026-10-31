@@ -9,13 +9,16 @@
 
 Workspace and Team listen for `user.deleted`, but the reviewed code has no
 producer or cross-process identity deletion bridge. Listeners swallow failures;
-AI has no cleanup consumer. Team cleanup removes owned teams but does not
-explicitly remove memberships in other owners' teams. Synthetic event-bus tests
+AI has no cleanup consumer. Team cleanup now removes owned teams and memberships in other owners' teams,
+and invalidates the affected access caches. This is only one part of the
+unfinished lifecycle operation. Synthetic event-bus tests
 do not establish that production identity deletion reaches every store.
 
 Evidence: Workspace/Team entrypoints and storage, AI entrypoint/storage,
 `server/lib/events.ts`, Go routes, and event-bus tests at `bbfec7f`.
-This is an incomplete future feature, not a broken live deletion endpoint.
+This is an incomplete future feature: the deletion endpoint does not exist.
+The formerly nonfunctional Settings control has been disabled until the workflow
+is implemented.
 
 ## Proposed solution
 

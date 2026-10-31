@@ -17,7 +17,8 @@ problem or prove that an earlier design had the same runtime behavior.
   async messages. The current code batches Workspace authorization in one SQL
   query per 500 recipients and uses bounded per-socket and per-room queues.
   It does not cache permissions. Overload closes sockets for reconnection, but
-  missed canvas events are not automatically reconciled after reconnect.
+  missed canvas events are not automatically reconciled after reconnect. The
+  client warns after rejoining and backs off repeated short connections.
 - A local synthetic before/after comparison is in `tests/load/README.md`. It
   does not measure real PostgreSQL, Redis, network conditions, or production p95.
   Tests cover ordered delivery, access removal, and fail-closed batch errors.
@@ -79,7 +80,9 @@ problem or prove that an earlier design had the same runtime behavior.
   not yet verified. The user asked to leave DynamoDB verification pending when
   Docker was unavailable. Old migration runners do not take the new lock.
 - Next: run two real migration processes against a disposable PostgreSQL
-  database; test real DynamoDB/S3 permissions and Canvas readiness; exercise an
+  database (a two-process test is in `tests/system/arch/migration-postgres.test.ts`,
+  but has not been run against a database); test real DynamoDB/S3 permissions
+  and Canvas readiness; exercise an
   actual SIGTERM with active HTTP, socket, and outbox work before deployment.
 
 ### 7. Public landing page placeholder content (removed locally)
