@@ -135,4 +135,12 @@ describe("Canvas Caching Utilities (Unit)", () => {
       isCanvasDraftCurrent({ nodes: [], edges: [], timestamp: 0 }, 12),
     ).toBe(false);
   });
+  it("reports when browser storage rejects the draft", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(localStorage.setItem).mockImplementationOnce(() => {
+      throw new Error("quota exceeded");
+    });
+    expect(saveCanvasToLocalCache("workspace", [], [], 1, 3)).toBe(false);
+    vi.mocked(console.warn).mockRestore();
+  });
 });

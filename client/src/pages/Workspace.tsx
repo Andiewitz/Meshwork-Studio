@@ -556,7 +556,7 @@ function WorkspaceView() {
       cancelPendingSaveRef.current?.();
       cancelPendingSaveRef.current = null;
       const draft = materializeRootCanvas(canvasStack, { nodes, edges });
-      saveCanvasToLocalCache(
+      const cached = saveCanvasToLocalCache(
         workspaceId,
         draft.nodes,
         draft.edges,
@@ -564,7 +564,14 @@ function WorkspaceView() {
         canvasRevisionRef.current,
         true,
       );
-      setSaveStatus("offline_saved");
+      setSaveStatus(cached ? "offline_saved" : "unsaved");
+      if (!cached) {
+        toast({
+          title: "Could not save a local draft",
+          description: "Export a copy before leaving or reloading this page.",
+          variant: "destructive",
+        });
+      }
     },
   );
   const sendNodeMove = useCallback(

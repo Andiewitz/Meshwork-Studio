@@ -35,8 +35,10 @@ export function saveCanvasToLocalCache(
       `${CANVAS_CACHE_PREFIX}${workspaceId}`,
       JSON.stringify(cache),
     );
+    return true;
   } catch (e) {
     console.warn("Failed to save canvas to local cache", e);
+    return false;
   }
 }
 
