@@ -919,14 +919,20 @@ function WorkspaceView() {
         },
         {
           onSuccess: ({ revision }) => {
-            canvasRevisionRef.current = revision;
-            lastSyncedCanvasRef.current = {
-              nodes: persistedCanvas.nodes,
-              edges: persistedCanvas.edges,
-            };
-            setSaveStatus("saved");
+            if (revision >= canvasRevisionRef.current) {
+              canvasRevisionRef.current = revision;
+              lastSyncedCanvasRef.current = {
+                nodes: persistedCanvas.nodes,
+                edges: persistedCanvas.edges,
+              };
+            }
+            if (cacheGeneration === saveGenerationRef.current) {
+              setSaveStatus("saved");
+            }
           },
           onError: (err: Error) => {
+            if (cacheGeneration !== saveGenerationRef.current) return;
+            setSaveStatus("offline_saved");
             const isConflict =
               (err as Error & { status?: number }).status === 409;
             toast({
@@ -1219,11 +1225,14 @@ function WorkspaceView() {
       },
       {
         onSuccess: ({ revision }) => {
-          canvasRevisionRef.current = revision;
-          lastSyncedCanvasRef.current = {
-            nodes: persistedCanvas.nodes,
-            edges: persistedCanvas.edges,
-          };
+          if (revision >= canvasRevisionRef.current) {
+            canvasRevisionRef.current = revision;
+            lastSyncedCanvasRef.current = {
+              nodes: persistedCanvas.nodes,
+              edges: persistedCanvas.edges,
+            };
+          }
+          if (cacheGeneration !== saveGenerationRef.current) return;
           setSaveStatus("saved");
           toast({
             title: "Workspace changes saved",
@@ -1232,6 +1241,7 @@ function WorkspaceView() {
           });
         },
         onError: (err: any) => {
+          if (cacheGeneration !== saveGenerationRef.current) return;
           setSaveStatus("offline_saved");
           toast({
             title: "Failed to save changes",
