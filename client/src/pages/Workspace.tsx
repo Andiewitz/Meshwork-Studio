@@ -829,6 +829,44 @@ function WorkspaceView() {
   } | null>(null);
   const isInitialLoad = useRef(true);
 
+  const reportCanvasSaveFailure = useCallback(
+    (
+      err: Error,
+      draft: { nodes: Node[]; edges: Edge[] },
+      generation: number,
+      cached: boolean,
+    ) => {
+      if (generation !== saveGenerationRef.current) return;
+      const isConflict = (err as Error & { status?: number }).status === 409;
+      if (isConflict) {
+        draftConflictRef.current = true;
+        draftBaseRevisionRef.current = canvasRevisionRef.current;
+        setDraftConflict(true);
+        cached = saveCanvasToLocalCache(
+          workspaceId,
+          draft.nodes,
+          draft.edges,
+          generation,
+          draftBaseRevisionRef.current,
+          true,
+        );
+      }
+      setSaveStatus(cached ? "offline_saved" : "unsaved");
+      toast({
+        title: isConflict
+          ? "Canvas changed elsewhere"
+          : "Could not save canvas",
+        description: cached
+          ? isConflict
+            ? "Your local draft is preserved for review."
+            : "Changes are saved locally and can be retried."
+          : "Local storage is unavailable. Export a copy before leaving this page.",
+        variant: "destructive",
+      });
+    },
+    [workspaceId, toast],
+  );
+
   const takeSnapshot = useCallback(() => {
     history.current.push({
       nodes: JSON.parse(JSON.stringify(nodes)),
@@ -963,7 +1001,7 @@ function WorkspaceView() {
 
     // Slow persist to DB (3s debounce)
     const cacheGeneration = ++saveGenerationRef.current;
-    saveCanvasToLocalCache(
+    const cached = saveCanvasToLocalCache(
       workspaceId,
       persistedCanvas.nodes,
       persistedCanvas.edges,
@@ -1015,17 +1053,12 @@ function WorkspaceView() {
             }
           },
           onError: (err: Error) => {
-            if (cacheGeneration !== saveGenerationRef.current) return;
-            setSaveStatus("offline_saved");
-            const isConflict =
-              (err as Error & { status?: number }).status === 409;
-            toast({
-              title: isConflict ? "Canvas changed elsewhere" : "Offline Save",
-              description: isConflict
-                ? "Reload to get the latest canvas; your local changes remain saved."
-                : "Could not reach the server. Changes saved locally.",
-              variant: "destructive",
-            });
+            reportCanvasSaveFailure(
+              err,
+              persistedCanvas,
+              cacheGeneration,
+              cached,
+            );
           },
         },
       );
@@ -1035,7 +1068,15 @@ function WorkspaceView() {
       cancelPendingSaveRef.current?.();
       cancelPendingSaveRef.current = null;
     };
-  }, [nodes, edges, canvasStack, canvasTransition, workspaceId, sync, toast]);
+  }, [
+    nodes,
+    edges,
+    canvasStack,
+    canvasTransition,
+    workspaceId,
+    sync,
+    reportCanvasSaveFailure,
+  ]);
 
   useEffect(() => {
     setEdges((eds) =>
@@ -1288,7 +1329,7 @@ function WorkspaceView() {
       edges,
     });
     const cacheGeneration = ++saveGenerationRef.current;
-    saveCanvasToLocalCache(
+    const cached = saveCanvasToLocalCache(
       workspaceId,
       persistedCanvas.nodes,
       persistedCanvas.edges,
@@ -1335,16 +1376,13 @@ function WorkspaceView() {
               "Your architecture has been successfully synchronized.",
           });
         },
-        onError: (err: any) => {
-          if (cacheGeneration !== saveGenerationRef.current) return;
-          setSaveStatus("offline_saved");
-          toast({
-            title: "Failed to save changes",
-            description:
-              err.message ||
-              "An error occurred while saving. Please try again.",
-            variant: "destructive",
-          });
+        onError: (err: Error) => {
+          reportCanvasSaveFailure(
+            err,
+            persistedCanvas,
+            cacheGeneration,
+            cached,
+          );
         },
       },
     );
