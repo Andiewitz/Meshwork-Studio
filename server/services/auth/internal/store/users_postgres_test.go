@@ -141,5 +141,27 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 		if activeSessions != 0 {
 			t.Fatalf("cleanup left %d active sessions", activeSessions)
 		}
+
+		if _, err := pool.Exec(ctx, `INSERT INTO users(id,email,email_normalized,is_active) VALUES ('rollback','rollback@example.test','rollback@example.test',true)`); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := pool.Exec(ctx, `ALTER TABLE account_cleanup_steps ADD CONSTRAINT reject_cleanup CHECK (false) NOT VALID`); err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.BeginAccountCleanup(ctx, "rollback", "bb58910d-3bf7-40cf-9cde-6f3992b09a36")
+		if err == nil {
+			t.Fatal("expected cleanup insert failure")
+		}
+		var rollbackActive bool
+		var operations int
+		if err := pool.QueryRow(ctx, `SELECT is_active FROM users WHERE id='rollback'`).Scan(&rollbackActive); err != nil {
+			t.Fatal(err)
+		}
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM account_cleanup_operations WHERE user_id='rollback'`).Scan(&operations); err != nil {
+			t.Fatal(err)
+		}
+		if !rollbackActive || operations != 0 {
+			t.Fatalf("cleanup failure did not roll back: active=%v operations=%d", rollbackActive, operations)
+		}
 	})
 }
