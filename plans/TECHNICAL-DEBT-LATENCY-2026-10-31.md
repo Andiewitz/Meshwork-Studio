@@ -37,15 +37,13 @@ problem or prove that an earlier design had the same runtime behavior.
   by request counts. Older stored snapshots remain incorrect; use histogram
   buckets or a load generator for p95/p99.
 
-### 3. Collaborator profile lookup performs sequential database queries
+### 3. Collaborator profile lookup (batched locally; real database measurement pending)
 
-- Evidence: `server/services/auth/internal/httpapi/collaborator_identity.go`
-  loops over up to 100 IDs and awaits a user lookup for each. The Share dialog
-  batches requests in groups of 100, but each group still fans into serial SQL.
-  This is new collaborator work. It mainly affects opening large sharing lists.
-- Next: use one bounded `WHERE id = ANY(...)` query, preserve active/verified
-  filters and the current minimal response shape, and test missing/duplicate IDs
-  and database outages. Measure query count and list latency before and after.
+- The internal profile endpoint now deduplicates and validates up to 100 IDs,
+  retrieves eligible accounts in one SQL query, and returns profiles in request
+  order without changing the response shape. Unit tests cover duplicates,
+  missing/ineligible users, authorization, invalid input, and store errors.
+- Real PostgreSQL execution and before/after latency measurement remain pending.
 
 ### 4. Canvas saves intentionally wait for inactivity
 
@@ -54,6 +52,8 @@ problem or prove that an earlier design had the same runtime behavior.
   perceived-save-latency tradeoff rather than proof of a server bottleneck.
   Git attributes the current debounce behavior to July 2026; nearby older lines
   trace to April, which alone does not prove the delay existed in April.
+- Save callbacks now avoid marking newer edits saved when an older request finishes.
+  The three-second debounce and lifecycle flush work remain unchanged.
 - Next: measure edit-to-save confirmation and failure recovery on representative
   canvases. Consider flushing on explicit save, navigation, and suitable page
   lifecycle events; preserve revision conflict handling and offline recovery.
@@ -64,6 +64,8 @@ problem or prove that an earlier design had the same runtime behavior.
   copies had been tracked and called for credential rotation. The report is
   historical evidence, not proof the keys are still valid, rotated, or exposed
   in the current tree. No credentials were printed or re-tested in this review.
+- A search of repository documentation found no confirmation of rotation. Provider
+  status has not been checked.
 - Next: check the credential-response records and provider-side rotation status;
   if any historical credential remains active, rotate it and follow
   `docs/operations/CREDENTIAL-RESPONSE.md`. Do not infer safety from `.gitignore`.
@@ -79,13 +81,12 @@ problem or prove that an earlier design had the same runtime behavior.
   database; test real DynamoDB/S3 permissions and Canvas readiness; exercise an
   actual SIGTERM with active HTTP, socket, and outbox work before deployment.
 
-### 7. Public landing page contains placeholder content
+### 7. Public landing page placeholder content (removed locally)
 
 - Evidence: `client/src/pages/Landing.tsx` renders `TODO(date)` and `TODO(copy)`
   in the update section. Git attributes these placeholders to October 2026,
   not March. They are a visible product issue, not a latency measurement.
-- Next: replace the placeholders with verified release details or hide the
-  section until real content exists.
+- The unfinished update section is removed until verified release content exists.
 
 ## Measurement baseline and sequence
 
