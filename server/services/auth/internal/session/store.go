@@ -85,7 +85,7 @@ type CreateInput struct {
 	IPHash    *string
 }
 
-// Create inserts a fresh session row and primes the cache.
+// Create inserts a fresh session while holding the account row lock.
 func (s *Store) Create(ctx context.Context, in CreateInput) (*Record, string, error) {
 	raw, hash, err := NewToken()
 	if err != nil {
@@ -102,7 +102,19 @@ func (s *Store) Create(ctx context.Context, in CreateInput) (*Record, string, er
 		UserAgent:         in.UserAgent,
 		IPHash:            in.IPHash,
 	}
-	_, err = s.pool.Exec(ctx, `
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, "", fmt.Errorf("begin session creation: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var active bool
+	if err := tx.QueryRow(ctx, `SELECT is_active FROM users WHERE id = $1 FOR UPDATE`, in.UserID).Scan(&active); err != nil {
+		return nil, "", fmt.Errorf("check account for session: %w", err)
+	}
+	if !active {
+		return nil, "", ErrInactiveAccount
+	}
+	_, err = tx.Exec(ctx, `
 		INSERT INTO auth_sessions
 			(id_hash, user_id, created_at, last_seen_at, expires_at, absolute_expires_at, user_agent, ip_hash)
 		VALUES ($1,$2,$3,$3,$4,$5,$6,$7)`,
@@ -110,7 +122,10 @@ func (s *Store) Create(ctx context.Context, in CreateInput) (*Record, string, er
 	if err != nil {
 		return nil, "", fmt.Errorf("insert session: %w", err)
 	}
-	s.primeCache(ctx, rec)
+	if err := tx.Commit(ctx); err != nil {
+		return nil, "", fmt.Errorf("commit session: %w", err)
+	}
+	// A post-commit cache write could resurrect a concurrently revoked session.
 	return rec, raw, nil
 }
 
@@ -129,6 +144,7 @@ func (s *Store) Rotate(ctx context.Context, oldRawToken string, in CreateInput) 
 	return s.Create(ctx, in)
 }
 
+var ErrInactiveAccount = errors.New("account is inactive")
 var ErrInvalidSession = errors.New("invalid session")
 var ErrNotFound = errors.New("session not found")
 

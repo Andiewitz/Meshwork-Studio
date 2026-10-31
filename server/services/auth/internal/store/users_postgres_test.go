@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/meshwork-studio/auth/internal/session"
 	"os"
 	"sync"
 	"testing"
@@ -115,6 +116,30 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 		}
 		if _, err := db.BeginAccountCleanup(ctx, "eligible", "bb58910d-3bf7-40cf-9cde-6f3992b09a34"); !errors.Is(err, ErrCleanupOperationMismatch) {
 			t.Fatalf("unexpected duplicate error: %v", err)
+		}
+		sessions := session.NewStore(pool, nil, time.Hour, time.Hour, time.Minute)
+		if _, _, err := sessions.Create(ctx, session.CreateInput{UserID: "eligible"}); !errors.Is(err, session.ErrInactiveAccount) {
+			t.Fatalf("inactive user created session: %v", err)
+		}
+		creation := make(chan error, 1)
+		cleanup := make(chan error, 1)
+		go func() { _, _, err := sessions.Create(ctx, session.CreateInput{UserID: "unverified"}); creation <- err }()
+		go func() {
+			_, err := db.BeginAccountCleanup(ctx, "unverified", "bb58910d-3bf7-40cf-9cde-6f3992b09a35")
+			cleanup <- err
+		}()
+		if err := <-cleanup; err != nil {
+			t.Fatal(err)
+		}
+		if err := <-creation; err != nil && !errors.Is(err, session.ErrInactiveAccount) {
+			t.Fatal(err)
+		}
+		var activeSessions int
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM auth_sessions WHERE user_id='unverified' AND revoked_at IS NULL`).Scan(&activeSessions); err != nil {
+			t.Fatal(err)
+		}
+		if activeSessions != 0 {
+			t.Fatalf("cleanup left %d active sessions", activeSessions)
 		}
 	})
 }
