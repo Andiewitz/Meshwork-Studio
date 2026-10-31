@@ -34,17 +34,6 @@ import {
   ArrowPathIcon as Loader2,
   PencilSquareIcon as EditIcon,
 } from "@heroicons/react/24/outline";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { validatePasswordStrength } from "@shared/auth";
 import { SecuritySection } from "@/components/settings/SecuritySection";
@@ -85,7 +74,7 @@ interface NavSection {
 }
 
 export default function Settings() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
@@ -101,14 +90,12 @@ export default function Settings() {
 
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -219,17 +206,6 @@ export default function Settings() {
       toast({ title: "Error", variant: "destructive" });
     } finally {
       setIsChangingPassword(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== "DELETE") return;
-    setIsDeletingAccount(true);
-    try {
-      await apiRequest("DELETE", "/api/v1/user/account");
-      logout();
-    } catch {
-      setIsDeletingAccount(false);
     }
   };
 
@@ -973,47 +949,15 @@ export default function Settings() {
                   Danger Zone
                 </h3>
                 <p className="text-xs text-white/50">
-                  Permanently remove your account and all associated workspace
-                  data.
+                  Account deletion is not available yet.
                 </p>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      className="text-xs rounded-xl"
-                    >
-                      Delete Account
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="bg-[#151519] border-white/10 text-white">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        Are you absolutely sure?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription className="text-white/60 text-xs">
-                        This action cannot be undone. Type DELETE to confirm:
-                      </AlertDialogDescription>
-                      <Input
-                        value={deleteConfirmText}
-                        onChange={(e) => setDeleteConfirmText(e.target.value)}
-                        placeholder="DELETE"
-                        className="bg-white/[0.04] border-white/10 text-xs text-white mt-2"
-                      />
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="bg-white/10 text-white hover:bg-white/20 border-0">
-                        Cancel
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleDeleteAccount}
-                        disabled={isDeletingAccount}
-                        className="bg-red-600 hover:bg-red-700 text-white"
-                      >
-                        {isDeletingAccount ? "Deleting..." : "Delete Account"}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <Button
+                  variant="destructive"
+                  disabled
+                  className="text-xs rounded-xl"
+                >
+                  Delete Account
+                </Button>
               </div>
             </div>
           )}
