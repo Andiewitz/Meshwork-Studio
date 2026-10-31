@@ -81,3 +81,34 @@ worker; p95 high + CPU low → storage-bound; 503s → DDB write locks).
 capacity-report.md) — gitignored. `state.json` contains only
 loadtest.example.com account credentials; NEVER seed real accounts here and
 never run against a production deployment.
+## Local realtime fan-out benchmark
+
+`node node_modules/tsx/dist/cli.mjs tests/load/realtime-local-benchmark.ts` runs
+the actual WebSocket server on loopback with synthetic signed users and no Redis
+or database. The current harness simulates one 1 ms database query per sender
+lookup and one per recipient batch. Ten isolated node-move messages are timed
+until the last recipient receives each one.
+
+A Windows run on 2026-10-31 produced the following before and after results:
+
+| Participants | Before: simulated queries/message | After: simulated queries/message | Before: last recipient p50 | After: last recipient p50 |
+| ---: | ---: | ---: | ---: | ---: |
+| 2 | 4 | 2 | 61.93 ms | 30.87 ms |
+| 10 | 20 | 2 | 266.14 ms | 31.33 ms |
+| 50 | 100 | 2 | 1,355.23 ms | 30.66 ms |
+
+The earlier run simulated two sequential 1 ms queries per permission lookup;
+the current run simulates the new single-query lookup and batch. The requested
+1 ms timer was much slower on this Windows machine, and each row has only ten
+samples. These figures illustrate query amplification and ordering overhead;
+they are **not production latency or a benchmark of PostgreSQL, Redis,
+DynamoDB, or a network**. Run a representative full-stack load test before
+estimating real latency. The current script reproduces the after case.
+
+The production batch implementation uses one Workspace SQL query per 500
+recipients, plus the sender check, and does not cache grants. Local per-socket
+ingress and per-room delivery are ordered and bounded; overload closes sockets
+so clients reconnect. Reconnection restores presence but does not automatically
+reconcile missed canvas events; users may need a reload. Events from independent server instances do not have a
+global total-order guarantee. The database query and cross-instance behavior
+still require infrastructure-backed tests.

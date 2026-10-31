@@ -64,6 +64,10 @@ export interface WorkspaceAccessReader {
     workspaceId: string,
     userId: string,
   ): Promise<QueryResult<WorkspaceAccess>>;
+  getAccessBatch?(
+    workspaceId: string,
+    userIds: string[],
+  ): Promise<QueryResult<{ userId: string; access: WorkspaceAccess }[]>>;
 }
 
 export function createWorkspaceAccessReader(source: {
@@ -71,8 +75,29 @@ export function createWorkspaceAccessReader(source: {
     workspaceId: string,
     userId: string,
   ): Promise<WorkspaceAccess>;
+  getWorkspaceAccessBatch?(
+    workspaceId: string,
+    userIds: string[],
+  ): Promise<{ userId: string; access: WorkspaceAccess }[]>;
 }): WorkspaceAccessReader {
   return {
+    ...(source.getWorkspaceAccessBatch
+      ? {
+          async getAccessBatch(workspaceId: string, userIds: string[]) {
+            try {
+              return {
+                status: "available" as const,
+                value: await source.getWorkspaceAccessBatch!(
+                  workspaceId,
+                  userIds,
+                ),
+              };
+            } catch (cause) {
+              return { status: "unavailable" as const, cause };
+            }
+          },
+        }
+      : {}),
     async getAccess(workspaceId, userId) {
       try {
         return {

@@ -12,6 +12,25 @@ export function workspaceAccess(direct: WorkspaceAccessReader) {
   }
   return {
     getWorkspaceRole,
+    ...(direct.getAccessBatch
+      ? {
+          async canAccessMany(workspaceId: string, userIds: string[]) {
+            const grants = readQuery(
+              await direct.getAccessBatch!(workspaceId, userIds),
+            );
+            return new Set(
+              grants
+                .filter(
+                  ({ access }) =>
+                    access === "owner" ||
+                    access === "edit" ||
+                    access === "view",
+                )
+                .map(({ userId }) => userId),
+            );
+          },
+        }
+      : {}),
     async canAccessWorkspace(userId: string, workspaceId: string) {
       return (await getWorkspaceRole(workspaceId, userId)) !== null;
     },

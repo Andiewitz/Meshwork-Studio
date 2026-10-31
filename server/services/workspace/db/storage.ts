@@ -47,6 +47,10 @@ export interface IWorkspaceStorage {
     workspaceId: string,
     userId: string,
   ): Promise<WorkspaceAccess>;
+  getWorkspaceAccessBatch(
+    workspaceId: string,
+    userIds: string[],
+  ): Promise<{ userId: string; access: WorkspaceAccess }[]>;
   upsertWorkspaceCollaborator(
     collaborator: InsertWorkspaceCollaborator,
   ): Promise<WorkspaceCollaborator>;
@@ -216,23 +220,50 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
     workspaceId: string,
     userId: string,
   ): Promise<WorkspaceAccess> {
-    const [workspace] = await db
-      .select({ userId: workspaces.userId })
-      .from(workspaces)
-      .where(eq(workspaces.id, workspaceId));
-    if (!workspace) return "none";
-    if (workspace.userId === userId) return "owner";
+    return (
+      (await this.getWorkspaceAccessBatch(workspaceId, [userId]))[0]?.access ??
+      "none"
+    );
+  }
 
-    const [collaborator] = await db
-      .select({ permission: workspaceCollaborators.permission })
-      .from(workspaceCollaborators)
-      .where(
-        and(
-          eq(workspaceCollaborators.workspaceId, workspaceId),
-          eq(workspaceCollaborators.userId, userId),
-        ),
-      );
-    return collaborator?.permission ?? "none";
+  async getWorkspaceAccessBatch(
+    workspaceId: string,
+    userIds: string[],
+  ): Promise<{ userId: string; access: WorkspaceAccess }[]> {
+    const unique = [...new Set(userIds)];
+    const result = new Map<string, WorkspaceAccess>(
+      unique.map((userId) => [userId, "none"]),
+    );
+    // Bound each SQL IN list; all results still come from Workspace's database.
+    for (let offset = 0; offset < unique.length; offset += 500) {
+      const batch = unique.slice(offset, offset + 500);
+      const rows = await db
+        .select({
+          ownerId: workspaces.userId,
+          collaboratorId: workspaceCollaborators.userId,
+          permission: workspaceCollaborators.permission,
+        })
+        .from(workspaces)
+        .leftJoin(
+          workspaceCollaborators,
+          and(
+            eq(workspaceCollaborators.workspaceId, workspaces.id),
+            inArray(workspaceCollaborators.userId, batch),
+          ),
+        )
+        .where(eq(workspaces.id, workspaceId));
+      for (const row of rows) {
+        if (row.ownerId && result.has(row.ownerId))
+          result.set(row.ownerId, "owner");
+        if (
+          row.collaboratorId &&
+          row.collaboratorId !== row.ownerId &&
+          row.permission
+        )
+          result.set(row.collaboratorId, row.permission);
+      }
+    }
+    return [...result].map(([userId, access]) => ({ userId, access }));
   }
 
   async upsertWorkspaceCollaborator(
@@ -567,6 +598,16 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
           collaborator.userId === userId,
       )?.permission ?? "none"
     );
+  }
+
+  async getWorkspaceAccessBatch(
+    workspaceId: string,
+    userIds: string[],
+  ): Promise<{ userId: string; access: WorkspaceAccess }[]> {
+    const result = new Map<string, WorkspaceAccess>();
+    for (const userId of new Set(userIds))
+      result.set(userId, await this.getWorkspaceAccess(workspaceId, userId));
+    return [...result].map(([userId, access]) => ({ userId, access }));
   }
 
   async upsertWorkspaceCollaborator(

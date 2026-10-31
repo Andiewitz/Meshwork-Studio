@@ -11,32 +11,31 @@ problem or prove that an earlier design had the same runtime behavior.
 
 ## Prioritized findings
 
-### 1. Realtime permission checks can amplify latency and reorder messages
+### 1. Realtime fan-out amplification (optimized locally; real-backend verification pending)
 
-- Evidence: `server/services/collaboration/websocket/presence.ts` checks access
-  for each recipient sequentially during each room broadcast and starts each
-  broadcast without waiting for previous broadcasts. `getWorkspaceAccess` in
-  `server/services/workspace/db/storage.ts` issues an owner query and, for a
-  non-owner, a second grant query. Cursor and canvas traffic can therefore cause
-  multiple database round trips per recipient, and asynchronous broadcasts can
-  complete out of order. This is **recent debt from the collaborator work**, not
-  a claim about March. No current p95/p99 was measured.
-- Next: load-test 2, 10, and 50 participants with cursor and node traffic;
-  measure pool waits, query count, event-loop lag, and ordered-delivery behavior.
-  Use an indexed single-query permission lookup and a bounded, ordered fan-out.
-  If caching, pair it with cross-process invalidation and fail-closed handling;
-  prove removals/downgrades stop delivery before relying on a cache.
+- The prior implementation checked recipients one at a time and could reorder
+  async messages. The current code batches Workspace authorization in one SQL
+  query per 500 recipients and uses bounded per-socket and per-room queues.
+  It does not cache permissions. Overload closes sockets for reconnection, but
+  missed canvas events are not automatically reconciled after reconnect.
+- A local synthetic before/after comparison is in `tests/load/README.md`. It
+  does not measure real PostgreSQL, Redis, network conditions, or production p95.
+  Tests cover ordered delivery, access removal, and fail-closed batch errors.
+- Next: test the query against real PostgreSQL, benchmark representative rooms
+  and cross-instance Redis traffic, and verify revocation under concurrency.
+  Independent server instances do not have a global total-order guarantee.
 
-### 2. The recorded latency average is mathematically unreliable
+### 2. The recorded latency average was mathematically unreliable (fixed locally)
 
 - Evidence: `server/services/metrics/collector/collector.ts` sums cumulative
   histogram buckets as if they were independent counts, and overwrites the
   duration sum for each label series. This was already identified in
   `docs/archive/plans/CODEBASE-RELIABILITY-AUDIT.md`; Git attributes these lines
   to August 2026, not seven months ago. The result can mislead performance work.
-- Next: calculate interval deltas from the histogram `_sum` and `_count` series
-  across labels, test with multiple routes and resets, and use histogram buckets
-  or a load generator for p95/p99 rather than deriving percentiles from averages.
+- Status: the collector now calculates per-series interval deltas from `_sum`
+  and `_count`, with reset and failed-write tests. Hourly views weight intervals
+  by request counts. Older stored snapshots remain incorrect; use histogram
+  buckets or a load generator for p95/p99.
 
 ### 3. Collaborator profile lookup performs sequential database queries
 
@@ -95,6 +94,7 @@ workload and explicitly notes its limits. It is not a current production
 baseline and does not cover the new permission path. Before optimization, run the
 existing `tests/load` scenarios against a representative deployment; record
 hardware, data size, concurrency, cache state, p50/p95/p99, errors, database
-pool waits, DynamoDB throttling, and WebSocket delivery lag. First fix the metrics
-calculation, then benchmark realtime fan-out and profile lookup, then consider
+pool waits, DynamoDB throttling, and WebSocket delivery lag. The metrics
+calculation is fixed locally. Benchmark realtime fan-out and profile lookup on
+real infrastructure, then consider
 changes to save timing. Compare the same workload before and after each change.

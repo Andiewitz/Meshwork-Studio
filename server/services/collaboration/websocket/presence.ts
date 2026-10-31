@@ -1,4 +1,4 @@
-import { WebSocketServer, WebSocket } from "ws";
+import { WebSocketServer, WebSocket, type RawData } from "ws";
 import { createChildLogger } from "@server/lib/logger";
 import { logTraceback } from "@server/lib/traceback";
 import type { ApiErrorCode } from "@server/lib/errorCodes";
@@ -60,7 +60,7 @@ function initRedisSub() {
         const workspaceId = channel.slice("ws:room:".length);
         const payload = JSON.parse(message);
         if (payload.originServerId === ORIGIN_SERVER_ID) return;
-        void broadcastToRoom(workspaceId, payload.data, payload.excludeUserId);
+        enqueueBroadcast(workspaceId, payload.data, payload.excludeUserId);
       } catch (err) {
         log.error({ err, channel }, "Error processing pub/sub message");
       }
@@ -88,7 +88,7 @@ function publishToRoom(
   message: ServerMessage,
   excludeUserId?: string,
 ) {
-  void broadcastToRoom(workspaceId, message, excludeUserId);
+  enqueueBroadcast(workspaceId, message, excludeUserId);
 
   const pub = getRedisPub();
   if (pub) {
@@ -174,39 +174,111 @@ function canMutateCanvas(role: string | null): boolean {
 
 let roomPermissionCheck:
   ((userId: string, workspaceId: string) => Promise<boolean>) | undefined;
+let roomBatchPermissionCheck:
+  | ((workspaceId: string, userIds: string[]) => Promise<Set<string>>)
+  | undefined;
+const roomDeliveryQueues = new Map<
+  string,
+  { tail: Promise<void>; pending: number }
+>();
+const MAX_PENDING_MESSAGES = 128;
 
-async function broadcastToRoom(
+function enqueueBroadcast(
   workspaceId: string,
   message: ServerMessage,
   excludeUserId?: string,
 ) {
   const room = rooms.get(workspaceId);
   if (!room) return;
-
-  const payload = JSON.stringify(message);
-  for (const [uid, user] of room.entries()) {
-    if (uid === excludeUserId) continue;
-    if (user.ws.readyState !== WebSocket.OPEN) continue;
-    try {
+  const recipients = [...room.entries()].filter(
+    ([id, user]) =>
+      id !== excludeUserId && user.ws.readyState === WebSocket.OPEN,
+  );
+  if (!recipients.length) return;
+  let queue = roomDeliveryQueues.get(workspaceId);
+  if (!queue) {
+    queue = { tail: Promise.resolve(), pending: 0 };
+    roomDeliveryQueues.set(workspaceId, queue);
+  }
+  if (queue.pending >= MAX_PENDING_MESSAGES) {
+    log.warn(
+      { workspaceId },
+      "Room delivery queue full; closing sockets for reconnect",
+    );
+    for (const user of room.values())
+      user.ws.close(1013, "Room overloaded; reconnect");
+    return;
+  }
+  const current = queue;
+  current.pending++;
+  current.tail = current.tail
+    .then(() => broadcastToRoom(workspaceId, message, recipients))
+    .catch((error: unknown) =>
+      log.error({ error, workspaceId }, "Room delivery failed"),
+    )
+    .finally(() => {
+      current.pending--;
       if (
-        !roomPermissionCheck ||
-        !(await roomPermissionCheck(uid, workspaceId))
-      ) {
-        user.ws.close(WS_CLOSE_FORBIDDEN, "forbidden");
-        continue;
+        current.pending === 0 &&
+        roomDeliveryQueues.get(workspaceId) === current
+      )
+        roomDeliveryQueues.delete(workspaceId);
+    });
+}
+
+async function broadcastToRoom(
+  workspaceId: string,
+  message: ServerMessage,
+  recipients: [string, PresenceUser][],
+) {
+  // Recheck immediately before each delivery; no permission cache or stale fallback.
+  const active = recipients.filter(
+    ([uid, user]) =>
+      rooms.get(workspaceId)?.get(uid)?.ws === user.ws &&
+      user.ws.readyState === WebSocket.OPEN,
+  );
+  if (!active.length) return;
+  try {
+    let allowed: Set<string>;
+    if (roomBatchPermissionCheck) {
+      allowed = await roomBatchPermissionCheck(
+        workspaceId,
+        active.map(([uid]) => uid),
+      );
+    } else {
+      // Compatibility for callers without a batch port, bounded to 10 lookups.
+      if (!roomPermissionCheck)
+        throw new Error("Permission checker unavailable");
+      allowed = new Set();
+      for (let offset = 0; offset < active.length; offset += 10) {
+        const decisions = await Promise.all(
+          active.slice(offset, offset + 10).map(async ([uid]) => ({
+            uid,
+            access: await roomPermissionCheck!(uid, workspaceId),
+          })),
+        );
+        for (const decision of decisions)
+          if (decision.access) allowed.add(decision.uid);
       }
+    }
+    const payload = JSON.stringify(message);
+    for (const [uid, user] of active) {
+      if (
+        rooms.get(workspaceId)?.get(uid)?.ws !== user.ws ||
+        user.ws.readyState !== WebSocket.OPEN
+      )
+        continue;
+      if (!allowed.has(uid)) user.ws.close(WS_CLOSE_FORBIDDEN, "forbidden");
+      else user.ws.send(payload);
+    }
+  } catch (error) {
+    log.error({ error, workspaceId }, "Presence permission check failed");
+    for (const [uid, user] of active)
       if (
         rooms.get(workspaceId)?.get(uid)?.ws === user.ws &&
         user.ws.readyState === WebSocket.OPEN
       )
-        user.ws.send(payload);
-    } catch (error) {
-      log.error(
-        { error, workspaceId, userId: uid },
-        "Presence permission check failed",
-      );
-      user.ws.close(WS_CLOSE_FORBIDDEN, "permission unavailable");
-    }
+        user.ws.close(WS_CLOSE_FORBIDDEN, "permission unavailable");
   }
 }
 
@@ -260,6 +332,7 @@ function rejectUpgrade(
 
 export interface CollaborationPermissions {
   canAccessWorkspace(userId: string, workspaceId: string): Promise<boolean>;
+  canAccessMany?(workspaceId: string, userIds: string[]): Promise<Set<string>>;
   getWorkspaceRole(
     workspaceId: string,
     userId: string,
@@ -272,6 +345,7 @@ export function initializeWebSocket(
 ) {
   roomPermissionCheck = (userId, workspaceId) =>
     permissions.canAccessWorkspace(userId, workspaceId);
+  roomBatchPermissionCheck = permissions.canAccessMany;
   // SECURITY: noServer mode — the HTTP 'upgrade' event is authenticated
   // BEFORE any socket is accepted. Anonymous sockets never exist.
   const wss = new WebSocketServer({ noServer: true });
@@ -425,7 +499,8 @@ export function initializeWebSocket(
       auth.lastValidatedAt = Date.now();
     }, SESSION_REVALIDATE_MS);
 
-    ws.on("message", async (raw) => {
+    const handleMessage = async (raw: RawData) => {
+      if (ws.readyState !== WebSocket.OPEN) return;
       try {
         const msg: ClientMessage = JSON.parse(raw.toString());
 
@@ -655,6 +730,20 @@ export function initializeWebSocket(
         logTraceback(log, "Message handling error", err, { requestId });
         sendWsError(ws, "INTERNAL", "Message failed", requestId);
       }
+    };
+    let incoming = Promise.resolve();
+    let pendingIncoming = 0;
+    ws.on("message", (raw) => {
+      if (pendingIncoming >= MAX_PENDING_MESSAGES) {
+        ws.close(1013, "Too many messages; reconnect");
+        return;
+      }
+      pendingIncoming++;
+      incoming = incoming
+        .then(() => handleMessage(raw))
+        .finally(() => {
+          pendingIncoming--;
+        });
     });
 
     // SECURITY: viewers and non-members must not broadcast canvas mutations.
