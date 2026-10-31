@@ -84,4 +84,13 @@ describe("presence reconnection", () => {
     expect(connected).toBe(true);
     expect(reconnected).toHaveBeenCalledOnce();
   });
+  it("reconnects when the server shuts down with going-away status", () => {
+    const first = FakeSocket.instances[0];
+    act(() => first.open());
+    act(() => first.presence());
+    act(() => first.close(1001));
+    expect(disconnected).toHaveBeenCalledOnce();
+    act(() => vi.advanceTimersByTime(1000));
+    expect(FakeSocket.instances).toHaveLength(2);
+  });
 });

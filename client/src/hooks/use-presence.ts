@@ -45,10 +45,10 @@ interface ServerMessage {
   changes?: NodeChange[] | EdgeChange[];
 }
 
-/** Only retry on abnormal/protocol close; clean close (1000) and
- *  going-away (1001) are intentional — don't reconnect. */
+/** Retry server shutdowns and abnormal/protocol closes. Local navigation
+ * removes the close handler before closing, so it cannot schedule a retry. */
 const RETRYABLE_CLOSE_CODES = new Set([
-  1002, 1003, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015,
+  1001, 1002, 1003, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015,
 ]);
 
 // ─── Hook ────────────────────────────────────────────────────────────
@@ -249,7 +249,7 @@ export function usePresence(
       if (event.code === 4001 || event.code === 4401 || event.code === 4403)
         return;
 
-      // Clean close or intentional navigation — don't reconnect
+      // A clean server close is intentional; navigation removes this handler.
       if (!RETRYABLE_CLOSE_CODES.has(event.code)) return;
       if (joinedRef.current) onDisconnectRef.current?.();
 
