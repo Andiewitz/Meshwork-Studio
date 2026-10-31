@@ -1,0 +1,132 @@
+[
+  {
+    "id": "SB-00",
+    "number": 49,
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues/49",
+    "title": "refactor(architecture): establish extractable service boundaries on the existing EC2",
+    "bodyFile": "00-tracker.md",
+    "labels": ["enhancement", "scalability"],
+    "priority": "Tracker",
+    "dependsOn": []
+  },
+  {
+    "id": "SB-01",
+    "number": 50,
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues/50",
+    "title": "fix(internal-api): correct stats routing, identity credentials, and unavailable results",
+    "bodyFile": "01-internal-api.md",
+    "labels": ["bug"],
+    "priority": "P1",
+    "dependsOn": []
+  },
+  {
+    "id": "SB-02",
+    "number": 51,
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues/51",
+    "title": "refactor(architecture): replace repository registry access with narrow module APIs",
+    "bodyFile": "02-module-apis.md",
+    "labels": ["enhancement"],
+    "priority": "P1",
+    "dependsOn": []
+  },
+  {
+    "id": "SB-03",
+    "number": 52,
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues/52",
+    "title": "refactor(contracts): isolate public DTOs and enforce resolved module imports",
+    "bodyFile": "03-contracts.md",
+    "labels": ["enhancement"],
+    "priority": "P2",
+    "dependsOn": ["SB-02"]
+  },
+  {
+    "id": "SB-04",
+    "number": 53,
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues/53",
+    "title": "refactor(access): unify workspace permissions and decouple realtime from Teams",
+    "bodyFile": "04-workspace-access.md",
+    "labels": ["enhancement"],
+    "priority": "P1",
+    "dependsOn": ["SB-02", "SB-03"]
+  },
+  {
+    "id": "SB-05",
+    "number": 54,
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues/54",
+    "title": "fix(outbox): require confirmed delivery and fence worker claims",
+    "bodyFile": "05-outbox.md",
+    "labels": ["bug", "database"],
+    "priority": "P1",
+    "dependsOn": []
+  },
+  {
+    "id": "SB-06",
+    "number": 55,
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues/55",
+    "title": "fix(canvas): coordinate snapshot reads, copy retries, and deletion fencing",
+    "bodyFile": "06-canvas-consistency.md",
+    "labels": ["enhancement", "canvas", "database"],
+    "priority": "P1 before Canvas extraction",
+    "dependsOn": []
+  },
+  {
+    "id": "SB-07",
+    "number": 56,
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues/56",
+    "title": "refactor(runtime): add module health, draining, and locked migrations",
+    "bodyFile": "07-module-lifecycle.md",
+    "labels": ["enhancement", "database"],
+    "priority": "P2",
+    "dependsOn": ["SB-02"]
+  },
+  {
+    "id": "SB-08",
+    "number": 57,
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues/57",
+    "title": "feat(identity): define durable cross-domain account cleanup before exposing deletion",
+    "bodyFile": "08-identity-lifecycle.md",
+    "labels": ["enhancement", "database"],
+    "priority": "P2; prerequisite for account deletion",
+    "dependsOn": ["SB-03", "SB-04", "SB-05"]
+  },
+  {
+    "id": "SB-09",
+    "number": 58,
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues/58",
+    "title": "feat(observability): carry service and operation context across module boundaries",
+    "bodyFile": "09-observability.md",
+    "labels": ["enhancement"],
+    "priority": "P2",
+    "dependsOn": ["SB-01", "SB-02"]
+  },
+  {
+    "id": "SB-10",
+    "number": 59,
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues/59",
+    "title": "refactor(ai): extract Jenkos into an independently managed EC2 process",
+    "bodyFile": "10-ai-process.md",
+    "labels": ["enhancement", "scalability"],
+    "priority": "P3; extraction after foundations",
+    "dependsOn": ["SB-02", "SB-03", "SB-07", "SB-09"]
+  },
+  {
+    "id": "SB-11",
+    "number": 60,
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues/60",
+    "title": "feat(canvas): execute durable document jobs through SQS and Lambda",
+    "bodyFile": "11-canvas-worker.md",
+    "labels": ["enhancement", "canvas", "scalability"],
+    "priority": "P3; extraction after foundations",
+    "dependsOn": ["SB-02", "SB-03", "SB-05", "SB-06", "SB-07", "SB-09"]
+  },
+  {
+    "id": "SB-12",
+    "number": 61,
+    "url": "https://github.com/Andiewitz/Meshwork-Studio/issues/61",
+    "title": "refactor(realtime): support independent collaboration deployment on the existing EC2",
+    "bodyFile": "12-realtime-process.md",
+    "labels": ["enhancement", "scalability"],
+    "priority": "P3; optional later extraction",
+    "dependsOn": ["SB-02", "SB-03", "SB-04", "SB-07", "SB-09"]
+  }
+]
