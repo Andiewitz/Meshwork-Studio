@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
 import {
   materializeRootCanvas,
+  recoveryCanvasSnapshot,
   type CanvasSnapshot,
   type NestedCanvasLevel,
 } from "@/features/workspace/utils/nestedCanvas";
@@ -73,5 +74,12 @@ describe("materializeRootCanvas", () => {
     };
 
     expect(materializeRootCanvas([], active)).toBe(active);
+  });
+  it("preserves the last stable root if disconnected mid-transition", () => {
+    const root = { nodes: [node("root", "Root")], edges: [] };
+    const stack: NestedCanvasLevel[] = [{ nodeId: "root", ...root }];
+    expect(recoveryCanvasSnapshot(stack, root, "entering", root)).toBe(root);
+    expect(recoveryCanvasSnapshot(stack, root, "exiting", null)).toBeNull();
+    expect(recoveryCanvasSnapshot([], root, "idle", null)).toBe(root);
   });
 });

@@ -223,6 +223,7 @@ import {
 } from "@/features/workspace/utils/canvasSettings";
 import {
   materializeRootCanvas,
+  recoveryCanvasSnapshot,
   type NestedCanvasLevel,
 } from "@/features/workspace/utils/nestedCanvas";
 
@@ -551,19 +552,30 @@ function WorkspaceView() {
       if (lastLoadedId.current !== workspaceId || draftConflictRef.current)
         return;
       draftConflictRef.current = true;
-      draftBaseRevisionRef.current = canvasRevisionRef.current;
+      const previousDraft = getCanvasFromLocalCache(workspaceId);
+      draftBaseRevisionRef.current =
+        canvasTransition !== "idle" && previousDraft
+          ? previousDraft.baseRevision
+          : canvasRevisionRef.current;
       setDraftConflict(true);
       cancelPendingSaveRef.current?.();
       cancelPendingSaveRef.current = null;
-      const draft = materializeRootCanvas(canvasStack, { nodes, edges });
-      const cached = saveCanvasToLocalCache(
-        workspaceId,
-        draft.nodes,
-        draft.edges,
-        ++saveGenerationRef.current,
-        canvasRevisionRef.current,
-        true,
+      const draft = recoveryCanvasSnapshot(
+        canvasStack,
+        { nodes, edges },
+        canvasTransition,
+        previousDraft ?? lastSyncedCanvasRef.current,
       );
+      const cached =
+        draft !== null &&
+        saveCanvasToLocalCache(
+          workspaceId,
+          draft.nodes,
+          draft.edges,
+          ++saveGenerationRef.current,
+          draftBaseRevisionRef.current,
+          true,
+        );
       setSaveStatus(cached ? "offline_saved" : "unsaved");
       if (!cached) {
         toast({
@@ -1826,7 +1838,8 @@ function WorkspaceView() {
                   version; automatic saving is paused.
                 </span>
                 <button
-                  className="rounded-md border border-white/30 px-3 py-2 text-white"
+                  className="rounded-md border border-white/30 px-3 py-2 text-white disabled:opacity-50"
+                  disabled={canvasTransition !== "idle"}
                   onClick={() => {
                     const draft = materializeRootCanvas(canvasStack, {
                       nodes,

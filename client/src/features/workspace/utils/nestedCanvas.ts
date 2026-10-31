@@ -40,3 +40,16 @@ export function materializeRootCanvas(
 
   return child;
 }
+
+/** During a view transition the active canvas and stack can describe different
+ * levels. Preserve the last stable root until the transition completes. */
+export function recoveryCanvasSnapshot(
+  canvasStack: NestedCanvasLevel[],
+  activeCanvas: CanvasSnapshot,
+  transition: "idle" | "entering" | "exiting",
+  lastStable: CanvasSnapshot | null,
+): CanvasSnapshot | null {
+  return transition === "idle"
+    ? materializeRootCanvas(canvasStack, activeCanvas)
+    : lastStable;
+}
