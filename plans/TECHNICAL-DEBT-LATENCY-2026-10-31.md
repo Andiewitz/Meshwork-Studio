@@ -76,8 +76,7 @@ problem or prove that an earlier design had the same runtime behavior.
 ### 6. Lifecycle and storage need real-backend verification
 
 - Evidence: this branch adds migration advisory locking, optional startup,
-  Canvas readiness, and draining. Tests use mocks and a local HTTP server; real
-  concurrent PostgreSQL migrations, real DynamoDB/S3, and deployment SIGTERM are
+  Canvas readiness, and draining. Real DynamoDB/S3 and deployment SIGTERM are
   not yet verified. The user asked to leave DynamoDB verification pending when
   Docker was unavailable. Old migration runners do not take the new lock.
 - A disposable local PostgreSQL instance passed the two-process migration lock,

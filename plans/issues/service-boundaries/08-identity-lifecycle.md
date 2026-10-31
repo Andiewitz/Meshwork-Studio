@@ -7,18 +7,16 @@
 
 ## Problem
 
-Workspace and Team listen for `user.deleted`, but the reviewed code has no
-producer or cross-process identity deletion bridge. Listeners swallow failures;
-AI has no cleanup consumer. Team cleanup now removes owned teams and memberships in other owners' teams,
-and invalidates the affected access caches. This is only one part of the
-unfinished lifecycle operation. Synthetic event-bus tests
-do not establish that production identity deletion reaches every store.
+The legacy `user.deleted` notification has no producer or cross-process bridge,
+and its listeners swallow failures. Identity now records a durable fencing
+operation and per-service steps; Workspace, Team, and AI expose required local
+commands with explicit receipts. Workspace retries use a stable operation ID and
+wait for Canvas completion. Team removes memberships in other owners' teams.
+Disposable PostgreSQL tests cover the owner-specific storage operations.
 
-Evidence: Workspace/Team entrypoints and storage, AI entrypoint/storage,
-`server/lib/events.ts`, Go routes, and event-bus tests at `bbfec7f`.
-This is an incomplete future feature: the deletion endpoint does not exist.
-The formerly nonfunctional Settings control has been disabled until the workflow
-is implemented.
+The durable identity-to-Node dispatcher and a complete write/session fence are
+still missing. The identity operation stays in `fencing` and no public deletion
+endpoint is enabled. The formerly nonfunctional Settings control is disabled.
 
 ## Proposed solution
 
