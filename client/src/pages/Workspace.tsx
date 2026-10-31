@@ -39,6 +39,7 @@ import {
   clearCanvasLocalCache,
 } from "@/hooks/use-canvas";
 import { planCanvasSave } from "@/lib/canvas-delta";
+import { scheduleCanvasSave } from "@/lib/canvas-save-scheduler";
 import {
   useWorkspace,
   useDeleteWorkspace,
@@ -748,7 +749,7 @@ function WorkspaceView() {
 
   type SaveStatus = "saved" | "saving" | "unsaved" | "offline_saved";
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const cancelPendingSaveRef = useRef<(() => void) | null>(null);
   const saveGenerationRef = useRef(0);
   const canvasRevisionRef = useRef(0);
   const lastSyncedCanvasRef = useRef<{
@@ -889,11 +890,8 @@ function WorkspaceView() {
     );
     setSaveStatus("unsaved");
 
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    saveTimeoutRef.current = setTimeout(() => {
+    cancelPendingSaveRef.current?.();
+    cancelPendingSaveRef.current = scheduleCanvasSave(() => {
       const baseline = lastSyncedCanvasRef.current;
       const plan = baseline
         ? planCanvasSave(
@@ -945,10 +943,11 @@ function WorkspaceView() {
           },
         },
       );
-    }, 3000);
+    });
 
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      cancelPendingSaveRef.current?.();
+      cancelPendingSaveRef.current = null;
     };
   }, [nodes, edges, canvasStack, canvasTransition, workspaceId, sync, toast]);
 
@@ -1188,7 +1187,8 @@ function WorkspaceView() {
       });
       return;
     }
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    cancelPendingSaveRef.current?.();
+    cancelPendingSaveRef.current = null;
     const persistedCanvas = materializeRootCanvas(canvasStack, {
       nodes,
       edges,
