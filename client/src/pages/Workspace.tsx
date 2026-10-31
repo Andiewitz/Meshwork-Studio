@@ -39,6 +39,7 @@ import {
   clearCanvasLocalCache,
 } from "@/hooks/use-canvas";
 import { planCanvasSave } from "@/lib/canvas-delta";
+import { isCanvasDraftCurrent } from "@/lib/canvas-cache";
 import { scheduleCanvasSave } from "@/lib/canvas-save-scheduler";
 import {
   useWorkspace,
@@ -471,9 +472,11 @@ function WorkspaceView() {
 
   // ── Real-time collaboration (cursors & presence) ──
   const isRemoteUpdate = useRef(false);
+  const draftConflictRef = useRef(false);
 
   const handleRemoteNodeMove = useCallback(
     (nodeId: string, x: number, y: number, parentId?: string | null) => {
+      if (draftConflictRef.current) return;
       isRemoteUpdate.current = true;
       setNodes((nds) =>
         nds.map((n) => {
@@ -499,6 +502,7 @@ function WorkspaceView() {
 
   const handleRemoteNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      if (draftConflictRef.current) return;
       isRemoteUpdate.current = true;
       setNodes((nds) =>
         normalizeNodeDimensions(applyNodeChanges(changes, nds)),
@@ -512,6 +516,7 @@ function WorkspaceView() {
 
   const handleRemoteEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
+      if (draftConflictRef.current) return;
       isRemoteUpdate.current = true;
       setEdges((eds) => applyEdgeChanges(changes, eds));
       requestAnimationFrame(() => {
@@ -525,9 +530,9 @@ function WorkspaceView() {
     collaborators,
     isConnected: isPresenceConnected,
     sendCursor,
-    sendNodeMove,
-    sendNodesChange,
-    sendEdgesChange,
+    sendNodeMove: sendLiveNodeMove,
+    sendNodesChange: sendLiveNodesChange,
+    sendEdgesChange: sendLiveEdgesChange,
   } = usePresence(
     workspaceId,
     handleRemoteNodeMove,
@@ -542,6 +547,24 @@ function WorkspaceView() {
         variant: "destructive",
       });
     },
+  );
+  const sendNodeMove = useCallback(
+    (id: string, x: number, y: number, parentId?: string | null) => {
+      if (!draftConflictRef.current) sendLiveNodeMove(id, x, y, parentId);
+    },
+    [sendLiveNodeMove],
+  );
+  const sendNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      if (!draftConflictRef.current) sendLiveNodesChange(changes);
+    },
+    [sendLiveNodesChange],
+  );
+  const sendEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      if (!draftConflictRef.current) sendLiveEdgesChange(changes);
+    },
+    [sendLiveEdgesChange],
   );
   const lastCursorSent = useRef(0);
   const lastNodeMoveSent = useRef(0);
@@ -760,6 +783,8 @@ function WorkspaceView() {
   const cancelPendingSaveRef = useRef<(() => void) | null>(null);
   const saveGenerationRef = useRef(0);
   const canvasRevisionRef = useRef(0);
+  const draftBaseRevisionRef = useRef<number | undefined>(undefined);
+  const [draftConflict, setDraftConflict] = useState(false);
   const lastSyncedCanvasRef = useRef<{
     nodes: Node[];
     edges: Edge[];
@@ -850,17 +875,27 @@ function WorkspaceView() {
       const localCache = getCanvasFromLocalCache(workspaceId);
 
       if (localCache && localCache.nodes && localCache.edges) {
+        const conflict = !isCanvasDraftCurrent(localCache, canvasData.revision);
+        draftConflictRef.current = conflict;
+        draftBaseRevisionRef.current = localCache.baseRevision;
+        setDraftConflict(conflict);
         setNodes(
           orderNodesByHierarchy(normalizeNodeDimensions(localCache.nodes)),
         );
         setEdges(localCache.edges);
         setSaveStatus("offline_saved");
         toast({
-          title: "Restored Unsaved Changes",
-          description:
-            "We found unsaved changes locally and restored them. They will sync automatically soon.",
+          title: conflict
+            ? "Local draft needs review"
+            : "Restored Unsaved Changes",
+          description: conflict
+            ? "The server canvas changed or the draft is from an older version. Export your draft before loading the server version."
+            : "We found unsaved changes locally and restored them. They will sync automatically soon.",
         });
       } else {
+        draftConflictRef.current = false;
+        draftBaseRevisionRef.current = canvasData.revision;
+        setDraftConflict(false);
         setNodes(
           orderNodesByHierarchy(
             normalizeNodeDimensions(canvasData.nodes || []),
@@ -895,8 +930,12 @@ function WorkspaceView() {
       persistedCanvas.nodes,
       persistedCanvas.edges,
       cacheGeneration,
+      draftConflictRef.current
+        ? draftBaseRevisionRef.current
+        : canvasRevisionRef.current,
     );
     setSaveStatus("unsaved");
+    if (draftConflictRef.current) return;
 
     cancelPendingSaveRef.current?.();
     cancelPendingSaveRef.current = scheduleCanvasSave(() => {
@@ -1188,6 +1227,14 @@ function WorkspaceView() {
   );
 
   const handleSave = () => {
+    if (draftConflictRef.current) {
+      toast({
+        title: "Local draft needs review",
+        description: "Export your draft before loading the server version.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (canvasTransition !== "idle") {
       toast({
         title: "Canvas is still changing views",
@@ -1207,6 +1254,7 @@ function WorkspaceView() {
       persistedCanvas.nodes,
       persistedCanvas.edges,
       cacheGeneration,
+      canvasRevisionRef.current,
     );
     const baseline = lastSyncedCanvasRef.current;
     const plan = baseline
@@ -1740,6 +1788,32 @@ function WorkspaceView() {
             data-cursor={drawingMode}
             style={{ cursor: drawingMode === "pan" ? "grab" : undefined }}
           >
+            {draftConflict && (
+              <div
+                role="alert"
+                className="absolute top-4 left-4 right-4 z-[1000] flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/40 bg-[#1c1914] p-3 text-sm text-white"
+              >
+                <span className="flex-1">
+                  This local draft may conflict with the server. Export a copy
+                  before loading the server version; automatic saving is paused.
+                </span>
+                <button
+                  className="rounded-md bg-white px-3 py-2 text-black"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Discard this local draft and load the server version? Export a copy first if you need it.",
+                      )
+                    ) {
+                      clearCanvasLocalCache(workspaceId);
+                      window.location.reload();
+                    }
+                  }}
+                >
+                  Discard draft and reload
+                </button>
+              </div>
+            )}
             {/* ── Canvas transition overlay ── */}
             <AnimatePresence>
               {canvasTransition !== "idle" && (

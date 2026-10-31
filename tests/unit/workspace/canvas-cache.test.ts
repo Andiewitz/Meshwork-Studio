@@ -4,6 +4,7 @@ import {
   getCanvasFromLocalCache,
   clearCanvasLocalCache,
   CANVAS_CACHE_PREFIX,
+  isCanvasDraftCurrent,
 } from "@/lib/canvas-cache";
 // type imports removed to circumvent test runner plugin crash
 
@@ -120,5 +121,15 @@ describe("Canvas Caching Utilities (Unit)", () => {
     );
 
     warnSpy.mockRestore();
+  });
+  it("only treats a draft as current when its server revision is known and matches", () => {
+    saveCanvasToLocalCache("w", [], [], 4, 12);
+    const draft = getCanvasFromLocalCache("w")!;
+    expect(draft.baseRevision).toBe(12);
+    expect(isCanvasDraftCurrent(draft, 12)).toBe(true);
+    expect(isCanvasDraftCurrent(draft, 13)).toBe(false);
+    expect(
+      isCanvasDraftCurrent({ nodes: [], edges: [], timestamp: 0 }, 12),
+    ).toBe(false);
   });
 });

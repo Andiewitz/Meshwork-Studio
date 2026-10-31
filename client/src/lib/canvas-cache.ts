@@ -8,6 +8,8 @@ export interface CanvasCache {
   timestamp: number;
   /** Monotonic client save generation; absent on caches written by older builds. */
   generation?: number;
+  /** Server revision this draft was based on, if known. */
+  baseRevision?: number;
 }
 
 export function saveCanvasToLocalCache(
@@ -15,6 +17,7 @@ export function saveCanvasToLocalCache(
   nodes: any[],
   edges: any[],
   generation?: number,
+  baseRevision?: number,
 ) {
   try {
     const cache: CanvasCache = {
@@ -22,6 +25,7 @@ export function saveCanvasToLocalCache(
       edges,
       timestamp: Date.now(),
       generation,
+      baseRevision,
     };
     localStorage.setItem(
       `${CANVAS_CACHE_PREFIX}${workspaceId}`,
@@ -54,4 +58,12 @@ export function clearCanvasLocalCache(
   }
   localStorage.removeItem(`${CANVAS_CACHE_PREFIX}${workspaceId}`);
   return true;
+}
+
+/** Old or unknown baselines cannot safely overwrite a newer server canvas. */
+export function isCanvasDraftCurrent(
+  cache: CanvasCache,
+  revision: number,
+): boolean {
+  return cache.baseRevision !== undefined && cache.baseRevision === revision;
 }
