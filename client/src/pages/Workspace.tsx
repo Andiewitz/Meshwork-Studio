@@ -1826,6 +1826,22 @@ function WorkspaceView() {
                   version; automatic saving is paused.
                 </span>
                 <button
+                  className="rounded-md border border-white/30 px-3 py-2 text-white"
+                  onClick={() => {
+                    const draft = materializeRootCanvas(canvasStack, {
+                      nodes,
+                      edges,
+                    });
+                    exportAsJson(
+                      draft.nodes,
+                      draft.edges,
+                      `${workspace?.title || "canvas"}-local-draft`,
+                    );
+                  }}
+                >
+                  Export draft
+                </button>
+                <button
                   className="rounded-md bg-white px-3 py-2 text-black"
                   onClick={() => {
                     if (
