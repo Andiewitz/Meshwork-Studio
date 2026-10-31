@@ -376,6 +376,21 @@ describe("workspace outbox PostgreSQL ownership", () => {
     );
   });
 
+  it("reports failed account cleanup rather than claiming success", async () => {
+    const operationId = randomUUID();
+    await storage.deleteAllUserDataAndEnqueueCleanup("owner", operationId);
+    const claim = (await store.claim())!;
+    expect(
+      await store.fail(
+        { ...claim, attempts: 12 },
+        new Error("canvas unavailable"),
+      ),
+    ).toBe(true);
+    expect(await storage.getUserCleanupStatus("owner", operationId)).toBe(
+      "failed",
+    );
+  });
+
   it("runs the operator helper and refuses a second replay", async () => {
     const id = await seed(11);
     await store.fail((await store.claim())!, new Error("final"));
