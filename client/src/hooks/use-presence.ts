@@ -64,6 +64,7 @@ export function usePresence(
   onCanvasSync?: (nodes: SerializedNode[], edges: SerializedEdge[]) => void,
   onNodesChange?: (changes: NodeChange[]) => void,
   onEdgesChange?: (changes: EdgeChange[]) => void,
+  onReconnect?: () => void,
 ) {
   const { isAuthenticated } = useAuth();
   const wsRef = useRef<WebSocket | null>(null);
@@ -76,6 +77,9 @@ export function usePresence(
   onNodesChangeRef.current = onNodesChange;
   const onEdgesChangeRef = useRef(onEdgesChange);
   onEdgesChangeRef.current = onEdgesChange;
+  const onReconnectRef = useRef(onReconnect);
+  onReconnectRef.current = onReconnect;
+  const joinedRef = useRef(false);
   const [collaborators, setCollaborators] = useState<Map<string, PresenceUser>>(
     new Map(),
   );
@@ -118,7 +122,6 @@ export function usePresence(
 
     ws.onopen = () => {
       connectingRef.current = false;
-      setIsConnected(true);
       backoffRef.current.connected(Date.now());
       // Authenticate and join the workspace room
       ws.send(JSON.stringify({ type: "join", workspaceId }));
@@ -136,6 +139,9 @@ export function usePresence(
               map.set(user.userId, user);
             }
             setCollaborators(map);
+            setIsConnected(true);
+            if (joinedRef.current) onReconnectRef.current?.();
+            joinedRef.current = true;
             break;
           }
 
@@ -261,6 +267,7 @@ export function usePresence(
     if (!isAuthenticated || !workspaceId) return;
 
     backoffRef.current = new ReconnectBackoff();
+    joinedRef.current = false;
     connect();
 
     return () => {

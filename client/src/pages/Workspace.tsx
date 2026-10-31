@@ -534,6 +534,14 @@ function WorkspaceView() {
     undefined, // onCanvasSync unused
     handleRemoteNodesChange,
     handleRemoteEdgesChange,
+    () => {
+      toast({
+        title: "Reconnected to collaborators",
+        description:
+          "Some changes made while disconnected may be missing. Export a copy of your work before reloading the workspace.",
+        variant: "destructive",
+      });
+    },
   );
   const lastCursorSent = useRef(0);
   const lastNodeMoveSent = useRef(0);
