@@ -1,11 +1,17 @@
 import { queryMetricsCounts, insertSnapshot } from "../db/storage";
 import { metricsRegistry } from "@server/lib/metrics";
 import { createChildLogger } from "@server/lib/logger";
+import {
+  intervalMeanMs,
+  readDurationHistogram,
+  type HistogramSnapshot,
+} from "./duration";
 
 const log = createChildLogger("metrics-collector");
 
 let previousRequests = 0;
 let previousAiRequests = 0;
+let previousDurations: HistogramSnapshot = new Map();
 let collectorRunning = false;
 let collectorTimer: NodeJS.Timeout | undefined;
 let activeSnapshot: Promise<void> | undefined;
@@ -30,25 +36,11 @@ export async function snapshotMetrics() {
     const metrics = await metricsRegistry.metrics();
 
     const totalReqs = parsePrometheusValue(metrics, "http_requests_total");
-    const requestRate = totalReqs - previousRequests;
-    previousRequests = totalReqs;
+    const requestRate =
+      totalReqs >= previousRequests ? totalReqs - previousRequests : totalReqs;
 
-    let totalDuration = 0;
-    let totalCount = 0;
-    for (const line of metrics.split("\n")) {
-      if (line.startsWith("http_request_duration_seconds_bucket")) {
-        const bucketMatch = /le="([^"]+)"/.exec(line);
-        const countMatch = /\}\s+([\d.eE+-]+)$/.exec(line);
-        if (bucketMatch && countMatch) {
-          totalCount += parseFloat(countMatch[1]);
-        }
-      } else if (line.startsWith("http_request_duration_seconds_sum")) {
-        const match = /\s+([\d.eE+-]+)$/.exec(line);
-        if (match) totalDuration = parseFloat(match[1]);
-      }
-    }
-    const avgDurationMs =
-      totalCount > 0 ? (totalDuration / totalCount) * 1000 : 0;
+    const durations = readDurationHistogram(metrics);
+    const avgDurationMs = intervalMeanMs(durations, previousDurations);
 
     const memoryMb =
       parsePrometheusValue(metrics, "meshwork_process_resident_memory_bytes") /
@@ -66,8 +58,8 @@ export async function snapshotMetrics() {
     const wsRooms = parsePrometheusValue(metrics, "websocket_rooms_active");
 
     const totalAi = parsePrometheusValue(metrics, "ai_chat_requests_total");
-    const aiRate = totalAi - previousAiRequests;
-    previousAiRequests = totalAi;
+    const aiRate =
+      totalAi >= previousAiRequests ? totalAi - previousAiRequests : totalAi;
 
     const c = await queryMetricsCounts();
 
@@ -88,6 +80,10 @@ export async function snapshotMetrics() {
       totalWorkspaces: c.total_workspaces,
       totalTeams: c.total_teams,
     });
+
+    previousRequests = totalReqs;
+    previousAiRequests = totalAi;
+    previousDurations = durations;
 
     log.debug(
       {

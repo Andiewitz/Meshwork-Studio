@@ -147,7 +147,7 @@ export async function getMetricsSummary() {
       (SELECT captured_at FROM metrics_snapshots ORDER BY captured_at DESC LIMIT 1) as "capturedAt",
       (SELECT total_requests FROM metrics_snapshots ORDER BY captured_at DESC LIMIT 1) as "totalRequests",
       (SELECT SUM(request_rate) FROM metrics_snapshots WHERE captured_at > NOW() - INTERVAL '1 hour') as "requestsLastHour",
-      (SELECT AVG(avg_duration_ms) FROM metrics_snapshots WHERE captured_at > NOW() - INTERVAL '1 hour') as "avgDurationLastHour",
+      (SELECT SUM(avg_duration_ms * request_rate) / NULLIF(SUM(request_rate), 0) FROM metrics_snapshots WHERE captured_at > NOW() - INTERVAL '1 hour' AND request_rate > 0) as "avgDurationLastHour",
       (SELECT AVG(memory_mb) FROM metrics_snapshots WHERE captured_at > NOW() - INTERVAL '1 hour') as "avgMemoryLastHour",
       (SELECT MAX(event_loop_lag_ms) FROM metrics_snapshots WHERE captured_at > NOW() - INTERVAL '1 hour') as "maxLagLastHour",
       (SELECT SUM(ai_requests) FROM metrics_snapshots WHERE captured_at > NOW() - INTERVAL '1 hour') as "aiRequestsLastHour",

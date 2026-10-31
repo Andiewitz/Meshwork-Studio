@@ -404,9 +404,11 @@ async function loadHistory(){
 
     // Latency chart (stored - single bar for latest)
     charts.lat.data.labels=['Avg (1h)'];
-    const avgLat=historyData.slice(-12).reduce((s,d)=>s+d.avgDurationMs,0)/Math.min(historyData.length,12);
+    const recentLatency=historyData.filter(d=>Date.parse(d.capturedAt)>=Date.now()-3600000 && d.requestRate>0);
+    const requestsForLatency=recentLatency.reduce((s,d)=>s+d.requestRate,0);
+    const avgLat=requestsForLatency ? recentLatency.reduce((s,d)=>s+d.avgDurationMs*d.requestRate,0)/requestsForLatency : null;
     charts.lat.data.datasets[0].data=[avgLat];
-    charts.lat.data.datasets[0].backgroundColor=[avgLat<50?'#22C55E':avgLat<200?'#F59E0B':'#E63636'];
+    charts.lat.data.datasets[0].backgroundColor=[avgLat===null?'#888':avgLat<50?'#22C55E':avgLat<200?'#F59E0B':'#E63636'];
     charts.lat.update('none');
 
     // WS chart (stored)
