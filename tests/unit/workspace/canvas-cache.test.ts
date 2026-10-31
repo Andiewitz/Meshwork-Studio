@@ -128,6 +128,9 @@ describe("Canvas Caching Utilities (Unit)", () => {
     expect(draft.baseRevision).toBe(12);
     expect(isCanvasDraftCurrent(draft, 12)).toBe(true);
     expect(isCanvasDraftCurrent(draft, 13)).toBe(false);
+    expect(isCanvasDraftCurrent({ ...draft, requiresReview: true }, 12)).toBe(
+      false,
+    );
     expect(
       isCanvasDraftCurrent({ nodes: [], edges: [], timestamp: 0 }, 12),
     ).toBe(false);

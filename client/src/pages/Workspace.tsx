@@ -547,6 +547,25 @@ function WorkspaceView() {
         variant: "destructive",
       });
     },
+    () => {
+      if (lastLoadedId.current !== workspaceId || draftConflictRef.current)
+        return;
+      draftConflictRef.current = true;
+      draftBaseRevisionRef.current = canvasRevisionRef.current;
+      setDraftConflict(true);
+      cancelPendingSaveRef.current?.();
+      cancelPendingSaveRef.current = null;
+      const draft = materializeRootCanvas(canvasStack, { nodes, edges });
+      saveCanvasToLocalCache(
+        workspaceId,
+        draft.nodes,
+        draft.edges,
+        ++saveGenerationRef.current,
+        canvasRevisionRef.current,
+        true,
+      );
+      setSaveStatus("offline_saved");
+    },
   );
   const sendNodeMove = useCallback(
     (id: string, x: number, y: number, parentId?: string | null) => {
@@ -933,6 +952,7 @@ function WorkspaceView() {
       draftConflictRef.current
         ? draftBaseRevisionRef.current
         : canvasRevisionRef.current,
+      draftConflictRef.current,
     );
     setSaveStatus("unsaved");
     if (draftConflictRef.current) return;
@@ -1794,8 +1814,9 @@ function WorkspaceView() {
                 className="absolute top-4 left-4 right-4 z-[1000] flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/40 bg-[#1c1914] p-3 text-sm text-white"
               >
                 <span className="flex-1">
-                  This local draft may conflict with the server. Export a copy
-                  before loading the server version; automatic saving is paused.
+                  This local draft may conflict with the server or may be
+                  missing live changes. Export a copy before loading the server
+                  version; automatic saving is paused.
                 </span>
                 <button
                   className="rounded-md bg-white px-3 py-2 text-black"

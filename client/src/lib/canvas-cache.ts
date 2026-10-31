@@ -10,6 +10,8 @@ export interface CanvasCache {
   generation?: number;
   /** Server revision this draft was based on, if known. */
   baseRevision?: number;
+  /** Live events may have been missed since the draft was last synchronized. */
+  requiresReview?: boolean;
 }
 
 export function saveCanvasToLocalCache(
@@ -18,6 +20,7 @@ export function saveCanvasToLocalCache(
   edges: any[],
   generation?: number,
   baseRevision?: number,
+  requiresReview = false,
 ) {
   try {
     const cache: CanvasCache = {
@@ -26,6 +29,7 @@ export function saveCanvasToLocalCache(
       timestamp: Date.now(),
       generation,
       baseRevision,
+      requiresReview,
     };
     localStorage.setItem(
       `${CANVAS_CACHE_PREFIX}${workspaceId}`,
@@ -65,5 +69,9 @@ export function isCanvasDraftCurrent(
   cache: CanvasCache,
   revision: number,
 ): boolean {
-  return cache.baseRevision !== undefined && cache.baseRevision === revision;
+  return (
+    !cache.requiresReview &&
+    cache.baseRevision !== undefined &&
+    cache.baseRevision === revision
+  );
 }

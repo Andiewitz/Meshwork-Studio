@@ -65,6 +65,7 @@ export function usePresence(
   onNodesChange?: (changes: NodeChange[]) => void,
   onEdgesChange?: (changes: EdgeChange[]) => void,
   onReconnect?: () => void,
+  onDisconnect?: () => void,
 ) {
   const { isAuthenticated } = useAuth();
   const wsRef = useRef<WebSocket | null>(null);
@@ -79,6 +80,8 @@ export function usePresence(
   onEdgesChangeRef.current = onEdgesChange;
   const onReconnectRef = useRef(onReconnect);
   onReconnectRef.current = onReconnect;
+  const onDisconnectRef = useRef(onDisconnect);
+  onDisconnectRef.current = onDisconnect;
   const joinedRef = useRef(false);
   const [collaborators, setCollaborators] = useState<Map<string, PresenceUser>>(
     new Map(),
@@ -248,6 +251,7 @@ export function usePresence(
 
       // Clean close or intentional navigation — don't reconnect
       if (!RETRYABLE_CLOSE_CODES.has(event.code)) return;
+      if (joinedRef.current) onDisconnectRef.current?.();
 
       // Auth lost — stop reconnecting
       if (!isAuthenticated) return;

@@ -36,6 +36,7 @@ describe("presence reconnection", () => {
   let root: Root;
   let container: HTMLDivElement;
   const reconnected = vi.fn();
+  const disconnected = vi.fn();
   let connected = false;
   function Harness() {
     connected = usePresence(
@@ -45,6 +46,7 @@ describe("presence reconnection", () => {
       undefined,
       undefined,
       reconnected,
+      disconnected,
     ).isConnected;
     return null;
   }
@@ -54,6 +56,7 @@ describe("presence reconnection", () => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     FakeSocket.instances = [];
     reconnected.mockClear();
+    disconnected.mockClear();
     container = document.createElement("div");
     root = createRoot(container);
     act(() => root.render(createElement(Harness)));
@@ -72,6 +75,7 @@ describe("presence reconnection", () => {
     expect(reconnected).not.toHaveBeenCalled();
     act(() => first.close(1013));
     expect(connected).toBe(false);
+    expect(disconnected).toHaveBeenCalledOnce();
     act(() => vi.advanceTimersByTime(1000));
     const second = FakeSocket.instances[1];
     act(() => second.open());
