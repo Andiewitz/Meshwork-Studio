@@ -14,6 +14,35 @@ export class WorkspaceService {
     registerWorkspaceInternalRoutes(app);
     workspaceOutbox.start(context.eventBus);
 
+    context.eventBus.registerRequired(
+      "account.cleanup.workspace",
+      async ({ userId }, { operationId }) => {
+        let status = await workspaceStorage.getUserCleanupStatus(
+          userId,
+          operationId,
+        );
+        if (status === "not_found") {
+          await workspaceStorage.deleteAllUserDataAndEnqueueCleanup(
+            userId,
+            operationId,
+          );
+          workspaceOutbox.wake();
+          status = await workspaceStorage.getUserCleanupStatus(
+            userId,
+            operationId,
+          );
+        }
+        if (status === "failed")
+          throw new Error("Workspace account cleanup failed");
+        if (status === "not_found")
+          throw new Error("Workspace account cleanup unavailable");
+        return {
+          operationId,
+          status: status === "completed" ? "completed" : "published",
+        };
+      },
+    );
+
     context.eventBus.on("user.deleted", async ({ id }) => {
       try {
         const ownedIds =

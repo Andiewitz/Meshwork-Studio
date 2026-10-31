@@ -12,6 +12,14 @@ export class TeamService {
     registerTeamRoutes(app, context);
     registerTeamInternalRoutes(app);
 
+    context.eventBus.registerRequired(
+      "account.cleanup.team",
+      async ({ userId }, { operationId }) => {
+        await teamStorage.deleteAllUserData(userId);
+        return { operationId, status: "completed" };
+      },
+    );
+
     context.eventBus.on("user.deleted", async ({ id }) => {
       try {
         await teamStorage.deleteAllUserData(id);

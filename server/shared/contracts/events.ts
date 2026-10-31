@@ -13,6 +13,9 @@ export const eventPayloadSchemas = {
   "workspace.duplicated": z.object({ originalId: id, newId: id }).strict(),
   "user.deleted": z.object({ id }).strict(),
   "workspaces.deleted": z.object({ ids: z.array(id) }).strict(),
+  "account.cleanup.workspace": z.object({ userId: id.max(128) }).strict(),
+  "account.cleanup.team": z.object({ userId: id.max(128) }).strict(),
+  "account.cleanup.ai": z.object({ userId: id.max(128) }).strict(),
 };
 export type AppEvents = {
   [K in keyof typeof eventPayloadSchemas]: z.infer<
@@ -58,6 +61,27 @@ export const eventEnvelopeSchema = z.discriminatedUnion("type", [
       ...metadata,
       type: z.literal("workspaces.deleted"),
       payload: eventPayloadSchemas["workspaces.deleted"],
+    })
+    .strict(),
+  z
+    .object({
+      ...metadata,
+      type: z.literal("account.cleanup.workspace"),
+      payload: eventPayloadSchemas["account.cleanup.workspace"],
+    })
+    .strict(),
+  z
+    .object({
+      ...metadata,
+      type: z.literal("account.cleanup.team"),
+      payload: eventPayloadSchemas["account.cleanup.team"],
+    })
+    .strict(),
+  z
+    .object({
+      ...metadata,
+      type: z.literal("account.cleanup.ai"),
+      payload: eventPayloadSchemas["account.cleanup.ai"],
     })
     .strict(),
   z

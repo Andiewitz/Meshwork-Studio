@@ -12,5 +12,5 @@ export interface TeamRouteDependencies {
 }
 
 export interface TeamDependencies extends TeamRouteDependencies {
-  eventBus: Pick<EventBus, "on">;
+  eventBus: Pick<EventBus, "on" | "registerRequired">;
 }

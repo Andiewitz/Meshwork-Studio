@@ -8,5 +8,5 @@ export interface WorkspaceRouteDependencies {
 }
 
 export interface WorkspaceDependencies extends WorkspaceRouteDependencies {
-  eventBus: Pick<EventBus, "on" | "executeRequired">;
+  eventBus: Pick<EventBus, "on" | "executeRequired" | "registerRequired">;
 }

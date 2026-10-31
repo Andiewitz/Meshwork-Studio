@@ -147,7 +147,7 @@ export async function registerRoutes(
       const { MIGRATIONS } = await import("@services/ai/db/migrations");
       await ensureSchema("ai", pool, MIGRATIONS);
       const { AIService } = await import("@services/ai");
-      AIService.initialize(app, { isAuthenticated: requireAuth });
+      AIService.initialize(app, { isAuthenticated: requireAuth, eventBus });
     } catch (error) {
       log.error({ err: error }, "AI unavailable during startup");
       throw error;

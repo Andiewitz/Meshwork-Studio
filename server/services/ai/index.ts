@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createAIRoutes } from "./routes/aiRoutes";
 import { createChildLogger } from "@server/lib/logger";
 import type { AIRouteDependencies } from "./dependencies";
+import { deleteAllUserAiData } from "./db/storage";
 
 const log = createChildLogger("ai-service");
 
@@ -20,6 +21,14 @@ export class AIService {
     // Mount Jenkos AI routes under /api/v1/jenkos and legacy /api/v1/ai
     app.use("/api/v1/jenkos", aiRouter);
     app.use("/api/v1/ai", aiRouter);
+
+    context.eventBus?.registerRequired(
+      "account.cleanup.ai",
+      async ({ userId }, { operationId }) => {
+        await deleteAllUserAiData(userId);
+        return { operationId, status: "completed" };
+      },
+    );
 
     log.info("Jenkos AI service initialized at /api/v1/jenkos and /api/v1/ai");
   }
