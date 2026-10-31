@@ -16,14 +16,25 @@ type collaboratorFake struct {
 	email string
 	user  *store.User
 	err   error
+	ids   []string
+	users []*store.User
+	calls int
 }
 
 func (f *collaboratorFake) FindUserByEmail(_ context.Context, email string) (*store.User, error) {
 	f.email = email
 	return f.user, f.err
 }
-func (f *collaboratorFake) FindUserByID(_ context.Context, _ string) (*store.User, error) {
-	return f.user, f.err
+func (f *collaboratorFake) FindEligibleUsersByIDs(_ context.Context, ids []string) ([]*store.User, error) {
+	f.calls++
+	f.ids = append([]string(nil), ids...)
+	if f.users != nil {
+		return f.users, f.err
+	}
+	if f.user != nil {
+		return []*store.User{f.user}, f.err
+	}
+	return nil, f.err
 }
 func collaboratorRequest(h http.HandlerFunc, body, key string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodPost, "/internal/test", strings.NewReader(body))
@@ -96,5 +107,42 @@ func TestCollaboratorProfilesBoundsAndLegacyIDs(t *testing.T) {
 	w = collaboratorRequest(h, `{"ids":[""]}`, "test-key")
 	if w.Code != 400 {
 		t.Fatalf("invalid id: %d", w.Code)
+	}
+}
+
+func TestCollaboratorProfilesBatchOrderingAndFailures(t *testing.T) {
+	old := internalKeyValue
+	internalKeyValue = "test-key"
+	t.Cleanup(func() { internalKeyValue = old })
+	now := time.Now()
+	db := &collaboratorFake{users: []*store.User{
+		{ID: "second", Email: "second@example.com", IsActive: true, EmailVerifiedAt: &now},
+		{ID: "inactive", IsActive: false, EmailVerifiedAt: &now},
+		{ID: "unverified", IsActive: true},
+		{ID: "first", Email: "first@example.com", IsActive: true, EmailVerifiedAt: &now},
+	}}
+	h := collaboratorProfilesHandler(db)
+	w := collaboratorRequest(h, `{"ids":["first","missing","second","first","inactive","unverified"]}`, "test-key")
+	var result struct {
+		Users []collaboratorIdentity `json:"users"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || w.Code != 200 || len(result.Users) != 2 || result.Users[0].ID != "first" || result.Users[1].ID != "second" {
+		t.Fatalf("unexpected response: %d %s", w.Code, w.Body)
+	}
+	if db.calls != 1 || strings.Join(db.ids, ",") != "first,missing,second,inactive,unverified" {
+		t.Fatalf("unexpected batch: calls=%d ids=%v", db.calls, db.ids)
+	}
+	w = collaboratorRequest(h, `{"ids":["first",""]}`, "test-key")
+	if w.Code != 400 || db.calls != 1 {
+		t.Fatalf("invalid request reached store: %d calls=%d", w.Code, db.calls)
+	}
+	w = collaboratorRequest(h, `{"ids":["first"]}`, "bad")
+	if w.Code != 401 || db.calls != 1 {
+		t.Fatalf("unauthorized request reached store: %d calls=%d", w.Code, db.calls)
+	}
+	db.err = errors.New("private database error")
+	w = collaboratorRequest(h, `{"ids":["first"]}`, "test-key")
+	if w.Code != 502 || strings.Contains(w.Body.String(), "private database error") {
+		t.Fatalf("unexpected outage response: %d %s", w.Code, w.Body)
 	}
 }

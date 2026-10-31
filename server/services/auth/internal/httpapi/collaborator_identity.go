@@ -11,7 +11,7 @@ import (
 
 type collaboratorIdentityLookup interface {
 	FindUserByEmail(context.Context, string) (*store.User, error)
-	FindUserByID(context.Context, string) (*store.User, error)
+	FindEligibleUsersByIDs(context.Context, []string) ([]*store.User, error)
 }
 
 type collaboratorIdentity struct {
@@ -70,27 +70,35 @@ func collaboratorProfilesHandler(db collaboratorIdentityLookup) http.HandlerFunc
 			writeError(w, r, http.StatusBadRequest, "VALIDATION", "Invalid request")
 			return
 		}
-		profiles := make([]collaboratorIdentity, 0, len(body.IDs))
+		ids := make([]string, 0, len(body.IDs))
 		seen := make(map[string]bool)
 		for _, id := range body.IDs {
 			if len(id) == 0 || len(id) > 128 || strings.TrimSpace(id) != id {
 				writeError(w, r, http.StatusBadRequest, "VALIDATION", "Invalid request")
 				return
 			}
-			if seen[id] {
-				continue
+			if !seen[id] {
+				seen[id] = true
+				ids = append(ids, id)
 			}
-			seen[id] = true
-			u, err := db.FindUserByID(r.Context(), id)
-			if errors.Is(err, store.ErrNotFound) {
-				continue
-			}
+		}
+		profiles := make([]collaboratorIdentity, 0, len(ids))
+		if len(ids) > 0 {
+			users, err := db.FindEligibleUsersByIDs(r.Context(), ids)
 			if err != nil {
 				writeError(w, r, http.StatusServiceUnavailable, "AUTH_SERVICE_UNAVAILABLE", "Authentication temporarily unavailable")
 				return
 			}
-			if identity := eligibleIdentity(u); identity != nil {
-				profiles = append(profiles, *identity)
+			byID := make(map[string]*collaboratorIdentity, len(users))
+			for _, user := range users {
+				if identity := eligibleIdentity(user); identity != nil && seen[identity.ID] {
+					byID[identity.ID] = identity
+				}
+			}
+			for _, id := range ids {
+				if profile := byID[id]; profile != nil {
+					profiles = append(profiles, *profile)
+				}
 			}
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"users": profiles})

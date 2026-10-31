@@ -98,6 +98,30 @@ func (d *DB) FindUserByEmail(ctx context.Context, emailNormalized string) (*User
 		emailNormalized))
 }
 
+// FindEligibleUsersByIDs reads verified, active accounts in one bounded query.
+func (d *DB) FindEligibleUsersByIDs(ctx context.Context, ids []string) ([]*User, error) {
+	if len(ids) == 0 {
+		return []*User{}, nil
+	}
+	rows, err := d.Pool.Query(ctx, `SELECT `+userCols+` FROM users WHERE id = ANY($1::text[]) AND is_active = true AND email_verified_at IS NOT NULL`, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	users := make([]*User, 0, len(ids))
+	for rows.Next() {
+		user, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
 func (d *DB) FindUserByID(ctx context.Context, id string) (*User, error) {
 	return scanUser(d.Pool.QueryRow(ctx,
 		`SELECT `+userCols+` FROM users WHERE id = $1 AND is_active = true`, id))
