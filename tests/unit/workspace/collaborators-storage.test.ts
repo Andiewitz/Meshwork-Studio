@@ -175,6 +175,12 @@ describe("Workspace collaborator storage (Unit)", () => {
     ]);
     expect(first).toEqual([workspaceId]);
     expect(retry).toEqual(first);
+    expect(await storage.getUserCleanupStatus("owner-1", operationId)).toBe(
+      "pending",
+    );
+    expect(await storage.getUserCleanupStatus("other", operationId)).toBe(
+      "not_found",
+    );
     expect(
       await storage.deleteAllUserDataAndEnqueueCleanup(
         "owner-1",

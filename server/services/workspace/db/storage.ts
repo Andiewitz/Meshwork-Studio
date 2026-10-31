@@ -18,6 +18,9 @@ import type {
   WorkspaceCollaboratorPermission,
 } from "@shared/schema/workspace-contract";
 
+export type UserCleanupStatus =
+  "pending" | "completed" | "failed" | "not_found";
+
 export interface IWorkspaceStorage {
   // Collections (subcollections/folders)
   getCollections(
@@ -88,6 +91,10 @@ export interface IWorkspaceStorage {
     userId: string,
     operationId?: string,
   ): Promise<string[]>;
+  getUserCleanupStatus(
+    userId: string,
+    operationId: string,
+  ): Promise<UserCleanupStatus>;
 }
 
 export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
@@ -470,6 +477,33 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
     }
   }
 
+  async getUserCleanupStatus(
+    userId: string,
+    operationId: string,
+  ): Promise<UserCleanupStatus> {
+    if (!isCleanupOperationId(operationId))
+      throw new Error("Invalid cleanup operation ID");
+    const [event] = await db
+      .select({
+        eventType: workspaceOutboxEvents.eventType,
+        payload: workspaceOutboxEvents.payload,
+        processedAt: workspaceOutboxEvents.processedAt,
+        deadLetteredAt: workspaceOutboxEvents.deadLetteredAt,
+      })
+      .from(workspaceOutboxEvents)
+      .where(eq(workspaceOutboxEvents.id, operationId.toLowerCase()));
+    const payload = event?.payload as { userId?: unknown } | undefined;
+    if (
+      !event ||
+      event.eventType !== "workspaces.deleted" ||
+      payload?.userId !== userId
+    )
+      return "not_found";
+    if (event.processedAt) return "completed";
+    if (event.deadLetteredAt) return "failed";
+    return "pending";
+  }
+
   async deleteAllUserDataAndEnqueueCleanup(
     userId: string,
     operationId?: string,
@@ -841,6 +875,16 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
         collaborator.userId !== userId,
     );
     this.collections = this.collections.filter((c) => c.userId !== userId);
+  }
+
+  async getUserCleanupStatus(
+    userId: string,
+    operationId: string,
+  ): Promise<UserCleanupStatus> {
+    if (!isCleanupOperationId(operationId))
+      throw new Error("Invalid cleanup operation ID");
+    const operation = this.cleanupOperations.get(operationId.toLowerCase());
+    return operation?.userId === userId ? "pending" : "not_found";
   }
 
   async deleteAllUserDataAndEnqueueCleanup(

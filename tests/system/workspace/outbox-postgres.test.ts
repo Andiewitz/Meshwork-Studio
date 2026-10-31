@@ -341,6 +341,12 @@ describe("workspace outbox PostgreSQL ownership", () => {
     ]);
     expect(first).toEqual(["src"]);
     expect(retry).toEqual(first);
+    expect(await storage.getUserCleanupStatus("owner", operationId)).toBe(
+      "pending",
+    );
+    expect(await storage.getUserCleanupStatus("other", operationId)).toBe(
+      "not_found",
+    );
     const events = (await state()).events;
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
@@ -350,6 +356,24 @@ describe("workspace outbox PostgreSQL ownership", () => {
     await expect(
       storage.deleteAllUserDataAndEnqueueCleanup("different-user", operationId),
     ).rejects.toThrow("already in use");
+    const claim = (await store.claim())!;
+    expect(
+      await store.settle(claim, { operationId, status: "published" }),
+    ).toBe(true);
+    expect(await storage.getUserCleanupStatus("owner", operationId)).toBe(
+      "pending",
+    );
+    await pool.query(
+      "UPDATE workspace_outbox_events SET available_at = NOW() WHERE id = $1",
+      [operationId],
+    );
+    const secondClaim = (await store.claim())!;
+    expect(
+      await store.settle(secondClaim, { operationId, status: "completed" }),
+    ).toBe(true);
+    expect(await storage.getUserCleanupStatus("owner", operationId)).toBe(
+      "completed",
+    );
   });
 
   it("runs the operator helper and refuses a second replay", async () => {
