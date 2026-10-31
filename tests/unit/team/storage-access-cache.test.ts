@@ -9,6 +9,7 @@ const cache = vi.hoisted(() => ({
 const db = vi.hoisted(() => ({
   select: vi.fn(),
   delete: vi.fn(),
+  transaction: vi.fn(),
 }));
 
 vi.mock("@services/team/db/access-cache", () => ({
@@ -75,5 +76,44 @@ describe("TeamDatabaseStorage access cache", () => {
       ["ws1"],
       ["u1", "u2"],
     );
+  });
+  it("removes memberships in other teams and invalidates affected access", async () => {
+    const storage = new TeamDatabaseStorage();
+    const where = vi
+      .fn()
+      .mockResolvedValueOnce([{ id: "owned" }])
+      .mockResolvedValueOnce([{ teamId: "other" }, { teamId: "owned" }])
+      .mockResolvedValueOnce([
+        { workspaceId: "ws-owned" },
+        { workspaceId: "ws-other" },
+      ])
+      .mockResolvedValueOnce([{ userId: "member" }, { userId: "user" }]);
+    const remove = vi
+      .fn()
+      .mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
+    const tx = {
+      select: vi
+        .fn()
+        .mockReturnValue({ from: vi.fn().mockReturnValue({ where }) }),
+      delete: remove,
+    };
+    db.transaction.mockImplementation(async (fn) => fn(tx));
+    await storage.deleteAllUserData("user");
+    const { teamMembers, teams } = await import("@services/team/db/schema");
+    expect(remove).toHaveBeenNthCalledWith(1, teamMembers);
+    expect(remove).toHaveBeenNthCalledWith(2, teams);
+    expect(cache.invalidateWorkspaceAccess).toHaveBeenCalledWith(
+      ["ws-owned", "ws-other"],
+      ["user", "member"],
+    );
+  });
+
+  it("propagates cleanup failure without claiming cache invalidation", async () => {
+    const storage = new TeamDatabaseStorage();
+    db.transaction.mockRejectedValueOnce(new Error("database unavailable"));
+    await expect(storage.deleteAllUserData("user")).rejects.toThrow(
+      "database unavailable",
+    );
+    expect(cache.invalidateWorkspaceAccess).not.toHaveBeenCalled();
   });
 });

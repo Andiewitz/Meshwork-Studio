@@ -535,37 +535,44 @@ export class TeamDatabaseStorage implements ITeamStorage {
     userId: string,
     providedTx?: DrizzleTx,
   ): Promise<void> {
-    const owned = await db
-      .select({ id: teams.id })
-      .from(teams)
-      .where(eq(teams.ownerId, userId));
-    const teamIds = owned.map((team) => team.id);
-    const [workspaceRows, memberRows] =
-      teamIds.length === 0
-        ? [[], []]
-        : await Promise.all([
-            db
-              .select({ workspaceId: teamWorkspaces.workspaceId })
-              .from(teamWorkspaces)
-              .where(inArray(teamWorkspaces.teamId, teamIds)),
-            db
-              .select({ userId: teamMembers.userId })
-              .from(teamMembers)
-              .where(inArray(teamMembers.teamId, teamIds)),
-          ]);
-    const workspaceIds = workspaceRows.map((row) => row.workspaceId);
-    const memberIds = memberRows.map((row) => row.userId);
-
     const execute = async (tx: DrizzleTx) => {
+      const owned = await tx
+        .select({ id: teams.id })
+        .from(teams)
+        .where(eq(teams.ownerId, userId));
+      const memberships = await tx
+        .select({ teamId: teamMembers.teamId })
+        .from(teamMembers)
+        .where(eq(teamMembers.userId, userId));
+      const ownedIds = owned.map((team) => team.id);
+      const affectedIds = [
+        ...new Set([...ownedIds, ...memberships.map((m) => m.teamId)]),
+      ];
+      const workspaceRows = affectedIds.length
+        ? await tx
+            .select({ workspaceId: teamWorkspaces.workspaceId })
+            .from(teamWorkspaces)
+            .where(inArray(teamWorkspaces.teamId, affectedIds))
+        : [];
+      const memberRows = ownedIds.length
+        ? await tx
+            .select({ userId: teamMembers.userId })
+            .from(teamMembers)
+            .where(inArray(teamMembers.teamId, ownedIds))
+        : [];
+      await tx.delete(teamMembers).where(eq(teamMembers.userId, userId));
       await tx.delete(teams).where(eq(teams.ownerId, userId));
+      return {
+        workspaceIds: [...new Set(workspaceRows.map((row) => row.workspaceId))],
+        memberIds: [
+          ...new Set([userId, ...memberRows.map((row) => row.userId)]),
+        ],
+      };
     };
-
-    if (providedTx) {
-      await execute(providedTx);
-    } else {
-      await db.transaction(execute);
-    }
-    await invalidateWorkspaceAccess(workspaceIds, memberIds);
+    const affected = providedTx
+      ? await execute(providedTx)
+      : await db.transaction(execute);
+    await invalidateWorkspaceAccess(affected.workspaceIds, affected.memberIds);
   }
 }
 
