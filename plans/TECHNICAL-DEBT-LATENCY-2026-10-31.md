@@ -44,7 +44,8 @@ problem or prove that an earlier design had the same runtime behavior.
   retrieves eligible accounts in one SQL query, and returns profiles in request
   order without changing the response shape. Unit tests cover duplicates,
   missing/ineligible users, authorization, invalid input, and store errors.
-- Real PostgreSQL execution and before/after latency measurement remain pending.
+- The batch query passed against a disposable local PostgreSQL instance.
+  Before/after latency measurement remains pending.
 
 ### 4. Canvas saves intentionally wait for inactivity
 
@@ -79,10 +80,10 @@ problem or prove that an earlier design had the same runtime behavior.
   concurrent PostgreSQL migrations, real DynamoDB/S3, and deployment SIGTERM are
   not yet verified. The user asked to leave DynamoDB verification pending when
   Docker was unavailable. Old migration runners do not take the new lock.
-- Next: run two real migration processes against a disposable PostgreSQL
-  database (a two-process test is in `tests/system/arch/migration-postgres.test.ts`,
-  but has not been run against a database); test real DynamoDB/S3 permissions
-  and Canvas readiness; exercise an
+- A disposable local PostgreSQL instance passed the two-process migration lock,
+  Workspace outbox, Team and AI cleanup, and Auth store tests. This does not
+  verify deployment permissions or failure behavior in AWS.
+- Next: test real DynamoDB/S3 permissions and Canvas readiness; exercise an
   actual SIGTERM with active HTTP, socket, and outbox work before deployment.
 
 ### 7. Public landing page placeholder content (removed locally)
