@@ -161,4 +161,32 @@ describe("Workspace collaborator storage (Unit)", () => {
       storage.listWorkspaceCollaborators(otherWorkspace.id),
     ).resolves.toEqual([]);
   });
+  it("replays a cleanup operation without changing its result or deleting another user's data", async () => {
+    const operationId = "c5ded47d-92e5-4ec0-ac67-5d910242cb14";
+    const other = await storage.createWorkspace({
+      title: "Other",
+      userId: "other",
+      groups: [],
+      tags: [],
+    });
+    const [first, retry] = await Promise.all([
+      storage.deleteAllUserDataAndEnqueueCleanup("owner-1", operationId),
+      storage.deleteAllUserDataAndEnqueueCleanup("owner-1", operationId),
+    ]);
+    expect(first).toEqual([workspaceId]);
+    expect(retry).toEqual(first);
+    expect(
+      await storage.deleteAllUserDataAndEnqueueCleanup(
+        "owner-1",
+        operationId.toUpperCase(),
+      ),
+    ).toEqual(first);
+    await expect(
+      storage.deleteAllUserDataAndEnqueueCleanup("other", operationId),
+    ).rejects.toThrow("already in use");
+    expect(await storage.getWorkspace(other.id)).toBeDefined();
+    await expect(
+      storage.deleteAllUserDataAndEnqueueCleanup("other", "invalid"),
+    ).rejects.toThrow("Invalid cleanup operation ID");
+  });
 });

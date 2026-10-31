@@ -84,7 +84,10 @@ export interface IWorkspaceStorage {
   retryCanvasCopy(id: string): Promise<Workspace>;
   deleteAllUserData(userId: string, tx?: DrizzleTx): Promise<void>;
   /** Atomically deletes a user's workspaces and queues their canvas cleanup. */
-  deleteAllUserDataAndEnqueueCleanup(userId: string): Promise<string[]>;
+  deleteAllUserDataAndEnqueueCleanup(
+    userId: string,
+    operationId?: string,
+  ): Promise<string[]>;
 }
 
 export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
@@ -467,8 +470,42 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
     }
   }
 
-  async deleteAllUserDataAndEnqueueCleanup(userId: string): Promise<string[]> {
+  async deleteAllUserDataAndEnqueueCleanup(
+    userId: string,
+    operationId?: string,
+  ): Promise<string[]> {
+    if (operationId !== undefined && !isCleanupOperationId(operationId))
+      throw new Error("Invalid cleanup operation ID");
+    operationId = operationId?.toLowerCase();
     return db.transaction(async (tx) => {
+      if (operationId) {
+        // Serialize concurrent retries before checking whether the operation exists.
+        await tx.execute(
+          sql`SELECT pg_advisory_xact_lock(hashtextextended(${"identity-cleanup:" + operationId}, 0))`,
+        );
+        const [existing] = await tx
+          .select({
+            eventType: workspaceOutboxEvents.eventType,
+            payload: workspaceOutboxEvents.payload,
+          })
+          .from(workspaceOutboxEvents)
+          .where(eq(workspaceOutboxEvents.id, operationId));
+        if (existing) {
+          const payload = existing.payload as {
+            userId?: unknown;
+            ids?: unknown;
+          };
+          if (
+            existing.eventType !== "workspaces.deleted" ||
+            payload?.userId !== userId ||
+            !Array.isArray(payload.ids) ||
+            !payload.ids.every((id) => typeof id === "string")
+          ) {
+            throw new Error("Cleanup operation ID is already in use");
+          }
+          return payload.ids as string[];
+        }
+      }
       const rows = await tx
         .select({ id: workspaces.id })
         .from(workspaces)
@@ -481,15 +518,26 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
       await tx.delete(workspaces).where(eq(workspaces.userId, userId));
       await tx.delete(collections).where(eq(collections.userId, userId));
       await tx.insert(workspaceOutboxEvents).values({
+        ...(operationId ? { id: operationId } : {}),
         eventType: "workspaces.deleted",
-        payload: { ids },
+        payload: operationId ? { ids, userId } : { ids },
       });
       return ids;
     });
   }
 }
 
+function isCleanupOperationId(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    id,
+  );
+}
+
 export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
+  private cleanupOperations = new Map<
+    string,
+    { userId: string; result: Promise<string[]> }
+  >();
   private collections: Collection[] = [];
   private workspaces: Workspace[] = [];
   private workspaceCollaborators: WorkspaceCollaborator[] = [];
@@ -795,10 +843,34 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
     this.collections = this.collections.filter((c) => c.userId !== userId);
   }
 
-  async deleteAllUserDataAndEnqueueCleanup(userId: string): Promise<string[]> {
-    const ids = await this.listWorkspaceIdsByOwner(userId);
-    await this.deleteAllUserData(userId);
-    return ids;
+  async deleteAllUserDataAndEnqueueCleanup(
+    userId: string,
+    operationId?: string,
+  ): Promise<string[]> {
+    if (operationId !== undefined && !isCleanupOperationId(operationId))
+      throw new Error("Invalid cleanup operation ID");
+    operationId = operationId?.toLowerCase();
+    const previous = operationId
+      ? this.cleanupOperations.get(operationId)
+      : undefined;
+    if (previous) {
+      if (previous.userId !== userId)
+        throw new Error("Cleanup operation ID is already in use");
+      return [...(await previous.result)];
+    }
+    const result = (async () => {
+      const ids = await this.listWorkspaceIdsByOwner(userId);
+      await this.deleteAllUserData(userId);
+      return ids;
+    })();
+    if (operationId)
+      this.cleanupOperations.set(operationId, { userId, result });
+    try {
+      return [...(await result)];
+    } catch (err) {
+      if (operationId) this.cleanupOperations.delete(operationId);
+      throw err;
+    }
   }
 
   async listWorkspaceIdsByOwner(userId: string): Promise<string[]> {

@@ -330,6 +330,28 @@ describe("workspace outbox PostgreSQL ownership", () => {
     }
   });
 
+  it("deduplicates concurrent account cleanup retries with a stable operation ID", async () => {
+    const operationId = randomUUID();
+    await pool.query(
+      "INSERT INTO workspaces(id,title,user_id) VALUES ('src','Source','owner')",
+    );
+    const [first, retry] = await Promise.all([
+      storage.deleteAllUserDataAndEnqueueCleanup("owner", operationId),
+      storage.deleteAllUserDataAndEnqueueCleanup("owner", operationId),
+    ]);
+    expect(first).toEqual(["src"]);
+    expect(retry).toEqual(first);
+    const events = (await state()).events;
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      id: operationId,
+      payload: { ids: ["src"], userId: "owner" },
+    });
+    await expect(
+      storage.deleteAllUserDataAndEnqueueCleanup("different-user", operationId),
+    ).rejects.toThrow("already in use");
+  });
+
   it("runs the operator helper and refuses a second replay", async () => {
     const id = await seed(11);
     await store.fail((await store.claim())!, new Error("final"));
