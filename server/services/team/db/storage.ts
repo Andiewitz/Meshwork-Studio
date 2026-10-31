@@ -14,6 +14,12 @@ import { workspaceOwners, type WorkspaceOwner } from "./schema";
 import type { WorkspaceOwnershipReader } from "@services/workspace/public";
 import { workspaceOwnershipHttp } from "../adapters/workspace-http";
 import { readQuery } from "@server/lib/module-outcomes";
+import {
+  cacheWorkspaceRole,
+  invalidateWorkspaceAccess,
+  readCachedWorkspaceRole,
+  type WorkspaceRole,
+} from "./access-cache";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import type { DrizzleTx } from "@server/lib/db-types";
 import crypto from "crypto";
@@ -75,6 +81,17 @@ export interface ITeamStorage {
   ): Promise<TeamRole | "workspace-owner" | null>;
   canAccessWorkspace(userId: string, workspaceId: string): Promise<boolean>;
   deleteAllUserData(userId: string, tx?: DrizzleTx): Promise<void>;
+}
+
+/** Domain rejection for joins: a missing invite vs an existing membership. */
+export class TeamJoinError extends Error {
+  constructor(
+    public readonly reason: "invalid_invite" | "already_member",
+    message: string,
+  ) {
+    super(message);
+    this.name = "TeamJoinError";
+  }
 }
 
 export class TeamDatabaseStorage implements ITeamStorage {
@@ -165,7 +182,7 @@ export class TeamDatabaseStorage implements ITeamStorage {
       .select()
       .from(teams)
       .where(eq(teams.inviteCode, inviteCode));
-    if (!team) throw new Error("Invalid invite code");
+    if (!team) throw new TeamJoinError("invalid_invite", "Invalid invite code");
 
     const [existing] = await db
       .select()
@@ -173,7 +190,11 @@ export class TeamDatabaseStorage implements ITeamStorage {
       .where(
         and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, userId)),
       );
-    if (existing) throw new Error("Already a member of this team");
+    if (existing)
+      throw new TeamJoinError(
+        "already_member",
+        "Already a member of this team",
+      );
 
     const color = await pickCursorColor(team.id);
 
@@ -182,6 +203,7 @@ export class TeamDatabaseStorage implements ITeamStorage {
       .values({ teamId: team.id, userId, role: "viewer", color })
       .returning();
 
+    await this.invalidateTeamAccess(team.id, [userId]);
     return { team, member };
   }
 
@@ -191,10 +213,41 @@ export class TeamDatabaseStorage implements ITeamStorage {
       .where(
         and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)),
       );
+    await this.invalidateTeamAccess(teamId, [userId]);
   }
 
   async deleteTeam(teamId: string): Promise<void> {
+    const workspaceIds = await this.getTeamWorkspaceIds(teamId);
+    const memberIds = await this.getTeamMemberIds(teamId);
     await db.delete(teams).where(eq(teams.id, teamId));
+    await invalidateWorkspaceAccess(workspaceIds, memberIds);
+  }
+
+  private async getTeamWorkspaceIds(teamId: string): Promise<string[]> {
+    const rows = await db
+      .select({ workspaceId: teamWorkspaces.workspaceId })
+      .from(teamWorkspaces)
+      .where(eq(teamWorkspaces.teamId, teamId));
+    return rows.map((row) => row.workspaceId);
+  }
+
+  private async getTeamMemberIds(teamId: string): Promise<string[]> {
+    const rows = await db
+      .select({ userId: teamMembers.userId })
+      .from(teamMembers)
+      .where(eq(teamMembers.teamId, teamId));
+    return rows.map((row) => row.userId);
+  }
+
+  private async invalidateTeamAccess(
+    teamId: string,
+    userIds: string[],
+    workspaceId?: string,
+  ): Promise<void> {
+    const workspaceIds = workspaceId
+      ? [workspaceId]
+      : await this.getTeamWorkspaceIds(teamId);
+    await invalidateWorkspaceAccess(workspaceIds, userIds);
   }
 
   async regenerateInviteCode(teamId: string): Promise<Team> {
@@ -237,6 +290,11 @@ export class TeamDatabaseStorage implements ITeamStorage {
       .insert(teamWorkspaces)
       .values({ teamId, workspaceId })
       .returning();
+    await this.invalidateTeamAccess(
+      teamId,
+      await this.getTeamMemberIds(teamId),
+      workspaceId,
+    );
     return tw;
   }
 
@@ -249,6 +307,11 @@ export class TeamDatabaseStorage implements ITeamStorage {
           eq(teamWorkspaces.workspaceId, workspaceId),
         ),
       );
+    await this.invalidateTeamAccess(
+      teamId,
+      await this.getTeamMemberIds(teamId),
+      workspaceId,
+    );
   }
 
   async getTeamWorkspaces(teamId: string): Promise<Workspace[]> {
@@ -372,29 +435,7 @@ export class TeamDatabaseStorage implements ITeamStorage {
     userId: string,
     workspaceId: string,
   ): Promise<boolean> {
-    const mirror = await this.mirrorFor([workspaceId]);
-    const owner = mirror.get(workspaceId)?.ownerId;
-    if (owner === userId) return true;
-
-    const teamsWithAccess = await db
-      .select({ teamId: teamWorkspaces.teamId })
-      .from(teamWorkspaces)
-      .where(eq(teamWorkspaces.workspaceId, workspaceId));
-
-    if (teamsWithAccess.length === 0) return false;
-
-    const teamIds = teamsWithAccess.map((t) => t.teamId);
-    const [membership] = await db
-      .select()
-      .from(teamMembers)
-      .where(
-        and(
-          eq(teamMembers.userId, userId),
-          inArray(teamMembers.teamId, teamIds),
-        ),
-      );
-
-    return !!membership;
+    return (await this.getWorkspaceRole(workspaceId, userId)) !== null;
   }
 
   async updateMemberRole(
@@ -412,6 +453,7 @@ export class TeamDatabaseStorage implements ITeamStorage {
         ),
       )
       .returning();
+    await this.invalidateTeamAccess(teamId, [targetUserId]);
     return updated;
   }
 
@@ -431,7 +473,19 @@ export class TeamDatabaseStorage implements ITeamStorage {
   async getWorkspaceRole(
     workspaceId: string,
     userId: string,
-  ): Promise<TeamRole | "workspace-owner" | null> {
+  ): Promise<WorkspaceRole | null> {
+    const cached = await readCachedWorkspaceRole(workspaceId, userId);
+    if (cached.hit) return cached.value;
+
+    const role = await this.computeWorkspaceRole(workspaceId, userId);
+    await cacheWorkspaceRole(workspaceId, userId, role);
+    return role;
+  }
+
+  private async computeWorkspaceRole(
+    workspaceId: string,
+    userId: string,
+  ): Promise<WorkspaceRole | null> {
     const mirror = await this.mirrorFor([workspaceId]);
     if (mirror.get(workspaceId)?.ownerId === userId) return "workspace-owner";
 
@@ -481,6 +535,27 @@ export class TeamDatabaseStorage implements ITeamStorage {
     userId: string,
     providedTx?: DrizzleTx,
   ): Promise<void> {
+    const owned = await db
+      .select({ id: teams.id })
+      .from(teams)
+      .where(eq(teams.ownerId, userId));
+    const teamIds = owned.map((team) => team.id);
+    const [workspaceRows, memberRows] =
+      teamIds.length === 0
+        ? [[], []]
+        : await Promise.all([
+            db
+              .select({ workspaceId: teamWorkspaces.workspaceId })
+              .from(teamWorkspaces)
+              .where(inArray(teamWorkspaces.teamId, teamIds)),
+            db
+              .select({ userId: teamMembers.userId })
+              .from(teamMembers)
+              .where(inArray(teamMembers.teamId, teamIds)),
+          ]);
+    const workspaceIds = workspaceRows.map((row) => row.workspaceId);
+    const memberIds = memberRows.map((row) => row.userId);
+
     const execute = async (tx: DrizzleTx) => {
       await tx.delete(teams).where(eq(teams.ownerId, userId));
     };
@@ -490,6 +565,7 @@ export class TeamDatabaseStorage implements ITeamStorage {
     } else {
       await db.transaction(execute);
     }
+    await invalidateWorkspaceAccess(workspaceIds, memberIds);
   }
 }
 

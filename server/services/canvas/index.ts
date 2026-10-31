@@ -1,10 +1,12 @@
 import type { Express } from "express";
 import { canvasStorage } from "./db/storage";
 import { ensureCanvasTable } from "./db/dynamo";
+import { invalidateCanvas } from "./cache";
 import { registerCanvasRoutes } from "./routes/canvasRoutes";
 import { createChildLogger } from "@server/lib/logger";
 import type { CanvasDependencies } from "./dependencies";
 import { copyWorkspaceCanvas } from "./copy-workspace";
+import { logTraceback } from "@server/lib/traceback";
 
 const log = createChildLogger("canvas-service");
 
@@ -19,13 +21,16 @@ export class CanvasService {
       async ({ id }, { operationId }) => {
         try {
           await canvasStorage.deleteWorkspaces([id]);
+          await invalidateCanvas(id);
           log.info(
             { workspaceId: id, operationId },
             "Canvas data deleted via event",
           );
           return { operationId, status: "completed" };
         } catch (err) {
-          log.error({ err, workspaceId: id }, "Failed to delete canvas data");
+          logTraceback(log, "Failed to delete canvas data", err, {
+            workspaceId: id,
+          });
           throw err;
         }
       },
@@ -49,16 +54,17 @@ export class CanvasService {
             );
             return { operationId, status: "completed" };
           }
+          await invalidateCanvas(newId);
           log.info(
             { originalId, newId, operationId },
             "Canvas data duplicated via event",
           );
           return { operationId, status: "completed" };
         } catch (err) {
-          log.error(
-            { err, originalId, newId },
-            "Failed to duplicate canvas data",
-          );
+          logTraceback(log, "Failed to duplicate canvas data", err, {
+            originalId,
+            newId,
+          });
           throw err;
         }
       },
@@ -70,13 +76,14 @@ export class CanvasService {
         if (ids.length === 0) return { operationId, status: "completed" };
         try {
           await canvasStorage.deleteWorkspaces(ids);
+          await Promise.all(ids.map((id) => invalidateCanvas(id)));
           log.info(
             { count: ids.length, operationId },
             "User canvas data deleted via event",
           );
           return { operationId, status: "completed" };
         } catch (err) {
-          log.error({ err }, "Failed to delete user canvas data");
+          logTraceback(log, "Failed to delete user canvas data", err);
           throw err;
         }
       },

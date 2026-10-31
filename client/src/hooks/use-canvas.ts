@@ -5,7 +5,19 @@ import type { Node, Edge } from "@xyflow/react";
 
 export * from "../lib/canvas-cache";
 import { clearCanvasLocalCache } from "../lib/canvas-cache";
+import {
+  normalizeCanvasEdge,
+  type CanvasSaveChanges,
+} from "../lib/canvas-delta";
 import { useAuth } from "./use-auth";
+
+export interface CanvasSyncInput {
+  nodes: Node[];
+  edges: Edge[];
+  baseRevision: number;
+  cacheGeneration?: number;
+  changes?: CanvasSaveChanges;
+}
 
 export function useCanvas(workspaceId: string | number | null | undefined) {
   const { isAuthenticated } = useAuth();
@@ -33,29 +45,35 @@ export function useCanvas(workspaceId: string | number | null | undefined) {
       nodes,
       edges,
       baseRevision,
-    }: {
-      nodes: Node[];
-      edges: Edge[];
-      baseRevision: number;
-      cacheGeneration?: number;
-    }) => {
+      changes,
+    }: CanvasSyncInput) => {
       if (!url) throw new Error("Workspace ID is required to sync canvas");
-      // Normalize animated property for Postgres compatibility
-      const normalizedEdges = edges.map((edge) => ({
-        ...edge,
-        animated: edge.animated ? 1 : 0,
-      }));
-      const res = await apiRequest("POST", url, {
-        nodes,
-        edges: normalizedEdges,
-        baseRevision,
-      });
+      const body = changes
+        ? { changes, baseRevision }
+        : {
+            nodes,
+            edges: edges.map(normalizeCanvasEdge),
+            baseRevision,
+          };
+      const res = await apiRequest("POST", url, body);
       return res.json() as Promise<{ success: boolean; revision: number }>;
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
       if (workspaceId)
         clearCanvasLocalCache(workspaceId, variables.cacheGeneration);
-      queryClient.invalidateQueries({ queryKey: [url] });
+      queryClient.setQueryData<{
+        nodes: Node[];
+        edges: Edge[];
+        revision: number;
+      }>([url], (current) =>
+        current && current.revision > data.revision
+          ? current
+          : {
+              nodes: variables.nodes,
+              edges: variables.edges,
+              revision: data.revision,
+            },
+      );
     },
   });
 

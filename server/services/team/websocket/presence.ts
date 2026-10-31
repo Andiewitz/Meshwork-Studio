@@ -1,5 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { createChildLogger } from "@server/lib/logger";
+import { logTraceback } from "@server/lib/traceback";
+import type { ApiErrorCode } from "@server/lib/errorCodes";
 import type { Server as HttpServer } from "http";
 import type { IncomingMessage } from "http";
 import cookie from "cookie";
@@ -26,6 +28,22 @@ const SESSION_REVOCATION_CHANNEL = "identity:sessions:revoked";
 const log = createChildLogger("team-websocket");
 
 const ORIGIN_SERVER_ID = crypto.randomUUID();
+const WS_CLOSE_UNAUTHORIZED = 4401;
+const WS_CLOSE_FORBIDDEN = 4403;
+
+function mintRequestId(): string {
+  return `req-${crypto.randomBytes(12).toString("hex")}`;
+}
+
+function sendWsError(
+  ws: WebSocket,
+  code: ApiErrorCode,
+  message: string,
+  requestId: string,
+): void {
+  if (ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: "error", code, message, requestId }));
+}
 
 let redisSub: RedisType | null = null;
 let redisPub: RedisType | null = null;
@@ -138,6 +156,7 @@ interface SocketAuth {
   email: string;
   name: string;
   lastValidatedAt: number;
+  requestId: string;
 }
 const socketAuth = new WeakMap<WebSocket, SocketAuth>();
 
@@ -222,11 +241,16 @@ function removeFromAllRooms(ws: WebSocket) {
 
 // ─── Handshake helpers ──────────────────────────────────────────────────────
 
-function rejectUpgrade(socket: import("net").Socket, reason: string): void {
+function rejectUpgrade(
+  socket: import("net").Socket,
+  reason: string,
+  requestId: string,
+): void {
   socket.write(
     `HTTP/1.1 401 Unauthorized\r\n` +
       `Connection: close\r\n` +
       `Content-Type: text/plain\r\n` +
+      `X-Request-Id: ${requestId}\r\n` +
       `Content-Length: ${reason.length}\r\n` +
       `\r\n${reason}`,
   );
@@ -281,8 +305,12 @@ export function initializeWebSocket(httpServer: HttpServer) {
           );
           return null;
         })();
+        const inboundRequestId = req.headers["x-request-id"];
+        const upgradeRequestId = Array.isArray(inboundRequestId)
+          ? inboundRequestId[0]
+          : inboundRequestId || mintRequestId();
         if (!identity) {
-          rejectUpgrade(socket, "Unauthorized");
+          rejectUpgrade(socket, "Unauthorized", upgradeRequestId);
           return;
         }
         const claims = identity;
@@ -294,12 +322,17 @@ export function initializeWebSocket(httpServer: HttpServer) {
             email: claims.eml ?? "",
             name: claims.nam ?? "",
             lastValidatedAt: Date.now(),
+            requestId: upgradeRequestId,
           });
           wss.emit("connection", ws, req);
         });
       } catch (err) {
-        log.error({ err }, "WS upgrade auth error");
-        rejectUpgrade(socket, "Unauthorized");
+        const inboundRequestId = req.headers["x-request-id"];
+        const requestId = Array.isArray(inboundRequestId)
+          ? inboundRequestId[0]
+          : inboundRequestId || mintRequestId();
+        logTraceback(log, "WS upgrade auth error", err, { requestId });
+        rejectUpgrade(socket, "Unauthorized", requestId);
       }
     },
   );
@@ -327,7 +360,7 @@ export function initializeWebSocket(httpServer: HttpServer) {
               (payload.userId && payload.userId === uid) ||
               payload.idHashes?.includes(auth.sidHash)
             ) {
-              user.ws.close(4001, "session revoked");
+              user.ws.close(WS_CLOSE_UNAUTHORIZED, "session revoked");
             }
           }
         }
@@ -340,8 +373,9 @@ export function initializeWebSocket(httpServer: HttpServer) {
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     websocketConnectionsActive.inc();
     const auth = socketAuth.get(ws);
+    const requestId = auth?.requestId ?? mintRequestId();
     log.info(
-      { userId: auth?.userId, sidHash: auth?.sidHash },
+      { userId: auth?.userId, sidHash: auth?.sidHash, requestId },
       "WS connection opened",
     );
     let currentUserId: string | undefined;
@@ -370,9 +404,9 @@ export function initializeWebSocket(httpServer: HttpServer) {
     // service's revocation channel.
     const revalidator = setInterval(() => {
       const auth = socketAuth.get(ws);
-      if (!auth) return ws.close(4001, "session expired");
+      if (!auth) return ws.close(WS_CLOSE_UNAUTHORIZED, "session expired");
       if (revokedSessions.has(auth.sidHash)) {
-        return ws.close(4001, "session revoked");
+        return ws.close(WS_CLOSE_UNAUTHORIZED, "session revoked");
       }
       auth.lastValidatedAt = Date.now();
     }, SESSION_REVALIDATE_MS);
@@ -384,11 +418,11 @@ export function initializeWebSocket(httpServer: HttpServer) {
         switch (msg.type) {
           case "join": {
             if (!msg.workspaceId) {
-              ws.send(
-                JSON.stringify({
-                  type: "error",
-                  message: "workspaceId required",
-                }),
+              sendWsError(
+                ws,
+                "VALIDATION_FAILED",
+                "workspaceId required",
+                requestId,
               );
               return;
             }
@@ -397,10 +431,8 @@ export function initializeWebSocket(httpServer: HttpServer) {
             // the denylist so a revoked socket cannot rejoin rooms.
             const auth = socketAuth.get(ws);
             if (!auth || revokedSessions.has(auth.sidHash)) {
-              ws.send(
-                JSON.stringify({ type: "error", message: "Unauthorized" }),
-              );
-              ws.close(4001, "session revoked");
+              sendWsError(ws, "SESSION_EXPIRED", "Unauthorized", requestId);
+              ws.close(WS_CLOSE_UNAUTHORIZED, "session revoked");
               return;
             }
             // Assertion carries display fields — no lookups needed.
@@ -416,13 +448,13 @@ export function initializeWebSocket(httpServer: HttpServer) {
             );
 
             if (!hasAccess) {
-              ws.send(
-                JSON.stringify({
-                  type: "error",
-                  message: "No access to this workspace",
-                }),
+              sendWsError(
+                ws,
+                "FORBIDDEN",
+                "No access to this workspace",
+                requestId,
               );
-              ws.close();
+              ws.close(WS_CLOSE_FORBIDDEN, "forbidden");
               return;
             }
 
@@ -588,7 +620,8 @@ export function initializeWebSocket(httpServer: HttpServer) {
           }
         }
       } catch (err: unknown) {
-        log.error({ err }, "Message handling error");
+        logTraceback(log, "Message handling error", err, { requestId });
+        sendWsError(ws, "INTERNAL", "Message failed", requestId);
       }
     });
 
@@ -600,11 +633,11 @@ export function initializeWebSocket(httpServer: HttpServer) {
     ): Promise<boolean> {
       const role = await cachedWorkspaceRole(userId, workspaceId);
       if (canMutateCanvas(role)) return true;
-      sock.send(
-        JSON.stringify({
-          type: "error",
-          message: "Insufficient permissions for this action",
-        }),
+      sendWsError(
+        sock,
+        "FORBIDDEN",
+        "Insufficient permissions for this action",
+        requestId,
       );
       return false;
     }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import pino from "pino";
-import { errorTrace, logTraceback } from "@server/lib/traceback";
+import { errorTrace, logTraceback, wasLogged } from "@server/lib/traceback";
 
 function captureLines() {
   const lines: string[] = [];
@@ -21,10 +21,26 @@ describe("proper traceback (the next 500 tells the whole story)", () => {
 
     const trace = errorTrace(wrapped);
     expect(trace.message).toBe("getWorkspace failed");
+    expect(trace.type).toBe("Error");
     expect(trace.stack?.length).toBeGreaterThan(0);
     expect(trace.stack?.some((line) => line.includes("at "))).toBe(true);
     expect(trace.cause?.message).toBe("connection terminated");
     expect(trace.cause?.code).toBe("ECONNRESET");
+    expect(trace.cause?.type).toBe("Error");
+  });
+
+  it("keeps AggregateError members instead of collapsing them to a string", () => {
+    const aggregate = new AggregateError(
+      [new Error("db down"), new Error("redis down")],
+      "dependencies failed",
+    );
+
+    const trace = errorTrace(aggregate);
+    expect(trace.type).toBe("AggregateError");
+    expect(trace.errors?.map((e) => e.message)).toEqual([
+      "db down",
+      "redis down",
+    ]);
   });
 
   it("never explodes on non-errors or cyclic causes", () => {
@@ -64,5 +80,17 @@ describe("proper traceback (the next 500 tells the whole story)", () => {
     expect(line.error.message).toContain("relation does not exist");
     expect(line.error.code).toBe("42P01");
     expect(line.error.stack.length).toBeGreaterThan(0);
+    expect(line.error.type).toBe("Error");
+  });
+
+  it("marks errors as logged so the global boundary does not log twice", () => {
+    const { stream } = captureLines();
+    const log = pino({ level: "info" }, stream as never);
+    const err = new Error("already handled");
+
+    expect(wasLogged(err)).toBe(false);
+    logTraceback(log, "origin", err, { requestId: "req-1" });
+    expect(wasLogged(err)).toBe(true);
+    expect(wasLogged("not an object")).toBe(false);
   });
 });

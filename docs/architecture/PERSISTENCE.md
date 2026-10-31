@@ -1,153 +1,111 @@
-# Canvas persistence (reference)
+# Canvas persistence
 
-> Status: implemented locally, deployment verification pending · Updated: 2026-10-26 · Context: where your diagram goes
-> when you draw it, and how it survives reloads. Data shapes:
-> [`CANVAS_SCHEMA.md`](./CANVAS_SCHEMA.md); backups:
-> [`../operations/RECOVERY.md`](../operations/RECOVERY.md).
+Status: merge implementation under local verification; not deployed. This
+integrates the atomic snapshot and replay guarantees from this branch with
+the delta, ETag, and S3 work from `main`. DynamoDB-backed and live S3
+verification are still pending.
 
-Canvas documents use a two-layer persistence model: browser storage for
-immediate recovery and DynamoDB for the durable source of truth. PostgreSQL
-owns workspace metadata, teams, AI data, and metrics; it does not store canvas
-nodes or edges.
+The browser keeps a local recovery copy while an edit is unsaved. The Node
+service stores the durable canvas in DynamoDB, with optional S3 overflow.
+PostgreSQL owns workspace metadata and the outbox; it does not hold canvas
+nodes and edges. [Internal module APIs](./MODULE_APIS.md) describe the service
+boundaries.
 
-Cross-module ownership and copy operations use the narrow capabilities
-described in [Internal module APIs](./MODULE_APIS.md), not foreign repositories.
+## Read and write path
 
-## Write path
+The client sends either a full snapshot or a delta to the existing canvas
+endpoint. Deltas are applied to the current snapshot, including cascading
+deleted-node edges, and the merged graph is validated before publication.
+Every save uses the submitted base revision: a concurrent edit is rejected
+rather than silently overwritten. The service returns the same public success
+and error envelopes as `main`.
 
-```text
-Canvas change
-  -> localStorage written immediately
-  -> 3-second idle debounce
-  -> POST /api/v1/workspaces/:id/canvas
-  -> direct-owner or shared editor-role check
-  -> conditional publication of a complete DynamoDB snapshot
+A DynamoDB item at `pk = ws#{workspaceId}, sk = doc` is the sole authority
+for a committed canvas. It contains a revision, a unique publication token,
+and a pointer to one complete compressed snapshot. A conditional head write
+makes the new snapshot visible all at once. A failed or concurrent publication
+cannot expose a partially written revision.
+
+Small snapshots are stored in the head item. Larger snapshots use immutable
+DynamoDB chunks or S3 objects, depending on configuration. Length and SHA-256
+checks detect missing or incomplete payloads. The Redis cache stores snapshots
+by revision; reads can return the existing ETag/304 response. Cache failures
+fall through to durable storage, and saves, copies, and deletes update or
+invalidate cached values.
+
+The outbox sends required deletion and copy work with a stable operation ID.
+Copy intents and receipts prevent replay from overwriting a later destination
+edit. Deletions install a permanent tombstone before cleanup, fencing delayed
+saves and copies. See [the outbox runbook](../operations/WORKSPACE_OUTBOX.md).
+
+## Existing data and rollout
+
+Existing item-per-node canvases remain readable. Their next atomic write
+publishes a complete head before retiring the old items. An optional backfill
+preserves the existing revision and leaves the old rows in place:
+
+```bash
+npx tsx scripts/migrate-canvas-docs.ts --dry-run
+npx tsx scripts/migrate-canvas-docs.ts --workers-stopped
 ```
 
-The browser cache key is `meshwork-canvas-cache-{workspaceId}`. It is cleared
-only after the API confirms the durable write. On a failed sync, the cache is
-kept for the next edit or reload.
+Stop all old canvas writers before backfill or deployment; old per-item
+writers and atomic writers cannot safely run together. Back up the table and
+verify a sample before changing production. The user confirmed that the
+earlier S3/document implementation has not been deployed with real canvas
+data. If an older document-format item is nevertheless encountered, the new
+adapter fails closed with `CANVAS_DOC_CONFIG`; it does not overwrite or
+interpret it as an empty canvas.
 
-## DynamoDB document model
+The `--to-legacy --workers-stopped` tool can restore an atomic snapshot to
+per-node rows. It writes and verifies those rows before conditionally removing
+the atomic head, and retains S3 objects for recovery. It also supports historical
+document records. Rolling an atomic deployment back to an old binary requires
+this planned export/restore and a maintenance window; a binary rollback alone
+is unsafe.
 
-The canvas service uses the existing `CANVAS_DDB_TABLE` (default
-`meshwork-canvas`). A `doc` item is the only authority for a committed document:
+## Configuration and S3
 
-| Attribute  | Value                                                               |
-| ---------- | ------------------------------------------------------------------- |
-| `pk`       | `ws#{workspaceId}`                                                  |
-| `sk`       | `doc`                                                               |
-| `revision` | Public optimistic concurrency revision                              |
-| `token`    | Unique publication generation; used for conditional writes          |
-| `pointer`  | Compressed complete payload, or immutable overflow-chunk descriptor |
+| Variable                           | Behavior                                     |
+| ---------------------------------- | -------------------------------------------- |
+| `CANVAS_DDB_TABLE`                 | Canvas table; default `meshwork-canvas`      |
+| `CANVAS_DOC_MODEL=on`              | Use S3 for snapshots above the inline limit  |
+| `CANVAS_DOC_MODEL=off` or `read`   | Use DynamoDB chunks for overflow             |
+| `CANVAS_DOC_INLINE_MAX_BYTES`      | Optional inline threshold, capped at 280 KiB |
+| `CANVAS_S3_BUCKET`                 | S3 bucket used for overflow                  |
+| `CANVAS_S3_PREFIX`                 | Object prefix; default `canvases`            |
+| `AWS_REGION`                       | DynamoDB and S3 region                       |
+| `DYNAMODB_ENDPOINT`, `S3_ENDPOINT` | Optional local development endpoints         |
 
-Nodes and edges are encoded together. Up to 280 KiB of compressed data lives
-inside the document item. Larger payloads use immutable chunks under
-`snapshot#{generation}#{index}` in the same workspace partition. Chunk staging
-transactions condition-check the current document token; only a successful
-head publication makes them visible. Length and SHA-256 checks reject incomplete
-payloads. The head, its payload, and the public revision describe one snapshot.
+The atomic format is used in every mode. This intentionally changes the old
+`off/read/on` rollout semantics: `off` and `read` no longer write individual
+nodes, and `read` is not a shadow-read mode. `on` preserves S3 overflow.
+The application role needs DynamoDB access and, when using S3, `s3:GetObject`,
+`s3:PutObject`, `s3:DeleteObject`, and prefix-restricted `s3:ListBucket`.
+Provision and verify the bucket and permissions before enabling S3 mode.
 
-`getCanvas()` returns `{ nodes, edges, revision }` from that snapshot. Small
-document reads require one GetItem; larger ones page through the chosen immutable
-generation. If a concurrent save retires chunks while a reader holds an old head,
-the reader retries against the newer head. Writes still use the submitted
-`baseRevision`; stale updates keep the existing conflict response. Publication
-also checks a unique generation token, so a delayed writer cannot exploit an
-expired lease. The old lease is no longer needed.
-
-A copy freezes its source revision when its durable operation intent is first
-written. Its payload is staged in the destination, independently of subsequent
-source edits or deletion. Publishing the destination and recording completion
-are one DynamoDB transaction. Replaying a completed operation does not overwrite
-later destination edits. An interrupted copy is retried with the same outbox
-operation ID; a user-requested new retry is a new operation and can choose a newer
-source revision. Direct `duplicate-canvas` calls use a stable source/destination
-operation ID. Every copy replaces the full document rather than overlaying items.
-
-Deletion first writes a permanent `doc` tombstone, then removes payload chunks,
-legacy rows, and operation records. All mutation transactions check the head;
-delayed save/copy/chunk requests cannot recreate a tombstoned document. Cleanup
-failure remains retryable while the tombstone keeps the document inaccessible.
-Workspace UUIDs must not be reused. The asynchronous HTTP delete acknowledgement
-still means cleanup was queued, not that the DynamoDB deletion already finished.
-
-Normal saves retire previous overflow chunks. Staged chunks from abandoned
-attempts, and previous overflow chunks replaced by a copy, may remain as invisible
-garbage until workspace deletion. Do not remove chunks merely because they are
-not the current head: a pending copy intent may own them. A future garbage
-collector needs token fencing and intent awareness. This storage overhead and
-copy receipts should be measured before production rollout.
-
-Each save writes the full compressed snapshot; large saves rewrite all of its
-chunks. Delta updates, S3 overflow, and performance/cost targets from #48 remain
-future work, and no load or AWS billing verification is claimed here.
-
-## Migration and rollback
-
-Legacy `node#`/`edge#`/`meta` rows remain readable until the first successful new
-publication; their revision is preserved and incremented normally. After that
-publication, legacy rows are cleaned up. **Stop every old writer before rollout**:
-old binaries do not understand the new head or deletion markers. Verify the EC2
-role permits the transactional writes and condition checks on the canvas table.
-No infrastructure or IAM changes are applied by this implementation.
-
-After a document migrates, a raw rollback to the old binary is unsafe. Rollback
-requires a maintenance-window export of committed snapshots back into the old
-node/edge model, or restoration of the pre-rollout backup. Keep all writers
-stopped during conversion. That conversion and a live restore drill have not
-been performed here; take and verify a backup before deployment.
-
-The implementation claims in #48 reference commits unavailable in this checkout
-or through GitHub at audit time. They are unverified. This correctness change
-uses the planned conditional document approach but does not claim #48's S3
-overflow, Redis cache, ETag/304, delta-save, or load-test work is implemented.
-No public response fields, status/error formatting, or browser cache policy are
-changed by the new persistence model.
-
-## Operational configuration
-
-| Variable            | Purpose                                      |
-| ------------------- | -------------------------------------------- |
-| `CANVAS_DDB_TABLE`  | Canvas table name                            |
-| `AWS_REGION`        | AWS region for DynamoDB                      |
-| `DYNAMODB_ENDPOINT` | Local DynamoDB endpoint for development only |
-
-The service can create a missing table with on-demand billing. In production,
-provision it through deployment automation and restrict the application IAM
-role to that one table. Table creation at application boot is convenient for
-local development but should not be a production permission.
-
-## Key implementation files
-
-| File                                            | Responsibility                                          |
-| ----------------------------------------------- | ------------------------------------------------------- |
-| `client/src/lib/canvas-cache.ts`                | Local recovery cache                                    |
-| `client/src/pages/Workspace.tsx`                | Debounced autosave and save status                      |
-| `client/src/hooks/use-canvas.ts`                | Canvas API mutation                                     |
-| `server/services/canvas/routes/canvasRoutes.ts` | Authentication, access, and role checks                 |
-| `server/services/canvas/db/dynamo.ts`           | DynamoDB client and table setup                         |
-| `server/services/canvas/db/snapshots.ts`        | Atomic reads, writes, copy intents and deletion fencing |
+S3 objects are immutable and scoped by workspace. Failed publications can
+leave unreferenced objects; previous objects are retained until workspace
+deletion. Deletion lists and removes the workspace prefix and retries if S3
+reports a failure. A delayed or ambiguous cross-service upload can still leave
+an orphan after a deletion: use a suitable bucket lifecycle policy and monitor
+storage until a durable garbage collector is implemented. Storage and S3
+requests can incur usage charges.
 
 ## Verification
 
-Run the canvas-focused unit and integration suites after changing this flow:
+Focused unit tests cover legacy reads/backfill, atomic publication and copy
+replay, delta validation, S3 overflow, failed writes, and deletion races using
+in-memory or mocked adapters. Route tests cover delta and ETag behavior.
+These tests do not prove real DynamoDB transactions or S3 permissions.
+
+Run the system suite against DynamoDB Local before deployment:
 
 ```bash
-npm run test:run -- tests/unit/workspace/canvas-cache.test.ts
-npm run test:run -- tests/unit/canvas tests/integration/canvas tests/integration/authz
+npx vitest run tests/unit/canvas tests/integration/canvas
 npm run test:system
 ```
 
-Unit tests use a deterministic command adapter to inject publication failures,
-concurrent saves, interrupted copies, source edits, and delayed writes after
-deletion. `tests/system/canvas/consistency.test.ts` exercises the same protocol
-against DynamoDB Local, including large payloads and real transaction conditions.
-That system suite is wired into existing CI, but was not run locally: Docker
-was unavailable and the user chose to leave DynamoDB verification pending.
-Do not treat the command adapter as proof of AWS transaction semantics.
-
-For production, alarm on DynamoDB throttling/errors, enable point-in-time
-recovery, and periodically restore a sample canvas from backup. The archive
-and restore requirements are in
-[`RECOVERY.md`](../operations/RECOVERY.md).
+Live S3, AWS IAM, production data migration, and rollback remain operator
+verification steps. Backup and restore procedures are in
+[Recovery](../operations/RECOVERY.md).

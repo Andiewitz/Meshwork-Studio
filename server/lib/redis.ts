@@ -10,6 +10,7 @@ const log = createChildLogger("redis");
 
 let redis: RedisType | null = null;
 let redisAvailable = false;
+let redisDisabledLogged = false;
 
 function getRedisUrl(): string | null {
   const url = process.env.REDIS_URL;
@@ -28,9 +29,13 @@ export function getRedis(): RedisType | null {
 
   const url = getRedisUrl();
   if (!url) {
-    log.info("Redis disabled (REDIS_URL empty)");
+    if (!redisDisabledLogged) {
+      log.info("Redis disabled (REDIS_URL empty)");
+      redisDisabledLogged = true;
+    }
     return null;
   }
+  redisDisabledLogged = false;
 
   try {
     redis = new Redis(url, {

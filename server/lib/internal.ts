@@ -6,6 +6,7 @@
 
 import crypto from "node:crypto";
 import type { z } from "zod";
+import { fail } from "./errorEnvelope";
 
 const INTERNAL_KEY = () => process.env.INTERNAL_API_KEY || "";
 
@@ -119,11 +120,8 @@ export function requireInternalKey(
     presented.length !== expected.length ||
     !crypto.timingSafeEqual(presented, expected)
   ) {
-    // Deliberately opaque (no code — must not confirm the route exists),
-    // but the request ID still joins to server logs.
-    res
-      .status(404)
-      .json({ message: "Not Found", requestId: req.requestId ?? "unscoped" });
+    // Deliberately opaque: same body as any other missing route.
+    fail(req, res, "NOT_FOUND", "Not Found");
     return;
   }
   next();

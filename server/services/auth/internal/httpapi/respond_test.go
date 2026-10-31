@@ -27,6 +27,9 @@ func TestWriteErrorEnvelope(t *testing.T) {
 	rec := httptest.NewRecorder()
 	writeError(rec, req, http.StatusTeapot, "WEAK_PASSWORD", "too short")
 
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status not canonicalized: %d", rec.Code)
+	}
 	body := decodeBody(t, rec)
 	if body["message"] != "too short" {
 		t.Fatalf("message changed: %v", body)

@@ -27,6 +27,7 @@ export default tseslint.config(
       "docs/archive/**",
       "*.cjs",
       "*.js",
+      "tests/load/**",
     ],
   },
   {

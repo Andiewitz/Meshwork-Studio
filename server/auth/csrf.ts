@@ -5,6 +5,7 @@
 
 import type { Request, RequestHandler } from "express";
 import crypto from "node:crypto";
+import { fail } from "../lib/errorEnvelope";
 
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -113,11 +114,7 @@ export const csrfProtect: RequestHandler = (req, res, next) => {
   if (!MUTATING.has(req.method)) return next();
 
   if (!originAllowed(req)) {
-    return res.status(403).json({
-      code: "CSRF_REJECTED",
-      message: "CSRF validation failed",
-      requestId: req.requestId ?? "unscoped",
-    });
+    return fail(req, res, "CSRF_REJECTED", "CSRF validation failed");
   }
 
   const cookieToken =
@@ -128,11 +125,7 @@ export const csrfProtect: RequestHandler = (req, res, next) => {
     !headerToken ||
     !timingSafeEqual(cookieToken, headerToken)
   ) {
-    return res.status(403).json({
-      code: "CSRF_REJECTED",
-      message: "CSRF validation failed",
-      requestId: req.requestId ?? "unscoped",
-    });
+    return fail(req, res, "CSRF_REJECTED", "CSRF validation failed");
   }
   next();
 };

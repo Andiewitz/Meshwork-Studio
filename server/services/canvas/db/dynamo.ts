@@ -7,6 +7,7 @@ import {
 } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { AtomicCanvasStorage } from "./snapshots";
+import { s3CanvasObjects } from "./s3-objects";
 import { createChildLogger } from "@server/lib/logger";
 
 export {
@@ -14,6 +15,8 @@ export {
   CanvasRevisionConflictError,
   CanvasWriteIncompleteError,
   CanvasWriteLockedError,
+  CanvasDocConfigError,
+  CanvasInvalidGraphError,
 } from "./errors";
 export const partitionKey = (id: string) => `ws#${id}`;
 const log = createChildLogger("dynamo-canvas");
@@ -97,6 +100,11 @@ export async function ensureCanvasTable(): Promise<void> {
 
 export class DynamoCanvasStorage extends AtomicCanvasStorage {
   constructor() {
-    super(clients().doc, TABLE);
+    super(clients().doc, TABLE, {
+      objects: s3CanvasObjects,
+      useObjects: () => process.env.CANVAS_DOC_MODEL === "on",
+      inlineLimit: () =>
+        Number(process.env.CANVAS_DOC_INLINE_MAX_BYTES || 280 * 1024),
+    });
   }
 }

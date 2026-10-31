@@ -9,9 +9,9 @@ import type pino from "pino";
  *
  * ```json
  * { "requestId": "req-…", "route": "GET /workspaces/:id",
- *   "error": { "message": "connection terminated", "code": "ECONNRESET",
- *              "stack": ["at …", "at …"],
- *              "cause": { "message": "…", "stack": […] } } }
+ *   "error": { "type": "Error", "message": "connection terminated",
+ *              "code": "ECONNRESET", "stack": ["at …", "at …"],
+ *              "cause": { "type": "Error", "message": "…", "stack": […] } } }
  * ```
  *
  * Rules: frames only (never variable values), cause chain capped at 5 so a
@@ -20,21 +20,40 @@ import type pino from "pino";
  */
 
 export interface ErrorTrace {
+  type?: string;
   message: string;
   stack?: string[];
   code?: string;
   cause?: ErrorTrace;
+  errors?: ErrorTrace[];
 }
 
 const MAX_CAUSE_DEPTH = 5;
+const MAX_AGGREGATE = 5;
+const MAX_FRAMES = 12;
+
+/**
+ * Marker set by `logTraceback`. The global error boundary checks it so an
+ * error logged where it happened is not logged a second time when rethrown.
+ */
+const LOGGED = Symbol.for("meshwork.errorLogged");
+
+export function wasLogged(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as Record<symbol, unknown>)[LOGGED] === true
+  );
+}
 
 export function errorTrace(err: unknown, depth = 0): ErrorTrace {
   if (err instanceof Error) {
     const trace: ErrorTrace = { message: err.message };
+    if (err.name) trace.type = err.name;
     if (typeof err.stack === "string") {
       trace.stack = err.stack
         .split("\n")
-        .slice(0, 12)
+        .slice(0, MAX_FRAMES)
         .map((line) => line.trim());
     }
     const code = (err as { code?: unknown }).code;
@@ -48,7 +67,26 @@ export function errorTrace(err: unknown, depth = 0): ErrorTrace {
           ? errorTrace(cause, depth + 1)
           : { message: String(cause) };
     }
+    if (err instanceof AggregateError && depth < MAX_CAUSE_DEPTH) {
+      trace.errors = err.errors
+        .slice(0, MAX_AGGREGATE)
+        .map((inner) => errorTrace(inner, depth + 1));
+    }
     return trace;
+  }
+  if (typeof err === "object" && err !== null) {
+    const obj = err as { message?: unknown; name?: unknown; stack?: unknown };
+    if (typeof obj.message === "string") {
+      const trace: ErrorTrace = { message: obj.message };
+      if (typeof obj.name === "string" && obj.name) trace.type = obj.name;
+      if (typeof obj.stack === "string") {
+        trace.stack = obj.stack
+          .split("\n")
+          .slice(0, MAX_FRAMES)
+          .map((line) => line.trim());
+      }
+      return trace;
+    }
   }
   return { message: String(err) };
 }
@@ -64,5 +102,16 @@ export function logTraceback(
   err: unknown,
   ctx: Record<string, unknown> = {},
 ): void {
+  if (typeof err === "object" && err !== null) {
+    try {
+      Object.defineProperty(err, LOGGED, {
+        value: true,
+        enumerable: false,
+        configurable: true,
+      });
+    } catch {
+      /* frozen error objects still log normally */
+    }
+  }
   log.error({ ...ctx, error: errorTrace(err) }, msg);
 }

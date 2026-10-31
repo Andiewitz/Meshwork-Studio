@@ -6,6 +6,7 @@ import {
   waitUntilTableExists,
 } from "@aws-sdk/client-dynamodb";
 import { DynamoCanvasStorage } from "../../../server/services/canvas/db/dynamo";
+import { DynamoCanvasStorage as LegacyCanvasStorage } from "../../../server/services/canvas/db/legacy-dynamo";
 
 // Storage captures its configuration at import time, before beforeAll runs.
 vi.hoisted(() => {
@@ -26,6 +27,7 @@ vi.hoisted(() => {
  *   - sync REPLACES the set (removed nodes/edges disappear)
  *   - unchanged items are not rewritten (diff, not blind upsert)
  *   - duplicateCanvas copies every item under a new partition
+ *   - deltas merge into the locked snapshot and cascade node deletes
  */
 
 const ENDPOINT = process.env.DYNAMODB_ENDPOINT || "http://127.0.0.1:8000";
@@ -110,6 +112,29 @@ describe("canvas dynamodb parity", () => {
     expect(await storage.getEdges("ws-r")).toEqual([]);
   });
 
+  it("delta_merges_and_cascades_node_deletes", async () => {
+    await storage.syncCanvas(
+      "ws-delta",
+      [node("a", "a"), node("b", "b")],
+      [{ id: "e1", source: "a", target: "b" }],
+    );
+
+    const snapshot = await storage.syncCanvasChanges(
+      "ws-delta",
+      {
+        upsertNodes: [node("b", "b2")],
+        deleteNodeIds: ["a"],
+      },
+      1,
+    );
+
+    expect(snapshot.nodes).toEqual([node("b", "b2")]);
+    expect(snapshot.edges).toEqual([]);
+    expect(snapshot.revision).toBe(2);
+    expect(await storage.getNodes("ws-delta")).toEqual([node("b", "b2")]);
+    expect(await storage.getEdges("ws-delta")).toEqual([]);
+  });
+
   it("duplicate_copies_every_item_to_the_new_partition", async () => {
     await storage.syncCanvas(
       "ws-src",
@@ -128,5 +153,75 @@ describe("canvas dynamodb parity", () => {
     await storage.syncCanvas("ws-del", [node("z", "z")], []);
     await storage.deleteWorkspaces(["ws-del"]);
     expect(await storage.getNodes("ws-del")).toEqual([]);
+  });
+
+  describe("document model", () => {
+    beforeAll(() => {
+      process.env.CANVAS_DOC_MODEL = "on";
+    });
+
+    afterAll(() => {
+      delete process.env.CANVAS_DOC_MODEL;
+    });
+
+    it("syncs_and_reads_the_document_with_one_revision", async () => {
+      await storage.syncCanvas(
+        "ws-doc",
+        [node("d1", "doc-a"), node("d2", "doc-b")],
+        [{ id: "de1", source: "d1", target: "d2" }],
+        0,
+      );
+
+      const snapshot = await storage.getCanvas("ws-doc");
+      expect(snapshot.revision).toBe(1);
+      expect(snapshot.nodes.map((n) => n.id)).toEqual(["d1", "d2"]);
+      expect(snapshot.edges.map((e) => e.id)).toEqual(["de1"]);
+      expect((await storage.getNodes("ws-doc")).map((n) => n.id)).toEqual([
+        "d1",
+        "d2",
+      ]);
+      expect((await storage.getEdges("ws-doc")).map((e) => e.id)).toEqual([
+        "de1",
+      ]);
+    });
+
+    it("rejects_a_stale_revision", async () => {
+      await expect(
+        storage.syncCanvas("ws-doc", [node("d3", "stale")], [], 0),
+      ).rejects.toMatchObject({ code: "CANVAS_REVISION_CONFLICT" });
+      expect(
+        (await storage.getCanvas("ws-doc")).nodes.map((n) => n.id),
+      ).toEqual(["d1", "d2"]);
+    });
+
+    it("backfills_a_legacy_canvas_at_the_same_revision", async () => {
+      process.env.CANVAS_DOC_MODEL = "off";
+      const legacyStorage = new LegacyCanvasStorage();
+      await legacyStorage.syncCanvas(
+        "ws-doc-backfill",
+        [node("legacy", "old")],
+        [],
+      );
+      const legacyRevision =
+        await legacyStorage.getCanvasRevision("ws-doc-backfill");
+      process.env.CANVAS_DOC_MODEL = "on";
+
+      await expect(storage.backfillCanvas("ws-doc-backfill")).resolves.toBe(
+        "created",
+      );
+
+      const snapshot = await storage.getCanvas("ws-doc-backfill");
+      expect(snapshot.revision).toBe(legacyRevision);
+      expect(snapshot.nodes.map((n) => n.id)).toEqual(["legacy"]);
+    });
+
+    it("duplicates_a_document_canvas", async () => {
+      await storage.syncCanvas("ws-doc-src", [node("copy", "x")], [], 0);
+      await storage.duplicateCanvas("ws-doc-src", "ws-doc-dst");
+
+      const copy = await storage.getCanvas("ws-doc-dst");
+      expect(copy.nodes.map((n) => n.id)).toEqual(["copy"]);
+      expect(copy.revision).toBe(1);
+    });
   });
 });

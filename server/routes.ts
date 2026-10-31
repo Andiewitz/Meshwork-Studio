@@ -21,6 +21,7 @@ import { createChildLogger } from "./lib/logger";
 import { createWorkspaceSummaryReader } from "@services/workspace/public";
 import { createTeamWorkspaceAccess } from "@services/team/public";
 import { eventBus } from "./lib/events";
+import { apiLimiter } from "./middleware/rateLimit";
 
 const log = createChildLogger("server");
 
@@ -48,8 +49,10 @@ export async function registerRoutes(
     ensureSchema("metrics", metricsPool, metricsMigrations),
   ]);
 
-  // Populate req.user early when a valid assertion cookie exists
+  // Populate req.user early when a valid assertion cookie exists, then apply
+  // the global limiter so authenticated requests can be keyed by user.
   app.use(optionalAuth);
+  app.use("/api/", apiLimiter);
 
   // Initialize Canvas Service (handles nodes and edges) - must listen before WorkspaceService for user.deleted
   CanvasService.initialize(app, {

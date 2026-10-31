@@ -14,6 +14,7 @@ restore drill.
 | Archive contents   | Auth, workspace, team, AI, and metrics PostgreSQL dumps; canvas NDJSON; checksum manifest. |
 | Off-host location  | Versioned, private S3 prefix with Block Public Access and lifecycle policy.                |
 | Canvas durability  | DynamoDB point-in-time recovery plus the archive snapshot.                                 |
+| Canvas overflow    | S3 versioning/replication; `db:backup` does not copy document objects above 350 KB.        |
 | Restore drills     | Quarterly, timed, isolated drill; record operator, archive ID, result, RPO, and RTO.       |
 | Production restore | Manual approved cutover only; never point the drill tool at production.                    |
 

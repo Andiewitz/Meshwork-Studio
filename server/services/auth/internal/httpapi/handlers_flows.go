@@ -58,7 +58,7 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 	default:
 		// Account unknown or OAuth-only: burn equivalent work so the response
 		// timing is indistinguishable, then answer generically.
-		password.VerifyDummy(email)
+		_ = password.VerifyDummyCtx(r.Context(), email)
 	}
 
 	// Always the same public answer — never reveal whether the account exists.
@@ -102,7 +102,10 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newHash, err := password.Hash(body.NewPassword)
+	newHash, err := password.HashCtx(r.Context(), body.NewPassword)
+	if hashBusy(w, r, err) {
+		return
+	}
 	if err != nil {
 		s.writeInternal(w, r, err, "Reset failed")
 		return

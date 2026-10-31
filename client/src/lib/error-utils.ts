@@ -125,7 +125,7 @@ function friendlyMessage(
   const lower = rawMessage.toLowerCase();
 
   // 1. Authentication — read the server code before blaming credentials:
-  // SESSION_EXPIRED/NO_SESSION mean "log in again", only a login-endpoint
+  // all session-state codes mean "log in again", only a login-endpoint
   // failure means the password was wrong.
   const code =
     error instanceof ApiError
@@ -133,6 +133,9 @@ function friendlyMessage(
       : undefined;
   if (
     code === "SESSION_EXPIRED" ||
+    code === "SESSION_INVALID" ||
+    code === "NO_SESSION" ||
+    code === "UNAUTHENTICATED" ||
     lower.includes("session expired") ||
     lower.includes("log in again")
   ) {

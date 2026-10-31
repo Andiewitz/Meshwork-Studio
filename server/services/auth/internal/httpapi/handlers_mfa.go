@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
@@ -42,8 +43,8 @@ func normalizeBackupCode(s string) string {
 	return strings.ToLower(strings.TrimSpace(s))
 }
 
-func verifyPasswordHash(plain, hash string) (bool, error) {
-	return password.Verify(plain, hash)
+func verifyPasswordHash(ctx context.Context, plain, hash string) (bool, error) {
+	return password.VerifyCtx(ctx, plain, hash)
 }
 
 // issueMFATicket hands out a single-use, short-lived cookie after a correct
@@ -228,8 +229,15 @@ func (s *Server) handleMFADisable(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusBadRequest, "VALIDATION", "Password confirmation required")
 		return
 	}
-	if info.User.PasswordHash == nil ||
-		func() bool { ok, _ := verifyPasswordHash(body.Password, *info.User.PasswordHash); return !ok }() {
+	ok := false
+	if info.User.PasswordHash != nil {
+		v, verr := verifyPasswordHash(r.Context(), body.Password, *info.User.PasswordHash)
+		if hashBusy(w, r, verr) {
+			return
+		}
+		ok = verr == nil && v
+	}
+	if !ok {
 		writeError(w, r, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Password incorrect")
 		return
 	}

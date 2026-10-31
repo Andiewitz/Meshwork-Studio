@@ -33,7 +33,7 @@ pure outcome helper. The browser bundle check independently proves that the
 shared hub and public entries do not bundle database dependencies.
 
 Composition exceptions are exact source-to-target edges in `COMPOSITION_EDGES`:
-the server startup/migration wiring and trusted outbox replay script. A file
+the server startup/migration wiring and trusted operator migration and outbox replay scripts. A file
 merely named `routes.ts` or `index.ts` gets no exception. Adding private startup
 wiring requires a deliberate policy edit. Tests can access private internals
 to exercise adapters; they are not production entrypoints.

@@ -33,6 +33,8 @@ interface ServerMessage {
   x?: number;
   y?: number;
   message?: string;
+  code?: string;
+  requestId?: string;
   nodeId?: string;
   nodeX?: number;
   nodeY?: number;
@@ -183,7 +185,12 @@ export function usePresence(
           }
 
           case "error": {
-            console.warn("[Presence] Server message:", msg.message);
+            console.warn(
+              "[Presence] Server error:",
+              msg.code ?? "UNKNOWN",
+              msg.message,
+              msg.requestId ? `(request ${msg.requestId})` : "",
+            );
             break;
           }
 
@@ -230,8 +237,9 @@ export function usePresence(
       wsRef.current = null;
       setIsConnected(false);
 
-      // Session revoked / expired — stop reconnecting
-      if (event.code === 4001) return;
+      // Session revoked / expired, or room access denied — stop reconnecting.
+      if (event.code === 4001 || event.code === 4401 || event.code === 4403)
+        return;
 
       // Clean close or intentional navigation — don't reconnect
       if (!RETRYABLE_CLOSE_CODES.has(event.code)) return;

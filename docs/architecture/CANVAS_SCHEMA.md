@@ -555,9 +555,12 @@ Demonstrates the container-nesting pattern. Children use positions **relative to
 ## Validation
 
 The server validates persisted writes with the Zod `canvasSyncSchema` in
-[`server/shared/canvas.ts`](../../server/shared/canvas.ts). There is no
-checked-in JSON Schema file. Integrations should either use that contract or
-call the API and handle its `400 INVALID_CANVAS` response.
+[`server/shared/canvas.ts`](../../server/shared/canvas.ts). The schema accepts a
+full `{ nodes, edges, baseRevision }` snapshot or a
+`{ changes, baseRevision }` delta; deltas are merged with the stored canvas and
+the resulting graph is validated again. There is no checked-in JSON Schema
+file. Integrations should either use that contract or call the API and handle
+its `400 INVALID_CANVAS` response.
 
 Before AI or template output enters the editor,
 [`validateAndRepairCanvas`](../../client/src/lib/ai-canvas-utils.ts) performs a
@@ -570,12 +573,12 @@ dimensions are retained.
 
 ## Key Source Files
 
-| File                                                                                                                                           | Purpose                                                                    |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| [`client/src/lib/ai-canvas-utils.ts`](../../client/src/lib/ai-canvas-utils.ts)                                                                 | Runtime type normalisation, repair, and ID deduplication                   |
-| [`client/src/features/workspace/utils/nodeRegistry.ts`](../../client/src/features/workspace/utils/nodeRegistry.ts)                             | Authoritative node types, aliases, and default sizes                       |
-| [`server/shared/schema/index.ts`](../../server/shared/schema/index.ts)                                                                         | Client/server contract types                                               |
-| [`server/services/canvas/db/dynamo.ts`](../../server/services/canvas/db/dynamo.ts)                                                             | `syncCanvas()` — persistence layer that writes nodes and edges to DynamoDB |
-| [`client/src/features/workspace/components/WorkspaceLeftSidebar.tsx`](../../client/src/features/workspace/components/WorkspaceLeftSidebar.tsx) | Jenkos AI drawer and canvas actions                                        |
-| [`../features/JENKOS_AI.md`](../features/JENKOS_AI.md)                                                                                         | How Jenkos uses canvas context in prompts and responses                    |
-| [`../features/WORKSPACES.md`](../features/WORKSPACES.md)                                                                                       | Workspace and collection API reference                                     |
+| File                                                                                                                                           | Purpose                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [`client/src/lib/ai-canvas-utils.ts`](../../client/src/lib/ai-canvas-utils.ts)                                                                 | Runtime type normalisation, repair, and ID deduplication           |
+| [`client/src/features/workspace/utils/nodeRegistry.ts`](../../client/src/features/workspace/utils/nodeRegistry.ts)                             | Authoritative node types, aliases, and default sizes               |
+| [`server/shared/schema/index.ts`](../../server/shared/schema/index.ts)                                                                         | Client/server contract types                                       |
+| [`server/services/canvas/db/dynamo.ts`](../../server/services/canvas/db/dynamo.ts)                                                             | `syncCanvas()` — legacy item writes or document CAS/S3 persistence |
+| [`client/src/features/workspace/components/WorkspaceLeftSidebar.tsx`](../../client/src/features/workspace/components/WorkspaceLeftSidebar.tsx) | Jenkos AI drawer and canvas actions                                |
+| [`../features/JENKOS_AI.md`](../features/JENKOS_AI.md)                                                                                         | How Jenkos uses canvas context in prompts and responses            |
+| [`../features/WORKSPACES.md`](../features/WORKSPACES.md)                                                                                       | Workspace and collection API reference                             |

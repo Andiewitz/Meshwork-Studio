@@ -127,13 +127,16 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	// Always pay full hash cost so success and conflict responses share one
 	// latency profile (anti-enumeration).
-	hash, herr := password.Hash(body.Password)
+	hash, herr := password.HashCtx(r.Context(), body.Password)
+	if hashBusy(w, r, herr) {
+		return
+	}
 	if herr != nil {
 		s.writeInternal(w, r, herr, "Registration unavailable")
 		return
 	}
 	if hasExisting {
-		password.VerifyDummy(body.Password)
+		_ = password.VerifyDummyCtx(r.Context(), body.Password)
 		s.auditor.Record(s.auditEntry(r, "", email, audit.Register))
 		writeError(w, r, http.StatusConflict, "REGISTRATION_UNAVAILABLE",
 			"Registration could not be completed with the provided information.")
@@ -219,12 +222,16 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	rehashToArgon2 := false
 	switch {
 	case user != nil && user.PasswordHash != nil:
-		if v, verr := password.Verify(body.Password, *user.PasswordHash); verr == nil && v {
+		v, verr := password.VerifyCtx(r.Context(), body.Password, *user.PasswordHash)
+		if hashBusy(w, r, verr) {
+			return
+		}
+		if verr == nil && v {
 			valid = true
 			rehashToArgon2 = password.NeedsRehash(*user.PasswordHash)
 		}
 	default:
-		password.VerifyDummy(body.Password) // equalise miss-path timing
+		_ = password.VerifyDummyCtx(r.Context(), body.Password) // equalise miss-path timing
 	}
 
 	if !valid {
@@ -243,7 +250,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	_ = s.lockouts.Reset(r.Context(), email)
 
 	if rehashToArgon2 {
-		if newHash, herr := password.Hash(body.Password); herr == nil {
+		if newHash, herr := password.HashCtx(r.Context(), body.Password); herr == nil {
 			_ = s.db.SetPasswordHash(r.Context(), user.ID, newHash, "argon2id")
 		}
 	}
@@ -353,9 +360,13 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	ok := false
 	if info.User.PasswordHash != nil {
-		ok, _ = password.Verify(body.CurrentPassword, *info.User.PasswordHash)
+		v, verr := password.VerifyCtx(r.Context(), body.CurrentPassword, *info.User.PasswordHash)
+		if hashBusy(w, r, verr) {
+			return
+		}
+		ok = verr == nil && v
 	} else {
-		password.VerifyDummy(body.CurrentPassword)
+		_ = password.VerifyDummyCtx(r.Context(), body.CurrentPassword)
 	}
 	if !ok {
 		s.auditor.Record(s.auditEntry(r, info.User.ID, info.User.Email, audit.LoginFailed))
@@ -363,7 +374,10 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newHash, err := password.Hash(body.NewPassword)
+	newHash, err := password.HashCtx(r.Context(), body.NewPassword)
+	if hashBusy(w, r, err) {
+		return
+	}
 	if err != nil {
 		s.writeInternal(w, r, err, "Change failed")
 		return

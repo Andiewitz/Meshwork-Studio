@@ -281,8 +281,14 @@ func (s *Server) handleGoogleLinkConfirm(w http.ResponseWriter, r *http.Request)
 		writeError(w, r, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Password incorrect")
 		return
 	}
-	ok, verr := verifyPasswordHash(body.Password, *user.PasswordHash)
-	password.VerifyDummy(body.Password) // keep timing flat when hash missing
+	ok, verr := verifyPasswordHash(r.Context(), body.Password, *user.PasswordHash)
+	if hashBusy(w, r, verr) {
+		return
+	}
+	if verr != nil {
+		// Malformed stored hash: keep timing flat when hashing was skipped.
+		_ = password.VerifyDummyCtx(r.Context(), body.Password)
+	}
 	if verr != nil || !ok {
 		writeError(w, r, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Password incorrect")
 		return

@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 import {
   BatchWriteCommand,
+  DeleteCommand,
   GetCommand,
   PutCommand,
   QueryCommand,
@@ -74,6 +75,9 @@ export class MemoryDynamo {
     } else if (command instanceof PutCommand) {
       this.check(input);
       this.items.set(this.key(input.Item), structuredClone(input.Item));
+    } else if (command instanceof DeleteCommand) {
+      this.check(input);
+      this.items.delete(this.key(input.Key));
     } else if (command instanceof TransactWriteCommand) {
       for (const operation of input.TransactItems)
         this.check(
@@ -93,16 +97,26 @@ export class MemoryDynamo {
         }
       }
     } else if (command instanceof BatchWriteCommand) {
-      const batches: Record<
+      const batches = input.RequestItems as Record<
         string,
-        { DeleteRequest: { Key: Record<string, unknown> } }[]
-      > = input.RequestItems;
+        Array<{
+          DeleteRequest?: { Key: Record<string, unknown> };
+          PutRequest?: { Item: Record<string, unknown> };
+        }>
+      >;
       if (this.batchFailures-- > 0)
         output = { UnprocessedItems: input.RequestItems };
       else
         for (const requests of Object.values(batches)) {
-          for (const request of requests)
-            this.items.delete(this.key(request.DeleteRequest.Key));
+          for (const request of requests) {
+            if (request.DeleteRequest)
+              this.items.delete(this.key(request.DeleteRequest.Key));
+            if (request.PutRequest)
+              this.items.set(
+                this.key(request.PutRequest.Item),
+                structuredClone(request.PutRequest.Item),
+              );
+          }
         }
     } else
       throw new Error(`Unexpected test command: ${command.constructor.name}`);

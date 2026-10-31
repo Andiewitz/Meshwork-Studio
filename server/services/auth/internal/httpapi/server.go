@@ -217,8 +217,8 @@ func MetricsHandler() http.Handler {
 }
 
 func pprofDisabled() http.HandlerFunc {
-	return func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, "pprof disabled", http.StatusForbidden)
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeError(w, r, http.StatusForbidden, "FORBIDDEN", "pprof disabled")
 	}
 }
 

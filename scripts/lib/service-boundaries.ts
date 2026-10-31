@@ -29,6 +29,11 @@ export const COMPOSITION_EDGES: ReadonlyArray<readonly [string, string]> = [
   ["server/index.ts", "server/services/workspace/db/connection.ts"],
   ["server/index.ts", "server/services/workspace/index.ts"],
   ["server/index.ts", "server/services/team/websocket/index.ts"],
+  ["scripts/migrate-canvas-docs.ts", "server/services/canvas/db/dynamo.ts"],
+  [
+    "scripts/migrate-canvas-docs.ts",
+    "server/services/canvas/db/legacy-dynamo.ts",
+  ],
   [
     "scripts/replay-workspace-outbox.ts",
     "server/services/workspace/db/connection.ts",

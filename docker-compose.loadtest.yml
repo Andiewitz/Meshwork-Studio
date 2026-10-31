@@ -1,0 +1,107 @@
+name: meshwork-studio
+# Load test override — caps the whole stack to a t3.small-like envelope.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.loadtest.yml ...
+# NEVER use alongside dev data: orchestrator stops the dev compose stack first
+# and remaps the three data volumes below so dev volumes are never touched.
+
+services:
+  meshwork-frontend:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.15"
+          memory: 64M
+
+  meshwork-backend:
+    # scripts/build.ts bundles the server with esbuild define
+    # {"process.env.NODE_ENV": '"production"'} — the image ALWAYS executes
+    # production branches (origin allowlist, rate limiters), regardless of
+    # runtime NODE_ENV. Rig-facing consequences and their fixes:
+    #   - csrf allowlist (server/auth/csrf.ts) keeps only APP_URL/FRONTEND_URL;
+    #     nginx forwards Host without the port ($host), so the same-origin
+    #     check can't match http://localhost:5000. Point APP_URL at the rig.
+    #   - express rate limiters stay armed; every rig client shares one IP
+    #     (and trust proxy=1 pins req.ip to nginx's appended address, so
+    #     client-supplied X-Forwarded-For is ignored). Raise the monolith cap
+    #     via the runtime knob added for this rig.
+    environment:
+      APP_URL: "http://localhost:5000"
+      FRONTEND_URL: "http://localhost:5000"
+      API_RATE_LIMIT_MAX: "1000000"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 600M
+
+  meshwork-auth:
+    environment:
+      # Register AND login share this limiter (server.go:141-143, default 20
+      # /15 min /IP). Seeded logins happen once per VU per stage run.
+      LOGIN_RATE_LIMIT_PER_IP: "100000"
+      # The legacy dev .env carries real SMTP creds; auth gates on SMTPHost
+      # != "" (config.go:64), so blanking the host switches to the dev
+      # console mailer — no outbound Gmail attempts while seeding.
+      SMTP_HOST: ""
+      EMAIL_FROM: ""
+      # 3 × 64 MiB argon2 scratch + base fits the 352M envelope below.
+      AUTH_HASH_CONCURRENCY: "3"
+      GOMEMLIMIT: 256MiB
+      # Load tests deliberately fire login waves (one per VU at stage start):
+      # queue them through the 3 slots for up to 10s before shedding a 429.
+      AUTH_HASH_WAIT_MS: "10000"
+    ports:
+      - "127.0.0.1:19091:9091"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.35"
+          # Argon2id is 64 MiB / op (password.go:21, t=3, p=2): the envelope
+          # holds ~4 concurrent hash ops. OOM here = silent restart + 502s.
+          memory: 352M
+
+  meshwork-postgres:
+    volumes:
+      # Same mount target ⇒ compose merge replaces the dev named volume.
+      - pgdata_loadtest:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    # First initdb on a fresh volume can outlast the base 10s×5 window when
+    # throttled to 0.25 CPU; start_period excludes that warm-up from retries.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 400M
+
+  meshwork-redis:
+    volumes:
+      - redis_loadtest:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: 128M
+
+  meshwork-dynamodb-local:
+    # In-memory SQLite: the image ships no /home/dynamodblocal/data directory,
+    # so a fresh named volume mounts root-owned and UID 1000 (dynamodblocal)
+    # cannot create its DB file — DDB then loops on "unable to open database
+    # file" and every storage-touching request hangs (canvas 504s). Loadtest
+    # state is re-seeded on every run, so on-disk persistence buys nothing.
+    # JVM heap inside a 352M box: DDB holds canvas docs (~50 KB/workspace).
+    command: "-Xmx256m -jar DynamoDBLocal.jar -sharedDb -inMemory"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.15"
+          memory: 352M
+
+volumes:
+  pgdata_loadtest:
+  redis_loadtest:
