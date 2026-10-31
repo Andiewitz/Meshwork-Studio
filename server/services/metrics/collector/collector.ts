@@ -7,6 +7,8 @@ const log = createChildLogger("metrics-collector");
 let previousRequests = 0;
 let previousAiRequests = 0;
 let collectorRunning = false;
+let collectorTimer: NodeJS.Timeout | undefined;
+let activeSnapshot: Promise<void> | undefined;
 
 function parsePrometheusValue(metrics: string, name: string): number {
   let total = 0;
@@ -104,13 +106,19 @@ export async function snapshotMetrics() {
 export function startCollector(intervalMs = 30000) {
   if (collectorRunning) return;
   collectorRunning = true;
-
-  setTimeout(() => {
-    void snapshotMetrics();
-    setInterval(() => {
-      void snapshotMetrics();
-    }, intervalMs);
-  }, intervalMs);
-
+  const tick = () => {
+    if (!collectorRunning || activeSnapshot) return;
+    activeSnapshot = snapshotMetrics().finally(() => {
+      activeSnapshot = undefined;
+    });
+  };
+  collectorTimer = setInterval(tick, intervalMs);
   log.info({ intervalMs }, "Metrics collector started");
+}
+
+export async function stopCollector(): Promise<void> {
+  collectorRunning = false;
+  if (collectorTimer) clearInterval(collectorTimer);
+  collectorTimer = undefined;
+  await activeSnapshot;
 }

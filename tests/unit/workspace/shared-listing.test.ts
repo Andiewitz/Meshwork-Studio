@@ -23,37 +23,19 @@ afterEach(() => {
 });
 
 describe("workspace listing dependency semantics", () => {
-  it("accepts a genuinely empty shared list and still returns owned workspaces", async () => {
-    fetchMock.mockResolvedValue(Response.json({ workspaceIds: [] }));
-    const owned = [{ id: "owned", userId: "user", title: "Project" }];
+  it("lists owned and direct collaborator workspaces without calling Team", async () => {
+    const rows = [
+      { id: "owned", userId: "user", title: "Project" },
+      { id: "shared", userId: "other", title: "Shared" },
+    ];
     select.mockReturnValue({
-      from: () => ({ where: () => ({ orderBy: async () => owned }) }),
+      from: () => ({ where: () => ({ orderBy: async () => rows }) }),
     });
     await expect(
       new WorkspaceDatabaseStorage().getWorkspaces("user", null, "aabb-ccdd"),
-    ).resolves.toEqual(owned);
-    expect(fetchMock).toHaveBeenCalledWith(
-      "http://team:5000/internal/v1/team/users/user/shared-workspace-ids",
-      expect.objectContaining({
-        headers: { "X-Internal-Key": "node-key", "X-Request-Id": "aabb-ccdd" },
-      }),
-    );
+    ).resolves.toEqual(rows);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
-
-  it.each(["offline", "invalid"])(
-    "does not return a misleading partial list when sharing is %s",
-    async (failure) => {
-      fetchMock.mockResolvedValue(
-        failure === "offline"
-          ? new Response("", { status: 503 })
-          : Response.json({ workspaces: [] }),
-      );
-      await expect(
-        new WorkspaceDatabaseStorage().getWorkspaces("user"),
-      ).rejects.toMatchObject({ status: 503, service: "team" });
-      expect(select).not.toHaveBeenCalled();
-    },
-  );
 
   it("does not treat an unavailable ownership source as missing ownership", async () => {
     fetchMock.mockRejectedValue(new Error("offline"));

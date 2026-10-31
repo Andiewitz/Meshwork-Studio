@@ -1,3 +1,4 @@
+import type { WorkspaceAccess } from "@shared/schema/workspace-contract";
 import type { Lookup, QueryResult } from "@server/lib/module-outcomes";
 import { readLookup } from "@server/lib/module-outcomes";
 import { workspaceOwnershipResponseSchema } from "@shared/contracts/workspace-queries";
@@ -49,6 +50,34 @@ export function createWorkspaceSummaryReader(source: {
             userId: row.userId,
             canvasCopyStatus: row.canvasCopyStatus,
           },
+        };
+      } catch (cause) {
+        return { status: "unavailable", cause };
+      }
+    },
+  };
+}
+
+/** Workspace owns direct collaborator permissions. A failed lookup is never a denial. */
+export interface WorkspaceAccessReader {
+  getAccess(
+    workspaceId: string,
+    userId: string,
+  ): Promise<QueryResult<WorkspaceAccess>>;
+}
+
+export function createWorkspaceAccessReader(source: {
+  getWorkspaceAccess(
+    workspaceId: string,
+    userId: string,
+  ): Promise<WorkspaceAccess>;
+}): WorkspaceAccessReader {
+  return {
+    async getAccess(workspaceId, userId) {
+      try {
+        return {
+          status: "available",
+          value: await source.getWorkspaceAccess(workspaceId, userId),
         };
       } catch (cause) {
         return { status: "unavailable", cause };

@@ -5,7 +5,7 @@ import type { ApiErrorCode } from "@server/lib/errorCodes";
 import type { Server as HttpServer } from "http";
 import type { IncomingMessage } from "http";
 import cookie from "cookie";
-import { teamStorage } from "../db/storage";
+import type { WorkspaceRole } from "@shared/permissions";
 import {
   authenticateUpgrade,
   verifyAssertionToken,
@@ -25,7 +25,7 @@ import crypto from "crypto";
 // password change or ban — not at next natural disconnect.
 const SESSION_REVOCATION_CHANNEL = "identity:sessions:revoked";
 
-const log = createChildLogger("team-websocket");
+const log = createChildLogger("collaboration-websocket");
 
 const ORIGIN_SERVER_ID = crypto.randomUUID();
 const WS_CLOSE_UNAUTHORIZED = 4401;
@@ -60,7 +60,7 @@ function initRedisSub() {
         const workspaceId = channel.slice("ws:room:".length);
         const payload = JSON.parse(message);
         if (payload.originServerId === ORIGIN_SERVER_ID) return;
-        broadcastToRoom(workspaceId, payload.data, payload.excludeUserId);
+        void broadcastToRoom(workspaceId, payload.data, payload.excludeUserId);
       } catch (err) {
         log.error({ err, channel }, "Error processing pub/sub message");
       }
@@ -88,7 +88,7 @@ function publishToRoom(
   message: ServerMessage,
   excludeUserId?: string,
 ) {
-  broadcastToRoom(workspaceId, message, excludeUserId);
+  void broadcastToRoom(workspaceId, message, excludeUserId);
 
   const pub = getRedisPub();
   if (pub) {
@@ -162,26 +162,6 @@ const socketAuth = new WeakMap<WebSocket, SocketAuth>();
 
 const SESSION_REVALIDATE_MS = 5 * 60 * 1000;
 
-// Role cache for mutation authorisation (60s TTL bounds stale-role window).
-interface RoleCacheEntry {
-  role: string | null;
-  at: number;
-}
-const roleCache = new Map<string, RoleCacheEntry>();
-const ROLE_CACHE_TTL = 60 * 1000;
-
-async function cachedWorkspaceRole(
-  userId: string,
-  workspaceId: string,
-): Promise<string | null> {
-  const key = `${userId}:${workspaceId}`;
-  const hit = roleCache.get(key);
-  if (hit && Date.now() - hit.at < ROLE_CACHE_TTL) return hit.role;
-  const role = await teamStorage.getWorkspaceRole(workspaceId, userId);
-  roleCache.set(key, { role, at: Date.now() });
-  return role;
-}
-
 function canMutateCanvas(role: string | null): boolean {
   // owner/admin/editor may mutate; viewers and strangers may not.
   return (
@@ -192,7 +172,10 @@ function canMutateCanvas(role: string | null): boolean {
   );
 }
 
-function broadcastToRoom(
+let roomPermissionCheck:
+  ((userId: string, workspaceId: string) => Promise<boolean>) | undefined;
+
+async function broadcastToRoom(
   workspaceId: string,
   message: ServerMessage,
   excludeUserId?: string,
@@ -203,8 +186,26 @@ function broadcastToRoom(
   const payload = JSON.stringify(message);
   for (const [uid, user] of room.entries()) {
     if (uid === excludeUserId) continue;
-    if (user.ws.readyState === WebSocket.OPEN) {
-      user.ws.send(payload);
+    if (user.ws.readyState !== WebSocket.OPEN) continue;
+    try {
+      if (
+        !roomPermissionCheck ||
+        !(await roomPermissionCheck(uid, workspaceId))
+      ) {
+        user.ws.close(WS_CLOSE_FORBIDDEN, "forbidden");
+        continue;
+      }
+      if (
+        rooms.get(workspaceId)?.get(uid)?.ws === user.ws &&
+        user.ws.readyState === WebSocket.OPEN
+      )
+        user.ws.send(payload);
+    } catch (error) {
+      log.error(
+        { error, workspaceId, userId: uid },
+        "Presence permission check failed",
+      );
+      user.ws.close(WS_CLOSE_FORBIDDEN, "permission unavailable");
     }
   }
 }
@@ -257,7 +258,20 @@ function rejectUpgrade(
   socket.destroy();
 }
 
-export function initializeWebSocket(httpServer: HttpServer) {
+export interface CollaborationPermissions {
+  canAccessWorkspace(userId: string, workspaceId: string): Promise<boolean>;
+  getWorkspaceRole(
+    workspaceId: string,
+    userId: string,
+  ): Promise<WorkspaceRole | null>;
+}
+
+export function initializeWebSocket(
+  httpServer: HttpServer,
+  permissions: CollaborationPermissions,
+) {
+  roomPermissionCheck = (userId, workspaceId) =>
+    permissions.canAccessWorkspace(userId, workspaceId);
   // SECURITY: noServer mode — the HTTP 'upgrade' event is authenticated
   // BEFORE any socket is accepted. Anonymous sockets never exist.
   const wss = new WebSocketServer({ noServer: true });
@@ -442,7 +456,7 @@ export function initializeWebSocket(httpServer: HttpServer) {
               firstName: auth.name || null,
             };
 
-            const hasAccess = await teamStorage.canAccessWorkspace(
+            const hasAccess = await permissions.canAccessWorkspace(
               user.id,
               msg.workspaceId,
             );
@@ -458,18 +472,21 @@ export function initializeWebSocket(httpServer: HttpServer) {
               return;
             }
 
-            let memberColor = "#FF6600";
-            const teamsWithAccess = await teamStorage.getTeamsForWorkspace(
-              msg.workspaceId,
-            );
-            for (const team of teamsWithAccess) {
-              const members = await teamStorage.getTeamMembers(team.id);
-              const me = members.find((m) => m.userId === user.id);
-              if (me) {
-                memberColor = me.color;
-                break;
-              }
-            }
+            // A stable colour needs no Team database lookup.
+            const palette = [
+              "#FF6600",
+              "#3B82F6",
+              "#A855F7",
+              "#10B981",
+              "#EF4444",
+              "#EAB308",
+            ];
+            const colorHash = crypto
+              .createHash("sha256")
+              .update(user.id)
+              .digest()
+              .readUInt32BE(0);
+            const memberColor = palette[colorHash % palette.length];
 
             removeFromAllRooms(ws);
 
@@ -522,6 +539,21 @@ export function initializeWebSocket(httpServer: HttpServer) {
           case "cursor": {
             if (!currentUserId || !currentWorkspaceId) return;
 
+            if (
+              !(await permissions.canAccessWorkspace(
+                currentUserId,
+                currentWorkspaceId,
+              ))
+            ) {
+              sendWsError(
+                ws,
+                "FORBIDDEN",
+                "No access to this workspace",
+                requestId,
+              );
+              ws.close(WS_CLOSE_FORBIDDEN, "forbidden");
+              return;
+            }
             const room = rooms.get(currentWorkspaceId);
             if (!room) return;
 
@@ -631,7 +663,7 @@ export function initializeWebSocket(httpServer: HttpServer) {
       workspaceId: string,
       sock: WebSocket,
     ): Promise<boolean> {
-      const role = await cachedWorkspaceRole(userId, workspaceId);
+      const role = await permissions.getWorkspaceRole(workspaceId, userId);
       if (canMutateCanvas(role)) return true;
       sendWsError(
         sock,

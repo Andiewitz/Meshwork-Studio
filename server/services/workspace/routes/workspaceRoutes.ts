@@ -8,9 +8,13 @@ import { fail } from "@server/lib/errorEnvelope";
 import { firstIssueMessage, zodIssues } from "@server/lib/validation";
 import { logTraceback } from "@server/lib/traceback";
 import type { WorkspaceRouteDependencies } from "../dependencies";
-import { workspaceAccess } from "@server/lib/team-access";
+import { workspaceAccess } from "@server/lib/workspace-access";
 import { canEditWorkspace, canDeleteWorkspace } from "@server/lib/permissions";
 import { workspaceOutbox } from "../outbox-service";
+import {
+  lookupCollaboratorIdentity,
+  getCollaboratorProfiles,
+} from "@server/auth/internal-client";
 
 const log = createChildLogger("workspace-routes");
 
@@ -33,7 +37,7 @@ export function registerWorkspaceRoutes(
   context: WorkspaceRouteDependencies,
 ) {
   const { isAuthenticated } = context;
-  const teamAccess = workspaceAccess(context.teamAccess);
+  const access = workspaceAccess(context.directAccess);
   // Collections (Subcollections)
   app.get("/api/v1/collections", isAuthenticated, async (req, res) => {
     const userId = getUserId(req);
@@ -138,6 +142,123 @@ export function registerWorkspaceRoutes(
     },
   );
 
+  // Direct collaborator grants are managed only by the workspace owner.
+  const collaboratorInput = z.object({
+    email: z.string().trim().email().max(320),
+    permission: z.enum(["view", "edit"]),
+  });
+  const permissionInput = z.object({ permission: z.enum(["view", "edit"]) });
+  const ownerWorkspace = async (req: Request) => {
+    const workspace = await workspaceStorage.getWorkspace(getParamId(req));
+    return workspace?.userId === getUserId(req) ? workspace : undefined;
+  };
+  app.get(
+    "/api/v1/workspaces/:id/collaborators",
+    isAuthenticated,
+    async (req, res) => {
+      if (!(await ownerWorkspace(req)))
+        return fail(req, res, "FORBIDDEN", "Forbidden");
+      const grants = await workspaceStorage.listWorkspaceCollaborators(
+        getParamId(req),
+      );
+      const byId = new Map<
+        string,
+        Awaited<ReturnType<typeof getCollaboratorProfiles>>["users"][number]
+      >();
+      for (let offset = 0; offset < grants.length; offset += 100) {
+        const profiles = await getCollaboratorProfiles(
+          grants.slice(offset, offset + 100).map((grant) => grant.userId),
+          { requestId: req.requestId },
+        );
+        for (const user of profiles.users) byId.set(user.id, user);
+      }
+      return res.json({
+        collaborators: grants.map((grant) => ({
+          userId: grant.userId,
+          permission: grant.permission,
+          profile: byId.get(grant.userId) ?? null,
+        })),
+      });
+    },
+  );
+  app.post(
+    "/api/v1/workspaces/:id/collaborators",
+    csrfProtect,
+    isAuthenticated,
+    async (req, res) => {
+      if (!(await ownerWorkspace(req)))
+        return fail(req, res, "FORBIDDEN", "Forbidden");
+      const parsed = collaboratorInput.safeParse(req.body);
+      if (!parsed.success)
+        return fail(req, res, "VALIDATION_FAILED", "Invalid collaborator");
+      const { user } = await lookupCollaboratorIdentity(parsed.data.email, {
+        requestId: req.requestId,
+      });
+      if (!user || user.id === getUserId(req))
+        return fail(
+          req,
+          res,
+          "VALIDATION_FAILED",
+          "Unable to add this collaborator",
+        );
+      const grant = await workspaceStorage.upsertWorkspaceCollaborator({
+        workspaceId: getParamId(req),
+        userId: user.id,
+        permission: parsed.data.permission,
+        addedBy: getUserId(req),
+      });
+      return res.status(201).json({
+        userId: grant.userId,
+        permission: grant.permission,
+        profile: user,
+      });
+    },
+  );
+  app.patch(
+    "/api/v1/workspaces/:id/collaborators/:userId",
+    csrfProtect,
+    isAuthenticated,
+    async (req, res) => {
+      if (!(await ownerWorkspace(req)))
+        return fail(req, res, "FORBIDDEN", "Forbidden");
+      const parsed = permissionInput.safeParse(req.body);
+      if (!parsed.success)
+        return fail(req, res, "VALIDATION_FAILED", "Invalid permission");
+      const target = getParamId(req, "userId");
+      if (target === getUserId(req))
+        return fail(req, res, "VALIDATION_FAILED", "Cannot modify the owner");
+      const grants = await workspaceStorage.listWorkspaceCollaborators(
+        getParamId(req),
+      );
+      if (!grants.some((grant) => grant.userId === target))
+        return fail(req, res, "NOT_FOUND", "Collaborator not found");
+      const grant =
+        await workspaceStorage.updateWorkspaceCollaboratorPermission(
+          getParamId(req),
+          target,
+          parsed.data.permission,
+        );
+      return res.json({ userId: grant.userId, permission: grant.permission });
+    },
+  );
+  app.delete(
+    "/api/v1/workspaces/:id/collaborators/:userId",
+    csrfProtect,
+    isAuthenticated,
+    async (req, res) => {
+      if (!(await ownerWorkspace(req)))
+        return fail(req, res, "FORBIDDEN", "Forbidden");
+      const target = getParamId(req, "userId");
+      if (target === getUserId(req))
+        return fail(req, res, "VALIDATION_FAILED", "Cannot remove the owner");
+      await workspaceStorage.removeWorkspaceCollaborator(
+        getParamId(req),
+        target,
+      );
+      return res.status(204).end();
+    },
+  );
+
   // Workspace routes
   app.get(api.workspaces.list.path, isAuthenticated, async (req, res) => {
     const userId = getUserId(req);
@@ -180,7 +301,7 @@ export function registerWorkspaceRoutes(
       const userId = getUserId(req);
       const hasAccess =
         isWorkspaceOwner(workspace, userId) ||
-        (await teamAccess.canAccessWorkspace(userId, workspace.id));
+        (await access.canAccessWorkspace(userId, workspace.id));
       if (!hasAccess)
         return fail(
           req,
@@ -255,7 +376,7 @@ export function registerWorkspaceRoutes(
         const userId = getUserId(req);
         const role = isWorkspaceOwner(existing, userId)
           ? "workspace-owner"
-          : await teamAccess.getWorkspaceRole(id, userId);
+          : await access.getWorkspaceRole(id, userId);
         if (!canEditWorkspace(role)) {
           return fail(
             req,
@@ -301,13 +422,13 @@ export function registerWorkspaceRoutes(
 
       const hasAccess =
         isWorkspaceOwner(existing, userId) ||
-        (await teamAccess.canAccessWorkspace(userId, id));
+        (await access.canAccessWorkspace(userId, id));
       if (!hasAccess)
         return fail(req, res, "FORBIDDEN", "No access to this workspace");
 
       const role = isWorkspaceOwner(existing, userId)
         ? "workspace-owner"
-        : await teamAccess.getWorkspaceRole(id, userId);
+        : await access.getWorkspaceRole(id, userId);
       if (!canDeleteWorkspace(role)) {
         return fail(
           req,
@@ -335,7 +456,7 @@ export function registerWorkspaceRoutes(
       const userId = getUserId(req);
       const role = isWorkspaceOwner(existing, userId)
         ? "workspace-owner"
-        : await teamAccess.getWorkspaceRole(id, userId);
+        : await access.getWorkspaceRole(id, userId);
       if (!canDeleteWorkspace(role)) {
         return fail(
           req,
@@ -369,7 +490,7 @@ export function registerWorkspaceRoutes(
       const userId = getUserId(req);
       const role = isWorkspaceOwner(workspace, userId)
         ? "workspace-owner"
-        : await teamAccess.getWorkspaceRole(id, userId);
+        : await access.getWorkspaceRole(id, userId);
       if (!canDeleteWorkspace(role)) {
         return fail(
           req,

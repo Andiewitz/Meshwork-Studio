@@ -78,7 +78,9 @@ async function buildApp() {
       next();
     },
     workspaces: createWorkspaceSummaryReader(workspaceStorage),
-    teamAccess: createTeamWorkspaceAccess(teamStorage),
+    directAccess: {
+      getAccess: async () => ({ status: "available", value: "none" }),
+    },
   };
   registerCanvasRoutes(app, context);
   return app;

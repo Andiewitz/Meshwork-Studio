@@ -1,6 +1,11 @@
 import type { Express } from "express";
 import { canvasStorage } from "./db/storage";
-import { ensureCanvasTable } from "./db/dynamo";
+import {
+  ensureCanvasTable,
+  canvasTableReady,
+  closeCanvasDynamo,
+} from "./db/dynamo";
+import { closeCanvasS3 } from "./db/s3-objects";
 import { invalidateCanvas } from "./cache";
 import { registerCanvasRoutes } from "./routes/canvasRoutes";
 import { createChildLogger } from "@server/lib/logger";
@@ -10,10 +15,20 @@ import { logTraceback } from "@server/lib/traceback";
 
 const log = createChildLogger("canvas-service");
 
+let tableSetup: Promise<void> | undefined;
+
 export class CanvasService {
+  static async ready(): Promise<boolean> {
+    return canvasTableReady();
+  }
+  static async shutdown(): Promise<void> {
+    await tableSetup;
+    closeCanvasDynamo();
+    closeCanvasS3();
+  }
   static initialize(app: Express, context: CanvasDependencies) {
     registerCanvasRoutes(app, context);
-    void ensureCanvasTable();
+    tableSetup = ensureCanvasTable();
 
     // Listen to external events
     context.eventBus.registerRequired(

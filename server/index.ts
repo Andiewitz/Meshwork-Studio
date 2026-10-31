@@ -1,5 +1,7 @@
 import "dotenv/config";
 import { logger, createChildLogger } from "./lib/logger";
+import { coreReady } from "./lib/readiness";
+import { drainApplication } from "./lib/drain";
 const log = createChildLogger("server");
 log.info("Starting initialization phase 0...");
 
@@ -9,7 +11,14 @@ import {
   pool as workspacePool,
 } from "./services/workspace/db/connection";
 import { sql } from "drizzle-orm";
-import { registerRoutes } from "./routes";
+import {
+  registerRoutes,
+  canvasReady,
+  shutdownRouteResources,
+  shutdownCollaboration,
+  shutdownCanvas,
+  shutdownTeam,
+} from "./routes";
 import { serveStatic } from "./static";
 import { createServer, request as httpRequest } from "http";
 import { requireAuth } from "./auth";
@@ -38,6 +47,7 @@ import fs from "fs";
 
 let isAppReady = false;
 let isShuttingDown = false;
+let metricsServer: import("http").Server | undefined;
 
 const app = express();
 const httpServer = createServer(app);
@@ -66,8 +76,32 @@ async function shutdown(reason: string, exitCode: number): Promise<void> {
     process.exit(exitCode || 1);
   }, 15_000);
   forceTimer.unref();
-  await Promise.all([closeHttpServer(), WorkspaceService.shutdown()]);
-  await Promise.allSettled([disconnectRedis(), workspacePool.end()]);
+  const closeMetrics = async () => {
+    if (!metricsServer) return;
+    const server = metricsServer;
+    metricsServer = undefined;
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  };
+  const results = await drainApplication(
+    [
+      closeHttpServer,
+      () => WorkspaceService.shutdown(),
+      shutdownCollaboration,
+      closeMetrics,
+    ],
+    [
+      shutdownRouteResources,
+      disconnectRedis,
+      () => workspacePool.end(),
+      shutdownTeam,
+      shutdownCanvas,
+    ],
+  );
+  const failures = results.filter((result) => result.status === "rejected");
+  if (failures.length) {
+    log.error({ failures }, "Some resources did not shut down cleanly");
+    exitCode = 1;
+  }
   log.info({ reason }, "Graceful shutdown complete");
   process.exit(exitCode);
 }
@@ -89,6 +123,12 @@ app.set("trust proxy", 1);
 // Traceability: mint/adopt a request ID first so every log line and error
 // body downstream can carry it. See server/middleware/requestId.ts.
 app.use(requestIdMiddleware);
+app.use((req, res, next) => {
+  if (isShuttingDown && req.path !== "/live" && req.path !== "/ready") {
+    return fail(req, res, "SERVICE_UNAVAILABLE", "Server is shutting down");
+  }
+  next();
+});
 
 declare module "http" {
   interface IncomingMessage {
@@ -308,8 +348,13 @@ app.get(["/health", "/healthz"], async (_req, res) => {
 // Readiness Probe
 app.get("/ready", async (_req, res) => {
   const checks = await dependencyChecks();
-  const ready =
-    isAppReady && checks.postgres && (!process.env.REDIS_URL || checks.redis);
+  const ready = await coreReady({
+    started: isAppReady,
+    postgres: checks.postgres,
+    redisRequired: Boolean(process.env.REDIS_URL),
+    redis: checks.redis,
+    canvas: canvasReady,
+  });
   if (ready) {
     res
       .status(200)
@@ -364,16 +409,12 @@ app.get("/admin", requireAuth, (_req, res) => {
 
     log.info("Starting module initialization...");
     await registerRoutes(httpServer, app);
+    if (isShuttingDown) return;
     log.info("All modules initialized successfully");
 
     // Unmatched API paths must never fall through to the SPA shell: a client
     // asking for a typoed endpoint gets JSON 404, not 200 text/html.
     app.use("/api", apiNotFoundHandler);
-
-    // Initialize WebSocket presence server for real-time cursors
-    const { initializeWebSocket } = await import("@services/team/websocket");
-    initializeWebSocket(httpServer);
-    log.info("WebSocket presence server initialized");
 
     // Importantly only setup vite in development and after
     // setting up all the other routes so the catch-all route
@@ -402,7 +443,7 @@ app.get("/admin", requireAuth, (_req, res) => {
         resolve();
       });
     });
-    startMetricsServer();
+    metricsServer = startMetricsServer();
     isAppReady = true;
     log.info(`Server fully ready and serving on port ${port}`);
   } catch (error) {

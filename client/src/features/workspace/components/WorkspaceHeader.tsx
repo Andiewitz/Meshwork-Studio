@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MeshworkLogo } from "@/components/MeshworkLogo";
+import { CollaboratorsDialog } from "./CollaboratorsDialog";
 import {
   ChevronLeftIcon,
   ChevronDownIcon,
@@ -64,15 +65,11 @@ export interface WorkspaceHeaderProps {
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
   collaborators: { userId: string; name: string; color: string }[];
-  teamMembers: any[];
-  teamId?: string | number | null;
-  updateRole: any;
   handleExportPng: () => void;
   handleExportSvg: () => void;
   handleExportJson: () => void;
   handleImportJson: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDuplicate: () => void;
-  handleCopyInvite: () => void;
   handleDeleteWorkspace: () => void;
   handleRename: (newName: string) => void;
   openSettings: () => void;
@@ -112,15 +109,11 @@ export function WorkspaceHeader({
   isSidebarOpen,
   setIsSidebarOpen,
   collaborators,
-  teamMembers,
-  teamId,
-  updateRole,
   handleExportPng,
   handleExportSvg,
   handleExportJson,
   handleImportJson,
   handleDuplicate,
-  handleCopyInvite,
   handleDeleteWorkspace,
   handleRename,
   openSettings,
@@ -144,6 +137,7 @@ export function WorkspaceHeader({
   setActiveView,
 }: WorkspaceHeaderProps) {
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const [sharingOpen, setSharingOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(workspace?.title || "");
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -507,7 +501,10 @@ export function WorkspaceHeader({
           {/* Live Collaborators */}
           <Popover>
             <PopoverTrigger asChild>
-              <button className="flex items-center focus:outline-none cursor-pointer hover:opacity-90 transition-opacity">
+              <button
+                aria-label="People online"
+                className="flex items-center focus:outline-none cursor-pointer hover:opacity-90 transition-opacity"
+              >
                 <div className="flex -space-x-1.5 overflow-hidden">
                   <Avatar className="size-6 border border-[#111114] shadow-sm">
                     <AvatarImage src={user?.profileImageUrl || ""} />
@@ -539,23 +536,27 @@ export function WorkspaceHeader({
             </PopoverTrigger>
             <PopoverContent className="w-64 p-2 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl text-white z-[200]">
               <div className="text-[11px] font-bold text-white/60 mb-1">
-                Team Members ({teamMembers.length})
+                People online
               </div>
-              {teamMembers.map((m) => (
-                <div
-                  key={m.userId}
-                  className="flex items-center justify-between py-1 text-[11px] text-white/80"
-                >
-                  <span>{m.firstName || m.email}</span>
-                  <span className="text-white/40 capitalize">{m.role}</span>
-                </div>
-              ))}
+              <div className="py-1 text-[11px] text-white/80">
+                {userName} (you)
+              </div>
+              {collaborators
+                .filter((person) => person.userId !== user?.id)
+                .map((person) => (
+                  <div
+                    key={person.userId}
+                    className="py-1 text-[11px] text-white/80"
+                  >
+                    {person.name}
+                  </div>
+                ))}
             </PopoverContent>
           </Popover>
 
           {/* Share Button */}
           <button
-            onClick={handleCopyInvite}
+            onClick={() => setSharingOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-[11px] font-medium text-white/80 hover:text-white transition-all shadow-sm"
           >
             <ShareIcon className="w-3 h-3" />
@@ -580,6 +581,14 @@ export function WorkspaceHeader({
           </button>
         </div>
       </header>
+
+      <CollaboratorsDialog
+        workspaceId={workspaceId}
+        open={sharingOpen}
+        onOpenChange={setSharingOpen}
+        isOwner={Boolean(user?.id && workspace?.userId === user.id)}
+        ownerName={userName}
+      />
 
       {/* Rename Dialog */}
       <Dialog open={isRenaming} onOpenChange={setIsRenaming}>

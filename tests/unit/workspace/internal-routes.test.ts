@@ -4,11 +4,13 @@ import express from "express";
 
 const mocks = vi.hoisted(() => ({
   getWorkspacesByIds: vi.fn(),
+  getWorkspaceAccess: vi.fn(),
 }));
 
 vi.mock("@services/workspace/db/storage", () => ({
   workspaceStorage: {
     getWorkspacesByIds: mocks.getWorkspacesByIds,
+    getWorkspaceAccess: mocks.getWorkspaceAccess,
   },
 }));
 
@@ -53,5 +55,45 @@ describe("GET /internal/v1/workspace/lookup", () => {
 
     expect(res.status).toBe(404);
     expect(mocks.getWorkspacesByIds).not.toHaveBeenCalled();
+  });
+});
+
+describe("Workspace access internal contract", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.INTERNAL_API_KEY = "test-key";
+  });
+  it.each(["owner", "edit", "view", "none"])(
+    "returns %s from Workspace",
+    async (access) => {
+      const app = express();
+      registerWorkspaceInternalRoutes(app);
+      mocks.getWorkspaceAccess.mockResolvedValueOnce(access);
+      const res = await request(app)
+        .get("/internal/v1/workspace/access?workspaceId=w1&userId=u1")
+        .set("X-Internal-Key", "test-key");
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ access });
+      expect(mocks.getWorkspaceAccess).toHaveBeenCalledWith("w1", "u1");
+    },
+  );
+  it("rejects missing credentials and invalid requests before lookup", async () => {
+    const app = express();
+    registerWorkspaceInternalRoutes(app);
+    expect(
+      (
+        await request(app).get(
+          "/internal/v1/workspace/access?workspaceId=w1&userId=u1",
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await request(app)
+          .get("/internal/v1/workspace/access?workspaceId=w1")
+          .set("X-Internal-Key", "test-key")
+      ).status,
+    ).toBe(400);
+    expect(mocks.getWorkspaceAccess).not.toHaveBeenCalled();
   });
 });

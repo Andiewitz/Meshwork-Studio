@@ -53,6 +53,11 @@ function workspacePrefix(workspaceId: string): string {
   return `${prefix ? `${prefix}/` : ""}${encodeURIComponent(workspaceId)}/`;
 }
 
+export function closeCanvasS3(): void {
+  client?.destroy();
+  client = undefined;
+}
+
 export const s3CanvasObjects: CanvasObjectStore = {
   async put(workspaceId, body) {
     const key = `${workspacePrefix(workspaceId)}${randomUUID()}.json.gz`;

@@ -68,10 +68,28 @@ const setupTestApp = () => {
         res.status(401).json({ message: "Not authenticated" });
       }
     },
-    teamAccess: createTeamWorkspaceAccess({
-      getWorkspaceRole: mockGetWorkspaceRole,
-      canAccessWorkspace: vi.fn(),
-    }),
+    directAccess: {
+      getAccess: async (workspaceId, userId) => {
+        try {
+          const role = await mockGetWorkspaceRole(workspaceId, userId);
+          return {
+            status: "available",
+            value:
+              role === "editor"
+                ? "edit"
+                : role === "viewer"
+                  ? "view"
+                  : role === "workspace-owner" ||
+                      role === "owner" ||
+                      role === "admin"
+                    ? "owner"
+                    : "none",
+          };
+        } catch (cause) {
+          return { status: "unavailable", cause };
+        }
+      },
+    },
   };
 
   registerWorkspaceRoutes(app, mockContext);

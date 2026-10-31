@@ -43,8 +43,6 @@ import {
   useWorkspace,
   useDeleteWorkspace,
   useWorkspaceRole,
-  useWorkspaceMembers,
-  useUpdateMemberRole,
   useUpdateWorkspace,
   useDuplicateWorkspace,
 } from "@/hooks/use-workspaces";
@@ -319,12 +317,6 @@ function WorkspaceView() {
   const canManage = canManageWorkspace(userRole);
   const canDelete = canDeleteWorkspace(userRole);
 
-  // ── Members list for role management ──
-  const { data: membersData } = useWorkspaceMembers(workspaceId);
-  const updateRole = useUpdateMemberRole();
-  const teamMembers = membersData?.members || [];
-  const teamId = membersData?.teamId;
-
   // ── Export / Import handlers ──
   const importFileRef = useRef<HTMLInputElement>(null);
   const rfInstance = useReactFlow();
@@ -433,26 +425,6 @@ function WorkspaceView() {
       },
     );
   }, [workspaceId, workspace?.title, duplicateWorkspace, toast]);
-
-  const handleCopyInvite = useCallback(async () => {
-    if (!teamId) {
-      toast({ title: "Not shared with a team" });
-      return;
-    }
-    // Fetch team details to get invite code
-    try {
-      const res = await fetch(`/api/v1/teams/${teamId}`, {
-        credentials: "include",
-      });
-      const team = await res.json();
-      if (team.inviteCode) {
-        await navigator.clipboard.writeText(team.inviteCode);
-        toast({ title: "Invite code copied!", description: team.inviteCode });
-      }
-    } catch {
-      toast({ title: "Failed to get invite code", variant: "destructive" });
-    }
-  }, [teamId, toast]);
 
   // ── Keyboard shortcuts modal + fullscreen ──
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -1668,15 +1640,11 @@ function WorkspaceView() {
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
         collaborators={collaborators}
-        teamMembers={teamMembers}
-        teamId={teamId}
-        updateRole={updateRole}
         handleExportPng={handleExportPng}
         handleExportSvg={handleExportSvg}
         handleExportJson={handleExportJson}
         handleImportJson={handleImportJson}
         handleDuplicate={handleDuplicate}
-        handleCopyInvite={handleCopyInvite}
         handleDeleteWorkspace={() => {
           if (confirm("Delete this project?")) {
             deleteWorkspace.mutate(workspaceId, {

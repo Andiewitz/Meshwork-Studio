@@ -6,6 +6,8 @@ infrastructure, IAM, retention, or alerts have been configured. Treat recovery
 as unready until the operator records a successful off-host archive and timed
 restore drill.
 
+Lifecycle, readiness, and shutdown: [Service lifecycle](SERVICE_LIFECYCLE.md).
+
 ## Recovery policy
 
 | Item               | Required policy                                                                            |
@@ -27,10 +29,15 @@ Before installing the timer, provide all of the following:
 
 1. `BACKUP_S3_URI` for an approved private bucket/prefix.
 2. Explicit DSNs for every service database and `CANVAS_DDB_TABLE`.
-3. `pg_dump`, AWS CLI, and an IAM role limited to the archive prefix and canvas
+3. `pg_dump`/`pg_dumpall`, and an IAM role limited to the archive prefix and canvas
    table read operations.
 4. DynamoDB point-in-time recovery enabled and verified on the production table.
 5. S3 versioning, encryption, retention/lifecycle rules, and a tested alert path.
+
+The S3 uploader uses the AWS SDK and instance-role credentials; AWS CLI is no
+longer required to create an archive. The optional [AWS foundation](../../infra/aws/README.md)
+provisions private storage and backup-age alarms. It does not prove a backup
+or isolated restore has succeeded.
 
 Run `npm run db:backup` manually first. A usable archive has a final
 `manifest.json` and checksums for every required artifact. A prefix without the

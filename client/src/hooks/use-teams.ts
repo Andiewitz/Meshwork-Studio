@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { secureFetch } from "../lib/secure-fetch";
 import { useAuth } from "./use-auth";
 import { api } from "@shared/routes";
-import type { Team, TeamMember, Workspace } from "@shared/schema";
+import type { Team, TeamMember } from "@shared/schema";
 
 const rawApiUrl = (import.meta.env.VITE_API_URL as string) || "";
 const API_BASE_URL = rawApiUrl.includes("railway") ? "" : rawApiUrl;
@@ -62,26 +62,6 @@ export function useTeam(teamId: string | null) {
       });
       if (!res.ok) throw new Error("Failed to fetch team");
       return res.json() as Promise<TeamDetail>;
-    },
-    enabled: isAuthenticated && !!teamId,
-    refetchInterval: 5000,
-  });
-}
-
-export function useTeamWorkspaces(teamId: string | null) {
-  const { isAuthenticated } = useAuth();
-
-  return useQuery<Workspace[]>({
-    queryKey: ["/api/v1/teams", teamId, "workspaces"],
-    queryFn: async () => {
-      const res = await secureFetch(
-        getApiUrl(`/api/v1/teams/${teamId}/workspaces`),
-        {
-          credentials: "include",
-        },
-      );
-      if (!res.ok) throw new Error("Failed to fetch team workspaces");
-      return res.json() as Promise<Workspace[]>;
     },
     enabled: isAuthenticated && !!teamId,
     refetchInterval: 5000,
@@ -175,40 +155,6 @@ export function useDeleteTeam() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["/api/v1/teams"] });
-      void queryClient.invalidateQueries({
-        queryKey: [api.workspaces.list.path],
-      });
-    },
-  });
-}
-
-export function useShareWorkspace() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      teamId,
-      workspaceId,
-    }: {
-      teamId: string;
-      workspaceId: string;
-    }) => {
-      const res = await secureFetch(
-        getApiUrl(`/api/v1/teams/${teamId}/workspaces`),
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ workspaceId }),
-          credentials: "include",
-        },
-      );
-      if (!res.ok) await extractError(res, "Failed to share workspace");
-      return res.json() as Promise<{ message: string }>;
-    },
-    onSuccess: (_, { teamId }) => {
-      void queryClient.invalidateQueries({
-        queryKey: ["/api/v1/teams", teamId, "workspaces"],
-      });
       void queryClient.invalidateQueries({
         queryKey: [api.workspaces.list.path],
       });

@@ -4,10 +4,14 @@
 import { Router, type Express, type Request, type Response } from "express";
 import { z } from "zod";
 import { requireInternalKey } from "@server/lib/internal";
+import { fail } from "@server/lib/errorEnvelope";
 import { workspaceStorage } from "../db/storage";
+import { createWorkspaceAccessReader } from "../public";
+import { readQuery } from "@server/lib/module-outcomes";
 
 export function registerWorkspaceInternalRoutes(app: Express) {
   const internal = Router();
+  const accessReader = createWorkspaceAccessReader(workspaceStorage);
   internal.use(requireInternalKey);
 
   // GET /internal/v1/workspace/lookup?ids=a,b,c
@@ -36,6 +40,23 @@ export function registerWorkspaceInternalRoutes(app: Express) {
       }));
 
     res.json({ workspaces: found });
+  });
+
+  // Workspace owns the access decision for each user and workspace.
+  internal.get("/access", async (req: Request, res: Response) => {
+    const parsed = z
+      .object({
+        workspaceId: z.string().min(1).max(128),
+        userId: z.string().min(1).max(128),
+      })
+      .safeParse(req.query);
+    if (!parsed.success) {
+      return fail(req, res, "VALIDATION_FAILED", "Invalid access query");
+    }
+    const access = readQuery(
+      await accessReader.getAccess(parsed.data.workspaceId, parsed.data.userId),
+    );
+    return res.json({ access });
   });
 
   // GET /internal/v1/workspace/stats — counters for the metrics collector.

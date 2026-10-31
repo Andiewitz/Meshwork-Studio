@@ -1,6 +1,6 @@
 # Workspace collaborators replacement plan
 
-Status: planned — no application behavior has changed through this document.
+Status: Workspace collaborator permissions are active; unrelated Team service retirement remains incomplete.
 
 ## Goal
 
@@ -114,3 +114,14 @@ Rollback is safe before commit 6 because the collaborator table is additive. Aft
 - Public sharing links.
 - Migrating old team memberships automatically.
 - Changing the WebSocket protocol payload shape without a versioned client migration.
+
+
+## Current implementation
+
+Workspace collaborator grants are the sole source of workspace access for
+HTTP and realtime. Team workspace sharing is disabled. Existing Team records
+are retained but do not grant access; the user confirmed there are no existing
+shares or data to migrate. The Share dialog manages direct grants.
+
+The Team service and unrelated Team endpoints still exist and can be removed
+in a separate cleanup.

@@ -9,6 +9,7 @@ import { getWorkspaceSummary } from "@services/workspace/public";
 import { fail } from "@server/lib/errorEnvelope";
 import { firstIssueMessage, zodIssues } from "@server/lib/validation";
 import { logTraceback } from "@server/lib/traceback";
+import { workspaceAccess } from "@server/lib/workspace-access";
 
 const log = createChildLogger("team-routes");
 
@@ -176,54 +177,12 @@ export function registerTeamRoutes(
     csrfProtect,
     isAuthenticated,
     async (req, res) => {
-      try {
-        const teamId = Array.isArray(req.params.id)
-          ? req.params.id[0]
-          : req.params.id;
-        const userId = getUserId(req);
-        const { workspaceId } = req.body as { workspaceId?: unknown };
-
-        if (!workspaceId || typeof workspaceId !== "string") {
-          return fail(
-            req,
-            res,
-            "VALIDATION_FAILED",
-            "workspaceId is required",
-            {
-              status: 400,
-            },
-          );
-        }
-
-        const isMember = await teamStorage.isTeamMember(teamId, userId);
-        if (!isMember) return fail(req, res, "FORBIDDEN", "Not a member");
-
-        const ws = await getWorkspace(workspaceId);
-        if (ws?.userId !== userId) {
-          return fail(
-            req,
-            res,
-            "FORBIDDEN",
-            "You can only share workspaces you own",
-            { status: 403 },
-          );
-        }
-
-        const tw = await teamStorage.shareWorkspace(teamId, workspaceId);
-        res.status(201).json(tw);
-      } catch (err) {
-        logTraceback(log, "Failed to share workspace", err, {
-          userId: getUserId(req),
-          teamId: req.params.id,
-          requestId: req.requestId ?? "unscoped",
-        });
-        fail(
-          req,
-          res,
-          "TEAM_UNAVAILABLE",
-          "Workspace could not be shared. Try again shortly.",
-        );
-      }
+      return fail(
+        req,
+        res,
+        "FORBIDDEN",
+        "Team workspace sharing is disabled. Share with collaborators instead.",
+      );
     },
   );
 
@@ -418,7 +377,14 @@ export function registerTeamRoutes(
         status: 400,
       });
 
-    const role = await teamStorage.getWorkspaceRole(workspaceId, userId);
+    const ws = await getWorkspace(workspaceId);
+    const role =
+      ws?.userId === userId
+        ? "workspace-owner"
+        : await workspaceAccess(context.directAccess).getWorkspaceRole(
+            workspaceId,
+            userId,
+          );
     res.json({ role: role ?? "none" });
   });
 
@@ -435,10 +401,9 @@ export function registerTeamRoutes(
           status: 400,
         });
 
-      const hasAccess = await teamStorage.canAccessWorkspace(
-        userId,
-        workspaceId,
-      );
+      const hasAccess = await workspaceAccess(
+        context.directAccess,
+      ).canAccessWorkspace(userId, workspaceId);
       const ws = await getWorkspace(workspaceId);
       if (!hasAccess && ws?.userId !== userId) {
         return fail(req, res, "FORBIDDEN", "No access to this workspace", {

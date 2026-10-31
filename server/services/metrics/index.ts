@@ -1,31 +1,19 @@
 import type { Express } from "express";
-import { ensureSchema } from "@server/lib/migrate";
-import { MIGRATIONS } from "./db/migrations";
-import { pool } from "./db/connection";
-import { startCollector } from "./collector/collector";
+import { startCollector, stopCollector } from "./collector/collector";
 import { registerMetricsRoutes } from "./routes/metricsRoutes";
 import { createChildLogger } from "@server/lib/logger";
-import { logTraceback } from "@server/lib/traceback";
 
 const log = createChildLogger("metrics-service");
 
 export class MetricsService {
   static async initialize(app: Express) {
-    try {
-      await ensureSchema("metrics", pool, MIGRATIONS);
-      startCollector(30000);
-    } catch (err) {
-      logTraceback(
-        log,
-        "Metrics schema migration failed — collector disabled",
-        err,
-      );
-      throw err;
-    }
-
     registerMetricsRoutes(app);
+    startCollector(30000);
 
     log.info("Metrics service initialized");
+  }
+  static async shutdown() {
+    await stopCollector();
   }
 }
 

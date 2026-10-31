@@ -39,15 +39,14 @@ function clients() {
 }
 
 export async function canvasTableReady(timeoutMs = 1500): Promise<boolean> {
-  let timer: NodeJS.Timeout | undefined;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const result = await Promise.race([
-      clients().client.send(new DescribeTableCommand({ TableName: TABLE })),
-      new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => reject(new Error("timeout")), timeoutMs);
-      }),
-    ]);
-    return Boolean(result.Table);
+    const result = await clients().client.send(
+      new DescribeTableCommand({ TableName: TABLE }),
+      { abortSignal: controller.signal },
+    );
+    return result.Table?.TableStatus === "ACTIVE";
   } catch (error) {
     if ((error as Error).name === "ResourceNotFoundException") return false;
     throw error;
@@ -96,6 +95,11 @@ export async function ensureCanvasTable(): Promise<void> {
       );
     }
   }
+}
+
+export function closeCanvasDynamo(): void {
+  cached?.client.destroy();
+  cached = undefined;
 }
 
 export class DynamoCanvasStorage extends AtomicCanvasStorage {

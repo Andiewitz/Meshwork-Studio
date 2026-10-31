@@ -1,12 +1,12 @@
+import type { WorkspaceAccessReader } from "@services/workspace/public";
 import type { RequestHandler } from "express";
 import type { EventBus } from "@server/lib/events";
-import type { TeamWorkspaceAccess } from "@services/team/public";
 import type { WorkspaceSummaryReader } from "@services/workspace/public";
 
 export interface CanvasRouteDependencies {
   isAuthenticated: RequestHandler;
   workspaces: WorkspaceSummaryReader;
-  teamAccess: TeamWorkspaceAccess;
+  directAccess: WorkspaceAccessReader;
 }
 
 export interface CanvasDependencies extends CanvasRouteDependencies {

@@ -11,11 +11,6 @@ import {
   type Collection,
   type InsertCollection,
 } from "./schema";
-// Team membership rows are NOT queryable from workspace_db — the shared
-// workspace ids arrive via the team service's internal HTTP API.
-import type { SharedWorkspaceReader } from "@services/team/public";
-import { sharedWorkspacesHttp } from "../adapters/team-http";
-import { readQuery } from "@server/lib/module-outcomes";
 import { eq, desc, and, isNull, or, inArray, sql } from "drizzle-orm";
 import type { DrizzleTx } from "@server/lib/db-types";
 import type {
@@ -89,10 +84,6 @@ export interface IWorkspaceStorage {
 }
 
 export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
-  constructor(
-    private readonly sharing: SharedWorkspaceReader = sharedWorkspacesHttp,
-  ) {}
-
   private async assertNotWorkspaceOwner(
     workspaceId: string,
     userId: string,
@@ -160,10 +151,6 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
     collectionId: number | null = null,
     requestId?: string,
   ): Promise<Workspace[]> {
-    const sharedWorkspaceIds = readQuery(
-      await this.sharing.listIds(userId, requestId),
-    );
-
     // 3. Build query: owned workspaces respect collection filter,
     //    shared workspaces always appear at root level (no collection filter)
     const ownedQuery = collectionId
@@ -173,10 +160,13 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
         )
       : and(eq(workspaces.userId, userId), isNull(workspaces.collectionId));
 
-    const fullQuery =
-      sharedWorkspaceIds.length > 0 && !collectionId
-        ? or(ownedQuery, inArray(workspaces.id, sharedWorkspaceIds))
-        : ownedQuery;
+    const directShares = db
+      .select({ id: workspaceCollaborators.workspaceId })
+      .from(workspaceCollaborators)
+      .where(eq(workspaceCollaborators.userId, userId));
+    const fullQuery = collectionId
+      ? ownedQuery
+      : or(ownedQuery, inArray(workspaces.id, directShares));
 
     return await db
       .select()
@@ -533,7 +523,14 @@ export class WorkspaceInMemoryStorage implements IWorkspaceStorage {
     collectionId: number | null = null,
   ): Promise<Workspace[]> {
     return this.workspaces
-      .filter((w) => w.userId === userId && w.collectionId === collectionId)
+      .filter(
+        (w) =>
+          (w.userId === userId && w.collectionId === collectionId) ||
+          (collectionId === null &&
+            this.workspaceCollaborators.some(
+              (c) => c.userId === userId && c.workspaceId === w.id,
+            )),
+      )
       .sort(
         (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
       );

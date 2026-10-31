@@ -9,6 +9,7 @@ import { createChildLogger } from "./logger";
 const log = createChildLogger("redis");
 
 let redis: RedisType | null = null;
+const dedicatedClients = new Set<RedisType>();
 let redisAvailable = false;
 let redisDisabledLogged = false;
 
@@ -102,6 +103,8 @@ export function createRedisClient(): RedisType | null {
         return Math.min(times * 200, 2000);
       },
     });
+    dedicatedClients.add(client);
+    client.once("end", () => dedicatedClients.delete(client));
     return client;
   } catch (err: unknown) {
     log.warn(
@@ -140,6 +143,8 @@ export async function isRedisAvailable(): Promise<boolean> {
  * Call during server shutdown.
  */
 export async function disconnectRedis(): Promise<void> {
+  for (const client of dedicatedClients) client.disconnect();
+  dedicatedClients.clear();
   if (redis) {
     await redis.quit();
     redis = null;

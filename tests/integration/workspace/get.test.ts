@@ -37,7 +37,19 @@ async function buildApp() {
       req.user = { id: "user-1" } as typeof req.user;
       next();
     },
-    teamAccess: createTeamWorkspaceAccess(teamStorage),
+    directAccess: {
+      getAccess: async (workspaceId, userId) => {
+        try {
+          const allowed = await teamStorage.canAccessWorkspace(
+            userId,
+            workspaceId,
+          );
+          return { status: "available", value: allowed ? "view" : "none" };
+        } catch (cause) {
+          return { status: "unavailable", cause };
+        }
+      },
+    },
   };
   registerWorkspaceRoutes(app, context);
   return app;

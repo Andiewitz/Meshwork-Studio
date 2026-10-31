@@ -1,10 +1,10 @@
+import type { WorkspaceAccessReader } from "@services/workspace/public";
 import type { RequestHandler } from "express";
 import type { EventBus } from "@server/lib/events";
-import type { TeamWorkspaceAccess } from "@services/team/public";
 
 export interface WorkspaceRouteDependencies {
   isAuthenticated: RequestHandler;
-  teamAccess: TeamWorkspaceAccess;
+  directAccess: WorkspaceAccessReader;
 }
 
 export interface WorkspaceDependencies extends WorkspaceRouteDependencies {

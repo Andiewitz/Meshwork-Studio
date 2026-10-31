@@ -13,7 +13,7 @@ export function checkModuleCapabilities(
   // @ts-expect-error Workspace is exposed as a summary reader, not a repository.
   canvas.workspaces.deleteAllUserData("user");
   // @ts-expect-error Team grants cannot be mutated through this capability.
-  workspace.teamAccess.shareWorkspace("team", "workspace");
+  workspace.directAccess.shareWorkspace("team", "workspace");
   // @ts-expect-error Team cannot update a foreign workspace.
   team.workspaces.updateWorkspace("workspace", {});
   // @ts-expect-error Canvas document copying does not grant bulk deletion.
@@ -25,12 +25,13 @@ export function checkModuleCapabilities(
   const wrong: WorkspaceRouteDependencies = {
     isAuthenticated: workspace.isAuthenticated,
     // @ts-expect-error A boolean lookup cannot hide dependency outages.
-    teamAccess: { checkAccess: async () => true, lookupRole: async () => null },
+    directAccess: { getAccess: async () => true },
   };
   const swapped: TeamRouteDependencies = {
     isAuthenticated: team.isAuthenticated,
     // @ts-expect-error A different domain's port is not a valid adapter.
-    workspaces: workspace.teamAccess,
+    workspaces: workspace.directAccess,
+    directAccess: team.directAccess,
   };
   return { missing, wrong, swapped };
 }

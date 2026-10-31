@@ -23,9 +23,8 @@ function wiredBus() {
     eventBus,
     isAuthenticated: (_req, _res, next) => next(),
     workspaces: createWorkspaceSummaryReader({ getWorkspace }),
-    teamAccess: {
-      checkAccess: async () => ({ status: "denied" }),
-      lookupRole: async () => ({ status: "missing" }),
+    directAccess: {
+      getAccess: async () => ({ status: "available", value: "none" }),
     },
   });
   return eventBus;

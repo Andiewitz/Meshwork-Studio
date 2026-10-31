@@ -23,7 +23,12 @@ export async function ensureSchema(
   migrations: Migration[],
 ): Promise<void> {
   const client = await pool.connect();
+  let locked = false;
+  let discardClient = false;
   try {
+    // One lock per database protects schema_migrations even if services share it.
+    await client.query("SELECT pg_advisory_lock($1, $2)", [1296388936, 1]);
+    locked = true;
     await client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         version varchar(255) PRIMARY KEY,
@@ -59,6 +64,20 @@ export async function ensureSchema(
       }
     }
   } finally {
-    client.release();
+    if (locked) {
+      try {
+        await client.query(
+          "SELECT pg_advisory_unlock($1, $2)",
+          [1296388936, 1],
+        );
+      } catch (error) {
+        discardClient = true;
+        log.error(
+          { err: error, serviceName },
+          "Failed to release migration lock",
+        );
+      }
+    }
+    client.release(discardClient);
   }
 }

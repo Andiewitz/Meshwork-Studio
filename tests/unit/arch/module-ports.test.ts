@@ -4,7 +4,6 @@ import {
   getWorkspaceSummary,
 } from "@services/workspace/public";
 import { createTeamWorkspaceAccess } from "@services/team/public";
-import { workspaceAccess } from "@server/lib/team-access";
 import { copyWorkspaceCanvas } from "@services/canvas/copy-workspace";
 import type {
   WorkspaceSummary,
@@ -59,9 +58,6 @@ describe("framework-free module capabilities", () => {
       expect(await access.checkAccess("user", "ws")).toEqual({
         status: allowed ? "allowed" : "denied",
       });
-      expect(
-        await workspaceAccess(access).canAccessWorkspace("user", "ws"),
-      ).toBe(allowed);
       expect(canAccessWorkspace).toHaveBeenCalledWith("user", "ws");
       expect(getWorkspaceRole).not.toHaveBeenCalled();
       expect(Object.keys(access).sort()).toEqual(["checkAccess", "lookupRole"]);
@@ -79,9 +75,6 @@ describe("framework-free module capabilities", () => {
       status: "found",
       value: "viewer",
     });
-    expect(await workspaceAccess(access).getWorkspaceRole("ws", "user")).toBe(
-      "viewer",
-    );
     expect(getWorkspaceRole).toHaveBeenCalledWith("ws", "user");
     expect(canAccessWorkspace).not.toHaveBeenCalled();
   });
@@ -94,9 +87,6 @@ describe("framework-free module capabilities", () => {
     expect(await access.lookupRole("ws", "user")).toEqual({
       status: "missing",
     });
-    expect(
-      await workspaceAccess(access).getWorkspaceRole("ws", "user"),
-    ).toBeNull();
   });
 
   it("does not turn access/role outages into denial or an empty role", async () => {
@@ -117,12 +107,6 @@ describe("framework-free module capabilities", () => {
       status: "unavailable",
       cause,
     });
-    await expect(
-      workspaceAccess(access).canAccessWorkspace("user", "ws"),
-    ).rejects.toBe(cause);
-    await expect(
-      workspaceAccess(access).getWorkspaceRole("ws", "user"),
-    ).rejects.toBe(cause);
   });
 });
 

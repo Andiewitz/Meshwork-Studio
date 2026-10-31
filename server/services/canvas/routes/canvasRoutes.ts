@@ -22,7 +22,7 @@ import { csrfProtect } from "../../../auth";
 import { createChildLogger } from "@server/lib/logger";
 import type { CanvasRouteDependencies } from "../dependencies";
 import { getWorkspaceSummary } from "@services/workspace/public";
-import { workspaceAccess } from "@server/lib/team-access";
+import { workspaceAccess } from "@server/lib/workspace-access";
 import { fail } from "@server/lib/errorEnvelope";
 import { canEditWorkspace } from "@server/lib/permissions";
 
@@ -47,7 +47,7 @@ export function registerCanvasRoutes(
   const { isAuthenticated } = context;
   const getWorkspace = (id: string) =>
     getWorkspaceSummary(context.workspaces, id);
-  const teamAccess = workspaceAccess(context.teamAccess);
+  const access = workspaceAccess(context.directAccess);
 
   // Canvas logic routes
   app.get(api.workspaces.getCanvas.path, isAuthenticated, async (req, res) => {
@@ -74,7 +74,7 @@ export function registerCanvasRoutes(
     const userId = req.user!.id;
     const hasAccess =
       isWorkspaceOwner(workspace, userId) ||
-      (await teamAccess.canAccessWorkspace(userId, workspace.id));
+      (await access.canAccessWorkspace(userId, workspace.id));
     if (!hasAccess)
       return fail(
         req,
@@ -136,7 +136,7 @@ export function registerCanvasRoutes(
       const userId = req.user!.id;
       const role = isWorkspaceOwner(workspace, userId)
         ? "workspace-owner"
-        : await teamAccess.getWorkspaceRole(workspace.id, userId);
+        : await access.getWorkspaceRole(workspace.id, userId);
       if (!canEditWorkspace(role)) {
         return fail(
           req,
@@ -253,7 +253,7 @@ export function registerCanvasRoutes(
       const userId = req.user!.id;
       const role = isWorkspaceOwner(workspace, userId)
         ? "workspace-owner"
-        : await teamAccess.getWorkspaceRole(workspace.id, userId);
+        : await access.getWorkspaceRole(workspace.id, userId);
       if (!canEditWorkspace(role)) {
         return fail(
           req,
@@ -420,7 +420,7 @@ export function registerCanvasRoutes(
       const userId = req.user!.id;
       const role = isWorkspaceOwner(workspace, userId)
         ? "workspace-owner"
-        : await teamAccess.getWorkspaceRole(workspace.id, userId);
+        : await access.getWorkspaceRole(workspace.id, userId);
       if (!canEditWorkspace(role)) {
         return fail(
           req,

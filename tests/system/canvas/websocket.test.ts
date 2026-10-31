@@ -29,12 +29,13 @@ vi.hoisted(() => {
 const { initAuth, optionalAuth, requireAuth } =
   await import("../../../server/auth");
 const { initializeWebSocket } =
-  await import("../../../server/services/team/websocket/presence");
+  await import("../../../server/services/collaboration/websocket/presence");
 import { registerCanvasRoutes } from "../../../server/services/canvas/routes/canvasRoutes";
 import { teamStorage } from "@services/team/db/storage";
 import { workspaceStorage } from "@services/workspace/db/storage";
 import { createWorkspaceSummaryReader } from "@services/workspace/public";
 import { createTeamWorkspaceAccess } from "@services/team/public";
+import { workspaceAccess } from "@server/lib/workspace-access";
 import type { CanvasRouteDependencies } from "@services/canvas/dependencies";
 
 // Workspace ownership: alice owns ws-shared; outsider knows nothing.
@@ -124,7 +125,12 @@ describe("canvas + websocket e2e", () => {
 
     const ctx: CanvasRouteDependencies = {
       isAuthenticated: requireAuth,
-      teamAccess: createTeamWorkspaceAccess(teamStorage),
+      directAccess: {
+        getAccess: async (_w, u) => ({
+          status: "available",
+          value: u === "alice" ? "owner" : u === "outsider" ? "none" : "view",
+        }),
+      },
       workspaces: createWorkspaceSummaryReader(workspaceStorage),
     };
 
@@ -132,7 +138,7 @@ describe("canvas + websocket e2e", () => {
     registerCanvasRoutes(app, ctx);
 
     server = http.createServer(app);
-    initializeWebSocket(server);
+    initializeWebSocket(server, workspaceAccess(ctx.directAccess));
     await new Promise<void>((r) => server.listen(0, r));
     const addr = server.address() as { port: number };
     baseUrl = `http://127.0.0.1:${addr.port}`;

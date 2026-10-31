@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import request from "supertest";
 import express from "express";
 import { registerTeamRoutes } from "@services/team/routes";
@@ -87,6 +87,24 @@ const setupApp = () => {
       } else {
         res.status(401).json({ message: "Not authenticated" });
       }
+    },
+    directAccess: {
+      getAccess: async (workspaceId, userId) => {
+        const role = await mockGetWorkspaceRole(workspaceId, userId);
+        return {
+          status: "available",
+          value:
+            role === "editor"
+              ? "edit"
+              : role === "viewer"
+                ? "view"
+                : role === "workspace-owner" ||
+                    role === "owner" ||
+                    role === "admin"
+                  ? "owner"
+                  : "none",
+        };
+      },
     },
     workspaces: createWorkspaceSummaryReader({
       getWorkspace: mockGetWorkspace,
@@ -266,51 +284,13 @@ describe("Team Routes - Full Coverage", () => {
   // ─── Share Workspace ─────────────────────────────────────────────
 
   describe("POST /api/teams/:id/workspaces", () => {
-    it("shares workspace if user is member AND workspace owner", async () => {
-      mockIsTeamMember.mockResolvedValue(true);
-      mockGetWorkspace.mockResolvedValue({ id: "ws-1", userId: "u1" });
-      mockShareWorkspace.mockResolvedValue({
-        teamId: "t1",
-        workspaceId: "ws-1",
-      });
-
+    it("does not create misleading Team shares after cutover", async () => {
       const res = await request(app)
         .post("/api/v1/teams/t1/workspaces")
         .set("x-test-user-id", "u1")
-        .send({ workspaceId: "ws-1" });
-      expect(res.status).toBe(201);
-    });
-
-    it("blocks sharing if not a team member", async () => {
-      mockIsTeamMember.mockResolvedValue(false);
-      const res = await request(app)
-        .post("/api/v1/teams/t1/workspaces")
-        .set("x-test-user-id", "hacker")
-        .send({ workspaceId: "ws-1" });
-      expect(res.status).toBe(403);
-    });
-
-    it("blocks sharing workspace you do not own (IDOR)", async () => {
-      mockIsTeamMember.mockResolvedValue(true);
-      mockGetWorkspace.mockResolvedValue({
-        id: "ws-1",
-        userId: "someone_else",
-      });
-      const res = await request(app)
-        .post("/api/v1/teams/t1/workspaces")
-        .set("x-test-user-id", "u1")
-        .send({ workspaceId: "ws-1" });
+        .send({ workspaceId: "1" });
       expect(res.status).toBe(403);
       expect(mockShareWorkspace).not.toHaveBeenCalled();
-    });
-
-    it("rejects missing workspaceId", async () => {
-      mockIsTeamMember.mockResolvedValue(true);
-      const res = await request(app)
-        .post("/api/v1/teams/t1/workspaces")
-        .set("x-test-user-id", "u1")
-        .send({});
-      expect(res.status).toBe(400);
     });
   });
 
@@ -561,7 +541,30 @@ describe("Team Routes - Full Coverage", () => {
       expect(res.body.role).toBe("workspace-owner");
     });
 
+    it("reports Workspace direct edit access for the UI", async () => {
+      mockGetWorkspace.mockResolvedValueOnce({ id: "1", userId: "u1" });
+      const directApp = express();
+      directApp.use(express.json());
+      registerTeamRoutes(directApp, {
+        isAuthenticated: (req, _res, next) => {
+          req.user = { id: "u2" } as typeof req.user;
+          next();
+        },
+        workspaces: createWorkspaceSummaryReader({
+          getWorkspace: mockGetWorkspace,
+        }),
+        directAccess: {
+          getAccess: async () => ({ status: "available", value: "edit" }),
+        },
+      });
+      const res = await request(directApp).get("/api/v1/workspaces/1/role");
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ role: "editor" });
+      expect(mockGetWorkspaceRole).not.toHaveBeenCalled();
+    });
+
     it("returns editor for a team editor", async () => {
+      mockGetWorkspace.mockResolvedValueOnce({ id: "1", userId: "u1" });
       mockGetWorkspaceRole.mockResolvedValue("editor");
       const res = await request(app)
         .get("/api/v1/workspaces/1/role")

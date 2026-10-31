@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import request from "supertest";
 import express from "express";
 import type { WorkspaceRole } from "@shared/permissions";
@@ -128,6 +128,7 @@ vi.mock("@server/middleware/rateLimit", () => ({
 async function buildApp(
   roles: Record<string, WorkspaceRole | null>,
   ownershipMirrorAvailable = true,
+  directRoles: Record<string, "owner" | "edit" | "view" | "none"> = {},
 ) {
   const teamMock = makeRoleMock(roles, OWNER, ownershipMirrorAvailable);
   const [{ registerWorkspaceRoutes }, { registerCanvasRoutes }, wsMod] =
@@ -149,7 +150,20 @@ async function buildApp(
       req.user = { id } as typeof req.user;
       next();
     },
-    teamAccess: createTeamWorkspaceAccess(teamMock),
+    directAccess: {
+      getAccess: async (_workspaceId, userId) => ({
+        status: "available",
+        value:
+          directRoles[userId] ??
+          (roles[userId] === "editor"
+            ? "edit"
+            : roles[userId] === "viewer"
+              ? "view"
+              : roles[userId]
+                ? "owner"
+                : "none"),
+      }),
+    },
     workspaces: createWorkspaceSummaryReader(wsMod.workspaceStorage),
   };
 
@@ -167,6 +181,90 @@ describe("authorization matrix — no 403 on your own data", () => {
     wsRows[WS_ID] = { id: WS_ID, title: "Shared", userId: OWNER };
     updateCalls.length = 0;
     delete canvasState[WS_ID];
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("ignores Team-only shares after cutover while retaining direct shares", async () => {
+    app = await buildApp({ [STRANGER]: "editor" }, false, {
+      [VIEWER]: "view",
+      [STRANGER]: "none",
+    });
+    expect(
+      (
+        await request(app)
+          .get(`/api/v1/workspaces/${WS_ID}`)
+          .set("x-test-user-id", STRANGER)
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request(app)
+          .get(`/api/v1/workspaces/${WS_ID}/canvas`)
+          .set("x-test-user-id", STRANGER)
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request(app)
+          .get(`/api/v1/workspaces/${WS_ID}`)
+          .set("x-test-user-id", VIEWER)
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(app)
+          .get(`/api/v1/workspaces/${WS_ID}`)
+          .set("x-test-user-id", OWNER)
+      ).status,
+    ).toBe(200);
+  });
+
+  it("direct workspace collaborators have consistent Workspace and Canvas read/write access", async () => {
+    app = await buildApp({}, false, { [EDITOR]: "edit", [VIEWER]: "view" });
+    for (const path of [
+      `/api/v1/workspaces/${WS_ID}`,
+      `/api/v1/workspaces/${WS_ID}/canvas`,
+    ]) {
+      expect(
+        (await request(app).get(path).set("x-test-user-id", VIEWER)).status,
+      ).toBe(200);
+      expect(
+        (await request(app).get(path).set("x-test-user-id", STRANGER)).status,
+      ).toBe(403);
+    }
+    expect(
+      (
+        await request(app)
+          .put(`/api/v1/workspaces/${WS_ID}`)
+          .set("x-test-user-id", VIEWER)
+          .send({ title: "read only" })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request(app)
+          .put(`/api/v1/workspaces/${WS_ID}`)
+          .set("x-test-user-id", EDITOR)
+          .send({ title: "edited" })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(app)
+          .post(`/api/v1/workspaces/${WS_ID}/canvas`)
+          .set("x-test-user-id", VIEWER)
+          .send({ nodes: [], edges: [], baseRevision: 0 })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request(app)
+          .post(`/api/v1/workspaces/${WS_ID}/canvas`)
+          .set("x-test-user-id", EDITOR)
+          .send({ nodes: [], edges: [], baseRevision: 0 })
+      ).status,
+    ).toBe(200);
   });
 
   it("owner_reads_own_workspace → 200", async () => {

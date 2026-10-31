@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "wouter";
 import { Helmet } from "react-helmet-async";
 import {
   UserGroupIcon as Users,
@@ -12,26 +11,9 @@ import {
   ArrowPathIcon as RefreshCw,
   ArrowRightIcon as ArrowRight,
   SparklesIcon as Crown,
-  ShareIcon as Share2,
-  ArrowTopRightOnSquareIcon as ExternalLink,
   CalendarIcon as Calendar,
   UserMinusIcon as UserMinus,
   ArrowPathIcon as Loader2,
-  CubeIcon as Box,
-  ServerIcon as Server,
-  GlobeAltIcon as Globe,
-  CircleStackIcon as Database,
-  ShieldCheckIcon as Shield,
-  CodeBracketIcon as GitBranch,
-  BoltIcon as Zap,
-  CpuChipIcon as Cpu,
-  GlobeAltIcon as Network,
-  CloudIcon as Cloud,
-  LockClosedIcon as Lock,
-  ChartBarIcon as BarChart3,
-  CodeBracketIcon as Code2,
-  SignalIcon as Wifi,
-  Squares2X2Icon as LayoutGrid,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -42,10 +24,7 @@ import {
   useLeaveTeam,
   useDeleteTeam,
   useRegenerateInviteCode,
-  useShareWorkspace,
-  useTeamWorkspaces,
 } from "@/hooks/use-teams";
-import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -57,30 +36,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-// ─── Icon Map ────────────────────────────────────────────────────────
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-  server: Server,
-  globe: Globe,
-  box: Box,
-  database: Database,
-  shield: Shield,
-  git: GitBranch,
-  zap: Zap,
-  cpu: Cpu,
-  network: Network,
-  cloud: Cloud,
-  lock: Lock,
-  chart: BarChart3,
-  code: Code2,
-  wifi: Wifi,
-  grid: LayoutGrid,
-};
-function getWsIcon(
-  iconId?: string | null,
-): React.ComponentType<{ className?: string }> {
-  return ICON_MAP[iconId || "box"] || Box;
-}
 
 // ─── Motion Variants ─────────────────────────────────────────────────
 const containerVariants = {
@@ -103,14 +58,12 @@ export default function Team() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: teams, isLoading } = useTeams();
-  const { data: workspaces } = useWorkspaces();
 
   const createTeam = useCreateTeam();
   const joinTeam = useJoinTeam();
   const leaveTeam = useLeaveTeam();
   const deleteTeam = useDeleteTeam();
   const regenerateCode = useRegenerateInviteCode();
-  const shareWorkspace = useShareWorkspace();
 
   const [newTeamName, setNewTeamName] = useState("");
   const [joinCode, setJoinCode] = useState("");
@@ -125,7 +78,6 @@ export default function Team() {
 
   const { data: teamDetail, isLoading: isDetailLoading } =
     useTeam(selectedTeamId);
-  const { data: teamWorkspaces } = useTeamWorkspaces(selectedTeamId);
 
   const handleCreateTeam = async () => {
     if (!newTeamName.trim()) return;
@@ -168,23 +120,6 @@ export default function Team() {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const handleShareWorkspace = async (workspaceId: string) => {
-    if (!selectedTeamId) return;
-    try {
-      await shareWorkspace.mutateAsync({ teamId: selectedTeamId, workspaceId });
-      toast({
-        title: "Shared",
-        description: "All team members can now access this workspace.",
-      });
-    } catch (err: unknown) {
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "An error occurred",
-        variant: "destructive",
-      });
-    }
-  };
-
   const triggerConfirm = (
     title: string,
     description: string,
@@ -192,11 +127,6 @@ export default function Team() {
   ) => {
     setConfirmAction({ title, description, action });
   };
-
-  const unsharedWorkspaces =
-    workspaces?.filter(
-      (ws) => !teamWorkspaces?.some((tw) => tw.id === ws.id),
-    ) || [];
 
   return (
     <>
@@ -218,7 +148,7 @@ export default function Team() {
             Teams
           </h1>
           <p className="text-sm text-white/30 mt-2 max-w-md">
-            Manage your teams, invite members, and share workspaces.
+            Manage your teams and invite members.
           </p>
         </motion.div>
 
@@ -328,8 +258,7 @@ export default function Team() {
                   No teams yet
                 </p>
                 <p className="text-xs text-white/15 mt-1.5 max-w-[220px] mx-auto leading-relaxed">
-                  Create a team to start sharing workspaces and collaborating
-                  with others.
+                  Create a team to bring your members together with others.
                 </p>
               </div>
             ) : (
@@ -482,8 +411,8 @@ export default function Team() {
                           triggerConfirm(
                             isOwner ? "Delete this team?" : "Leave this team?",
                             isOwner
-                              ? "This permanently deletes the team, removes all members, and unshares all workspaces."
-                              : "You'll lose access to all workspaces shared with this team.",
+                              ? "This permanently deletes the team and removes all members."
+                              : "You'll leave this team.",
                             async () => {
                               if (isOwner)
                                 await deleteTeam.mutateAsync(selectedTeamId);
@@ -560,7 +489,7 @@ export default function Team() {
                               onClick={() =>
                                 triggerConfirm(
                                   `Remove ${member.firstName || member.email.split("@")[0]}?`,
-                                  "They'll lose access to all shared workspaces.",
+                                  "They will be removed from this team.",
                                   async () => {
                                     await leaveTeam.mutateAsync({
                                       teamId: selectedTeamId,
@@ -578,79 +507,6 @@ export default function Team() {
                       ))}
                     </div>
                   </div>
-
-                  {/* Shared Workspaces Section */}
-                  <div className="mb-12">
-                    <h3 className="text-xs font-bold font-sans tracking-[0.2em] uppercase text-[#555] mb-4 flex items-center gap-2">
-                      <Share2 className="w-3.5 h-3.5" /> Shared Workspaces
-                    </h3>
-                    {teamWorkspaces && teamWorkspaces.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {teamWorkspaces.map((ws) => {
-                          const WsIcon = getWsIcon(ws.icon);
-                          return (
-                            <Link key={ws.id} href={`/workspace/${ws.id}`}>
-                              <motion.div
-                                whileHover={{
-                                  scale: 1.02,
-                                  borderColor: "rgba(26,115,232,0.25)",
-                                }}
-                                whileTap={{ scale: 0.985 }}
-                                className="flex items-center gap-3 px-4 py-3 rounded-lg border border-white/[0.04] transition-all cursor-pointer group"
-                              >
-                                <div className="w-8 h-8 rounded-lg bg-white/[0.03] flex items-center justify-center flex-shrink-0 group-hover:bg-primary/[0.08] transition-colors">
-                                  <WsIcon className="w-3.5 h-3.5 text-white/20 group-hover:text-primary transition-colors" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-white/80 group-hover:text-white truncate transition-colors">
-                                    {ws.title}
-                                  </p>
-                                  <p className="text-[9px] text-white/12 uppercase tracking-wider">
-                                    {ws.type}
-                                  </p>
-                                </div>
-                                <ExternalLink className="w-3.5 h-3.5 text-white/0 group-hover:text-primary/40 transition-all flex-shrink-0" />
-                              </motion.div>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="border border-dashed border-white/[0.04] rounded-lg py-10 text-center">
-                        <p className="text-[10px] text-white/12 uppercase tracking-widest">
-                          No workspaces shared yet
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Share Picker */}
-                  {unsharedWorkspaces.length > 0 && (
-                    <div>
-                      <h3 className="text-xs font-bold font-sans tracking-[0.2em] uppercase text-[#555] mb-4 flex items-center gap-2">
-                        <Plus className="w-3.5 h-3.5" /> Share a Workspace
-                      </h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {unsharedWorkspaces.map((ws) => (
-                          <motion.button
-                            key={ws.id}
-                            whileHover={{
-                              scale: 1.02,
-                              borderColor: "rgba(26,115,232,0.2)",
-                            }}
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => handleShareWorkspace(ws.id)}
-                            className="flex items-center gap-2 px-3 py-2.5 border border-white/[0.04] rounded-lg text-left transition-all group"
-                          >
-                            <Plus className="w-3 h-3 text-white/10 group-hover:text-primary transition-colors flex-shrink-0" />
-                            <span className="text-[11px] text-white/25 truncate group-hover:text-white/60 transition-colors">
-                              {ws.title}
-                            </span>
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </motion.div>
               ) : (
                 <motion.div
@@ -664,7 +520,7 @@ export default function Team() {
                     Select a team
                   </p>
                   <p className="text-[11px] text-white/10 mt-1 max-w-[200px]">
-                    Pick a team from the left to manage members and workspaces.
+                    Pick a team from the left to manage its members.
                   </p>
                 </motion.div>
               )}

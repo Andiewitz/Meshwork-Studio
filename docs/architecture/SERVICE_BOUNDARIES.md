@@ -1,11 +1,15 @@
 # Service boundaries & API contracts (reference)
 
-> Status: active · Updated: 2026-10-12 · Context: which part of the code owns
+> Status: active · Updated: 2026-10-26 · Context: which part of the code owns
 > which data. Login flow: [`../AUTH_ARCHITECTURE.md`](../AUTH_ARCHITECTURE.md).
 
 Meshwork Studio runs as a Node app plus a Go login service. The code is
 organised into domain services (workspace, team, AI, metrics, canvas) so that
 a future split into separate services won't require shared database access.
+The Node modules still share one runtime, registry, and event bus; they are not
+independently deployable services. The
+[service boundary audit and extraction plan](../../plans/SERVICE-BOUNDARY-AUDIT.md)
+records the remaining coupling and proposed implementation order.
 
 ## Ownership map
 
@@ -20,7 +24,11 @@ a future split into separate services won't require shared database access.
 
 The Node process has one connection pool per domain database. A service must
 not import another service's schema or pool. The architecture-boundary test
-enforces that rule.
+checks selected direct imports; it does not yet enforce all relative,
+transitive, or service-root imports. The registry also exposes full foreign
+storage interfaces, which the audit proposes replacing with narrow module APIs.
+AI selects `JENKOS_DATABASE_URL` when set, otherwise `AI_DATABASE_URL`; both
+names currently configure the same logical AI module.
 
 ## Request paths
 
