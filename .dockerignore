@@ -8,6 +8,7 @@ dist
 .github
 attached_assets
 docs
+infra
 tests
 *.log
 *.txt

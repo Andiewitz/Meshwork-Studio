@@ -44,6 +44,7 @@ type Server struct {
 	auditor     *audit.Writer
 	ipHasher    *iphash.Hasher
 	oauthCfg    *oauth2.Config
+	cognitoCfg  *oauth2.Config
 	assert      *assertion.Signer
 	internalKey string
 	allow       *csrf.Allowlist
@@ -111,6 +112,14 @@ func NewServer(cfg *config.Config, pool *pgxpool.Pool, rdb redis.UniversalClient
 		log:         log,
 	}
 	s.auditor = audit.New(db, log)
+	if cfg.CognitoDomain != "" {
+		s.cognitoCfg = &oauth2.Config{
+			ClientID:    cfg.CognitoClientID,
+			RedirectURL: cfg.PublicURL + "/api/v1/auth/cognito/callback",
+			Scopes:      []string{"openid", "email", "profile"},
+			Endpoint:    oauth2.Endpoint{AuthURL: cfg.CognitoDomain + "/oauth2/authorize", TokenURL: cfg.CognitoDomain + "/oauth2/token", AuthStyle: oauth2.AuthStyleInParams},
+		}
+	}
 	internalKeyValue = cfg.InternalKey
 	return s, nil
 }
@@ -138,6 +147,11 @@ func (s *Server) Router() http.Handler {
 
 	// Public, unauthenticated endpoints.
 	api.Get("/auth/csrf-token", s.handleIssueCSRF)
+	api.Get("/auth/providers", s.handleAuthProviders)
+	if s.cognitoCfg != nil {
+		api.With(s.limiter.Middleware(ipKey("cognito"), s.cfg.LoginWindowPerIP, 15*time.Minute)).Get("/auth/cognito", s.handleCognitoStart)
+		api.Get("/auth/cognito/callback", s.handleCognitoCallback)
+	}
 	api.With(s.limiter.Middleware(ipKey("register"), s.cfg.LoginWindowPerIP, 15*time.Minute), s.csrfProtect, s.captchaProtect).
 		Post("/auth/register", s.handleRegister)
 	api.With(s.limiter.Middleware(ipKey("login"), s.cfg.LoginWindowPerIP, 15*time.Minute), s.csrfProtect).
@@ -190,6 +204,8 @@ func (s *Server) Router() http.Handler {
 	// Server-to-server surface. Never routed through NGINX; guarded by the
 	// shared internal key inside the handler itself.
 	r.Post("/internal/introspect", s.handleIntrospect)
+	r.Post("/internal/collaborators/lookup", collaboratorLookupHandler(s.db))
+	r.Post("/internal/collaborators/profiles", collaboratorProfilesHandler(s.db))
 	r.Get("/internal/stats/users", s.handleUserStats)
 	r.Get("/internal/audit-search", s.handleAuditSearch)
 

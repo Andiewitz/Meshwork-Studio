@@ -16,6 +16,8 @@ import {
 } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import pg from "pg";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { uploadS3Archive } from "./s3-archive";
 import { requiredDatabaseTargets, requiredS3Uri } from "./backup-lib";
 
 interface ArchiveFile {
@@ -261,28 +263,22 @@ async function writeCanvasSnapshot(
   return { filePath, itemCount };
 }
 
-function s3Destination(prefix: string, archiveName: string, fileName: string) {
-  return `${prefix}/${archiveName}/${fileName}`;
-}
-
 async function uploadArchive(
   prefix: string,
   archiveName: string,
   files: string[],
 ): Promise<void> {
-  const aws = process.env.AWS_CLI_BIN || "aws";
-  const encryptionArgs = process.env.BACKUP_S3_KMS_KEY_ID
-    ? ["--sse", "aws:kms", "--sse-kms-key-id", process.env.BACKUP_S3_KMS_KEY_ID]
-    : ["--sse", "AES256"];
-  for (const filePath of files) {
-    await run(aws, [
-      "s3",
-      "cp",
-      filePath,
-      s3Destination(prefix, archiveName, path.basename(filePath)),
-      "--only-show-errors",
-      ...encryptionArgs,
-    ]);
+  const client = new S3Client({ region: awsRegion });
+  try {
+    await uploadS3Archive(
+      (input) => client.send(new PutObjectCommand(input)),
+      prefix,
+      archiveName,
+      files,
+      process.env.BACKUP_S3_KMS_KEY_ID,
+    );
+  } finally {
+    client.destroy();
   }
 }
 

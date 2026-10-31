@@ -7,6 +7,8 @@ import { rm, readFile, cp } from "fs/promises";
 const allowlist = [
   "@aws-sdk/client-dynamodb",
   "@aws-sdk/lib-dynamodb",
+  "@aws-sdk/client-s3",
+  "@aws-sdk/client-ssm",
   "cors",
   "drizzle-orm",
   "drizzle-zod",
@@ -64,6 +66,14 @@ async function buildAll() {
   });
 
   console.log("copying admin dashboard...");
+  await esbuild({
+    entryPoints: ["scripts/with-aws-env.ts"],
+    platform: "node",
+    bundle: true,
+    format: "cjs",
+    outfile: "dist/recovery/with-aws-env.cjs",
+    logLevel: "info",
+  });
   await cp("server/public/admin/index.html", "dist/admin.html");
 }
 

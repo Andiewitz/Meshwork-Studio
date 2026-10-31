@@ -51,3 +51,40 @@ export function searchIdentityAudit(
     options,
   );
 }
+
+const collaboratorIdentitySchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  name: z.string(),
+  profileImageUrl: z.string().nullable(),
+});
+
+export function lookupCollaboratorIdentity(
+  email: string,
+  options?: InternalRequestOptions,
+) {
+  return identityGet(
+    "/internal/collaborators/lookup",
+    z.object({ user: collaboratorIdentitySchema.nullable() }),
+    {
+      ...options,
+      method: "POST",
+      body: { email },
+    },
+  );
+}
+
+export function getCollaboratorProfiles(
+  ids: string[],
+  options?: InternalRequestOptions,
+) {
+  return identityGet(
+    "/internal/collaborators/profiles",
+    z.object({ users: z.array(collaboratorIdentitySchema) }),
+    {
+      ...options,
+      method: "POST",
+      body: { ids },
+    },
+  );
+}

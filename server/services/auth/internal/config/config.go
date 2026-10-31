@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -52,6 +53,9 @@ type Config struct {
 
 	GoogleClientID     string
 	GoogleClientSecret string
+	CognitoDomain      string
+	CognitoClientID    string
+	CognitoPoolID      string
 
 	CaptchaSecret   string
 	CaptchaProvider string // "hcaptcha" | "recaptcha" | ""
@@ -136,10 +140,20 @@ func Load() (*Config, error) {
 		EmailFrom:          str("EMAIL_FROM"),
 		GoogleClientID:     str("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		CognitoDomain:      strings.TrimSuffix(str("COGNITO_DOMAIN"), "/"),
+		CognitoClientID:    str("COGNITO_CLIENT_ID"),
+		CognitoPoolID:      str("COGNITO_POOL_ID"),
 		CaptchaSecret:      os.Getenv("CAPTCHA_SECRET"),
 		CaptchaMinScore:    0.5,
 	}
 
+	if cfg.CognitoDomain != "" || cfg.CognitoClientID != "" || cfg.CognitoPoolID != "" {
+		u, err := url.Parse(cfg.CognitoDomain)
+		fail(err != nil || u == nil || u.Scheme != "https" || u.User != nil || u.Port() != "" ||
+			!strings.HasSuffix(u.Hostname(), ".amazoncognito.com") || u.Path != "" || u.RawQuery != "" || u.Fragment != "",
+			"COGNITO_DOMAIN must be an HTTPS Amazon Cognito hosted domain")
+		fail(cfg.CognitoClientID == "" || cfg.CognitoPoolID == "", "COGNITO_CLIENT_ID and COGNITO_POOL_ID are required with Cognito")
+	}
 	if cfg.Port == "" {
 		cfg.Port = "8081"
 	}

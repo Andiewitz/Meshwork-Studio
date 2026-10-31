@@ -9,6 +9,15 @@
 
 ## Rules
 
+Optional AWS integration: `COGNITO_DOMAIN`, `COGNITO_CLIENT_ID`, and
+`COGNITO_POOL_ID` are public identifiers consumed by Go and must be configured
+together. `BACKUP_S3_URI` selects the approved backup bucket/prefix. These values
+can be loaded from Standard SSM parameters by `dist/recovery/with-aws-env.cjs`.
+No AWS access keys are needed on EC2 when an instance role is attached.
+Runtime parameters and IAM setup are documented in the
+[AWS foundation guide](../../infra/aws/README.md); do not store passwords in
+Terraform input files or state.
+
 1. Generate with `openssl rand -base64 32` (or `openssl rand -hex 32`) — never invent strings.
 2. Server env files live at `~/meshwork-studiov2/.env`, `chmod 600`, owned by `ubuntu`.
 3. Local dev uses one `.env` at repo root (gitignored). The Go service reads the

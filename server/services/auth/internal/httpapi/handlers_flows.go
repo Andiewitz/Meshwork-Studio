@@ -137,15 +137,21 @@ type verifyBody struct {
 	Token string `json:"token"`
 }
 
-func (s *Server) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
+func readVerificationToken(r *http.Request) string {
 	var body verifyBody
+	err := readJSON(r, &body)
 	token := body.Token
-	if err := readJSON(r, &body); err != nil || token == "" {
+	if err != nil || token == "" {
 		token = r.URL.Query().Get("token")
-		if token == "" {
-			writeError(w, r, http.StatusBadRequest, "VALIDATION", "Verification token required")
-			return
-		}
+	}
+	return token
+}
+
+func (s *Server) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
+	token := readVerificationToken(r)
+	if token == "" {
+		writeError(w, r, http.StatusBadRequest, "VALIDATION", "Verification token required")
+		return
 	}
 	userID, err := s.db.ConsumeOneTimeToken(r.Context(),
 		password.KeyedHash("one-time-token", token), store.TokenEmailVerification)

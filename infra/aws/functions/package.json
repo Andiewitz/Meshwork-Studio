@@ -1,0 +1,21 @@
+{
+  "name": "meshwork-aws-functions",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@aws-crypto/client-node": "^4.2.1",
+    "@aws-sdk/client-cloudwatch": "^3.1118.0",
+    "@aws-sdk/client-dynamodb": "^3.1118.0",
+    "@aws-sdk/client-s3": "^3.1118.0",
+    "@aws-sdk/client-sesv2": "^3.1118.0",
+    "@aws-sdk/client-sqs": "^3.1118.0",
+    "@aws-sdk/lib-dynamodb": "^3.1118.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

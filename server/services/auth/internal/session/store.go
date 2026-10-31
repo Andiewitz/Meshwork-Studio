@@ -349,3 +349,20 @@ func (s *Store) publishRevocation(ctx context.Context, userID string, hashes []s
 
 // RevocationChannel is the Redis pub/sub channel other services subscribe to.
 const RevocationChannel = "identity:sessions:revoked"
+
+// CapExpiry prevents a bridged external login from gaining a longer local
+// session than the upstream access token. Sliding touches honor absolute expiry.
+func (s *Store) CapExpiry(ctx context.Context, rec *Record, limit time.Time) error {
+	_, err := s.pool.Exec(ctx, `UPDATE auth_sessions SET expires_at=LEAST(expires_at,$2), absolute_expires_at=LEAST(absolute_expires_at,$2) WHERE id_hash=$1`, rec.IDHash, limit)
+	if err != nil {
+		return err
+	}
+	if limit.Before(rec.ExpiresAt) {
+		rec.ExpiresAt = limit
+	}
+	if limit.Before(rec.AbsoluteExpiresAt) {
+		rec.AbsoluteExpiresAt = limit
+	}
+	s.invalidateCache(ctx, rec.IDHash)
+	return nil
+}

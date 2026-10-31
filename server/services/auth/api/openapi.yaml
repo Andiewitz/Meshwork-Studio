@@ -17,6 +17,57 @@ tags:
   - name: Sessions
   - name: OAuth
 paths:
+  /auth/providers:
+    get:
+      tags: [OAuth]
+      summary: Discover enabled login providers
+      responses:
+        "200":
+          description: Server-controlled provider availability
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [cognito, google]
+                properties:
+                  cognito: { type: boolean }
+                  google: { type: boolean }
+  /auth/cognito:
+    get:
+      tags: [OAuth]
+      summary: Start browser-bound Cognito authorization-code login with PKCE
+      description: Available only when Cognito is configured. Linking requires an existing authenticated local session and the same verified email; email alone never merges accounts.
+      parameters:
+        - {
+            name: returnTo,
+            in: query,
+            schema: { type: string },
+            description: Same-origin path after login,
+          }
+        - {
+            name: link,
+            in: query,
+            schema: { type: boolean },
+            description: Link to the current local account,
+          }
+      responses:
+        "302": { description: Redirect to the Cognito hosted UI }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "503": { $ref: "#/components/responses/Error" }
+  /auth/cognito/callback:
+    get:
+      tags: [OAuth]
+      summary: Consume one-time OAuth state, exchange the code, and open a local session
+      parameters:
+        - { name: state, in: query, required: true, schema: { type: string } }
+        - { name: code, in: query, required: true, schema: { type: string } }
+      responses:
+        "302":
+          {
+            description: Local session issued and redirect to the requested path,
+            or login with a sanitized error code,
+          }
   /auth/csrf-token:
     get:
       tags: [Auth]
@@ -72,19 +123,39 @@ paths:
             schema:
               type: object
               properties:
-                code: { type: string, pattern: '^[0-9]{6}$' }
+                code: { type: string, pattern: "^[0-9]{6}$" }
                 backupCode: { type: string }
       responses:
         "200": { $ref: "#/components/responses/AuthSuccess" }
         "401": { $ref: "#/components/responses/Error" }
   /auth/logout:
-    post: { tags: [Auth], summary: Revoke the current session, responses: { "200": { description: OK } } }
+    post:
+      {
+        tags: [Auth],
+        summary: Revoke the current session,
+        responses: { "200": { description: OK } },
+      }
   /auth/logout-all:
-    post: { tags: [Auth], summary: Revoke every session of the caller, responses: { "200": { description: OK } } }
+    post:
+      {
+        tags: [Auth],
+        summary: Revoke every session of the caller,
+        responses: { "200": { description: OK } },
+      }
   /auth/session:
-    get: { tags: [Auth], summary: Current user + expiry, responses: { "200": { $ref: "#/components/responses/AuthSuccess" } } }
+    get:
+      {
+        tags: [Auth],
+        summary: Current user + expiry,
+        responses: { "200": { $ref: "#/components/responses/AuthSuccess" } },
+      }
   /auth/me:
-    get: { tags: [Auth], summary: Public profile with verification/MFA flags, responses: { "200": { description: OK } } }
+    get:
+      {
+        tags: [Auth],
+        summary: Public profile with verification/MFA flags,
+        responses: { "200": { description: OK } },
+      }
   /auth/change-password:
     post:
       tags: [Auth]
@@ -129,7 +200,12 @@ paths:
         "200": { description: Verified }
         "400": { $ref: "#/components/responses/Error" }
   /auth/resend-verification:
-    post: { tags: [Auth], summary: Resend verification email (authenticated), responses: { "200": { description: Sent } } }
+    post:
+      {
+        tags: [Auth],
+        summary: Resend verification email (authenticated),
+        responses: { "200": { description: Sent } },
+      }
   /auth/sessions:
     get:
       tags: [Sessions]
@@ -157,7 +233,8 @@ paths:
     delete:
       tags: [Sessions]
       summary: Revoke one session by hash
-      parameters: [{ name: idHash, in: path, required: true, schema: { type: string } }]
+      parameters:
+        [{ name: idHash, in: path, required: true, schema: { type: string } }]
       responses:
         "200": { description: Revoked }
         "404": { $ref: "#/components/responses/Error" }
@@ -215,7 +292,8 @@ components:
             properties:
               user: { type: object }
               expiresAt: { type: string, format: date-time }
-              accessTokenExpiresAt: { type: string, format: date-time, deprecated: true }
+              accessTokenExpiresAt:
+                { type: string, format: date-time, deprecated: true }
     Error:
       description: Error envelope
       content:

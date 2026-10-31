@@ -23,6 +23,24 @@
 
 ## Who owns what
 
+### Optional Cognito hosted login
+
+Status: implemented locally; AWS activation and live verification pending.
+Set `COGNITO_DOMAIN`, `COGNITO_CLIENT_ID`, and `COGNITO_POOL_ID` together to
+enable the additional login/register button. Go starts a browser-bound PKCE
+authorization flow, uses the configured Cognito user-info endpoint, requires
+a verified email, and maps the pool/subject to a local user. Existing accounts
+require an authenticated link; matching emails never merge accounts on their
+own. Local sessions and assertions remain the application authorization layer.
+The bridged session is capped at the access token expiry (at most 15 minutes).
+Local logout does not terminate the Cognito hosted-browser session, and
+Cognito-side revocation is not an immediate revocation of local sessions.
+Existing password/Google flows and their SMTP requirements remain active.
+The optional AWS custom sender queues encrypted codes through SQS for Lambda
+delivery via SES. See the [deployment and verification guide](../infra/aws/README.md).
+
+### Existing service boundaries
+
 | Job                                                       | Owner                                        | Stored in       |
 | --------------------------------------------------------- | -------------------------------------------- | --------------- |
 | Users, sessions, CSRF secrets, lockout, MFA, OAuth, audit | **Go auth service** (`server/services/auth`) | `auth_db`       |
@@ -80,3 +98,14 @@ Generate with `openssl rand -base64 32`. The complete table (what each key
 does, who reads it, how to rotate): [`operations/SECRETS.md`](./operations/SECRETS.md).
 One rule that bites: the auth service's `AUTH_ASSERTION_PRIVATE_KEY` and the
 app's `AUTH_ASSERTION_PUBLIC_KEY` must be generated as **one pair**.
+
+## Internal collaborator identity lookup
+
+The identity service exposes `POST /internal/collaborators/lookup` (email) and
+`POST /internal/collaborators/profiles` (up to 100 user IDs) to trusted services.
+Both require `X-Internal-Key` with `AUTH_INTERNAL_KEY` and must remain blocked
+from the public proxy. Lookup normalizes email and returns `user: null` for
+unknown, inactive, and unverified accounts. Profiles omit ineligible accounts.
+Responses contain only ID, email, display name, and profile image URL.
+These endpoints are groundwork; existing workspace sharing still uses Team
+authorization until the collaborator cutover is implemented and verified.

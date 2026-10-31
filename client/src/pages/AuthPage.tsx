@@ -136,6 +136,32 @@ function SocialButton({
   );
 }
 
+function CognitoButton() {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/v1/auth/providers", { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((providers: { cognito?: boolean } | null) =>
+        setEnabled(providers?.cognito === true),
+      )
+      .catch(() => {
+        // Keep the existing login methods usable when discovery is unavailable.
+      });
+    return () => controller.abort();
+  }, []);
+  if (!enabled) return null;
+  return (
+    <SocialButton
+      icon={null}
+      label="Sign in or create a Meshwork account"
+      onClick={() => {
+        window.location.href = "/api/v1/auth/cognito?returnTo=%2Fhome";
+      }}
+    />
+  );
+}
+
 function LoginForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -170,6 +196,13 @@ function LoginForm() {
           "Your security session has expired. Please sign in again to continue.",
         variant: "destructive",
       });
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (err === "cognito" || err === "cognito_link_required") {
+      setOauthError(
+        err === "cognito_link_required"
+          ? "Sign in with your existing method before linking this account."
+          : "Sign-in could not be completed. Please try again.",
+      );
       window.history.replaceState({}, "", window.location.pathname);
     } else if (err === "google") {
       setOauthError(
@@ -303,6 +336,7 @@ function LoginForm() {
         </motion.div>
       )}
       <div className="space-y-2.5 mb-5">
+        <CognitoButton />
         <SocialButton
           icon={<GithubIcon />}
           label="Continue with GitHub"
@@ -589,6 +623,7 @@ function RegisterForm() {
         </motion.div>
       )}
       <div className="space-y-2.5 mb-5">
+        <CognitoButton />
         <SocialButton
           icon={<GoogleIcon />}
           label="Continue with Google"

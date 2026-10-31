@@ -31,7 +31,7 @@ type oauthStatePayload struct {
 
 // safeReturnTo allows only same-site absolute paths.
 func safeReturnTo(rt string) string {
-	if rt == "" || !strings.HasPrefix(rt, "/") || strings.HasPrefix(rt, "//") {
+	if rt == "" || !strings.HasPrefix(rt, "/") || strings.HasPrefix(rt, "//") || strings.ContainsAny(rt, "\\\r\n") {
 		return "/"
 	}
 	return rt

@@ -29,6 +29,8 @@ export class InternalCallError extends Error {
 export interface InternalRequestOptions {
   timeoutMs?: number;
   requestId?: string;
+  method?: "GET" | "POST";
+  body?: unknown;
 }
 
 type NodeInternalService = "workspace" | "team";
@@ -44,7 +46,12 @@ export async function requestInternal<T>(
   key: string,
   path: string,
   responseSchema: z.ZodType<T>,
-  { timeoutMs = 3000, requestId }: InternalRequestOptions = {},
+  {
+    timeoutMs = 3000,
+    requestId,
+    method = "GET",
+    body,
+  }: InternalRequestOptions = {},
 ): Promise<T> {
   if (!key) throw new InternalCallError(service, "unconfigured");
 
@@ -52,8 +59,11 @@ export async function requestInternal<T>(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, {
+      method,
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       headers: {
         "X-Internal-Key": key,
+        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
         ...(requestId ? { "X-Request-Id": requestId } : {}),
       },
       signal: controller.signal,
@@ -63,16 +73,16 @@ export async function requestInternal<T>(
       await res.body?.cancel();
       throw new InternalCallError(service, "http", res.status);
     }
-    let body: unknown;
+    let responseBody: unknown;
     try {
-      body = await res.json();
+      responseBody = await res.json();
     } catch {
       throw new InternalCallError(
         service,
         controller.signal.aborted ? "timeout" : "invalid_response",
       );
     }
-    const parsed = responseSchema.safeParse(body);
+    const parsed = responseSchema.safeParse(responseBody);
     if (!parsed.success)
       throw new InternalCallError(service, "invalid_response");
     return parsed.data;

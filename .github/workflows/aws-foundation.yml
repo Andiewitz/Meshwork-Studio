@@ -1,0 +1,66 @@
+name: AWS Foundation
+
+on:
+  pull_request:
+    paths: ["infra/aws/**", ".github/workflows/aws-foundation.yml"]
+  push:
+    branches: [main]
+    paths: ["infra/aws/**", ".github/workflows/aws-foundation.yml"]
+  workflow_dispatch:
+    inputs:
+      activate_staged_release:
+        description: "Activate artifacts already staged on EC2 through the fixed SSM deploy document"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: infra/aws/functions/package-lock.json
+      - run: npm ci && npm test && npm run build
+        working-directory: infra/aws/functions
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.2"
+      - run: terraform fmt -check -recursive && terraform init -backend=false -input=false && terraform validate && terraform test
+        working-directory: infra/aws
+
+  activate:
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' && inputs.activate_staged_release && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      - name: Activate the staged release and check its result
+        env:
+          INSTANCE: ${{ vars.AWS_INSTANCE_ID }}
+          DOCUMENT: ${{ vars.AWS_DEPLOY_DOCUMENT }}
+        run: |
+          set -euo pipefail
+          COMMAND=$(aws ssm send-command --instance-ids "$INSTANCE" --document-name "$DOCUMENT" --query 'Command.CommandId' --output text)
+          for attempt in $(seq 1 100); do
+            STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND" --instance-id "$INSTANCE" --query Status --output text 2>/dev/null || true)
+            case "$STATUS" in
+              Success) exit 0 ;;
+              Failed|Cancelled|TimedOut|Cancelling) echo "Activation failed: $STATUS"; exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "Activation did not finish within the polling deadline"
+          exit 1

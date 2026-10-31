@@ -1,0 +1,11 @@
+aws_account_id  = "123456789012"
+ec2_instance_id = "i-0123456789abcdef0"
+ec2_role_name   = "existing-meshwork-instance-role"
+app_origin     = "https://app.example.com"
+email_domain   = "example.com"
+email_from     = "no-reply@example.com"
+alert_email    = "owner@example.com"
+monthly_addon_budget   = 5
+monthly_account_budget = 30 # Includes existing EC2/EBS; adjust to your actual bill.
+# Reuse an existing GitHub OIDC provider if this account already has one:
+# github_oidc_provider_arn = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"

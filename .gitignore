@@ -85,3 +85,11 @@ server/services/*/.env
 
 # k6 load-test artifacts
 /tests/load/results
+# Terraform state, local settings, saved plans, and Lambda packages
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+infra/aws/.build/

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Install this generated file root-owned at /usr/local/sbin/meshwork-deploy.
+# It only activates artifacts already staged by the existing build/transfer flow.
+set -euo pipefail
+exec runuser -u ubuntu -- /bin/bash -lc '
+  set -euo pipefail
+  cd "${app_directory}"
+  test -f dist/index.cjs
+  test -f dist/recovery/with-aws-env.cjs
+  ./scripts/deploy-remote.sh
+  set -a
+  source .env
+  set +a
+  if [ -f server/services/auth/meshwork-auth ]; then
+    install -m 0755 server/services/auth/meshwork-auth meshwork-auth
+  fi
+  if ! pm2 describe meshwork-auth >/dev/null 2>&1; then
+    node dist/recovery/with-aws-env.cjs /${name}/runtime pm2 start ./meshwork-auth --name meshwork-auth
+  else
+    node dist/recovery/with-aws-env.cjs /${name}/runtime pm2 restart meshwork-auth --update-env
+  fi
+  node dist/recovery/with-aws-env.cjs /${name}/runtime pm2 restart meshwork --update-env
+  pm2 save
+  sleep 3
+  curl --fail --silent http://127.0.0.1:8081/healthz
+  curl --fail --silent http://127.0.0.1:5000/ready
+'
