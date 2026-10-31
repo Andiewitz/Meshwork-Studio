@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { NodeChange, EdgeChange } from "@xyflow/react";
 import { useAuth } from "@/auth";
+import { ReconnectBackoff } from "@/lib/reconnect-backoff";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -44,8 +45,6 @@ interface ServerMessage {
   changes?: NodeChange[] | EdgeChange[];
 }
 
-const MAX_BACKOFF_MS = 30_000;
-const INITIAL_BACKOFF_MS = 1_000;
 /** Only retry on abnormal/protocol close; clean close (1000) and
  *  going-away (1001) are intentional — don't reconnect. */
 const RETRYABLE_CLOSE_CODES = new Set([
@@ -82,7 +81,7 @@ export function usePresence(
   );
   const [isConnected, setIsConnected] = useState(false);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
-  const backoffRef = useRef(INITIAL_BACKOFF_MS);
+  const backoffRef = useRef(new ReconnectBackoff());
 
   const connect = useCallback(() => {
     if (!workspaceId || !isAuthenticated) return;
@@ -120,7 +119,7 @@ export function usePresence(
     ws.onopen = () => {
       connectingRef.current = false;
       setIsConnected(true);
-      backoffRef.current = INITIAL_BACKOFF_MS;
+      backoffRef.current.connected(Date.now());
       // Authenticate and join the workspace room
       ws.send(JSON.stringify({ type: "join", workspaceId }));
     };
@@ -248,8 +247,7 @@ export function usePresence(
       if (!isAuthenticated) return;
 
       // Exponential backoff with cap
-      const delay = backoffRef.current;
-      backoffRef.current = Math.min(delay * 2, MAX_BACKOFF_MS);
+      const delay = backoffRef.current.nextDelay(Date.now());
       reconnectTimer.current = setTimeout(() => connect(), delay);
     };
 
@@ -262,6 +260,7 @@ export function usePresence(
   useEffect(() => {
     if (!isAuthenticated || !workspaceId) return;
 
+    backoffRef.current = new ReconnectBackoff();
     connect();
 
     return () => {
