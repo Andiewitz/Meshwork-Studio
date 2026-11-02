@@ -55,8 +55,9 @@ problem or prove that an earlier design had the same runtime behavior.
   Git attributes the current debounce behavior to July 2026; nearby older lines
   trace to April, which alone does not prove the delay existed in April.
 - Save callbacks now avoid marking newer edits saved when an older request finishes.
-  The three-second debounce now flushes when the page becomes hidden; this is
-  best effort and the local cache remains the recovery path if it cannot finish.
+  The three-second debounce flushes when the page becomes hidden and starts a
+  save within 15 seconds during continuous editing. These are best effort;
+  the local cache remains the recovery path if a server save cannot finish.
 - Next: measure edit-to-save confirmation and failure recovery on representative
   canvases. Consider flushing on explicit save, navigation, and suitable page
   lifecycle events; preserve revision conflict handling and offline recovery.

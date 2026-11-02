@@ -14,9 +14,12 @@ commands with explicit receipts. Workspace retries use a stable operation ID and
 wait for Canvas completion. Team removes memberships in other owners' teams.
 Disposable PostgreSQL tests cover the owner-specific storage operations.
 
-The durable identity-to-Node dispatcher and a complete write/session fence are
-still missing. The identity operation stays in `fencing` and no public deletion
-endpoint is enabled. The formerly nonfunctional Settings control is disabled.
+A lease-fenced Identity worker and authenticated internal Node bridge now
+coordinate the three required commands. A complete write/session fence and a
+safe transition out of `fencing` are still missing, so no normal operation is
+claimable and no public deletion endpoint is enabled. The formerly nonfunctional
+Settings control remains disabled. PostgreSQL tests exercise retries and lease
+fencing; the full DynamoDB-backed workflow remains unverified.
 
 ## Proposed solution
 
