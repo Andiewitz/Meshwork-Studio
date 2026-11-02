@@ -5,8 +5,9 @@ import aiRoutes from "@services/ai/routes";
 import { requestIdMiddleware } from "@server/middleware/requestId";
 import type { AIRouteDependencies } from "@services/ai/dependencies";
 
-const { mockGeminiCompletion } = vi.hoisted(() => ({
+const { mockGeminiCompletion, mockOpenRouterCompletion } = vi.hoisted(() => ({
   mockGeminiCompletion: vi.fn(),
+  mockOpenRouterCompletion: vi.fn(),
 }));
 
 // Mock DB calls — by default return null/empty to simulate no BYOK keys
@@ -29,6 +30,11 @@ vi.mock("@services/ai/db", () => ({
 vi.mock("@services/ai/providers/gemini", () => ({
   createGeminiChatCompletion: mockGeminiCompletion,
   streamGeminiChatCompletion: vi.fn(),
+}));
+
+vi.mock("@services/ai/providers/openrouter", () => ({
+  createOpenRouterChatCompletion: mockOpenRouterCompletion,
+  streamOpenRouterChatCompletion: vi.fn(),
 }));
 
 vi.mock("../../../server/auth", () => ({
@@ -81,6 +87,9 @@ describe("AI Chat Route Integration Tests", () => {
     originalOpenrouterKey = process.env.OPENROUTER_API_KEY;
     originalGeminiKey = process.env.GEMINI_API_KEY;
     originalGoogleKey = process.env.GOOGLE_GENAI_API_KEY;
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_GENAI_API_KEY;
+    delete process.env.OPENROUTER_API_KEY;
   });
 
   afterEach(() => {
@@ -142,6 +151,38 @@ describe("AI Chat Route Integration Tests", () => {
       expect(res.status).toBe(404);
       expect(res.body.code).toBe("NO_ACTIVE_KEY");
       expect(res.body.message).toContain("anthropic");
+    });
+
+    it("routes an OpenRouter-only deployment through OpenRouter with a free model", async () => {
+      process.env.OPENROUTER_API_KEY = "test-openrouter-key";
+      mockOpenRouterCompletion.mockResolvedValue({
+        choices: [{ message: { role: "assistant", content: "Hello" } }],
+      });
+      const res = await request(app)
+        .post("/api/v1/ai/chat")
+        .set("x-test-user-id", "1")
+        .send({
+          provider: "gemini",
+          model: "gemini-3.5-flash",
+          messages: [{ role: "user", content: "Hello" }],
+          tools: [
+            {
+              type: "function",
+              function: { name: "edit_canvas", parameters: { type: "object" } },
+            },
+          ],
+        });
+      expect(res.status).toBe(200);
+      expect(res.body.choices[0].message.content).toBe("Hello");
+      expect(mockGeminiCompletion).not.toHaveBeenCalled();
+      expect(mockOpenRouterCompletion).toHaveBeenCalledWith(
+        "test-openrouter-key",
+        expect.objectContaining({
+          model: "openrouter/free",
+          messages: [{ role: "user", content: "Hello" }],
+          tools: expect.any(Array),
+        }),
+      );
     });
 
     it("should accept requests without provider/model (free-tier path)", async () => {

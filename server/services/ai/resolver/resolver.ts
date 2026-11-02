@@ -5,6 +5,7 @@ const log = createChildLogger("ai-resolver");
 
 export const DEFAULT_PROVIDER = "gemini";
 export const DEFAULT_FREE_MODEL = "gemini-3.5-flash";
+export const DEFAULT_OPENROUTER_FREE_MODEL = "openrouter/free";
 
 const ALLOWED_MODELS: Record<string, readonly string[]> = {
   gemini: ["gemini-3.5-flash", "gemini-3.5-flash-lite"],
@@ -14,7 +15,7 @@ const ALLOWED_MODELS: Record<string, readonly string[]> = {
     "claude-3-5-sonnet",
     "claude-3-opus",
   ],
-  openrouter: ["meta-llama/llama-3-8b-instruct:free"],
+  openrouter: [DEFAULT_OPENROUTER_FREE_MODEL],
 };
 
 function allowedModel(provider: string, requested?: string): string {
@@ -88,30 +89,36 @@ export async function resolveProviderForRequest(
     );
   }
 
-  const fallbackKey =
+  const geminiKey =
     process.env.GEMINI_API_KEY?.trim() ||
-    process.env.GOOGLE_GENAI_API_KEY?.trim() ||
-    process.env.OPENROUTER_API_KEY?.trim();
-
-  if (!fallbackKey) {
-    log.error("GEMINI_API_KEY not set — free tier unavailable");
-    throw new ProviderResolutionError(
-      "FALLBACK_NOT_CONFIGURED",
-      "The default AI provider is not configured. Set GEMINI_API_KEY.",
-    );
+    process.env.GOOGLE_GENAI_API_KEY?.trim();
+  if (geminiKey) {
+    log.debug({ userId, source: "fallback" }, "Resolved to Gemini fallback");
+    return {
+      provider: "gemini",
+      model: allowedModel("gemini", requestedModel),
+      apiKey: geminiKey,
+      source: "fallback",
+    };
   }
 
-  log.debug(
-    { userId, source: "fallback" },
-    "Resolved to Gemini free-tier fallback",
+  const openRouterKey = process.env.OPENROUTER_API_KEY?.trim();
+  if (openRouterKey) {
+    log.debug(
+      { userId, source: "fallback" },
+      "Resolved to OpenRouter fallback",
+    );
+    return {
+      provider: "openrouter",
+      model: allowedModel("openrouter", requestedModel),
+      apiKey: openRouterKey,
+      source: "fallback",
+    };
+  }
+
+  log.error("No default AI provider key configured");
+  throw new ProviderResolutionError(
+    "FALLBACK_NOT_CONFIGURED",
+    "The default AI provider is not configured. Set GEMINI_API_KEY or OPENROUTER_API_KEY.",
   );
-
-  const resolvedModel = allowedModel("gemini", requestedModel);
-
-  return {
-    provider: "gemini",
-    model: resolvedModel,
-    apiKey: fallbackKey,
-    source: "fallback",
-  };
 }

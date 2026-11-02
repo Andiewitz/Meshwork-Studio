@@ -3,7 +3,6 @@ import {
   resolveProviderForRequest,
   ProviderResolutionError,
   DEFAULT_PROVIDER,
-  DEFAULT_FREE_MODEL,
 } from "@services/ai/resolver";
 
 // Mock the DB functions used by the resolver
@@ -24,16 +23,22 @@ describe("resolveProviderForRequest", () => {
   const userId = "user-123";
   let originalGeminiEnv: string | undefined;
   let originalOpenrouterEnv: string | undefined;
+  let originalGoogleEnv: string | undefined;
 
   beforeEach(() => {
     vi.clearAllMocks();
     originalGeminiEnv = process.env.GEMINI_API_KEY;
     originalOpenrouterEnv = process.env.OPENROUTER_API_KEY;
+    originalGoogleEnv = process.env.GOOGLE_GENAI_API_KEY;
+    delete process.env.GOOGLE_GENAI_API_KEY;
     delete process.env.GEMINI_API_KEY;
     process.env.OPENROUTER_API_KEY = "sk-or-test-fallback-key";
   });
 
   afterEach(() => {
+    if (originalGoogleEnv !== undefined)
+      process.env.GOOGLE_GENAI_API_KEY = originalGoogleEnv;
+    else delete process.env.GOOGLE_GENAI_API_KEY;
     if (originalGeminiEnv !== undefined) {
       process.env.GEMINI_API_KEY = originalGeminiEnv;
     } else {
@@ -59,8 +64,8 @@ describe("resolveProviderForRequest", () => {
       );
 
       expect(result).toEqual({
-        provider: "gemini",
-        model: DEFAULT_FREE_MODEL,
+        provider: "openrouter",
+        model: "openrouter/free",
         apiKey: "sk-or-test-fallback-key",
         source: "fallback",
       });
@@ -78,19 +83,34 @@ describe("resolveProviderForRequest", () => {
       );
 
       expect(result.source).toBe("fallback");
-      expect(result.provider).toBe("gemini");
+      expect(result.provider).toBe("openrouter");
       expect(mockedGetActiveKey).not.toHaveBeenCalled();
     });
 
-    it("should sanitize model name and return DEFAULT_FREE_MODEL for openrouter model strings", async () => {
+    it("does not send a Gemini model name to OpenRouter", async () => {
       const result = await resolveProviderForRequest(
         userId,
         undefined,
-        "google/gemma-4-31b-it:free",
+        "gemini-3.5-flash",
       );
 
-      expect(result.model).toBe(DEFAULT_FREE_MODEL);
+      expect(result.model).toBe("openrouter/free");
       expect(result.source).toBe("fallback");
+    });
+
+    it("uses the Gemini key with Gemini when both fallback keys exist", async () => {
+      process.env.GEMINI_API_KEY = "  gemini-key  ";
+      const result = await resolveProviderForRequest(
+        userId,
+        "gemini",
+        "gemini-3.5-flash",
+      );
+      expect(result).toEqual({
+        provider: "gemini",
+        model: "gemini-3.5-flash",
+        apiKey: "gemini-key",
+        source: "fallback",
+      });
     });
 
     it("should trim whitespace from OPENROUTER_API_KEY", async () => {

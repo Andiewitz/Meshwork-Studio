@@ -51,8 +51,8 @@ import {
 } from "../providers/runtime";
 
 const log = createChildLogger("ai-routes");
-const MAX_CHAT_TOKENS = 1_024;
-const DEFAULT_CHAT_TOKENS = 512;
+const MAX_CHAT_TOKENS = 2_048;
+const DEFAULT_CHAT_TOKENS = 2_048;
 
 interface CanvasNode {
   id: string;

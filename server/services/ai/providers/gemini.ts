@@ -154,7 +154,11 @@ function buildGeminiPayload(request: ChatCompletionRequest) {
     ];
   }
 
-  const generationConfig: Record<string, unknown> = {};
+  // Gemini 3 models use a shared output/thinking budget. Keep reasoning low so
+  // short interactive requests have room for text or a canvas tool call.
+  const generationConfig: Record<string, unknown> = {
+    thinkingConfig: { thinkingLevel: "low" },
+  };
   if (typeof request.temperature === "number") {
     generationConfig.temperature = request.temperature;
   }
