@@ -297,6 +297,24 @@ describe("Jenkos Agent & Architecture Generation Pipeline", () => {
       expect(response.message.toolCalls).toHaveLength(2);
     });
 
+    it("reports an empty AI response instead of claiming analysis succeeded", async () => {
+      mockedSecureFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: "", tool_calls: [] } }],
+        }),
+      } as Response);
+      await expect(
+        runJenkosAgent({
+          userPrompt: "Create a diagram",
+          history: [],
+          currentNodes: [],
+          currentEdges: [],
+          viewportCenter,
+        }),
+      ).rejects.toThrow("The AI returned no usable response");
+    });
+
     it("parses fallback markdown JSON codeblocks gracefully if LLM omits native tool_calls", async () => {
       mockedSecureFetch.mockResolvedValueOnce({
         ok: true,

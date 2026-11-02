@@ -474,14 +474,14 @@ export async function runJenkosAgent({
     }
   }
 
+  if (!textContent.trim() && !canvasResult?.applied) {
+    throw new Error("The AI returned no usable response. Please try again.");
+  }
+
   const assistantMessage: JenkosAgentMessage = {
     id: (Date.now() + 1).toString(),
     role: "assistant",
-    content:
-      textContent ||
-      (canvasResult?.summary
-        ? `✅ ${canvasResult.summary}`
-        : "Architecture analyzed."),
+    content: textContent || `✅ ${canvasResult?.summary ?? "Canvas updated."}`,
     toolCalls: executedToolCalls.length > 0 ? executedToolCalls : undefined,
     appliedToCanvas: !!canvasResult?.applied,
   };
