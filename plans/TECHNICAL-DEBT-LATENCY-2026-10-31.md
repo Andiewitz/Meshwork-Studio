@@ -18,7 +18,9 @@ problem or prove that an earlier design had the same runtime behavior.
   query per 500 recipients and uses bounded per-socket and per-room queues.
   It does not cache permissions. Overload closes sockets for reconnection, but
   missed canvas events are not automatically reconciled after reconnect. The
-  client warns after rejoining and backs off repeated short connections.
+  client preserves a draft and pauses persistence and broadcasts after a gap;
+  the user can export the draft and reload. It also backs off repeated short
+  connections. This is manual recovery, not event replay or conflict merging.
 - A local synthetic before/after comparison is in `tests/load/README.md`. It
   does not measure real PostgreSQL, Redis, network conditions, or production p95.
   Tests cover ordered delivery, access removal, and fail-closed batch errors.
