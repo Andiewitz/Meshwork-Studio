@@ -28,7 +28,7 @@ func TestCognitoProviderFlagIsServerControlled(t *testing.T) {
 			s.cognitoCfg = &oauth2.Config{}
 		}
 		rec := httptest.NewRecorder()
-		s.handleAuthProviders(rec, httptest.NewRequest("GET", "/api/v1/auth/providers", nil))
+		s.handleAuthProviders(rec, httptest.NewRequestWithContext(t.Context(), "GET", "/api/v1/auth/providers", nil))
 		if decodeBody(t, rec)["cognito"] != enabled {
 			t.Fatal("wrong provider flag")
 		}

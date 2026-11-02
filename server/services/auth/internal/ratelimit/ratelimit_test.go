@@ -8,7 +8,7 @@ import (
 )
 
 func TestWriteLimitErrorIncludesRequestID(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "/auth/login", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/auth/login", nil)
 	req.Header.Set("X-Request-Id", "req-abc123")
 	rec := httptest.NewRecorder()
 
@@ -27,7 +27,7 @@ func TestWriteLimitErrorIncludesRequestID(t *testing.T) {
 }
 
 func TestWriteLimitErrorFallsBackToUnscoped(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "/auth/login", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/auth/login", nil)
 	rec := httptest.NewRecorder()
 
 	writeLimitError(rec, req, http.StatusServiceUnavailable, "RATE_LIMIT_UNAVAILABLE", "Try again shortly")

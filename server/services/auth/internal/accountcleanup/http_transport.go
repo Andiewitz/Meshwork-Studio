@@ -44,7 +44,7 @@ func (t *HTTPTransport) Execute(ctx context.Context, service string, claim *Clai
 	if err != nil {
 		return Receipt{}, errors.New("cleanup bridge unavailable")
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode != http.StatusOK {
 		return Receipt{}, fmt.Errorf("cleanup bridge rejected request (status %d)", res.StatusCode)
 	}

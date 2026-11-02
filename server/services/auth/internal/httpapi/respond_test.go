@@ -23,7 +23,7 @@ func decodeBody(t *testing.T, rec *httptest.ResponseRecorder) map[string]any {
 
 // Additive contract: message text unchanged, code + requestId added.
 func TestWriteErrorEnvelope(t *testing.T) {
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), "GET", "/", nil)
 	rec := httptest.NewRecorder()
 	writeError(rec, req, http.StatusTeapot, "WEAK_PASSWORD", "too short")
 
@@ -71,7 +71,7 @@ func TestStatusForSentinels(t *testing.T) {
 }
 
 func TestWriteErrorAdoptsRequestID(t *testing.T) {
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), "GET", "/", nil)
 	ctx := context.WithValue(req.Context(), ctxRequestID, "req-abc123")
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()

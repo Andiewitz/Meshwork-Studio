@@ -302,7 +302,7 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 		var workspaceComplete atomic.Bool
 		bridge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get("X-Internal-Key") != "node-key" {
-				http.Error(w, "forbidden", 403)
+				http.Error(w, "forbidden", http.StatusForbidden)
 				return
 			}
 			var body struct {
@@ -317,7 +317,7 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 			}
 			allowed, err := queue.AuthorizeDelivery(r.Context(), &accountcleanup.Claim{OperationID: body.OperationID, UserID: body.UserID, Token: body.Token}, body.Service)
 			if err != nil || !allowed {
-				http.Error(w, "forbidden", 403)
+				http.Error(w, "forbidden", http.StatusForbidden)
 				return
 			}
 			status := "completed"

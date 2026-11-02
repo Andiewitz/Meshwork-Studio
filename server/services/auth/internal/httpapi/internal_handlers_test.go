@@ -48,7 +48,7 @@ func TestInternalHandlersRequireTheIdentityCredential(t *testing.T) {
 		t.Run(endpoint.path, func(t *testing.T) {
 			for _, key := range []string{"", "different-node-key", "wrong"} {
 				before := connects.Load()
-				req := httptest.NewRequest("GET", endpoint.path, nil)
+				req := httptest.NewRequestWithContext(t.Context(), "GET", endpoint.path, nil)
 				req.Header.Set("X-Internal-Key", key)
 				rec := httptest.NewRecorder()
 				endpoint.handler(rec, req)
@@ -61,7 +61,7 @@ func TestInternalHandlersRequireTheIdentityCredential(t *testing.T) {
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
-			req := httptest.NewRequest("GET", endpoint.path, nil).WithContext(ctx)
+			req := httptest.NewRequestWithContext(ctx, "GET", endpoint.path, nil)
 			req.Header.Set("X-Internal-Key", "identity-only-key")
 			rec := httptest.NewRecorder()
 			before := connects.Load()

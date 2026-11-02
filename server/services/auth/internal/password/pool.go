@@ -49,9 +49,9 @@ func init() {
 	go idleReclaim()
 }
 
-func envInt(name string, def, min, max int) int {
+func envInt(name string, def, minimum, maximum int) int {
 	v, err := strconv.Atoi(os.Getenv(name))
-	if err != nil || v < min || v > max {
+	if err != nil || v < minimum || v > maximum {
 		return def
 	}
 	return v

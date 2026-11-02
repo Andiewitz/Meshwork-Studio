@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"net"
 	"testing"
 )
 
 func TestEnsurePortClosed(t *testing.T) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	var config net.ListenConfig
+	listener, err := config.Listen(context.Background(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}

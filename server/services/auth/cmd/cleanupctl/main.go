@@ -21,7 +21,8 @@ func ensurePortClosed(port int) error {
 	if port < 1 || port > 65535 {
 		return errors.New("invalid local port")
 	}
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), time.Second)
+	dialer := net.Dialer{Timeout: time.Second}
+	conn, err := dialer.DialContext(context.Background(), "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
 	if err == nil {
 		_ = conn.Close()
 		return fmt.Errorf("local service port %d is still accepting connections", port)

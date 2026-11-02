@@ -37,7 +37,7 @@ func (f *collaboratorFake) FindEligibleUsersByIDs(_ context.Context, ids []strin
 	return nil, f.err
 }
 func collaboratorRequest(h http.HandlerFunc, body, key string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(http.MethodPost, "/internal/test", strings.NewReader(body))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/internal/test", strings.NewReader(body))
 	req.Header.Set("X-Internal-Key", key)
 	w := httptest.NewRecorder()
 	h(w, req)
