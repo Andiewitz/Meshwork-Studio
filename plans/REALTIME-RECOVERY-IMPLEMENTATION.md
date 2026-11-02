@@ -16,7 +16,9 @@ identify which live events it contains.
    must be verified; this does not require provisioning managed Redis.
 2. Bind resume cursors to the user, workspace, and their authorization epoch.
    Increment that epoch transactionally on grant, removal, role change, and
-   ownership change. Verify current access and the epoch before replay. This
+   ownership change. Workspace now records these epochs transactionally and
+   exposes an internal permission-plus-epoch snapshot; replay does not yet use
+   it. Verify current access and the epoch before replay. This
    prevents a removed and later re-added collaborator from reading events from
    the period in which they lacked access. A cursor must not be forgeable.
 3. Define a join/replay barrier: buffer new events while the server validates
