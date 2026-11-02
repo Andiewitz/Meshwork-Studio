@@ -6,7 +6,9 @@ this is not a live self-service deletion workflow. The full Canvas cleanup has
 not yet been verified against real DynamoDB/S3.
 
 The operator must stop **all** Node app and Go identity processes, drain any
-in-flight work, and keep them stopped throughout the fencing period. This
+in-flight work, and keep them stopped throughout the fencing period. In Docker,
+loopback checks inside a one-off container do not see other containers; the
+operator must verify that all app and identity containers are stopped. This
 includes background workers and other application instances. A closed local
 port alone does not prove processes are stopped. Do not use this procedure for
 multiple hosts or if the maximum lifetime of previously issued assertions is
@@ -42,6 +44,10 @@ lifetime: the operator's attestation covers those facts.
 To process pending work after restarting services, set
 `AUTH_CLEANUP_BRIDGE_URL` to the internal Node origin and
 `AUTH_CLEANUP_BRIDGE_KEY` to Node's `INTERNAL_API_KEY` in the Identity service.
+For Compose, an internal origin is `http://meshwork-backend:5000`; set the
+bridge key to the same value as `INTERNAL_API_KEY` without putting it in logs.
+The identity image includes `/app/cleanupctl` for an operator-run one-off
+container. Do not run the tool in the same container as a live identity server.
 Node must be able to call the Identity internal endpoint with
 `AUTH_SERVICE_URL` and `AUTH_INTERNAL_KEY`. Do not route `/internal/*` through
 public ingress. A missing service, failed Canvas cleanup, or unavailable bridge
