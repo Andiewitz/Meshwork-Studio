@@ -245,6 +245,8 @@ export function usePresence(
       connectingRef.current = false;
       wsRef.current = null;
       setIsConnected(false);
+      // Any server-side close can leave this canvas without live updates.
+      onDisconnectRef.current?.();
 
       // Session revoked / expired, or room access denied — stop reconnecting.
       if (event.code === 4001 || event.code === 4401 || event.code === 4403)
@@ -252,7 +254,6 @@ export function usePresence(
 
       // Unknown close codes are not retried.
       if (!RETRYABLE_CLOSE_CODES.has(event.code)) return;
-      onDisconnectRef.current?.();
 
       // Auth lost — stop reconnecting
       if (!isAuthenticated) return;

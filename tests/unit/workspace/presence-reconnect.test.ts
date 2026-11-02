@@ -110,4 +110,14 @@ describe("presence reconnection", () => {
     act(() => vi.advanceTimersByTime(1000));
     expect(FakeSocket.instances).toHaveLength(2);
   });
+  it("preserves the draft but stops retries when access is revoked", () => {
+    const first = FakeSocket.instances[0];
+    act(() => first.open());
+    act(() => first.presence());
+    act(() => first.close(4403));
+    expect(disconnected).toHaveBeenCalledOnce();
+    expect(connected).toBe(false);
+    act(() => vi.advanceTimersByTime(30000));
+    expect(FakeSocket.instances).toHaveLength(1);
+  });
 });
