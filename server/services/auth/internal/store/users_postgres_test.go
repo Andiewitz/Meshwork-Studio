@@ -163,5 +163,86 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 		if !rollbackActive || operations != 0 {
 			t.Fatalf("cleanup failure did not roll back: active=%v operations=%d", rollbackActive, operations)
 		}
+		if _, err := pool.Exec(ctx, `ALTER TABLE account_cleanup_steps DROP CONSTRAINT reject_cleanup`); err != nil {
+			t.Fatal(err)
+		}
 	})
+	t.Run("cleanup queue fences stale workers and finalizes only inactive accounts", func(t *testing.T) {
+		_, err := pool.Exec(ctx, `INSERT INTO users(id,email,email_normalized,is_active) VALUES ('queue','queue@example.test','queue@example.test',true)`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = pool.Exec(ctx, `INSERT INTO auth_sessions(id_hash,user_id,expires_at,absolute_expires_at) VALUES ('queue-session','queue',now()+interval '1 hour',now()+interval '1 hour'); INSERT INTO auth_csrf_secrets(session_id_hash,secret_hash,expires_at) VALUES ('queue-session','hash',now()+interval '1 hour'); INSERT INTO audit_events(user_id,event) VALUES ('queue','test')`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		operationID := "bb58910d-3bf7-40cf-9cde-6f3992b09a37"
+		if _, err := db.BeginAccountCleanup(ctx, "queue", operationID); err != nil {
+			t.Fatal(err)
+		}
+		queue := CleanupQueue{DB: db}
+		if claim, err := queue.Claim(ctx); err != nil || claim != nil {
+			t.Fatalf("fencing operation was claimed: %v %v", claim, err)
+		}
+		// Test-only transition: production must establish the write fence first.
+		if _, err := pool.Exec(ctx, `UPDATE account_cleanup_operations SET status='pending' WHERE id=$1`, operationID); err != nil {
+			t.Fatal(err)
+		}
+		first, err := queue.Claim(ctx)
+		if err != nil || first == nil {
+			t.Fatalf("claim: %v %v", first, err)
+		}
+		if _, err := pool.Exec(ctx, `UPDATE account_cleanup_operations SET locked_until=now()-interval '1 second' WHERE id=$1`, operationID); err != nil {
+			t.Fatal(err)
+		}
+		second, err := queue.Claim(ctx)
+		if err != nil || second == nil || second.Token == first.Token {
+			t.Fatalf("reclaim: %v %v", second, err)
+		}
+		if err := queue.CompleteStep(ctx, first, "workspace"); !errors.Is(err, ErrCleanupLeaseLost) {
+			t.Fatalf("stale worker accepted: %v", err)
+		}
+		if err := queue.Finish(ctx, second); err == nil {
+			t.Fatal("finished with incomplete steps")
+		}
+		for _, service := range []string{"workspace", "ai", "team"} {
+			if err := queue.CompleteStep(ctx, second, service); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := pool.Exec(ctx, `UPDATE users SET is_active=true WHERE id='queue'`); err != nil {
+			t.Fatal(err)
+		}
+		if err := queue.Finish(ctx, second); err == nil {
+			t.Fatal("finished with active user")
+		}
+		var csrfCount int
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM auth_csrf_secrets WHERE session_id_hash='queue-session'`).Scan(&csrfCount); err != nil || csrfCount != 1 {
+			t.Fatalf("failed finalization did not roll back: %d %v", csrfCount, err)
+		}
+		if _, err := pool.Exec(ctx, `UPDATE users SET is_active=false WHERE id='queue'`); err != nil {
+			t.Fatal(err)
+		}
+		if err := queue.Finish(ctx, second); err != nil {
+			t.Fatal(err)
+		}
+		var users, csrf, audit int
+		var status string
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM users WHERE id='queue'`).Scan(&users); err != nil {
+			t.Fatal(err)
+		}
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM auth_csrf_secrets WHERE session_id_hash='queue-session'`).Scan(&csrf); err != nil {
+			t.Fatal(err)
+		}
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM audit_events WHERE user_id='queue'`).Scan(&audit); err != nil {
+			t.Fatal(err)
+		}
+		if err := pool.QueryRow(ctx, `SELECT status FROM account_cleanup_operations WHERE id=$1`, operationID).Scan(&status); err != nil {
+			t.Fatal(err)
+		}
+		if users != 0 || csrf != 0 || audit != 1 || status != "completed" {
+			t.Fatalf("users=%d csrf=%d audit=%d status=%s", users, csrf, audit, status)
+		}
+	})
+
 }
