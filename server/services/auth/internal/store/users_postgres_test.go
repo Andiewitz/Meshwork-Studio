@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -271,7 +272,7 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 			t.Fatal(err)
 		}
 		queue := CleanupQueue{DB: db}
-		workspaceComplete := false
+		var workspaceComplete atomic.Bool
 		bridge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get("X-Internal-Key") != "node-key" {
 				http.Error(w, "forbidden", 403)
@@ -293,7 +294,7 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 				return
 			}
 			status := "completed"
-			if body.Service == "workspace" && !workspaceComplete {
+			if body.Service == "workspace" && !workspaceComplete.Load() {
 				status = "published"
 			}
 			_ = json.NewEncoder(w).Encode(map[string]string{"operationId": body.OperationID, "status": status})
@@ -311,7 +312,7 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 		if err := pool.QueryRow(ctx, `SELECT status FROM account_cleanup_operations WHERE id=$1`, operationID).Scan(&status); err != nil || status != "pending" {
 			t.Fatalf("queued cleanup settled early: %s %v", status, err)
 		}
-		workspaceComplete = true
+		workspaceComplete.Store(true)
 		if _, err := pool.Exec(ctx, `UPDATE account_cleanup_operations SET next_attempt_at=now() WHERE id=$1`, operationID); err != nil {
 			t.Fatal(err)
 		}

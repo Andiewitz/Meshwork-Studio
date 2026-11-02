@@ -106,6 +106,9 @@ jobs:
       AUTH_DATABASE_URL: postgresql://user:password@localhost:5432/test_auth_db
       WORKSPACE_DATABASE_URL: postgresql://user:password@localhost:5432/test_workspace_db
       OUTBOX_TEST_DATABASE_URL: postgresql://user:password@localhost:5432/test_workspace_db
+      MIGRATION_TEST_DATABASE_URL: postgresql://user:password@localhost:5432/test_workspace_db
+      TEAM_TEST_DATABASE_URL: postgresql://user:password@localhost:5432/test_team_db
+      AI_TEST_DATABASE_URL: postgresql://user:password@localhost:5432/test_ai_db
       TEAM_DATABASE_URL: postgresql://user:password@localhost:5432/test_team_db
       AI_DATABASE_URL: postgresql://user:password@localhost:5432/test_ai_db
       METRICS_DATABASE_URL: postgresql://user:password@localhost:5432/test_metrics_db

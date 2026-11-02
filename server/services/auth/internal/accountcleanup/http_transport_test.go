@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
 func TestHTTPTransportRequiresValidReceipt(t *testing.T) {
 	claim := &Claim{OperationID: "op", UserID: "user", Token: "token"}
-	response := `{"operationId":"op","status":"published"}`
+	var response atomic.Value
+	response.Store(`{"operationId":"op","status":"published"}`)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" || r.URL.Path != "/internal/v1/account-cleanup/deliver" || r.Header.Get("X-Internal-Key") != "secret" {
 			t.Error("bad request")
@@ -23,7 +25,7 @@ func TestHTTPTransportRequiresValidReceipt(t *testing.T) {
 		if body["operationId"] != "op" || body["userId"] != "user" || body["claimToken"] != "token" || body["service"] != "ai" {
 			t.Errorf("bad body: %v", body)
 		}
-		_, _ = w.Write([]byte(response))
+		_, _ = w.Write([]byte(response.Load().(string)))
 	}))
 	defer server.Close()
 	transport, err := NewHTTPTransport(server.URL, "secret")
@@ -34,7 +36,7 @@ func TestHTTPTransportRequiresValidReceipt(t *testing.T) {
 		t.Fatalf("valid receipt: %+v %v", receipt, err)
 	}
 	for _, bad := range []string{`{"operationId":"other","status":"completed"}`, `{"operationId":"op","status":"invalid"}`, `{"operationId":"op","status":"completed","extra":true}`, `{"operationId":"op","status":"completed"} {}`} {
-		response = bad
+		response.Store(bad)
 		if _, err := transport.Execute(context.Background(), "ai", claim); err == nil {
 			t.Fatalf("accepted invalid receipt %s", bad)
 		}
