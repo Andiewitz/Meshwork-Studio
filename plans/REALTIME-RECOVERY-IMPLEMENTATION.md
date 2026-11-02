@@ -46,3 +46,24 @@ identify which live events it contains.
 - Measure room latency and memory under representative load against PostgreSQL
   and the chosen Redis persistence configuration. Do not infer production p95
   from mocks or a local synthetic benchmark.
+
+## Groundwork and remaining constraints
+
+The signed cursor and Redis stream modules are currently unused by the live
+WebSocket protocol. The stream is limited per workspace to 128 entries, 8 KiB
+per event, and five minutes of idle retention. Oversized entries and missing
+anchors cause a gap. Unit tests cover the primitive; an infrastructure-backed
+Redis test is configured in CI but has not been run locally.
+
+Before connecting this to live traffic, decide and enforce a global memory
+budget across workspaces without evicting authentication data from the shared
+Redis instance. The current Docker configuration enables append-only
+persistence, so stream expiry alone does not ensure canvas contents disappear
+from Redis persistence or backups. Set an explicit data-retention policy and
+implement the required isolation or protection before writing canvas events.
+
+The local draft cache currently uses one key per workspace. Although a save
+acknowledgement cannot clear a different editor instance's draft, two open tabs
+can still overwrite that shared key. A recovery design must preserve and expose
+multiple drafts, including older-format drafts, before claiming multi-tab safety.
+Do not silently select and overwrite a different tab's unsaved work.
