@@ -327,4 +327,42 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 		}
 	})
 
+	t.Run("offline fence waits for assertion expiry and rejects live sessions", func(t *testing.T) {
+		if _, err := pool.Exec(ctx, `INSERT INTO users(id,email,email_normalized,is_active) VALUES ('offline','offline@example.test','offline@example.test',true)`); err != nil {
+			t.Fatal(err)
+		}
+		operationID := "bb58910d-3bf7-40cf-9cde-6f3992b09a39"
+		if _, err := db.BeginAccountCleanup(ctx, "offline", operationID); err != nil {
+			t.Fatal(err)
+		}
+		if err := db.ActivateQuiescentCleanup(ctx, operationID, 5*time.Minute); err == nil {
+			t.Fatal("activated without quiescence")
+		}
+		if err := db.RecordCleanupQuiescence(ctx, operationID); err != nil {
+			t.Fatal(err)
+		}
+		if err := db.ActivateQuiescentCleanup(ctx, operationID, 5*time.Minute); err == nil {
+			t.Fatal("activated before expiry")
+		}
+		if _, err := pool.Exec(ctx, `UPDATE account_cleanup_operations SET quiescent_since=clock_timestamp()-interval '7 minutes' WHERE id=$1`, operationID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := pool.Exec(ctx, `INSERT INTO auth_sessions(id_hash,user_id,expires_at,absolute_expires_at) VALUES ('late','offline',now()+interval '1 hour',now()+interval '1 hour')`); err != nil {
+			t.Fatal(err)
+		}
+		if err := db.ActivateQuiescentCleanup(ctx, operationID, 5*time.Minute); err == nil {
+			t.Fatal("activated with live session")
+		}
+		if _, err := pool.Exec(ctx, `UPDATE auth_sessions SET revoked_at=now() WHERE id_hash='late'`); err != nil {
+			t.Fatal(err)
+		}
+		if err := db.ActivateQuiescentCleanup(ctx, operationID, 5*time.Minute); err != nil {
+			t.Fatal(err)
+		}
+		claim, err := (CleanupQueue{DB: db}).Claim(ctx)
+		if err != nil || claim == nil || claim.OperationID != operationID {
+			t.Fatalf("activated operation not claimable: %v %v", claim, err)
+		}
+	})
+
 }
