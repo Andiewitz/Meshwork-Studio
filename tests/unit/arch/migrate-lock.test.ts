@@ -26,7 +26,7 @@ describe("migration lock", () => {
   });
   it("serializes two simulated runners so the second sees the applied version", async () => {
     let held = false;
-    const waiting: Array<() => void> = [];
+    const waiting: (() => void)[] = [];
     let applied = false;
     let executions = 0;
     const pool = {

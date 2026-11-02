@@ -537,7 +537,7 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
           ) {
             throw new Error("Cleanup operation ID is already in use");
           }
-          return payload.ids as string[];
+          return payload.ids;
         }
       }
       const rows = await tx

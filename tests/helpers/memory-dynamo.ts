@@ -99,10 +99,10 @@ export class MemoryDynamo {
     } else if (command instanceof BatchWriteCommand) {
       const batches = input.RequestItems as Record<
         string,
-        Array<{
+        {
           DeleteRequest?: { Key: Record<string, unknown> };
           PutRequest?: { Item: Record<string, unknown> };
-        }>
+        }[]
       >;
       if (this.batchFailures-- > 0)
         output = { UnprocessedItems: input.RequestItems };
