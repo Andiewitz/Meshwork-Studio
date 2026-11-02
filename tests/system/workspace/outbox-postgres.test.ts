@@ -92,6 +92,79 @@ describe("workspace outbox PostgreSQL ownership", () => {
     await admin.end();
   });
 
+  it("changes access epochs transactionally on grant, revoke and ownership transfer", async () => {
+    await pool.query(
+      "INSERT INTO workspaces(id,title,user_id) VALUES ('epoch-workspace','Map','owner')",
+    );
+    const epoch = async (userId: string) =>
+      (
+        await pool.query<{ epoch: string }>(
+          "SELECT epoch FROM workspace_access_epochs WHERE workspace_id='epoch-workspace' AND user_id=$1",
+          [userId],
+        )
+      ).rows[0]?.epoch;
+    expect(await epoch("owner")).toBe("1");
+    await pool.query(
+      "INSERT INTO workspace_collaborators(workspace_id,user_id,permission,added_by) VALUES ('epoch-workspace','collab','view','owner')",
+    );
+    expect(await epoch("collab")).toBe("1");
+    await pool.query(
+      "UPDATE workspace_collaborators SET permission='view' WHERE workspace_id='epoch-workspace' AND user_id='collab'",
+    );
+    expect(await epoch("collab")).toBe("1");
+    await pool.query(
+      "UPDATE workspace_collaborators SET permission='edit' WHERE workspace_id='epoch-workspace' AND user_id='collab'",
+    );
+    expect(await epoch("collab")).toBe("2");
+    await pool.query(
+      "DELETE FROM workspace_collaborators WHERE workspace_id='epoch-workspace' AND user_id='collab'",
+    );
+    expect(await epoch("collab")).toBe("3");
+    await pool.query(
+      "INSERT INTO workspace_collaborators(workspace_id,user_id,permission,added_by) VALUES ('epoch-workspace','collab','view','owner')",
+    );
+    expect(await epoch("collab")).toBe("4");
+    const transaction = await pool.connect();
+    try {
+      await transaction.query("BEGIN");
+      await transaction.query(
+        "DELETE FROM workspace_collaborators WHERE workspace_id='epoch-workspace' AND user_id='collab'",
+      );
+      await transaction.query("ROLLBACK");
+    } finally {
+      transaction.release();
+    }
+    expect(await epoch("collab")).toBe("4");
+    await pool.query(
+      "INSERT INTO workspaces(id,title,user_id) VALUES ('epoch-other','Other','owner')",
+    );
+    await pool.query(
+      "UPDATE workspace_collaborators SET workspace_id='epoch-other' WHERE workspace_id='epoch-workspace' AND user_id='collab'",
+    );
+    expect(await epoch("collab")).toBe("5");
+    const otherEpoch = await pool.query(
+      "SELECT epoch FROM workspace_access_epochs WHERE workspace_id='epoch-other' AND user_id='collab'",
+    );
+    expect(otherEpoch.rows[0].epoch).toBe("1");
+    await pool.query(
+      "UPDATE workspace_collaborators SET workspace_id='epoch-workspace' WHERE workspace_id='epoch-other' AND user_id='collab'",
+    );
+    expect(await epoch("collab")).toBe("6");
+    await pool.query(
+      "UPDATE workspaces SET user_id='new-owner' WHERE id='epoch-workspace'",
+    );
+    expect(await epoch("owner")).toBe("2");
+    expect(await epoch("new-owner")).toBe("1");
+    await pool.query("DELETE FROM workspaces WHERE id='epoch-workspace'");
+    expect(
+      (
+        await pool.query(
+          "SELECT * FROM workspace_access_epochs WHERE workspace_id='epoch-workspace'",
+        )
+      ).rows,
+    ).toEqual([]);
+  });
+
   it("migrates existing pending rows without losing their operation id", async () => {
     const id = await seed();
     await pool.query(

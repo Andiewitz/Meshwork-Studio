@@ -145,4 +145,63 @@ export const MIGRATIONS: Migration[] = [
         ON collections (user_id, parent_id);
     `,
   },
+  {
+    version: "0024_workspace_access_epochs",
+    up: `
+      CREATE TABLE IF NOT EXISTS workspace_access_epochs (
+        workspace_id VARCHAR(128) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        user_id VARCHAR(128) NOT NULL,
+        epoch BIGINT NOT NULL DEFAULT 1 CHECK (epoch > 0),
+        PRIMARY KEY (workspace_id, user_id)
+      );
+      INSERT INTO workspace_access_epochs(workspace_id,user_id)
+        SELECT id,user_id FROM workspaces WHERE user_id IS NOT NULL
+        ON CONFLICT DO NOTHING;
+      INSERT INTO workspace_access_epochs(workspace_id,user_id)
+        SELECT workspace_id,user_id FROM workspace_collaborators
+        ON CONFLICT DO NOTHING;
+
+      CREATE OR REPLACE FUNCTION meshwork_bump_collaborator_epoch() RETURNS trigger AS $$
+      DECLARE ws_id VARCHAR(128); subject_id VARCHAR(128);
+      BEGIN
+        IF TG_OP = 'UPDATE' AND (NEW.workspace_id IS DISTINCT FROM OLD.workspace_id OR NEW.user_id IS DISTINCT FROM OLD.user_id) THEN
+          IF EXISTS (SELECT 1 FROM workspaces WHERE id=OLD.workspace_id) THEN
+            INSERT INTO workspace_access_epochs(workspace_id,user_id,epoch) VALUES(OLD.workspace_id,OLD.user_id,1)
+            ON CONFLICT(workspace_id,user_id) DO UPDATE SET epoch=workspace_access_epochs.epoch+1;
+          END IF;
+        ELSIF TG_OP = 'UPDATE' AND NEW.permission IS NOT DISTINCT FROM OLD.permission THEN
+          RETURN NEW;
+        END IF;
+        IF TG_OP = 'DELETE' THEN ws_id := OLD.workspace_id; subject_id := OLD.user_id;
+        ELSE ws_id := NEW.workspace_id; subject_id := NEW.user_id; END IF;
+        -- A cascading workspace deletion has already removed the parent.
+        IF EXISTS (SELECT 1 FROM workspaces WHERE id=ws_id) THEN
+          INSERT INTO workspace_access_epochs(workspace_id,user_id,epoch) VALUES(ws_id,subject_id,1)
+          ON CONFLICT(workspace_id,user_id) DO UPDATE SET epoch=workspace_access_epochs.epoch+1;
+        END IF;
+        IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+        RETURN NEW;
+      END $$ LANGUAGE plpgsql;
+      DROP TRIGGER IF EXISTS workspace_collaborator_epoch ON workspace_collaborators;
+      CREATE TRIGGER workspace_collaborator_epoch AFTER INSERT OR UPDATE OR DELETE ON workspace_collaborators
+        FOR EACH ROW EXECUTE FUNCTION meshwork_bump_collaborator_epoch();
+
+      CREATE OR REPLACE FUNCTION meshwork_bump_owner_epoch() RETURNS trigger AS $$
+      BEGIN
+        IF TG_OP = 'UPDATE' AND NEW.user_id IS NOT DISTINCT FROM OLD.user_id THEN RETURN NEW; END IF;
+        IF TG_OP = 'UPDATE' AND OLD.user_id IS NOT NULL THEN
+          INSERT INTO workspace_access_epochs(workspace_id,user_id,epoch) VALUES(NEW.id,OLD.user_id,1)
+          ON CONFLICT(workspace_id,user_id) DO UPDATE SET epoch=workspace_access_epochs.epoch+1;
+        END IF;
+        IF NEW.user_id IS NOT NULL THEN
+          INSERT INTO workspace_access_epochs(workspace_id,user_id,epoch) VALUES(NEW.id,NEW.user_id,1)
+          ON CONFLICT(workspace_id,user_id) DO UPDATE SET epoch=workspace_access_epochs.epoch+1;
+        END IF;
+        RETURN NEW;
+      END $$ LANGUAGE plpgsql;
+      DROP TRIGGER IF EXISTS workspace_owner_epoch ON workspaces;
+      CREATE TRIGGER workspace_owner_epoch AFTER INSERT OR UPDATE OF user_id ON workspaces
+        FOR EACH ROW EXECUTE FUNCTION meshwork_bump_owner_epoch();
+    `,
+  },
 ];
