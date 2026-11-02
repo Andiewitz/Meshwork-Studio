@@ -21,10 +21,13 @@ func (d *DB) Migrate(ctx context.Context) (resultErr error) {
 	if err != nil {
 		return fmt.Errorf("acquire migration connection: %w", err)
 	}
-	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock($1,$2)`, 1296388936, 1); err != nil {
+	_, err = conn.Exec(ctx, `SELECT pg_advisory_lock($1,$2)`, 1296388936, 1)
+	if err != nil {
 		closeCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		_ = conn.Hijack().Close(closeCtx)
+	}
+	if err != nil {
 		return fmt.Errorf("acquire migration lock: %w", err)
 	}
 	defer func() {
