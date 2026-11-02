@@ -93,7 +93,7 @@ export function SecuritySection() {
         await logout();
         return;
       }
-      toast({ title: "Password updated" });
+      toast({ title: "Password updated", variant: "success" });
       setCurrentPassword("");
       setNewPassword("");
     } catch (err) {
@@ -135,7 +135,7 @@ export function SecuritySection() {
       if (me.ok) {
         notifyLoginSuccess(await me.json(), new Date().toISOString());
       }
-      toast({ title: "Two-factor authentication enabled" });
+      toast({ title: "Two-factor authentication enabled", variant: "success" });
     } catch (err) {
       toast({
         title: "Activation failed",
@@ -152,7 +152,10 @@ export function SecuritySection() {
     try {
       await authClient.mfaDisable(disablePassword, {});
       setDisablePassword("");
-      toast({ title: "Two-factor authentication disabled" });
+      toast({
+        title: "Two-factor authentication disabled",
+        variant: "success",
+      });
     } catch (err) {
       toast({
         title: "Could not disable MFA",
@@ -168,7 +171,7 @@ export function SecuritySection() {
     try {
       await authClient.revokeSession(fullHash);
       await refreshSessions();
-      toast({ title: "Session revoked" });
+      toast({ title: "Session revoked", variant: "success" });
     } catch {
       toast({
         title: "Revoke failed",

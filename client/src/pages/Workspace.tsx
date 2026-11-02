@@ -337,7 +337,7 @@ function WorkspaceView() {
   const handleExportPng = useCallback(async () => {
     try {
       await exportAsPng(rfInstance, workspace?.title);
-      toast({ title: "Exported as PNG" });
+      toast({ title: "Exported as PNG", variant: "success" });
     } catch (e: unknown) {
       toast({
         title: "Export failed",
@@ -350,7 +350,7 @@ function WorkspaceView() {
   const handleExportSvg = useCallback(async () => {
     try {
       await exportAsSvg(rfInstance, workspace?.title);
-      toast({ title: "Exported as SVG" });
+      toast({ title: "Exported as SVG", variant: "success" });
     } catch (e: unknown) {
       toast({
         title: "Export failed",
@@ -362,7 +362,7 @@ function WorkspaceView() {
 
   const handleExportJson = useCallback(() => {
     exportAsJson(nodes, edges, workspace?.title || "canvas");
-    toast({ title: "Exported as JSON" });
+    toast({ title: "Exported as JSON", variant: "success" });
   }, [nodes, edges, workspace?.title, toast]);
 
   const handleImportJson = useCallback(
