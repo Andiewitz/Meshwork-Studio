@@ -47,7 +47,18 @@ To process pending work after restarting services, set
 For Compose, an internal origin is `http://meshwork-backend:5000`; set the
 bridge key to the same value as `INTERNAL_API_KEY` without putting it in logs.
 The identity image includes `/app/cleanupctl` for an operator-run one-off
-container. Do not run the tool in the same container as a live identity server.
+container. With PostgreSQL still running, after explicitly stopping the app,
+identity, and any other writers, the Compose equivalent of `prepare` is:
+
+```sh
+docker compose run --rm --no-deps --entrypoint /app/cleanupctl meshwork-auth \
+  -action=prepare -user-id USER_ID -single-host-services-stopped
+```
+
+Use the same one-off command with `-action=activate`, `-operation-id`, and
+`-assertion-max-age` after the waiting period. Its loopback port checks cannot
+inspect other containers, so verify those containers are stopped separately.
+Do not run the tool in the same container as a live identity server.
 Node must be able to call the Identity internal endpoint with
 `AUTH_SERVICE_URL` and `AUTH_INTERNAL_KEY`. Do not route `/internal/*` through
 public ingress. A missing service, failed Canvas cleanup, or unavailable bridge
