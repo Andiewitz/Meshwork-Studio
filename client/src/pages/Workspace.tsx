@@ -233,6 +233,8 @@ import {
 function WorkspaceView() {
   const { id } = useParams<{ id?: string }>();
   const workspaceId = id || "";
+  const activeWorkspaceIdRef = useRef(workspaceId);
+  activeWorkspaceIdRef.current = workspaceId;
   const {
     data: canvasData,
     isLoading: isCanvasLoading,
@@ -840,6 +842,8 @@ function WorkspaceView() {
     edges: Edge[];
   } | null>(null);
   const isInitialLoad = useRef(true);
+  const hydrationSerialRef = useRef(0);
+  const [hydrationEpoch, setHydrationEpoch] = useState(0);
 
   const reportCanvasSaveFailure = useCallback(
     (
@@ -848,7 +852,12 @@ function WorkspaceView() {
       generation: number,
       cached: boolean,
     ) => {
-      if (generation !== saveGenerationRef.current) return;
+      if (
+        activeWorkspaceIdRef.current !== workspaceId ||
+        lastLoadedId.current !== workspaceId ||
+        generation !== saveGenerationRef.current
+      )
+        return;
       const isConflict = (err as Error & { status?: number }).status === 409;
       if (isConflict) {
         draftConflictRef.current = true;
@@ -955,6 +964,8 @@ function WorkspaceView() {
 
   useEffect(() => {
     if (canvasData && lastLoadedId.current !== workspaceId) {
+      isInitialLoad.current = true;
+      const hydrationSerial = ++hydrationSerialRef.current;
       canvasRevisionRef.current = canvasData.revision;
       pendingSinceRef.current = null;
       lastSyncedCanvasRef.current = {
@@ -1030,13 +1041,20 @@ function WorkspaceView() {
       setCanvasTransition("idle");
 
       setTimeout(() => {
+        if (
+          hydrationSerialRef.current !== hydrationSerial ||
+          lastLoadedId.current !== workspaceId
+        )
+          return;
         isInitialLoad.current = false;
+        if (localCache && !draftConflictRef.current)
+          setHydrationEpoch((value) => value + 1);
       }, 500);
     }
   }, [canvasData, workspaceId, setNodes, setEdges, toast]);
 
   useEffect(() => {
-    if (isInitialLoad.current) return;
+    if (isInitialLoad.current || lastLoadedId.current !== workspaceId) return;
     if (isRemoteUpdate.current) return;
     if (canvasTransition !== "idle") return;
 
@@ -1094,6 +1112,11 @@ function WorkspaceView() {
         },
         {
           onSuccess: ({ revision }) => {
+            if (
+              activeWorkspaceIdRef.current !== workspaceId ||
+              lastLoadedId.current !== workspaceId
+            )
+              return;
             if (revision >= canvasRevisionRef.current) {
               canvasRevisionRef.current = revision;
               lastSyncedCanvasRef.current = {
@@ -1129,6 +1152,7 @@ function WorkspaceView() {
     workspaceId,
     sync,
     reportCanvasSaveFailure,
+    hydrationEpoch,
   ]);
 
   useEffect(() => {
@@ -1360,6 +1384,13 @@ function WorkspaceView() {
   );
 
   const handleSave = () => {
+    if (isInitialLoad.current || lastLoadedId.current !== workspaceId) {
+      toast({
+        title: "Canvas is still loading",
+        description: "Wait for the workspace to finish loading before saving.",
+      });
+      return;
+    }
     if (draftConflictRef.current) {
       toast({
         title: "Local draft needs review",
@@ -1415,6 +1446,11 @@ function WorkspaceView() {
       },
       {
         onSuccess: ({ revision }) => {
+          if (
+            activeWorkspaceIdRef.current !== workspaceId ||
+            lastLoadedId.current !== workspaceId
+          )
+            return;
           if (revision >= canvasRevisionRef.current) {
             canvasRevisionRef.current = revision;
             lastSyncedCanvasRef.current = {
