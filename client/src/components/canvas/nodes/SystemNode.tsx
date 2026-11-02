@@ -689,7 +689,7 @@ export function SystemNode({
         minWidth={minimumDimensions.width}
         minHeight={minimumDimensions.height}
         isVisible={selected}
-        lineClassName={isNote ? "!border-yellow-500/50" : "!border-blue-500/50"}
+        lineClassName="!border-blue-500/50"
         lineStyle={{ padding: 6 }}
         handleClassName="!h-2.5 !w-2.5 !bg-white !border-2 !border-blue-500 !rounded-full !shadow-md"
         handleStyle={{ margin: -6 }}
@@ -784,25 +784,23 @@ export function SystemNode({
           <div
             className={`
                             relative p-4 overflow-hidden w-full h-full flex flex-col rounded-xl
-                            shadow-lg shadow-black/20
-                            ${selected ? "ring-2 ring-yellow-400/50 shadow-[0_0_20px_rgba(250,204,21,0.15)]" : "group-hover:shadow-xl group-hover:shadow-black/30"}
+                            ${selected ? "ring-2 ring-blue-500/50" : ""}
                             transition-shadow
                         `}
             style={{
-              background:
-                customBg || "linear-gradient(135deg, #FFF9C4, #FFF176)",
+              background: customBg || "#f5f5f4",
               border: customBorder
                 ? `1px solid ${customBorder}`
-                : "1px solid rgba(250, 204, 21, 0.3)",
+                : "1.5px solid #aeb5b0",
               borderRadius: finalRadius,
               ...themeStyles,
             }}
           >
             <p
-              className="leading-relaxed font-semibold whitespace-pre-wrap break-all italic w-full max-w-full"
+              className="leading-relaxed font-medium whitespace-pre-wrap break-words w-full max-w-full"
               style={{
                 fontFamily: "var(--font-body)",
-                color: customFontColor || "rgba(66, 32, 6, 0.8)",
+                color: customFontColor || nodeTextColor(customBg, false),
                 fontSize:
                   finalFontSize ||
                   `${Math.max(14, Math.floor((width || 192) / 12))}px`,
@@ -822,14 +820,14 @@ export function SystemNode({
             style={{
               border: customBorder
                 ? `1.5px dashed ${customBorder}`
-                : `1.5px dashed ${finalColor}35`,
-              background: customBg || `${finalColor}08`,
+                : `1.5px dashed ${userAccent || "#8999b9"}`,
+              background: customBg || "rgba(229, 232, 243, 0.06)",
               borderRadius: finalRadius,
               ...themeStyles,
             }}
           >
             {/* Top-left corner label — type + name */}
-            <div className="flex items-center gap-1.5 px-2.5 pt-2 self-start">
+            <div className="m-2 flex max-w-[calc(100%-1rem)] items-center gap-1.5 self-start rounded-full bg-[#e5e8f3] px-3 py-1">
               {brand.Icon &&
                 (typeof brand.Icon === "string" ? (
                   <img
@@ -851,19 +849,19 @@ export function SystemNode({
                   />
                 ))}
               <span
-                className="font-bold uppercase tracking-[0.14em] opacity-60"
+                className="font-semibold"
                 style={{
                   fontSize: `${zoneLabelSize}px`,
-                  color: customFontColor || finalColor,
+                  color: customFontColor || "#3d527e",
                 }}
               >
                 {brand.label}
               </span>
               <span
-                className="font-normal tracking-normal normal-case opacity-40"
+                className="truncate font-medium"
                 style={{
                   fontSize: `${zoneLabelSize}px`,
-                  color: customFontColor || finalColor,
+                  color: customFontColor || "#3d527e",
                 }}
               >
                 / {data.label!}
@@ -905,7 +903,7 @@ export function SystemNode({
           <div
             className={`
                             relative border border-dashed overflow-hidden w-full h-full flex flex-col rounded-2xl
-                            bg-[#326CE5]/[0.03] border-[#326CE5]/20
+                            bg-[#e5e8f3]/[0.06] border-[#8999b9]
                             ${selected ? "ring-2 ring-[#326CE5]/40 shadow-[0_0_30px_rgba(50,108,229,0.1)]" : "hover:bg-[#326CE5]/[0.05]"}
                             transition-all
                         `}
@@ -919,15 +917,15 @@ export function SystemNode({
             {/* Namespace label — pill badge */}
             <div className="flex items-center gap-2 p-2 self-start">
               <div
-                className="px-3 py-1 rounded-full bg-[#326CE5]/80 font-black uppercase tracking-[0.15em] text-white flex items-center gap-1.5"
+                className="px-3 py-1 rounded-full bg-[#e5e8f3] font-semibold flex items-center gap-1.5"
                 style={{
                   fontSize: `${zoneLabelSize}px`,
-                  color: customFontColor || "#ffffff",
+                  color: customFontColor || "#3d527e",
                 }}
               >
                 <SiKubernetes
                   style={{ width: zoneIconSize, height: zoneIconSize }}
-                  className="text-white"
+                  className="text-[#3d527e]"
                 />
                 ns: {data.label!}
               </div>
