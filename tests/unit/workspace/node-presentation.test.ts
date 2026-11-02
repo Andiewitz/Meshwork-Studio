@@ -15,7 +15,7 @@ describe("canvas node presentation", () => {
     ["queue", "async", "queue"],
     ["api", "external", "external"],
     ["k8s-cronjob", "async", "card"],
-    ["unrecognized", "compute", "card"],
+    ["unrecognized", "other", "card"],
   ] as const)(
     "classifies %s without changing its saved type",
     (type, layer, shape) => {
@@ -30,6 +30,14 @@ describe("canvas node presentation", () => {
     expect(nodeSubtitle("gateway", "Production gateway", undefined)).toBe(
       "API gateway",
     );
+    expect(
+      nodeSubtitle(
+        "generic",
+        "Third-party processor",
+        undefined,
+        "payment-processor",
+      ),
+    ).toBe("payment-processor");
   });
   it("chooses readable text for light and dark custom backgrounds", () => {
     expect(nodeTextColor("#fff")).toBe("#1c2023");

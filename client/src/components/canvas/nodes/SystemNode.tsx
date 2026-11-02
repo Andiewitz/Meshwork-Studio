@@ -585,7 +585,12 @@ export function SystemNode({
     "!w-2 !h-2 !rounded-full !border-2 !border-blue-400 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm";
   const { layer, shape } = nodePresentation(type);
   const palette = nodeLayerColors[layer];
-  const subtitle = nodeSubtitle(type, data.label, data.provider);
+  const subtitle = nodeSubtitle(
+    type,
+    data.label,
+    data.provider,
+    data.originalType,
+  );
   const iconByType: Record<string, keyof typeof HeroIcons> = {
     user: "UserIcon",
     app: "ComputerDesktopIcon",
@@ -606,6 +611,27 @@ export function SystemNode({
     api: "ArrowTopRightOnSquareIcon",
     auth0: "ShieldCheckIcon",
     vault: "ShieldCheckIcon",
+    okta: "ShieldCheckIcon",
+    waf: "ShieldCheckIcon",
+    nats: "QueueListIcon",
+    socketio: "SignalIcon",
+    pusher: "SignalIcon",
+    github_actions: "PlayCircleIcon",
+    jenkins: "Cog6ToothIcon",
+    circleci: "PlayCircleIcon",
+    gitlab: "CodeBracketIcon",
+    argocd: "ArrowPathIcon",
+    prometheus: "ChartBarIcon",
+    grafana: "ChartBarIcon",
+    datadog: "ChartBarIcon",
+    influxdb: "CircleStackIcon",
+    snowflake: "CircleStackIcon",
+    clickhouse: "CircleStackIcon",
+    stripe: "CreditCardIcon",
+    paypal: "CreditCardIcon",
+    twilio: "ChatBubbleLeftRightIcon",
+    sendgrid: "EnvelopeIcon",
+    shopify: "ShoppingBagIcon",
     "k8s-pod": "CubeIcon",
     "k8s-deployment": "Square3Stack3DIcon",
     "k8s-replicaset": "Square2StackIcon",

@@ -1,5 +1,5 @@
 export type NodeLayer =
-  "client" | "edge" | "compute" | "data" | "async" | "external";
+  "client" | "edge" | "compute" | "data" | "async" | "external" | "other";
 export type NodeShape = "pill" | "card" | "database" | "queue" | "external";
 
 const layers: Record<string, NodeLayer> = {
@@ -10,6 +10,7 @@ const layers: Record<string, NodeLayer> = {
   loadBalancer: "edge",
   gateway: "edge",
   waf: "edge",
+  socketio: "edge",
   "k8s-ingress": "edge",
   database: "data",
   cache: "data",
@@ -30,6 +31,31 @@ const layers: Record<string, NodeLayer> = {
   shopify: "external",
   sendgrid: "external",
   paypal: "external",
+  pusher: "external",
+  server: "compute",
+  microservice: "compute",
+  worker: "compute",
+  logic: "compute",
+  github_actions: "compute",
+  jenkins: "compute",
+  circleci: "compute",
+  gitlab: "compute",
+  argocd: "compute",
+  vault: "compute",
+  auth0: "compute",
+  okta: "compute",
+  prometheus: "compute",
+  grafana: "compute",
+  datadog: "compute",
+  "k8s-pod": "compute",
+  "k8s-deployment": "compute",
+  "k8s-replicaset": "compute",
+  "k8s-statefulset": "compute",
+  "k8s-daemonset": "compute",
+  "k8s-service": "compute",
+  "k8s-configmap": "compute",
+  "k8s-secret": "compute",
+  "k8s-hpa": "compute",
 };
 
 export const nodeLayerColors: Record<
@@ -42,13 +68,14 @@ export const nodeLayerColors: Record<
   data: { background: "#dff2e5", border: "#98cdaa", icon: "#12643d" },
   async: { background: "#ffebcd", border: "#e8b563", icon: "#85500c" },
   external: { background: "#f5f5f4", border: "#8a8f8d", icon: "#454b49" },
+  other: { background: "#eceeec", border: "#aeb5b0", icon: "#505a54" },
 };
 
 export function nodePresentation(type: string): {
   layer: NodeLayer;
   shape: NodeShape;
 } {
-  const layer = layers[type] ?? "compute";
+  const layer = layers[type] ?? "other";
   const shape: NodeShape =
     type === "database"
       ? "database"
@@ -87,11 +114,15 @@ export function nodeSubtitle(
   type: string,
   label: string | undefined,
   provider: string | undefined,
+  originalType?: string,
 ): string | undefined {
   const value =
     provider?.trim() ||
+    (type === "generic" ? originalType?.trim() : undefined) ||
     typeLabels[type] ||
-    type.replace(/^k8s-/, "Kubernetes ").replace(/[_-]/g, " ");
+    (type === "generic"
+      ? undefined
+      : type.replace(/^k8s-/, "Kubernetes ").replace(/[_-]/g, " "));
   return value && value.toLowerCase() !== label?.trim().toLowerCase()
     ? value
     : undefined;
