@@ -1,5 +1,15 @@
 import type { Node } from "@xyflow/react";
-import { getNodeSize } from "./nodeRegistry";
+import { CONTAINER_TYPES, getNodeSize } from "./nodeRegistry";
+
+/** Minimum sizes apply to new resize operations, not to existing saved frames. */
+export function getNodeMinimumDimensions(type?: string): {
+  width: number;
+  height: number;
+} {
+  return CONTAINER_TYPES.has(type || "")
+    ? { width: 144, height: 96 }
+    : { width: 96, height: 48 };
+}
 
 function positiveNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value > 0

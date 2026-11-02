@@ -16,8 +16,21 @@ import {
   AdjustmentsHorizontalIcon as Sliders,
   ArrowRightIcon as ArrowRight,
 } from "@heroicons/react/24/outline";
+import {
+  nodeLayerColors,
+  nodePresentation,
+  nodeTextColor,
+} from "@/components/canvas/nodes/nodePresentation";
+import { nodeBrands } from "@/components/canvas/nodes/SystemNode";
+import {
+  hasLegacyDefaultAppearance,
+  legacyFallbackBrand,
+} from "@/components/canvas/nodes/legacyNodeAppearance";
 import { nodeTypesList } from "@/features/workspace/utils/nodeTypes";
-import { getNodeDimensions } from "@/features/workspace/utils/nodeGeometry";
+import {
+  getNodeDimensions,
+  getNodeMinimumDimensions,
+} from "@/features/workspace/utils/nodeGeometry";
 import type { NodeData, EdgeData, NodeStyle } from "@/types/canvas";
 
 interface PropertiesSidebarProps {
@@ -66,18 +79,27 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
   // --- NODE PROPERTIES SIDEBAR MODE ---
   if (selectedNode) {
     const dimensions = getNodeDimensions(selectedNode);
+    const minimumDimensions = getNodeMinimumDimensions(selectedNode.type);
     const nodeInfo = nodeTypesList.find((n) => n.type === selectedNode.type);
     const NodeIcon = nodeInfo?.icon || Box;
     const currentAccent = selectedNode.data?.accentColor;
 
     const tags = selectedNode.data?.tags ?? [];
-    const nodeStyle = (selectedNode.style ?? {}) as NodeStyle;
+    const legacyDefault = hasLegacyDefaultAppearance(
+      selectedNode,
+      nodeBrands[selectedNode.type || ""] || legacyFallbackBrand,
+    );
+    const nodeStyle = (
+      legacyDefault ? {} : (selectedNode.style ?? {})
+    ) as NodeStyle;
+    const palette =
+      nodeLayerColors[nodePresentation(selectedNode.type || "generic").layer];
     const backgroundColor = nodeStyle.backgroundColor ?? "";
     const borderColor = nodeStyle.borderColor ?? "";
     const borderRadius =
       nodeStyle.borderRadius !== undefined ? nodeStyle.borderRadius : 8;
     const opacity = nodeStyle.opacity !== undefined ? nodeStyle.opacity : 1;
-    const fontColor = selectedNode.data?.fontColor ?? "";
+    const fontColor = legacyDefault ? "" : (selectedNode.data?.fontColor ?? "");
     const fontSize = nodeStyle.fontSize !== undefined ? nodeStyle.fontSize : 13;
     const customIcon = selectedNode.data?.icon ?? "";
     const theme = selectedNode.data?.theme ?? "default";
@@ -280,12 +302,15 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               </div>
               <Input
                 type="number"
-                min={24}
+                min={minimumDimensions.width}
+                aria-label="Node width"
                 value={Math.round(dimensions.width)}
                 onChange={(e) => {
                   const val = parseInt(e.target.value);
                   if (!isNaN(val) && val > 0) {
-                    updateNodeStyle(selectedNode.id, { width: val });
+                    updateNodeStyle(selectedNode.id, {
+                      width: Math.max(minimumDimensions.width, val),
+                    });
                   }
                 }}
                 className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
@@ -297,12 +322,15 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               </div>
               <Input
                 type="number"
-                min={24}
+                min={minimumDimensions.height}
+                aria-label="Node height"
                 value={Math.round(dimensions.height)}
                 onChange={(e) => {
                   const val = parseInt(e.target.value);
                   if (!isNaN(val) && val > 0) {
-                    updateNodeStyle(selectedNode.id, { height: val });
+                    updateNodeStyle(selectedNode.id, {
+                      height: Math.max(minimumDimensions.height, val),
+                    });
                   }
                 }}
                 className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
@@ -382,7 +410,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                       backgroundColor.startsWith("#") &&
                       backgroundColor.length === 7
                         ? backgroundColor
-                        : "#1a1a2e"
+                        : palette.background
                     }
                     onChange={(e) =>
                       handleStyleChange("backgroundColor", e.target.value)
@@ -412,7 +440,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                     value={
                       borderColor.startsWith("#") && borderColor.length === 7
                         ? borderColor
-                        : "#555555"
+                        : palette.border
                     }
                     onChange={(e) =>
                       handleStyleChange("borderColor", e.target.value)
@@ -429,7 +457,9 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                     Border Radius
                   </Label>
                   <span className="text-[10px] text-white/30 font-mono">
-                    {borderRadius}px
+                    {nodeStyle.borderRadius === undefined
+                      ? "Default"
+                      : `${borderRadius}px`}
                   </span>
                 </div>
                 <input
@@ -490,7 +520,10 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                     value={
                       fontColor.startsWith("#") && fontColor.length === 7
                         ? fontColor
-                        : "#ffffff"
+                        : nodeTextColor(
+                            backgroundColor || undefined,
+                            theme === "minimal" || theme === "glass",
+                          )
                     }
                     onChange={(e) =>
                       updateNodeData(selectedNode.id, {

@@ -3,6 +3,7 @@ import {
   nodePresentation,
   nodeSubtitle,
   nodeTextColor,
+  nodeAccessibleLabel,
 } from "@/components/canvas/nodes/nodePresentation";
 
 describe("canvas node presentation", () => {
@@ -43,5 +44,14 @@ describe("canvas node presentation", () => {
     expect(nodeTextColor("#fff")).toBe("#1c2023");
     expect(nodeTextColor("#111827")).toBe("#fff");
     expect(nodeTextColor(undefined, true)).toBe("#fff");
+  });
+  it("keeps the complete label, provider and description accessible", () => {
+    expect(
+      nodeAccessibleLabel("database", {
+        label: "A long database name",
+        provider: "PostgreSQL",
+        description: "Stores customer orders",
+      }),
+    ).toBe("A long database name. PostgreSQL. Stores customer orders");
   });
 });

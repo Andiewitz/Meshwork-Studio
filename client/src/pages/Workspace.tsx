@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useState, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+} from "react";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
 import { DefaultLoading } from "@/components/loading-states";
@@ -167,7 +173,12 @@ import {
   TagIcon as LucideTag,
   XMarkIcon as X,
 } from "@heroicons/react/24/outline";
-import { SystemNode } from "@/components/canvas/nodes/SystemNode";
+import { SystemNode, nodeBrands } from "@/components/canvas/nodes/SystemNode";
+import {
+  prepareLegacyNodeForEdit,
+  legacyFallbackBrand,
+} from "@/components/canvas/nodes/legacyNodeAppearance";
+import { nodeAccessibleLabel } from "@/components/canvas/nodes/nodePresentation";
 
 import {
   nodeTypes,
@@ -273,6 +284,22 @@ function WorkspaceView() {
   const duplicateWorkspace = useDuplicateWorkspace();
 
   const [nodes, setNodes] = useState<Node[]>([]);
+  const accessibleNodeCache = useRef(new WeakMap<Node, Node>());
+  const accessibleNodes = useMemo(
+    () =>
+      nodes.map((node) => {
+        if (node.ariaLabel) return node;
+        const cached = accessibleNodeCache.current.get(node);
+        if (cached) return cached;
+        const accessible = {
+          ...node,
+          ariaLabel: nodeAccessibleLabel(node.type, node.data),
+        };
+        accessibleNodeCache.current.set(node, accessible);
+        return accessible;
+      }),
+    [nodes],
+  );
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -1264,7 +1291,11 @@ function WorkspaceView() {
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === id) {
-            return { ...node, data: { ...node.data, ...newData } };
+            const editable = prepareLegacyNodeForEdit(
+              node,
+              nodeBrands[node.type || ""] || legacyFallbackBrand,
+            );
+            return { ...editable, data: { ...editable.data, ...newData } };
           }
           return node;
         }),
@@ -1291,8 +1322,12 @@ function WorkspaceView() {
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === id) {
+            const editable = prepareLegacyNodeForEdit(
+              node,
+              nodeBrands[node.type || ""] || legacyFallbackBrand,
+            );
             return withNodeDimensions(
-              { ...node, style: { ...node.style, ...snappedStyle } },
+              { ...editable, style: { ...editable.style, ...snappedStyle } },
               { width, height },
             );
           }
@@ -2032,7 +2067,7 @@ function WorkspaceView() {
             </AnimatePresence>
 
             <ReactFlow
-              nodes={nodes}
+              nodes={accessibleNodes}
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}

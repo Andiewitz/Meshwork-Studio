@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { ReactFlow, type Node } from "@xyflow/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SystemNode } from "@/components/canvas/nodes/SystemNode";
+import { nodeAccessibleLabel } from "@/components/canvas/nodes/nodePresentation";
 
 const nodeTypes = { database: SystemNode };
 
@@ -104,5 +105,30 @@ describe("node appearance through React Flow", () => {
       ?.getAttribute("d");
     expect(defaultIconPath).toBeTruthy();
     expect(customIconPath).not.toBe(defaultIconPath);
+  });
+  it("exposes the full description when the canvas node receives keyboard focus", async () => {
+    const data = {
+      label: "Orders",
+      provider: "PostgreSQL",
+      description: "Stores all order records",
+    };
+    await renderNode({
+      id: "db",
+      type: "database",
+      position: { x: 0, y: 0 },
+      width: 144,
+      height: 120,
+      data,
+      ariaLabel: nodeAccessibleLabel("database", data),
+    });
+    const node = container.querySelector<HTMLElement>('[data-id="db"]')!;
+    expect(node.getAttribute("aria-label")).toBe(
+      "Orders. PostgreSQL. Stores all order records",
+    );
+    await act(async () => node.focus());
+    expect(document.activeElement).toBe(node);
+    expect(node.querySelector('[role="tooltip"]')?.textContent).toContain(
+      "Stores all order records",
+    );
   });
 });

@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
 import {
   Handle,
   Position,
@@ -10,8 +9,13 @@ import {
 } from "@xyflow/react";
 import { EXPANDABLE_TYPES } from "@/features/workspace/utils/nodeTypes";
 import { CONTAINER_TYPES } from "@/features/workspace/utils/nodeRegistry";
+import { getNodeMinimumDimensions } from "@/features/workspace/utils/nodeGeometry";
 import { fireEnterNode } from "@/features/workspace/utils/canvasEvents";
 import type { NodeData } from "@/types/canvas";
+import {
+  hasLegacyDefaultAppearance,
+  legacyFallbackBrand,
+} from "./legacyNodeAppearance";
 import {
   nodeLayerColors,
   nodePresentation,
@@ -459,8 +463,7 @@ export function SystemNode({
   // React Flow applies style to its wrapper and does not pass it as a node prop.
   const storedStyle = useStore(
     (state) => state.nodeLookup.get(id)?.internals.userNode.style,
-  ) as NodeStyle | undefined;
-  const [isHovered, setIsHovered] = useState(false);
+  ) as (React.CSSProperties & NodeStyle) | undefined;
   const provider = (data.provider ?? "").toLowerCase();
   const isInfrastructure =
     CONTAINER_TYPES.has(type) && type !== "k8s-namespace";
@@ -506,19 +509,11 @@ export function SystemNode({
   // Old editor-created nodes stored the old default look as if it were a
   // customization. Recognize only the complete default tuple; keep all other
   // stored styles intact and never modify the saved node during rendering.
-  const legacyBrand = nodeBrands[type] || {
-    color: "#4F46E5",
-    borderColor: "#4338CA",
-  };
-  const legacyDefault =
-    storedStyle?.backgroundColor === legacyBrand.color &&
-    storedStyle.borderColor === legacyBrand.borderColor &&
-    storedStyle.borderRadius === 8 &&
-    storedStyle.opacity === 1 &&
-    storedStyle.fontSize === 13 &&
-    (!data.theme || data.theme === "default") &&
-    !data.icon &&
-    (!data.fontColor || data.fontColor.toLowerCase() === "#ffffff");
+  const legacyBrand = nodeBrands[type] || legacyFallbackBrand;
+  const legacyDefault = hasLegacyDefaultAppearance(
+    { style: storedStyle, data },
+    legacyBrand,
+  );
   const customBg = legacyDefault ? undefined : storedStyle?.backgroundColor;
   const customBorder = legacyDefault ? undefined : storedStyle?.borderColor;
   const customRadius = legacyDefault ? undefined : storedStyle?.borderRadius;
@@ -583,6 +578,7 @@ export function SystemNode({
 
   const handleCls =
     "!w-2 !h-2 !rounded-full !border-2 !border-blue-400 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm";
+  const minimumDimensions = getNodeMinimumDimensions(type);
   const { layer, shape } = nodePresentation(type);
   const palette = nodeLayerColors[layer];
   const subtitle = nodeSubtitle(
@@ -690,19 +686,15 @@ export function SystemNode({
   return (
     <>
       <NodeResizer
-        minWidth={24}
-        minHeight={24}
+        minWidth={minimumDimensions.width}
+        minHeight={minimumDimensions.height}
         isVisible={selected}
         lineClassName={isNote ? "!border-yellow-500/50" : "!border-blue-500/50"}
         lineStyle={{ padding: 6 }}
         handleClassName="!h-2.5 !w-2.5 !bg-white !border-2 !border-blue-500 !rounded-full !shadow-md"
         handleStyle={{ margin: -6 }}
       />
-      <div
-        className="group w-full h-full relative"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
+      <div className="group w-full h-full relative">
         {/* Connection Handles — small rounded dots on all 4 cardinal directions */}
         {/* Top */}
         <Handle
@@ -1002,12 +994,16 @@ export function SystemNode({
             >
               <div
                 className="line-clamp-2 break-words text-[13px] font-semibold"
+                title={data.label}
                 style={{ fontSize: finalFontSize }}
               >
                 {data.label || type}
               </div>
               {subtitle && (
-                <div className="mt-0.5 truncate text-[11px] font-normal opacity-75">
+                <div
+                  title={subtitle}
+                  className="mt-0.5 truncate text-[11px] font-normal opacity-75"
+                >
                   {subtitle}
                 </div>
               )}
@@ -1041,25 +1037,19 @@ export function SystemNode({
           </div>
         )}
 
-        {/* Hover Tooltip */}
-        <AnimatePresence>
-          {isHovered && !!data.description && (
-            <motion.div
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -5 }}
-              transition={{ duration: 0.15 }}
-              className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-[#121214] border border-white/10 rounded-lg p-2.5 z-[1000] shadow-2xl backdrop-blur-xl pointer-events-none"
-            >
-              <div className="text-[11px] font-semibold text-white/90 mb-1">
-                {data.label! || type}
-              </div>
-              <div className="text-[10px] text-white/50 leading-relaxed whitespace-pre-wrap">
-                {data.description}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {data.description && (
+          <div
+            role="tooltip"
+            className="node-description-tooltip pointer-events-none invisible absolute bottom-full left-1/2 z-[1000] mb-2 w-48 -translate-x-1/2 rounded-lg border border-white/10 bg-[#121214] p-2.5 opacity-0 shadow-xl transition-opacity group-hover:visible group-hover:opacity-100"
+          >
+            <div className="mb-1 text-[11px] font-semibold text-white/90">
+              {data.label || type}
+            </div>
+            <div className="whitespace-pre-wrap text-[11px] leading-relaxed text-white/70">
+              {data.description}
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

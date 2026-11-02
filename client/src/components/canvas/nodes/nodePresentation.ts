@@ -150,3 +150,35 @@ export function nodeTextColor(
     0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
   return luminance > 0.179 ? "#1c2023" : "#fff";
 }
+
+/** Accessible text stays complete even when the visual node truncates. */
+export function nodeAccessibleLabel(
+  type: string | undefined,
+  data: Record<string, unknown>,
+): string {
+  const label =
+    typeof data.label === "string" && data.label.trim()
+      ? data.label.trim()
+      : type || "Node";
+  const provider =
+    typeof data.provider === "string" ? data.provider : undefined;
+  const original =
+    typeof data.originalType === "string" ? data.originalType : undefined;
+  const subtitle = nodeSubtitle(type || "generic", label, provider, original);
+  const description =
+    typeof data.description === "string" ? data.description.trim() : "";
+  const status =
+    typeof data.status === "string" && data.status
+      ? `Status: ${data.status}`
+      : "";
+  const metadata = [
+    data.replicas ? `${String(data.replicas)} replicas` : "",
+    data.image,
+    data.serviceType,
+    data.schedule,
+    data.storageSize,
+  ].filter((value): value is string => typeof value === "string" && !!value);
+  return [label, subtitle, status, ...metadata, description]
+    .filter(Boolean)
+    .join(". ");
+}

@@ -377,6 +377,11 @@ html {
   box-shadow: none !important;
 }
 
+.react-flow__node:focus-within .node-description-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
 /* Tool specific cursors (override global pointer for crosshairs) */
 
 [data-cursor="select"] .react-flow__pane,

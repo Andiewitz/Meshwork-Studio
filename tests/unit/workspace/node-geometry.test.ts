@@ -4,6 +4,7 @@ import {
   getNodeDimensions,
   normalizeNodeDimensions,
   withNodeDimensions,
+  getNodeMinimumDimensions,
 } from "@/features/workspace/utils/nodeGeometry";
 
 const legacyNode: Node = {
@@ -15,6 +16,23 @@ const legacyNode: Node = {
 };
 
 describe("node geometry", () => {
+  it("uses readable minimum sizes without changing existing small nodes", () => {
+    expect(getNodeMinimumDimensions("database")).toEqual({
+      width: 96,
+      height: 48,
+    });
+    expect(getNodeMinimumDimensions("vpc")).toEqual({ width: 144, height: 96 });
+    expect(
+      getNodeDimensions({
+        id: "old",
+        type: "database",
+        position: { x: 0, y: 0 },
+        width: 48,
+        height: 24,
+        data: {},
+      }),
+    ).toEqual({ width: 48, height: 24 });
+  });
   it("migrates legacy style dimensions without changing user sizes", () => {
     const [normalized] = normalizeNodeDimensions([legacyNode]);
 
