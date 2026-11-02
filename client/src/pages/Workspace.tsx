@@ -477,6 +477,10 @@ function WorkspaceView() {
   // ── Real-time collaboration (cursors & presence) ──
   const isRemoteUpdate = useRef(false);
   const draftConflictRef = useRef(false);
+  const pendingConnectionGapRef = useRef(false);
+  useEffect(() => {
+    pendingConnectionGapRef.current = false;
+  }, [workspaceId]);
 
   const handleRemoteNodeMove = useCallback(
     (nodeId: string, x: number, y: number, parentId?: string | null) => {
@@ -552,8 +556,11 @@ function WorkspaceView() {
       });
     },
     () => {
-      if (lastLoadedId.current !== workspaceId || draftConflictRef.current)
+      if (lastLoadedId.current !== workspaceId) {
+        pendingConnectionGapRef.current = true;
         return;
+      }
+      if (draftConflictRef.current) return;
       draftConflictRef.current = true;
       const previousDraft = getCanvasFromLocalCache(workspaceId);
       draftBaseRevisionRef.current =
@@ -957,33 +964,66 @@ function WorkspaceView() {
       const localCache = getCanvasFromLocalCache(workspaceId);
 
       if (localCache && localCache.nodes && localCache.edges) {
-        const conflict = !isCanvasDraftCurrent(localCache, canvasData.revision);
+        const conflict =
+          pendingConnectionGapRef.current ||
+          !isCanvasDraftCurrent(localCache, canvasData.revision);
         draftConflictRef.current = conflict;
         draftBaseRevisionRef.current = localCache.baseRevision;
         setDraftConflict(conflict);
+        const cached =
+          !conflict ||
+          saveCanvasToLocalCache(
+            workspaceId,
+            localCache.nodes,
+            localCache.edges,
+            ++saveGenerationRef.current,
+            localCache.baseRevision,
+            true,
+          );
         setNodes(
           orderNodesByHierarchy(normalizeNodeDimensions(localCache.nodes)),
         );
         setEdges(localCache.edges);
-        setSaveStatus("offline_saved");
+        setSaveStatus(cached ? "offline_saved" : "unsaved");
         toast({
           title: conflict
             ? "Local draft needs review"
             : "Restored Unsaved Changes",
-          description: conflict
-            ? "The server canvas changed or the draft is from an older version. Export your draft before loading the server version."
-            : "We found unsaved changes locally and restored them. They will sync automatically soon.",
+          description: !cached
+            ? "Local storage is unavailable. Export a copy before leaving this page."
+            : conflict
+              ? "The server canvas changed or the draft is from an older version. Export your draft before loading the server version."
+              : "We found unsaved changes locally and restored them. They will sync automatically soon.",
         });
       } else {
-        draftConflictRef.current = false;
+        const conflict = pendingConnectionGapRef.current;
+        draftConflictRef.current = conflict;
         draftBaseRevisionRef.current = canvasData.revision;
-        setDraftConflict(false);
+        setDraftConflict(conflict);
         setNodes(
           orderNodesByHierarchy(
             normalizeNodeDimensions(canvasData.nodes || []),
           ),
         );
         setEdges(canvasData.edges || []);
+        if (conflict) {
+          const cached = saveCanvasToLocalCache(
+            workspaceId,
+            canvasData.nodes || [],
+            canvasData.edges || [],
+            ++saveGenerationRef.current,
+            canvasData.revision,
+            true,
+          );
+          setSaveStatus(cached ? "offline_saved" : "unsaved");
+          toast({
+            title: "Live connection was interrupted",
+            description: cached
+              ? "The canvas may be missing live changes; review it before saving."
+              : "Local storage is unavailable. Export a copy before leaving this page.",
+            variant: "destructive",
+          });
+        }
       }
       lastLoadedId.current = workspaceId;
       setCanvasStack([]);

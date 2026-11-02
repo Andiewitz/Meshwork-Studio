@@ -93,4 +93,21 @@ describe("presence reconnection", () => {
     act(() => vi.advanceTimersByTime(1000));
     expect(FakeSocket.instances).toHaveLength(2);
   });
+  it("reports an interrupted connection even before the initial room join", () => {
+    const first = FakeSocket.instances[0];
+    act(() => first.close(1006));
+    expect(disconnected).toHaveBeenCalledOnce();
+    expect(reconnected).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(1000));
+    expect(FakeSocket.instances).toHaveLength(2);
+  });
+  it("treats a server's clean close as a gap while the workspace stays open", () => {
+    const first = FakeSocket.instances[0];
+    act(() => first.open());
+    act(() => first.presence());
+    act(() => first.close(1000));
+    expect(disconnected).toHaveBeenCalledOnce();
+    act(() => vi.advanceTimersByTime(1000));
+    expect(FakeSocket.instances).toHaveLength(2);
+  });
 });
