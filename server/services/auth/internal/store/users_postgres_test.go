@@ -4,10 +4,14 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/meshwork-studio/auth/internal/accountcleanup"
 	"github.com/meshwork-studio/auth/internal/session"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"sync"
 	"testing"
@@ -251,6 +255,75 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 		}
 		if users != 0 || csrf != 0 || audit != 1 || status != "completed" {
 			t.Fatalf("users=%d csrf=%d audit=%d status=%s", users, csrf, audit, status)
+		}
+	})
+
+	t.Run("worker resumes published cleanup through authenticated transport", func(t *testing.T) {
+		if _, err := pool.Exec(ctx, `INSERT INTO users(id,email,email_normalized,is_active) VALUES ('worker','worker@example.test','worker@example.test',true)`); err != nil {
+			t.Fatal(err)
+		}
+		operationID := "bb58910d-3bf7-40cf-9cde-6f3992b09a38"
+		if _, err := db.BeginAccountCleanup(ctx, "worker", operationID); err != nil {
+			t.Fatal(err)
+		}
+		// Test-only: never bypass the real write fence in production.
+		if _, err := pool.Exec(ctx, `UPDATE account_cleanup_operations SET status='pending' WHERE id=$1`, operationID); err != nil {
+			t.Fatal(err)
+		}
+		queue := CleanupQueue{DB: db}
+		workspaceComplete := false
+		bridge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("X-Internal-Key") != "node-key" {
+				http.Error(w, "forbidden", 403)
+				return
+			}
+			var body struct {
+				OperationID string `json:"operationId"`
+				UserID      string `json:"userId"`
+				Token       string `json:"claimToken"`
+				Service     string `json:"service"`
+			}
+			if json.NewDecoder(r.Body).Decode(&body) != nil {
+				http.Error(w, "invalid", 400)
+				return
+			}
+			allowed, err := queue.AuthorizeDelivery(r.Context(), &accountcleanup.Claim{OperationID: body.OperationID, UserID: body.UserID, Token: body.Token}, body.Service)
+			if err != nil || !allowed {
+				http.Error(w, "forbidden", 403)
+				return
+			}
+			status := "completed"
+			if body.Service == "workspace" && !workspaceComplete {
+				status = "published"
+			}
+			_ = json.NewEncoder(w).Encode(map[string]string{"operationId": body.OperationID, "status": status})
+		}))
+		defer bridge.Close()
+		transport, err := accountcleanup.NewHTTPTransport(bridge.URL, "node-key")
+		if err != nil {
+			t.Fatal(err)
+		}
+		worker := accountcleanup.Worker{Store: queue, Transport: transport}
+		if err := worker.RunOnce(ctx); err != nil {
+			t.Fatal(err)
+		}
+		var status string
+		if err := pool.QueryRow(ctx, `SELECT status FROM account_cleanup_operations WHERE id=$1`, operationID).Scan(&status); err != nil || status != "pending" {
+			t.Fatalf("queued cleanup settled early: %s %v", status, err)
+		}
+		workspaceComplete = true
+		if _, err := pool.Exec(ctx, `UPDATE account_cleanup_operations SET next_attempt_at=now() WHERE id=$1`, operationID); err != nil {
+			t.Fatal(err)
+		}
+		if err := worker.RunOnce(ctx); err != nil {
+			t.Fatal(err)
+		}
+		var users int
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM users WHERE id='worker'`).Scan(&users); err != nil {
+			t.Fatal(err)
+		}
+		if err := pool.QueryRow(ctx, `SELECT status FROM account_cleanup_operations WHERE id=$1`, operationID).Scan(&status); err != nil || status != "completed" || users != 0 {
+			t.Fatalf("cleanup did not finish: %s users=%d err=%v", status, users, err)
 		}
 	})
 

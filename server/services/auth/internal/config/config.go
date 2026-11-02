@@ -38,7 +38,9 @@ type Config struct {
 	IPHashKey     []byte // HMAC-SHA256 key for IP pseudonymisation
 	EncryptionKey []byte // AES-256-GCM key for MFA secrets at rest
 
-	InternalKey string // shared secret for server-to-server introspection
+	InternalKey      string // shared secret for server-to-server introspection
+	CleanupBridgeURL string // optional Node internal cleanup bridge
+	CleanupBridgeKey string // Node INTERNAL_API_KEY
 
 	AssertionPrivateKey string   // ed25519 seed (b64) signing session assertions
 	AssertionPrevKeys   []string // previous public seeds accepted during rotation
@@ -211,6 +213,10 @@ func Load() (*Config, error) {
 	default:
 		cfg.EncryptionKey = randomKey(32)
 	}
+
+	cfg.CleanupBridgeURL = str("AUTH_CLEANUP_BRIDGE_URL")
+	cfg.CleanupBridgeKey = str("AUTH_CLEANUP_BRIDGE_KEY")
+	fail((cfg.CleanupBridgeURL == "") != (cfg.CleanupBridgeKey == ""), "AUTH_CLEANUP_BRIDGE_URL and AUTH_CLEANUP_BRIDGE_KEY must be configured together")
 
 	cfg.InternalKey = str("AUTH_INTERNAL_KEY")
 	fail(isProd && cfg.InternalKey == "",

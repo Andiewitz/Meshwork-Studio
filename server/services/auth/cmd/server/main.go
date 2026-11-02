@@ -17,6 +17,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/meshwork-studio/auth/internal/accountcleanup"
 	"github.com/meshwork-studio/auth/internal/config"
 	"github.com/meshwork-studio/auth/internal/httpapi"
 	"github.com/meshwork-studio/auth/internal/store"
@@ -149,6 +150,33 @@ func main() {
 			}
 		}
 	}()
+
+	if cfg.CleanupBridgeURL != "" {
+		transport, err := accountcleanup.NewHTTPTransport(cfg.CleanupBridgeURL, cfg.CleanupBridgeKey)
+		if err != nil {
+			logger.Error("cleanup worker configuration invalid", "err", err)
+			os.Exit(1)
+		}
+		workerCtx, cancelWorker := context.WithCancel(ctx)
+		workerDone := make(chan struct{})
+		worker := accountcleanup.Worker{Store: store.CleanupQueue{DB: db}, Transport: transport}
+		go func() {
+			defer close(workerDone)
+			ticker := time.NewTicker(5 * time.Second)
+			defer ticker.Stop()
+			for {
+				if err := worker.RunOnce(workerCtx); err != nil && workerCtx.Err() == nil {
+					logger.Warn("account cleanup attempt failed", "err", err)
+				}
+				select {
+				case <-workerCtx.Done():
+					return
+				case <-ticker.C:
+				}
+			}
+		}()
+		defer func() { cancelWorker(); <-workerDone }()
+	}
 
 	addr := net.JoinHostPort("", cfg.Port)
 	httpSrv := srv.HTTPServer(addr)

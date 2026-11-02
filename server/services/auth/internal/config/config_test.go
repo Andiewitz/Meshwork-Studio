@@ -118,3 +118,14 @@ func TestAbsoluteTTLMustCoverIdleTTL(t *testing.T) {
 		t.Fatalf("absolute < idle must be rejected, got %v", err)
 	}
 }
+func TestCleanupBridgeRequiresURLAndKeyTogether(t *testing.T) {
+	setEnv(t, map[string]string{"NODE_ENV": "development", "AUTH_DATABASE_URL": "postgres://db", "AUTH_CLEANUP_BRIDGE_URL": "http://127.0.0.1:5000", "AUTH_CLEANUP_BRIDGE_KEY": ""})
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "AUTH_CLEANUP_BRIDGE") {
+		t.Fatalf("missing bridge key accepted: %v", err)
+	}
+	t.Setenv("AUTH_CLEANUP_BRIDGE_KEY", "node-internal-test-key")
+	cfg, err := Load()
+	if err != nil || cfg.CleanupBridgeURL == "" {
+		t.Fatalf("valid bridge config rejected: %v", err)
+	}
+}
