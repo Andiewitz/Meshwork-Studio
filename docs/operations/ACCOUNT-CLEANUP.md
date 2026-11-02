@@ -5,7 +5,9 @@ single application host only. Account deletion remains unavailable in the UI;
 this is not a live self-service deletion workflow. A PostgreSQL-backed system test exercises the Identity worker, internal bridge,
 and Workspace, Team, and AI handlers with a simulated Canvas consumer, including
 an injected failure and retry. The full Canvas cleanup has not yet been verified
-against real DynamoDB/S3.
+against real DynamoDB/S3. To run that simulated-Canvas system test, install Go,
+point `ACCOUNT_CLEANUP_TEST_DATABASE_URL` at a disposable PostgreSQL database,
+and run `npx vitest run --config vitest.system.config.ts tests/system/account-cleanup/cross-service-postgres.test.ts`.
 
 The operator must stop **all** Node app and Go identity processes, drain any
 in-flight work, and keep them stopped throughout the fencing period. In Docker,
