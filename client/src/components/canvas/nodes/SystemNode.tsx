@@ -1,6 +1,13 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Handle, Position, NodeProps, NodeResizer, Node } from "@xyflow/react";
+import {
+  Handle,
+  Position,
+  NodeProps,
+  NodeResizer,
+  Node,
+  useStore,
+} from "@xyflow/react";
 import { EXPANDABLE_TYPES } from "@/features/workspace/utils/nodeTypes";
 import { CONTAINER_TYPES } from "@/features/workspace/utils/nodeRegistry";
 import { fireEnterNode } from "@/features/workspace/utils/canvasEvents";
@@ -9,6 +16,7 @@ import {
   nodeLayerColors,
   nodePresentation,
   nodeSubtitle,
+  nodeTextColor,
 } from "./nodePresentation";
 import * as HeroIcons from "@heroicons/react/24/outline";
 import {
@@ -447,8 +455,11 @@ export function SystemNode({
   selected,
   type,
   width,
-  style,
-}: NodeProps<Node<NodeData>> & { style?: NodeStyle }) {
+}: NodeProps<Node<NodeData>>) {
+  // React Flow applies style to its wrapper and does not pass it as a node prop.
+  const storedStyle = useStore(
+    (state) => state.nodeLookup.get(id)?.internals.userNode.style,
+  ) as NodeStyle | undefined;
   const [isHovered, setIsHovered] = useState(false);
   const provider = (data.provider ?? "").toLowerCase();
   const isInfrastructure =
@@ -492,19 +503,35 @@ export function SystemNode({
   const finalBorder =
     userAccent ?? statusBrand?.borderColor ?? brand.borderColor;
 
-  const customBg = style?.backgroundColor;
-  const customBorder = style?.borderColor;
-  const customRadius = style?.borderRadius;
-  const customOpacity = style?.opacity;
-  const customFontColor = style?.fontColor;
-  const customFontSize = style?.fontSize;
-  const customIconName = style?.icon;
-  const customTheme = style?.theme ?? "default";
+  // Old editor-created nodes stored the old default look as if it were a
+  // customization. Recognize only the complete default tuple; keep all other
+  // stored styles intact and never modify the saved node during rendering.
+  const legacyBrand = nodeBrands[type] || {
+    color: "#4F46E5",
+    borderColor: "#4338CA",
+  };
+  const legacyDefault =
+    storedStyle?.backgroundColor === legacyBrand.color &&
+    storedStyle.borderColor === legacyBrand.borderColor &&
+    storedStyle.borderRadius === 8 &&
+    storedStyle.opacity === 1 &&
+    storedStyle.fontSize === 13 &&
+    (!data.theme || data.theme === "default") &&
+    !data.icon &&
+    (!data.fontColor || data.fontColor.toLowerCase() === "#ffffff");
+  const customBg = legacyDefault ? undefined : storedStyle?.backgroundColor;
+  const customBorder = legacyDefault ? undefined : storedStyle?.borderColor;
+  const customRadius = legacyDefault ? undefined : storedStyle?.borderRadius;
+  const customFontColor = legacyDefault
+    ? undefined
+    : data.fontColor || storedStyle?.fontColor;
+  const customFontSize = legacyDefault ? undefined : storedStyle?.fontSize;
+  const customIconName = data.icon || storedStyle?.icon;
+  const customTheme = data.theme || storedStyle?.theme || "default";
 
   const finalBorderColor = customBorder || finalBorder;
   const finalRadius =
     customRadius !== undefined ? `${customRadius}px` : undefined;
-  const finalOpacity = customOpacity !== undefined ? customOpacity : undefined;
   const finalFontSize =
     customFontSize !== undefined ? `${customFontSize}px` : undefined;
 
@@ -593,9 +620,23 @@ export function SystemNode({
     "k8s-cronjob": "ClockIcon",
     "k8s-hpa": "ArrowsUpDownIcon",
   };
+  const iconAliases: Record<string, keyof typeof HeroIcons> = {
+    Database: "CircleStackIcon",
+    Globe: "GlobeAltIcon",
+    Server: "ServerIcon",
+    Box: "CubeIcon",
+    Search: "MagnifyingGlassIcon",
+    Zap: "BoltIcon",
+  };
+  const requestedIcon = customIconName
+    ? iconAliases[customIconName] ||
+      (customIconName.endsWith("Icon")
+        ? customIconName
+        : `${customIconName}Icon`)
+    : undefined;
   const iconName =
-    customIconName && HeroIcons[customIconName as keyof typeof HeroIcons]
-      ? (customIconName as keyof typeof HeroIcons)
+    requestedIcon && HeroIcons[requestedIcon]
+      ? requestedIcon
       : (iconByType[type] ?? "CubeIcon");
   const NodeIcon = HeroIcons[iconName] as React.ComponentType<{
     className?: string;
@@ -604,7 +645,10 @@ export function SystemNode({
   const showStatus = isKubernetes && !!k8sStatus;
   const textColor =
     customFontColor ||
-    (customBg || customTheme !== "default" ? "#fff" : "#1c2023");
+    nodeTextColor(
+      customBg,
+      customTheme === "glass" || customTheme === "minimal",
+    );
   const metadata = isKubernetes
     ? [
         data.replicas ? `${String(data.replicas)} replicas` : null,
@@ -702,7 +746,6 @@ export function SystemNode({
               backgroundColor: customBg,
               border: customBorder ? `1px solid ${customBorder}` : undefined,
               borderRadius: finalRadius,
-              opacity: finalOpacity,
               ...themeStyles,
             }}
           >
@@ -734,7 +777,6 @@ export function SystemNode({
                 ? `1px solid ${customBorder}`
                 : "1px solid rgba(250, 204, 21, 0.3)",
               borderRadius: finalRadius,
-              opacity: finalOpacity,
               ...themeStyles,
             }}
           >
@@ -765,7 +807,6 @@ export function SystemNode({
                 : `1.5px dashed ${finalColor}35`,
               background: customBg || `${finalColor}08`,
               borderRadius: finalRadius,
-              opacity: finalOpacity,
               ...themeStyles,
             }}
           >
@@ -854,7 +895,6 @@ export function SystemNode({
               backgroundColor: customBg,
               border: customBorder ? `1px solid ${customBorder}` : undefined,
               borderRadius: finalRadius,
-              opacity: finalOpacity,
               ...themeStyles,
             }}
           >
@@ -889,7 +929,6 @@ export function SystemNode({
                   : shape === "database"
                     ? "50% / 13%"
                     : "16px"),
-              opacity: finalOpacity,
               ...themeStyles,
             }}
           >
@@ -913,7 +952,14 @@ export function SystemNode({
             )}
             <div
               className="relative flex h-7 w-7 shrink-0 items-center justify-center"
-              style={{ color: customFontColor || userAccent || palette.icon }}
+              style={{
+                color:
+                  customFontColor ||
+                  userAccent ||
+                  (customBg || customTheme !== "default"
+                    ? textColor
+                    : palette.icon),
+              }}
             >
               <NodeIcon className="h-6 w-6" />
               {showStatus && (

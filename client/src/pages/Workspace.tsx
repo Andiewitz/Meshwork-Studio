@@ -167,7 +167,7 @@ import {
   TagIcon as LucideTag,
   XMarkIcon as X,
 } from "@heroicons/react/24/outline";
-import { SystemNode, nodeBrands } from "@/components/canvas/nodes/SystemNode";
+import { SystemNode } from "@/components/canvas/nodes/SystemNode";
 
 import {
   nodeTypes,
@@ -1208,30 +1208,18 @@ function WorkspaceView() {
       takeSnapshot();
       const nodeTypeInfo = nodeTypesList.find((n) => n.type === type);
       const dim = NODE_SIZES[type] || { w: 168, h: 96 };
-      const brand = nodeBrands[type] || {
-        color: "#4F46E5",
-        borderColor: "#4338CA",
-      };
-
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type,
         position,
         width: dim.w,
         height: dim.h,
-        style: {
-          backgroundColor: brand.color,
-          borderColor: brand.borderColor,
-          borderRadius: 8,
-          opacity: 1,
-          fontSize: 13,
-        },
+        style: {},
         data: {
           label: label,
           category: nodeTypeInfo?.category || "Core",
           description: NODE_DESCRIPTIONS[type] || "",
           tags: [],
-          fontColor: "#ffffff",
           icon: null,
           theme: "default",
           ai: {

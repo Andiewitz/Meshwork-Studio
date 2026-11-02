@@ -525,7 +525,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               {/* Custom Icon Name */}
               <div className="space-y-1.5">
                 <Label className="text-[9px] uppercase font-bold text-white/30">
-                  Custom Lucide Icon
+                  Custom Icon
                 </Label>
                 <Input
                   type="text"
@@ -539,7 +539,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                   className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
                 />
                 <span className="text-[9px] text-white/35 block leading-normal">
-                  Type any valid Lucide icon name to render it dynamically.
+                  Use a Heroicons name, such as ServerIcon or GlobeAltIcon.
                 </span>
               </div>
             </div>

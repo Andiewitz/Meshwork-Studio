@@ -96,3 +96,26 @@ export function nodeSubtitle(
     ? value
     : undefined;
 }
+
+/** Choose legible default text for the hex colors offered by the style picker. */
+export function nodeTextColor(
+  background: string | undefined,
+  transparentTheme = false,
+): string {
+  if (transparentTheme) return "#fff";
+  const hex = background?.trim().match(/^#([\da-f]{3}|[\da-f]{6})$/i)?.[1];
+  if (!hex) return background ? "#fff" : "#1c2023";
+  const full =
+    hex.length === 3
+      ? hex
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : hex;
+  const channels = [0, 2, 4]
+    .map((offset) => parseInt(full.slice(offset, offset + 2), 16) / 255)
+    .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  const luminance =
+    0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  return luminance > 0.179 ? "#1c2023" : "#fff";
+}

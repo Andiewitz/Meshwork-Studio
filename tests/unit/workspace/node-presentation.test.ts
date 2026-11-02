@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   nodePresentation,
   nodeSubtitle,
+  nodeTextColor,
 } from "@/components/canvas/nodes/nodePresentation";
 
 describe("canvas node presentation", () => {
@@ -29,5 +30,10 @@ describe("canvas node presentation", () => {
     expect(nodeSubtitle("gateway", "Production gateway", undefined)).toBe(
       "API gateway",
     );
+  });
+  it("chooses readable text for light and dark custom backgrounds", () => {
+    expect(nodeTextColor("#fff")).toBe("#1c2023");
+    expect(nodeTextColor("#111827")).toBe("#fff");
+    expect(nodeTextColor(undefined, true)).toBe("#fff");
   });
 });
