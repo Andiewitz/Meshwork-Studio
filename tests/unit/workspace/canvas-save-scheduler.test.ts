@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { scheduleCanvasSave } from "@/lib/canvas-save-scheduler";
+import {
+  canvasSaveDelay,
+  scheduleCanvasSave,
+} from "@/lib/canvas-save-scheduler";
 
 describe("canvas save scheduling", () => {
   let page: EventTarget & { visibilityState: string };
@@ -41,5 +44,24 @@ describe("canvas save scheduling", () => {
     vi.advanceTimersByTime(3000);
     expect(oldSave).not.toHaveBeenCalled();
     expect(newSave).toHaveBeenCalledOnce();
+  });
+  it("saves within fifteen seconds during continuous edits", () => {
+    const save = vi.fn();
+    const firstEditAt = Date.now();
+    let cancel = scheduleCanvasSave(
+      save,
+      canvasSaveDelay(firstEditAt, Date.now()),
+    );
+    for (let elapsed = 1000; elapsed < 15000; elapsed += 1000) {
+      vi.advanceTimersByTime(1000);
+      cancel();
+      cancel = scheduleCanvasSave(
+        save,
+        canvasSaveDelay(firstEditAt, Date.now()),
+      );
+    }
+    expect(save).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1000);
+    expect(save).toHaveBeenCalledOnce();
   });
 });

@@ -40,7 +40,10 @@ import {
 } from "@/hooks/use-canvas";
 import { planCanvasSave } from "@/lib/canvas-delta";
 import { isCanvasDraftCurrent } from "@/lib/canvas-cache";
-import { scheduleCanvasSave } from "@/lib/canvas-save-scheduler";
+import {
+  canvasSaveDelay,
+  scheduleCanvasSave,
+} from "@/lib/canvas-save-scheduler";
 import {
   useWorkspace,
   useDeleteWorkspace,
@@ -560,6 +563,7 @@ function WorkspaceView() {
       setDraftConflict(true);
       cancelPendingSaveRef.current?.();
       cancelPendingSaveRef.current = null;
+      pendingSinceRef.current = null;
       const draft = recoveryCanvasSnapshot(
         canvasStack,
         { nodes, edges },
@@ -819,6 +823,7 @@ function WorkspaceView() {
   type SaveStatus = "saved" | "saving" | "unsaved" | "offline_saved";
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const cancelPendingSaveRef = useRef<(() => void) | null>(null);
+  const pendingSinceRef = useRef<number | null>(null);
   const saveGenerationRef = useRef(0);
   const canvasRevisionRef = useRef(0);
   const draftBaseRevisionRef = useRef<number | undefined>(undefined);
@@ -944,6 +949,7 @@ function WorkspaceView() {
   useEffect(() => {
     if (canvasData && lastLoadedId.current !== workspaceId) {
       canvasRevisionRef.current = canvasData.revision;
+      pendingSinceRef.current = null;
       lastSyncedCanvasRef.current = {
         nodes: canvasData.nodes || [],
         edges: canvasData.edges || [],
@@ -1012,10 +1018,17 @@ function WorkspaceView() {
       draftConflictRef.current,
     );
     setSaveStatus("unsaved");
-    if (draftConflictRef.current) return;
+    if (draftConflictRef.current) {
+      pendingSinceRef.current = null;
+      return;
+    }
 
+    const now = Date.now();
+    pendingSinceRef.current ??= now;
+    const delay = canvasSaveDelay(pendingSinceRef.current, now);
     cancelPendingSaveRef.current?.();
     cancelPendingSaveRef.current = scheduleCanvasSave(() => {
+      pendingSinceRef.current = null;
       const baseline = lastSyncedCanvasRef.current;
       const plan = baseline
         ? planCanvasSave(
@@ -1062,7 +1075,7 @@ function WorkspaceView() {
           },
         },
       );
-    });
+    }, delay);
 
     return () => {
       cancelPendingSaveRef.current?.();
@@ -1324,6 +1337,7 @@ function WorkspaceView() {
     }
     cancelPendingSaveRef.current?.();
     cancelPendingSaveRef.current = null;
+    pendingSinceRef.current = null;
     const persistedCanvas = materializeRootCanvas(canvasStack, {
       nodes,
       edges,

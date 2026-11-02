@@ -1,3 +1,8 @@
+/** Keep the trailing save responsive while bounding delays during continuous editing. */
+export function canvasSaveDelay(firstEditAt: number, now: number): number {
+  return Math.max(0, Math.min(3000, 15000 - Math.max(0, now - firstEditAt)));
+}
+
 /** Schedule a best-effort save when editing stops or the page becomes hidden. */
 export function scheduleCanvasSave(
   save: () => void,
