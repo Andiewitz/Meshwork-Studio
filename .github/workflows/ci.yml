@@ -136,7 +136,7 @@ jobs:
       - run: npm ci
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.26.9"
+          go-version: "1.26.10"
           cache-dependency-path: server/services/auth/go.sum
       - name: Download Identity dependencies for system tests
         working-directory: server/services/auth
@@ -167,7 +167,8 @@ jobs:
 
   e2e:
     name: Browser Smoke Test
-    runs-on: ubuntu-latest
+    # Playwright 1.59 does not support the Ubuntu 26 runner image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: [lint, typecheck]
     services:
@@ -216,7 +217,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.26.9"
+          go-version: "1.26.10"
           cache-dependency-path: server/services/auth/go.sum
       - uses: actions/setup-node@v4
         with:
