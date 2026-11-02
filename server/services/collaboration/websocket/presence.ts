@@ -6,6 +6,7 @@ import type { Server as HttpServer } from "http";
 import type { IncomingMessage } from "http";
 import cookie from "cookie";
 import type { WorkspaceRole } from "@shared/permissions";
+import type { WorkspaceAccess } from "@shared/schema/workspace-contract";
 import {
   authenticateUpgrade,
   verifyAssertionToken,
@@ -333,6 +334,10 @@ function rejectUpgrade(
 export interface CollaborationPermissions {
   canAccessWorkspace(userId: string, workspaceId: string): Promise<boolean>;
   canAccessMany?(workspaceId: string, userIds: string[]): Promise<Set<string>>;
+  getAccessVersion?(
+    workspaceId: string,
+    userId: string,
+  ): Promise<{ access: WorkspaceAccess; epoch: string | null }>;
   getWorkspaceRole(
     workspaceId: string,
     userId: string,

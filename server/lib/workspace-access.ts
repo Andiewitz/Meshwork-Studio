@@ -12,6 +12,15 @@ export function workspaceAccess(direct: WorkspaceAccessReader) {
   }
   return {
     getWorkspaceRole,
+    ...(direct.getAccessVersion
+      ? {
+          async getAccessVersion(workspaceId: string, userId: string) {
+            return readQuery(
+              await direct.getAccessVersion!(workspaceId, userId),
+            );
+          },
+        }
+      : {}),
     ...(direct.getAccessBatch
       ? {
           async canAccessMany(workspaceId: string, userIds: string[]) {

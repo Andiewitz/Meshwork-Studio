@@ -23,4 +23,20 @@ describe("Workspace-owned access", () => {
     });
     await expect(access.canAccessWorkspace("u", "w")).rejects.toBe(cause);
   });
+  it("passes access versions through and preserves lookup failures", async () => {
+    const cause = new Error("offline");
+    const getAccessVersion = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: "available",
+        value: { access: "view", epoch: "42" },
+      })
+      .mockResolvedValueOnce({ status: "unavailable", cause });
+    const access = workspaceAccess({ getAccess: vi.fn(), getAccessVersion });
+    await expect(access.getAccessVersion!("w", "u")).resolves.toEqual({
+      access: "view",
+      epoch: "42",
+    });
+    await expect(access.getAccessVersion!("w", "u")).rejects.toBe(cause);
+  });
 });
