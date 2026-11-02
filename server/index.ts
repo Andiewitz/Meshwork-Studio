@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "./lib/zodLegacyErrors";
 import { logger, createChildLogger } from "./lib/logger";
 import { coreReady } from "./lib/readiness";
 import { drainApplication } from "./lib/drain";

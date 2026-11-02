@@ -120,7 +120,7 @@ export const insertUserApiKeySchema = createInsertSchema(userApiKeys).omit({
 });
 
 export const insertConversationSchema = createInsertSchema(conversations, {
-  context: z.record(z.unknown()).optional(),
+  context: z.record(z.string(), z.unknown()).optional(),
 }).omit({
   id: true,
   createdAt: true,
@@ -130,7 +130,7 @@ export const insertConversationSchema = createInsertSchema(conversations, {
 export const insertMessageSchema = createInsertSchema(messages, {
   toolCalls: z.array(z.any()).optional(),
   toolResults: z.array(z.any()).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 }).omit({
   id: true,
   createdAt: true,

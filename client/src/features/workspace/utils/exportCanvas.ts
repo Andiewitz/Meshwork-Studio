@@ -28,7 +28,7 @@ export const canvasJsonSchema = z.object({
         id: z.string(),
         type: z.string().optional(),
         position: z.object({ x: z.number(), y: z.number() }),
-        data: z.record(z.any()),
+        data: z.record(z.string(), z.any()),
       })
       .passthrough(),
   ),
@@ -201,7 +201,7 @@ export async function importFromJson(
 
   const result = canvasJsonSchema.safeParse(parsed);
   if (!result.success) {
-    const firstError = result.error.errors[0];
+    const firstError = result.error.issues[0];
     throw new Error(
       `Invalid canvas file: ${firstError?.path.join(".")} — ${firstError?.message}`,
     );

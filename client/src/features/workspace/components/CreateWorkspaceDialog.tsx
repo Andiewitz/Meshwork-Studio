@@ -71,7 +71,7 @@ export function CreateWorkspaceDialog({
 
   const [selectedIcon, setSelectedIcon] = useState("box");
 
-  const form = useForm<FormValues>({
+  const form = useForm<z.input<typeof formSchema>, unknown, FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { title: "", type: "system" },
   });
@@ -188,7 +188,7 @@ export function CreateWorkspaceDialog({
                     )}
                   />
                   <p className="text-[11px] text-[#555] mt-1 font-body">
-                    {titleValue
+                    {typeof titleValue === "string" && titleValue
                       ? `${titleValue.length}/16 characters`
                       : "Give your workspace a name"}
                   </p>

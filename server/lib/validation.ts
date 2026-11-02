@@ -1,3 +1,4 @@
+import "./zodLegacyErrors";
 import type { ZodError } from "zod";
 import type { ApiIssue } from "./errorEnvelope";
 
@@ -9,7 +10,13 @@ import type { ApiIssue } from "./errorEnvelope";
 export function zodIssues(error: ZodError, limit = 10): ApiIssue[] {
   return error.issues.slice(0, limit).map((issue) => ({
     path: issue.path.join(".") || "(root)",
-    message: issue.message,
+    // Preserve the established missing-field message across Zod versions.
+    message:
+      issue.code === "invalid_type" &&
+      issue.message ===
+        `Invalid input: expected ${issue.expected}, received undefined`
+        ? "Required"
+        : issue.message,
   }));
 }
 

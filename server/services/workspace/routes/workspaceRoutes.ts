@@ -368,7 +368,14 @@ export function registerWorkspaceRoutes(
     isAuthenticated,
     async (req, res) => {
       try {
-        const input = api.workspaces.update.input.parse(req.body);
+        const parsed = api.workspaces.update.input.parse(req.body);
+        // Zod 4 applies defaults inside partial schemas. A partial update must
+        // only write fields the caller supplied, never reset the others.
+        const input = Object.fromEntries(
+          Object.entries(parsed).filter(([key]) =>
+            Object.hasOwn(req.body, key),
+          ),
+        );
         const id = getParamId(req);
         const existing = await workspaceStorage.getWorkspace(id);
         if (!existing) return fail(req, res, "NOT_FOUND", "Not found");
