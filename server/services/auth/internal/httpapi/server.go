@@ -206,6 +206,7 @@ func (s *Server) Router() http.Handler {
 	r.Post("/internal/introspect", s.handleIntrospect)
 	r.Post("/internal/collaborators/lookup", collaboratorLookupHandler(s.db))
 	r.Post("/internal/collaborators/profiles", collaboratorProfilesHandler(s.db))
+	r.Post("/internal/account-cleanup/authorize", cleanupAuthorizeHandler(store.CleanupQueue{DB: s.db}))
 	r.Get("/internal/stats/users", s.handleUserStats)
 	r.Get("/internal/audit-search", s.handleAuditSearch)
 

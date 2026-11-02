@@ -112,6 +112,14 @@ func (q CleanupQueue) Release(ctx context.Context, c *accountcleanup.Claim, reas
 	return nil
 }
 
+// AuthorizeDelivery only permits the current fenced worker claim to dispatch
+// an existing service step. The check is repeated for every delivery attempt.
+func (q CleanupQueue) AuthorizeDelivery(ctx context.Context, c *accountcleanup.Claim, service string) (bool, error) {
+	var allowed bool
+	err := q.DB.Pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM account_cleanup_operations o JOIN account_cleanup_steps s ON s.operation_id=o.id WHERE o.id=$1 AND o.user_id=$2 AND o.claim_token=$3 AND o.status='pending' AND o.locked_until>clock_timestamp() AND s.service=$4)`, c.OperationID, c.UserID, c.Token, service).Scan(&allowed)
+	return allowed, err
+}
+
 // Finish removes identity-owned records only after every owner confirms its
 // cleanup. Security audit rows are retained; no public deletion route exists.
 func (q CleanupQueue) Finish(ctx context.Context, c *accountcleanup.Claim) error {

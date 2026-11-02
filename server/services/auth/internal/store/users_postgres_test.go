@@ -202,6 +202,15 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 		if err := queue.CompleteStep(ctx, first, "workspace"); !errors.Is(err, ErrCleanupLeaseLost) {
 			t.Fatalf("stale worker accepted: %v", err)
 		}
+		if allowed, err := queue.AuthorizeDelivery(ctx, first, "workspace"); err != nil || allowed {
+			t.Fatalf("stale authorization: %v %v", allowed, err)
+		}
+		if allowed, err := queue.AuthorizeDelivery(ctx, second, "workspace"); err != nil || !allowed {
+			t.Fatalf("current authorization: %v %v", allowed, err)
+		}
+		if allowed, err := queue.AuthorizeDelivery(ctx, second, "unknown"); err != nil || allowed {
+			t.Fatalf("unknown service authorization: %v %v", allowed, err)
+		}
 		if err := queue.Finish(ctx, second); err == nil {
 			t.Fatal("finished with incomplete steps")
 		}

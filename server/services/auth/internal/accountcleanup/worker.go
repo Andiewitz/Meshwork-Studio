@@ -24,7 +24,7 @@ type Store interface {
 	Release(context.Context, *Claim, string) error
 }
 type Transport interface {
-	Execute(context.Context, string, string, string) (Receipt, error)
+	Execute(context.Context, string, *Claim) (Receipt, error)
 }
 type Worker struct {
 	Store     Store
@@ -72,7 +72,7 @@ func (w Worker) RunOnce(ctx context.Context) error {
 				timeout = 10 * time.Second
 			}
 			requestCtx, cancel := context.WithTimeout(ctx, timeout)
-			receipt, err := w.Transport.Execute(requestCtx, step.Service, claim.UserID, claim.OperationID)
+			receipt, err := w.Transport.Execute(requestCtx, step.Service, claim)
 			cancel()
 			if err != nil {
 				failure = err

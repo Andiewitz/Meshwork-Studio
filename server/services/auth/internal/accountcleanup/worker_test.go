@@ -44,7 +44,8 @@ type fakeTransport struct {
 	calls          []string
 }
 
-func (t *fakeTransport) Execute(_ context.Context, service, user, operation string) (Receipt, error) {
+func (t *fakeTransport) Execute(_ context.Context, service string, claim *Claim) (Receipt, error) {
+	operation := claim.OperationID
 	t.calls = append(t.calls, service)
 	if service == t.fail {
 		return Receipt{}, errors.New("owner unavailable")
