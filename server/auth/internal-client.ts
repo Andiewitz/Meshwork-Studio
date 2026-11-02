@@ -88,3 +88,23 @@ export function getCollaboratorProfiles(
     },
   );
 }
+
+export function authorizeAccountCleanup(
+  input: {
+    operationId: string;
+    userId: string;
+    claimToken: string;
+    service: "workspace" | "team" | "ai";
+  },
+  options?: InternalRequestOptions,
+) {
+  return identityGet(
+    "/internal/account-cleanup/authorize",
+    z.object({ authorized: z.boolean() }),
+    {
+      ...options,
+      method: "POST",
+      body: input,
+    },
+  );
+}

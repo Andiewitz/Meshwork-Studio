@@ -1,3 +1,4 @@
+import { registerAccountCleanupInternalRoutes } from "./lib/account-cleanup-internal";
 import type { Express } from "express";
 import type { Server } from "http";
 import { initAuth, optionalAuth, requireAuth } from "./auth";
@@ -138,6 +139,8 @@ export async function registerRoutes(
     directAccess,
     eventBus,
   });
+
+  registerAccountCleanupInternalRoutes(app, eventBus);
 
   const aiReady = await startOptionalCapability("ai", async () => {
     try {
