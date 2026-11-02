@@ -13,10 +13,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 // Use a disposable database; this test creates and drops a unique schema.
@@ -325,6 +327,52 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 		}
 		if err := pool.QueryRow(ctx, `SELECT status FROM account_cleanup_operations WHERE id=$1`, operationID).Scan(&status); err != nil || status != "completed" || users != 0 {
 			t.Fatalf("cleanup did not finish: %s users=%d err=%v", status, users, err)
+		}
+	})
+
+	t.Run("failed deliveries back off and preserve valid unicode errors", func(t *testing.T) {
+		if _, err := pool.Exec(ctx, `INSERT INTO users(id,email,email_normalized,is_active) VALUES ('retry','retry@example.test','retry@example.test',true)`); err != nil {
+			t.Fatal(err)
+		}
+		operationID := "bb58910d-3bf7-40cf-9cde-6f3992b09a40"
+		if _, err := db.BeginAccountCleanup(ctx, "retry", operationID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := pool.Exec(ctx, `UPDATE account_cleanup_operations SET status='pending' WHERE id=$1`, operationID); err != nil {
+			t.Fatal(err)
+		}
+		queue := CleanupQueue{DB: db}
+		first, err := queue.Claim(ctx)
+		if err != nil || first == nil {
+			t.Fatalf("first claim: %v %v", first, err)
+		}
+		if err := queue.Release(ctx, first, "unavailable"); err != nil {
+			t.Fatal(err)
+		}
+		if again, err := queue.Claim(ctx); err != nil || again != nil {
+			t.Fatalf("retry was not delayed: %v %v", again, err)
+		}
+		if _, err := pool.Exec(ctx, `UPDATE account_cleanup_operations SET next_attempt_at=now() WHERE id=$1`, operationID); err != nil {
+			t.Fatal(err)
+		}
+		second, err := queue.Claim(ctx)
+		if err != nil || second == nil {
+			t.Fatalf("second claim: %v %v", second, err)
+		}
+		if err := queue.Release(ctx, second, strings.Repeat("é", 1100)); err != nil {
+			t.Fatal(err)
+		}
+		var storedError string
+		var delaySeconds float64
+		if err := pool.QueryRow(ctx, `SELECT last_error,extract(epoch from (next_attempt_at-updated_at)) FROM account_cleanup_operations WHERE id=$1`, operationID).Scan(&storedError, &delaySeconds); err != nil {
+			t.Fatal(err)
+		}
+		if length := utf8.RuneCountInString(storedError); length != 1000 || delaySeconds != 10 {
+			t.Fatalf("length=%d delay=%f", length, delaySeconds)
+		}
+		// Leave no pending job for the following test.
+		if _, err := pool.Exec(ctx, `UPDATE account_cleanup_operations SET status='fencing' WHERE id=$1`, operationID); err != nil {
+			t.Fatal(err)
 		}
 	})
 

@@ -101,7 +101,8 @@ func (q CleanupQueue) Release(ctx context.Context, c *accountcleanup.Claim, reas
 		reason = string(runes[:1000])
 	}
 	tag, err := q.DB.Pool.Exec(ctx, `UPDATE account_cleanup_operations SET claim_token=NULL,locked_until=NULL,
- next_attempt_at=now()+interval '5 seconds',last_error=NULLIF($4,''),updated_at=now()
+ next_attempt_at=now()+(CASE WHEN $4='' THEN 5 ELSE LEAST(300,5*power(2,LEAST(GREATEST(attempts-1,0),6))) END * interval '1 second'),
+ last_error=NULLIF($4,''),updated_at=now()
  WHERE id=$1 AND user_id=$2 AND claim_token=$3 AND status='pending' AND locked_until>clock_timestamp()`, c.OperationID, c.UserID, c.Token, reason)
 	if err != nil {
 		return err
