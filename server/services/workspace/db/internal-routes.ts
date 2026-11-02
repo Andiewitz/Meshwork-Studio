@@ -59,6 +59,32 @@ export function registerWorkspaceInternalRoutes(app: Express) {
     return res.json({ access });
   });
 
+  // Read the permission and replay epoch from the same Workspace snapshot.
+  internal.get("/access-version", async (req: Request, res: Response) => {
+    const parsed = z
+      .object({
+        workspaceId: z.string().min(1).max(128),
+        userId: z.string().min(1).max(128),
+      })
+      .safeParse(req.query);
+    if (!parsed.success)
+      return fail(req, res, "VALIDATION_FAILED", "Invalid access query");
+    if (!accessReader.getAccessVersion)
+      return fail(
+        req,
+        res,
+        "SERVICE_UNAVAILABLE",
+        "Access version unavailable",
+      );
+    const snapshot = readQuery(
+      await accessReader.getAccessVersion(
+        parsed.data.workspaceId,
+        parsed.data.userId,
+      ),
+    );
+    return res.json(snapshot);
+  });
+
   // GET /internal/v1/workspace/stats — counters for the metrics collector.
   internal.get("/stats", async (_req: Request, res: Response) => {
     const rows = await workspaceStorage.countWorkspaces();

@@ -5,12 +5,14 @@ import express from "express";
 const mocks = vi.hoisted(() => ({
   getWorkspacesByIds: vi.fn(),
   getWorkspaceAccess: vi.fn(),
+  getWorkspaceAccessVersion: vi.fn(),
 }));
 
 vi.mock("@services/workspace/db/storage", () => ({
   workspaceStorage: {
     getWorkspacesByIds: mocks.getWorkspacesByIds,
     getWorkspaceAccess: mocks.getWorkspaceAccess,
+    getWorkspaceAccessVersion: mocks.getWorkspaceAccessVersion,
   },
 }));
 
@@ -95,5 +97,50 @@ describe("Workspace access internal contract", () => {
       ).status,
     ).toBe(400);
     expect(mocks.getWorkspaceAccess).not.toHaveBeenCalled();
+  });
+});
+
+describe("Workspace access version internal contract", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.INTERNAL_API_KEY = "test-key";
+  });
+  it("returns a versioned access decision without changing the existing access endpoint", async () => {
+    const app = express();
+    registerWorkspaceInternalRoutes(app);
+    mocks.getWorkspaceAccessVersion.mockResolvedValueOnce({
+      access: "view",
+      epoch: "42",
+    });
+    const result = await request(app)
+      .get("/internal/v1/workspace/access-version?workspaceId=w1&userId=u1")
+      .set("X-Internal-Key", "test-key");
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ access: "view", epoch: "42" });
+  });
+  it("fails closed on missing credentials, malformed input, or database errors", async () => {
+    const app = express();
+    registerWorkspaceInternalRoutes(app);
+    expect(
+      (
+        await request(app).get(
+          "/internal/v1/workspace/access-version?workspaceId=w1&userId=u1",
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await request(app)
+          .get("/internal/v1/workspace/access-version?workspaceId=w1")
+          .set("X-Internal-Key", "test-key")
+      ).status,
+    ).toBe(400);
+    mocks.getWorkspaceAccessVersion.mockRejectedValueOnce(
+      new Error("database unavailable"),
+    );
+    const result = await request(app)
+      .get("/internal/v1/workspace/access-version?workspaceId=w1&userId=u1")
+      .set("X-Internal-Key", "test-key");
+    expect(result.status).toBeGreaterThanOrEqual(500);
   });
 });

@@ -104,10 +104,16 @@ describe("workspace outbox PostgreSQL ownership", () => {
         )
       ).rows[0]?.epoch;
     expect(await epoch("owner")).toBe("1");
+    expect(
+      await storage.getWorkspaceAccessVersion("epoch-workspace", "owner"),
+    ).toEqual({ access: "owner", epoch: "1" });
     await pool.query(
       "INSERT INTO workspace_collaborators(workspace_id,user_id,permission,added_by) VALUES ('epoch-workspace','collab','view','owner')",
     );
     expect(await epoch("collab")).toBe("1");
+    expect(
+      await storage.getWorkspaceAccessVersion("epoch-workspace", "collab"),
+    ).toEqual({ access: "view", epoch: "1" });
     await pool.query(
       "UPDATE workspace_collaborators SET permission='view' WHERE workspace_id='epoch-workspace' AND user_id='collab'",
     );
@@ -120,10 +126,16 @@ describe("workspace outbox PostgreSQL ownership", () => {
       "DELETE FROM workspace_collaborators WHERE workspace_id='epoch-workspace' AND user_id='collab'",
     );
     expect(await epoch("collab")).toBe("3");
+    expect(
+      await storage.getWorkspaceAccessVersion("epoch-workspace", "collab"),
+    ).toEqual({ access: "none", epoch: null });
     await pool.query(
       "INSERT INTO workspace_collaborators(workspace_id,user_id,permission,added_by) VALUES ('epoch-workspace','collab','view','owner')",
     );
     expect(await epoch("collab")).toBe("4");
+    expect(
+      await storage.getWorkspaceAccessVersion("epoch-workspace", "collab"),
+    ).toEqual({ access: "view", epoch: "4" });
     const transaction = await pool.connect();
     try {
       await transaction.query("BEGIN");

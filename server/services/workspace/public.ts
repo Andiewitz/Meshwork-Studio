@@ -59,11 +59,20 @@ export function createWorkspaceSummaryReader(source: {
 }
 
 /** Workspace owns direct collaborator permissions. A failed lookup is never a denial. */
+export interface WorkspaceAccessVersion {
+  access: WorkspaceAccess;
+  epoch: string | null;
+}
+
 export interface WorkspaceAccessReader {
   getAccess(
     workspaceId: string,
     userId: string,
   ): Promise<QueryResult<WorkspaceAccess>>;
+  getAccessVersion?(
+    workspaceId: string,
+    userId: string,
+  ): Promise<QueryResult<WorkspaceAccessVersion>>;
   getAccessBatch?(
     workspaceId: string,
     userIds: string[],
@@ -75,12 +84,33 @@ export function createWorkspaceAccessReader(source: {
     workspaceId: string,
     userId: string,
   ): Promise<WorkspaceAccess>;
+  getWorkspaceAccessVersion?(
+    workspaceId: string,
+    userId: string,
+  ): Promise<WorkspaceAccessVersion>;
   getWorkspaceAccessBatch?(
     workspaceId: string,
     userIds: string[],
   ): Promise<{ userId: string; access: WorkspaceAccess }[]>;
 }): WorkspaceAccessReader {
   return {
+    ...(source.getWorkspaceAccessVersion
+      ? {
+          async getAccessVersion(workspaceId: string, userId: string) {
+            try {
+              return {
+                status: "available" as const,
+                value: await source.getWorkspaceAccessVersion!(
+                  workspaceId,
+                  userId,
+                ),
+              };
+            } catch (cause) {
+              return { status: "unavailable" as const, cause };
+            }
+          },
+        }
+      : {}),
     ...(source.getWorkspaceAccessBatch
       ? {
           async getAccessBatch(workspaceId: string, userIds: string[]) {

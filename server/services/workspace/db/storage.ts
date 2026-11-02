@@ -50,6 +50,11 @@ export interface IWorkspaceStorage {
     workspaceId: string,
     userId: string,
   ): Promise<WorkspaceAccess>;
+  getWorkspaceAccessVersion?(
+    workspaceId: string,
+    userId: string,
+  ): Promise<{ access: WorkspaceAccess; epoch: string | null }>;
+
   getWorkspaceAccessBatch(
     workspaceId: string,
     userIds: string[],
@@ -234,6 +239,28 @@ export class WorkspaceDatabaseStorage implements IWorkspaceStorage {
       (await this.getWorkspaceAccessBatch(workspaceId, [userId]))[0]?.access ??
       "none"
     );
+  }
+
+  /** One database snapshot for the access decision and its replay epoch. */
+  async getWorkspaceAccessVersion(
+    workspaceId: string,
+    userId: string,
+  ): Promise<{ access: WorkspaceAccess; epoch: string | null }> {
+    const result = await db.execute<{
+      access: WorkspaceAccess;
+      epoch: string | null;
+    }>(sql`
+      SELECT CASE WHEN w.user_id=${userId} THEN 'owner'
+        WHEN c.permission IN ('view','edit') THEN c.permission ELSE 'none' END AS access,
+        e.epoch::text AS epoch
+      FROM workspaces w
+      LEFT JOIN workspace_collaborators c ON c.workspace_id=w.id AND c.user_id=${userId}
+      LEFT JOIN workspace_access_epochs e ON e.workspace_id=w.id AND e.user_id=${userId}
+      WHERE w.id=${workspaceId}`);
+    const row = result.rows[0];
+    if (!row || row.access === "none") return { access: "none", epoch: null };
+    if (!row.epoch) throw new Error("Workspace access epoch unavailable");
+    return { access: row.access, epoch: row.epoch };
   }
 
   async getWorkspaceAccessBatch(
