@@ -5,6 +5,11 @@ import { EXPANDABLE_TYPES } from "@/features/workspace/utils/nodeTypes";
 import { CONTAINER_TYPES } from "@/features/workspace/utils/nodeRegistry";
 import { fireEnterNode } from "@/features/workspace/utils/canvasEvents";
 import type { NodeData } from "@/types/canvas";
+import {
+  nodeLayerColors,
+  nodePresentation,
+  nodeSubtitle,
+} from "./nodePresentation";
 import * as HeroIcons from "@heroicons/react/24/outline";
 import {
   UserIcon,
@@ -54,7 +59,7 @@ import {
   SiAmazondynamodb,
   SiKubernetes,
 } from "react-icons/si";
-import { k8sIcons, K8sLogo } from "../icons/KubernetesIcons";
+import { K8sLogo } from "../icons/KubernetesIcons";
 
 // ─────────────────────────────────────────────────────────────
 // Per-node-type brand mapping — every node gets a unique logo & color
@@ -525,14 +530,6 @@ export function SystemNode({
     };
   }
 
-  let K8sResourceIcon: React.ReactNode = null;
-  if (isKubernetes) {
-    const K8sIcon = k8sIcons[type];
-    K8sResourceIcon = K8sIcon ? (
-      <K8sIcon size={14} className="text-white/60" />
-    ) : null;
-  }
-
   // ── Junction Point ──
   if (type === "junction") {
     return (
@@ -559,8 +556,66 @@ export function SystemNode({
 
   const handleCls =
     "!w-2 !h-2 !rounded-full !border-2 !border-blue-400 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm";
-  const selectionRing = selected
-    ? "ring-2 ring-blue-500/40 shadow-[0_0_20px_rgba(59,130,246,0.15)]"
+  const { layer, shape } = nodePresentation(type);
+  const palette = nodeLayerColors[layer];
+  const subtitle = nodeSubtitle(type, data.label, data.provider);
+  const iconByType: Record<string, keyof typeof HeroIcons> = {
+    user: "UserIcon",
+    app: "ComputerDesktopIcon",
+    route53: "GlobeAltIcon",
+    cdn: "CloudIcon",
+    loadBalancer: "ArrowsRightLeftIcon",
+    gateway: "GlobeAltIcon",
+    server: "ServerIcon",
+    microservice: "CodeBracketSquareIcon",
+    worker: "CpuChipIcon",
+    logic: "BoltIcon",
+    database: "CircleStackIcon",
+    cache: "BoltIcon",
+    search: "MagnifyingGlassIcon",
+    storage: "ArchiveBoxIcon",
+    queue: "QueueListIcon",
+    bus: "QueueListIcon",
+    api: "ArrowTopRightOnSquareIcon",
+    auth0: "ShieldCheckIcon",
+    vault: "ShieldCheckIcon",
+    "k8s-pod": "CubeIcon",
+    "k8s-deployment": "Square3Stack3DIcon",
+    "k8s-replicaset": "Square2StackIcon",
+    "k8s-statefulset": "CircleStackIcon",
+    "k8s-daemonset": "ServerStackIcon",
+    "k8s-service": "GlobeAltIcon",
+    "k8s-ingress": "ArrowDownOnSquareIcon",
+    "k8s-configmap": "DocumentTextIcon",
+    "k8s-secret": "KeyIcon",
+    "k8s-pvc": "CircleStackIcon",
+    "k8s-job": "PlayIcon",
+    "k8s-cronjob": "ClockIcon",
+    "k8s-hpa": "ArrowsUpDownIcon",
+  };
+  const iconName =
+    customIconName && HeroIcons[customIconName as keyof typeof HeroIcons]
+      ? (customIconName as keyof typeof HeroIcons)
+      : (iconByType[type] ?? "CubeIcon");
+  const NodeIcon = HeroIcons[iconName] as React.ComponentType<{
+    className?: string;
+    style?: React.CSSProperties;
+  }>;
+  const showStatus = isKubernetes && !!k8sStatus;
+  const textColor =
+    customFontColor ||
+    (customBg || customTheme !== "default" ? "#fff" : "#1c2023");
+  const metadata = isKubernetes
+    ? [
+        data.replicas ? `${String(data.replicas)} replicas` : null,
+        data.image,
+        data.serviceType,
+        data.schedule,
+        data.storageSize,
+      ]
+        .filter(Boolean)
+        .map(String)
+        .join(" · ")
     : "";
   return (
     <>
@@ -820,230 +875,92 @@ export function SystemNode({
               </div>
             </div>
           </div>
-        ) : /* ── KUBERNETES NODES ── */
-        isKubernetes ? (
-          <div
-            className={`
-                            relative px-3 py-2.5 overflow-hidden w-full h-full flex items-center gap-3 rounded-2xl
-                            bg-[#121214]/80 backdrop-blur-xl
-                            shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)]
-                            ${selectionRing}
-                            ${!selected ? "hover:shadow-[0_12px_40px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-[#16161A]/90" : ""}
-                            transition-all duration-300 group
-                        `}
-            style={{
-              border: `1px solid ${finalBorderColor}40`,
-              backgroundColor: customBg,
-              borderRadius: finalRadius,
-              opacity: finalOpacity,
-              ...themeStyles,
-            }}
-          >
-            <div
-              className="absolute inset-0 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none"
-              style={{
-                backgroundImage: `radial-gradient(circle at 50% 0%, ${finalBorderColor}, transparent 70%)`,
-              }}
-            />
-            <K8sLogo className="absolute right-2 bottom-2 w-8 h-8 object-contain opacity-[0.04] pointer-events-none text-white z-0" />
-
-            <div
-              className="relative w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] z-10"
-              style={{
-                background: `linear-gradient(135deg, ${finalBorderColor}30, ${finalBorderColor}10)`,
-                border: `1px solid ${finalBorderColor}50`,
-              }}
-            >
-              {(() => {
-                if (
-                  customIconName &&
-                  HeroIcons[customIconName as keyof typeof HeroIcons]
-                ) {
-                  const IconComponent = HeroIcons[
-                    customIconName as keyof typeof HeroIcons
-                  ] as React.ComponentType<{
-                    size?: number;
-                    className?: string;
-                    style?: React.CSSProperties;
-                  }>;
-                  return (
-                    <IconComponent
-                      size={20}
-                      style={{ color: customFontColor || "#ffffffec" }}
-                    />
-                  );
-                }
-                if (brand.Icon && typeof brand.Icon !== "string") {
-                  return <brand.Icon size={20} className="text-white/90" />;
-                }
-                return null;
-              })()}
-              {K8sResourceIcon && (
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/10 rounded-sm flex items-center justify-center">
-                  {K8sResourceIcon}
-                </div>
-              )}
-              {k8sStatus && (
-                <div
-                  className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-[#1A1A1A]
-                                    ${k8sStatus === "healthy" ? "bg-green-400" : k8sStatus === "error" ? "bg-red-400" : "bg-gray-400"}
-                                `}
-                >
-                  <div className="k8s-status-pulse" />
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col min-w-0 flex-1 z-10">
-              <span
-                className="text-[13px] font-medium tracking-tight line-clamp-2 break-words whitespace-pre-wrap leading-tight text-white/95"
-                style={{
-                  color: customFontColor || "rgba(255,255,255,0.95)",
-                  fontSize: finalFontSize || "13px",
-                }}
-              >
-                {data.label!}
-              </span>
-              <div className="flex gap-1 mt-1.5 flex-wrap">
-                {Boolean(data.replicas) && (
-                  <span className="text-[7px] px-1.5 py-0.5 bg-white/[0.06] rounded-md text-white/60 font-medium">
-                    {String(data.replicas)} replicas
-                  </span>
-                )}
-                {Boolean(data.image) && (
-                  <span className="text-[7px] px-1.5 py-0.5 bg-white/[0.06] rounded-md text-white/60 font-mono truncate max-w-[100px]">
-                    {String(data.image)}
-                  </span>
-                )}
-                {Boolean(data.serviceType) && (
-                  <span className="text-[7px] px-1.5 py-0.5 bg-white/[0.06] rounded-md text-white/60 font-medium">
-                    {String(data.serviceType)}
-                  </span>
-                )}
-                {Boolean(data.schedule) && (
-                  <span className="text-[7px] px-1.5 py-0.5 bg-white/[0.06] rounded-md text-white/60 font-mono">
-                    {String(data.schedule)}
-                  </span>
-                )}
-                {Boolean(data.storageSize) && (
-                  <span className="text-[7px] px-1.5 py-0.5 bg-white/[0.06] rounded-md text-white/60 font-medium">
-                    {String(data.storageSize)}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
         ) : (
-          /* ── DEFAULT NODES (Compute, Data, Networking, External) ── */
+          /* Regular nodes use their layer for color and their role for shape. */
           <div
-            className={`
-                            relative px-3 py-2.5 overflow-hidden w-full h-full rounded-2xl
-                            bg-[#121214]/80 backdrop-blur-xl
-                            shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)]
-                            flex items-center gap-3.5
-                            ${selectionRing}
-                            ${!selected ? "hover:shadow-[0_12px_40px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-[#16161A]/90" : ""}
-                            transition-all duration-300 group
-                        `}
+            className={`relative flex h-full w-full items-center gap-3 overflow-hidden px-3.5 py-2.5 font-sans transition-shadow ${selected ? "ring-2 ring-blue-500/70 ring-offset-2 ring-offset-[#0c0c0e]" : ""}`}
             style={{
-              border: `1px solid ${finalBorderColor}40`,
-              backgroundColor: customBg,
-              borderRadius: finalRadius,
+              backgroundColor: customBg || palette.background,
+              border: `1.5px ${shape === "external" ? "dashed" : "solid"} ${customBorder || userAccent || palette.border}`,
+              borderRadius:
+                finalRadius ||
+                (shape === "pill"
+                  ? "9999px"
+                  : shape === "database"
+                    ? "50% / 13%"
+                    : "16px"),
               opacity: finalOpacity,
               ...themeStyles,
             }}
           >
-            <div
-              className="absolute inset-0 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none"
-              style={{
-                backgroundImage: `radial-gradient(circle at 50% 0%, ${finalBorderColor}, transparent 70%)`,
-              }}
-            />
-
-            <div
-              className="relative rounded-xl flex items-center justify-center flex-shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] z-10 w-9 h-9"
-              style={{
-                background: `linear-gradient(135deg, ${finalBorderColor}30, ${finalBorderColor}10)`,
-                border: `1px solid ${finalBorderColor}50`,
-              }}
-            >
-              {(() => {
-                if (
-                  customIconName &&
-                  HeroIcons[customIconName as keyof typeof HeroIcons]
-                ) {
-                  const IconComponent = HeroIcons[
-                    customIconName as keyof typeof HeroIcons
-                  ] as React.ComponentType<{
-                    size?: number;
-                    className?: string;
-                    style?: React.CSSProperties;
-                  }>;
-                  return (
-                    <IconComponent
-                      size={20}
-                      style={{ color: customFontColor || "#ffffffec" }}
-                    />
-                  );
-                }
-                if (brand.Icon) {
-                  return typeof brand.Icon === "string" ? (
-                    <img
-                      src={brand.Icon}
-                      className="object-contain w-[18px] h-[18px]"
-                      alt=""
-                    />
-                  ) : (
-                    <brand.Icon
-                      className="w-5 h-5 text-white/90"
-                      style={{ color: customFontColor }}
-                    />
-                  );
-                }
-                if (type === "user") {
-                  return (
-                    <UserIcon
-                      className="w-[18px] h-[18px] text-white/90"
-                      style={{ color: customFontColor }}
-                    />
-                  );
-                }
-                return <div className="w-4 h-4 bg-white/20 rounded" />;
-              })()}
-            </div>
-
-            <div className="flex flex-col min-w-0 z-10">
-              <span
-                className="text-[13px] font-medium tracking-tight line-clamp-2 break-words whitespace-pre-wrap leading-tight text-white/95"
+            {shape === "database" && (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-0 h-[19%] rounded-[50%] border-b"
                 style={{
-                  color: customFontColor || "rgba(255,255,255,0.95)",
-                  fontSize: finalFontSize || "13px",
+                  borderColor: customBorder || userAccent || palette.border,
                 }}
-              >
-                {data.label!}
-              </span>
+              />
+            )}
+            {shape === "queue" && (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 left-1 right-1 rounded-xl border-x"
+                style={{
+                  borderColor: customBorder || userAccent || palette.border,
+                }}
+              />
+            )}
+            <div
+              className="relative flex h-7 w-7 shrink-0 items-center justify-center"
+              style={{ color: customFontColor || userAccent || palette.icon }}
+            >
+              <NodeIcon className="h-6 w-6" />
+              {showStatus && (
+                <span
+                  title={`Status: ${k8sStatus}`}
+                  aria-label={`Status: ${k8sStatus}`}
+                  className={`absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border border-white ${k8sStatus === "healthy" ? "bg-green-600" : k8sStatus === "error" ? "bg-red-600" : "bg-slate-500"}`}
+                />
+              )}
             </div>
-
-            {/* Expandable: arrow badge bottom-left — click to enter sub-canvas */}
+            <div
+              className="relative min-w-0 flex-1 leading-tight"
+              style={{ color: textColor }}
+            >
+              <div
+                className="line-clamp-2 break-words text-[13px] font-semibold"
+                style={{ fontSize: finalFontSize }}
+              >
+                {data.label || type}
+              </div>
+              {subtitle && (
+                <div className="mt-0.5 truncate text-[11px] font-normal opacity-75">
+                  {subtitle}
+                </div>
+              )}
+              {metadata && (
+                <div
+                  title={metadata}
+                  className="mt-0.5 truncate text-[10px] opacity-75"
+                >
+                  {metadata}
+                </div>
+              )}
+            </div>
             {EXPANDABLE_TYPES.has(type) && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   fireEnterNode(id);
                 }}
-                className="absolute bottom-1 left-1.5 flex items-center gap-1 px-1 py-0.5 rounded hover:bg-white/[0.08] transition-colors group/enter"
+                className="nodrag absolute bottom-1 right-1.5 flex min-h-5 min-w-5 items-center justify-center rounded-md text-[#263441]/65 hover:bg-black/10 hover:text-[#263441] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700"
                 title="Open internal workspace"
+                aria-label="Open internal workspace"
               >
-                <svg
-                  width="7"
-                  height="7"
-                  viewBox="0 0 8 8"
-                  className="text-white/20 group-hover/enter:text-white/60 transition-colors"
-                >
-                  <path d="M1 1L7 4L1 7V1Z" fill="currentColor" />
-                </svg>
+                <HeroIcons.ArrowTopRightOnSquareIcon className="h-3 w-3" />
                 {(data.subCanvas?.nodes?.length ?? 0) > 0 && (
-                  <span className="text-[7px] font-bold text-white/20 group-hover/enter:text-white/50 transition-colors">
+                  <span className="ml-0.5 text-[9px] font-semibold">
                     {data.subCanvas?.nodes?.length}
                   </span>
                 )}
