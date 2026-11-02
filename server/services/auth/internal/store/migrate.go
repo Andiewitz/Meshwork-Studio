@@ -3,13 +3,12 @@ package store
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
 	"sort"
 	"time"
-
-	"github.com/jackc/pgx/v5"
 )
 
 //go:embed migrations/*.sql
@@ -17,8 +16,32 @@ var migrationFS embed.FS
 
 // Migrate applies embedded SQL migrations in filename order, tracking applied
 // files in schema_migrations. It fails closed: an error aborts boot.
-func (d *DB) Migrate(ctx context.Context) error {
-	if _, err := d.Pool.Exec(ctx, `
+func (d *DB) Migrate(ctx context.Context) (resultErr error) {
+	conn, err := d.Pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire migration connection: %w", err)
+	}
+	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock($1,$2)`, 1296388936, 1); err != nil {
+		closeCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		_ = conn.Hijack().Close(closeCtx)
+		return fmt.Errorf("acquire migration lock: %w", err)
+	}
+	defer func() {
+		unlockCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		var unlocked bool
+		err := conn.QueryRow(unlockCtx, `SELECT pg_advisory_unlock($1,$2)`, 1296388936, 1).Scan(&unlocked)
+		if err != nil || !unlocked {
+			closeCtx, closeCancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer closeCancel()
+			_ = conn.Hijack().Close(closeCtx)
+			resultErr = errors.Join(resultErr, errors.New("release migration lock failed"))
+			return
+		}
+		conn.Release()
+	}()
+	if _, err := conn.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			version varchar(255) PRIMARY KEY,
 			applied_at timestamptz NOT NULL DEFAULT now()
@@ -40,7 +63,7 @@ func (d *DB) Migrate(ctx context.Context) error {
 
 	for _, name := range names {
 		var exists bool
-		if err := d.Pool.QueryRow(ctx,
+		if err := conn.QueryRow(ctx,
 			`SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version = $1)`, name,
 		).Scan(&exists); err != nil {
 			return fmt.Errorf("check migration %s: %w", name, err)
@@ -54,13 +77,20 @@ func (d *DB) Migrate(ctx context.Context) error {
 			return fmt.Errorf("read migration %s: %w", name, err)
 		}
 
-		err = d.WithTx(ctx, func(tx pgx.Tx) error {
+		err = func() error {
+			tx, err := conn.Begin(ctx)
+			if err != nil {
+				return err
+			}
+			defer func() { _ = tx.Rollback(ctx) }()
 			if _, err := tx.Exec(ctx, string(sqlBytes)); err != nil {
 				return err
 			}
-			_, err := tx.Exec(ctx, `INSERT INTO schema_migrations (version) VALUES ($1)`, name)
-			return err
-		})
+			if _, err := tx.Exec(ctx, `INSERT INTO schema_migrations (version) VALUES ($1)`, name); err != nil {
+				return err
+			}
+			return tx.Commit(ctx)
+		}()
 		if err != nil {
 			return fmt.Errorf("apply migration %s: %w", name, err)
 		}

@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/meshwork-studio/auth/internal/accountcleanup"
 	"github.com/meshwork-studio/auth/internal/session"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -54,9 +55,24 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
+	otherSchema := pgx.Identifier{schema + "_other"}.Sanitize()
+	if _, err := admin.Exec(ctx, "CREATE SCHEMA "+otherSchema); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _, _ = admin.Exec(context.Background(), "DROP SCHEMA "+otherSchema+" CASCADE") }()
+	if _, err := admin.Exec(ctx, "CREATE TABLE "+otherSchema+".auth_csrf_secrets (session_id_hash varchar(128) PRIMARY KEY)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `CREATE TABLE auth_csrf_secrets(session_id_hash varchar(128),secret_hash varchar(128) NOT NULL,expires_at timestamp NOT NULL)`); err != nil {
+		t.Fatal(err)
+	}
 	db := &DB{Pool: pool}
 	if err := db.Migrate(ctx); err != nil {
 		t.Fatal(err)
+	}
+	var hasPrimaryKey bool
+	if err := pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='auth_csrf_secrets'::regclass AND contype='p')`).Scan(&hasPrimaryKey); err != nil || !hasPrimaryKey {
+		t.Fatalf("schema-specific CSRF primary key missing: %v", err)
 	}
 	_, err = pool.Exec(ctx, `INSERT INTO users (id,email,email_normalized,is_active,email_verified_at)
  VALUES ('eligible','eligible@example.test','eligible@example.test',true,now()),
@@ -411,6 +427,64 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 		claim, err := (CleanupQueue{DB: db}).Claim(ctx)
 		if err != nil || claim == nil || claim.OperationID != operationID {
 			t.Fatalf("activated operation not claimable: %v %v", claim, err)
+		}
+	})
+
+	t.Run("concurrent identity migration runners share one database lock", func(t *testing.T) {
+		other := schema + "_concurrent"
+		quoted := pgx.Identifier{other}.Sanitize()
+		if _, err := admin.Exec(ctx, "CREATE SCHEMA "+quoted); err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _, _ = admin.Exec(context.Background(), "DROP SCHEMA "+quoted+" CASCADE") }()
+		cfg, err := pgxpool.ParseConfig(url)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cfg.ConnConfig.RuntimeParams["search_path"] = other + ",public"
+		cfg.MaxConns = 2
+		cfg.MinConns = 0
+		concurrentPool, err := pgxpool.NewWithConfig(ctx, cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer concurrentPool.Close()
+		runner := &DB{Pool: concurrentPool}
+		errs := make(chan error, 2)
+		go func() { errs <- runner.Migrate(ctx) }()
+		go func() { errs <- runner.Migrate(ctx) }()
+		for i := 0; i < 2; i++ {
+			if err := <-errs; err != nil {
+				t.Fatal(err)
+			}
+		}
+		var count int
+		entries, err := fs.ReadDir(migrationFS, "migrations")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := concurrentPool.QueryRow(ctx, `SELECT count(*) FROM schema_migrations`).Scan(&count); err != nil || count != len(entries) {
+			t.Fatalf("migration count=%d expected=%d err=%v", count, len(entries), err)
+		}
+		holder, err := concurrentPool.Acquire(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer holder.Release()
+		if _, err := holder.Exec(ctx, `SELECT pg_advisory_lock($1,$2)`, 1296388936, 1); err != nil {
+			t.Fatal(err)
+		}
+		waitCtx, cancelWait := context.WithTimeout(ctx, 200*time.Millisecond)
+		err = runner.Migrate(waitCtx)
+		cancelWait()
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("expected lock timeout: %v", err)
+		}
+		if _, err := holder.Exec(ctx, `SELECT pg_advisory_unlock($1,$2)`, 1296388936, 1); err != nil {
+			t.Fatal(err)
+		}
+		if err := runner.Migrate(ctx); err != nil {
+			t.Fatalf("migration lock leaked after timeout: %v", err)
 		}
 	})
 
