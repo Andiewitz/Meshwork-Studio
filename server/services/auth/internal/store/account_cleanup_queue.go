@@ -20,6 +20,7 @@ func (q CleanupQueue) Claim(ctx context.Context) (*accountcleanup.Claim, error) 
 	var c accountcleanup.Claim
 	err := q.DB.Pool.QueryRow(ctx, `WITH candidate AS (
   SELECT id FROM account_cleanup_operations WHERE status='pending' AND next_attempt_at <= now()
+  AND EXISTS (SELECT 1 FROM users WHERE users.id=account_cleanup_operations.user_id AND users.is_active=false)
   AND (locked_until IS NULL OR locked_until <= clock_timestamp()) ORDER BY created_at
   FOR UPDATE SKIP LOCKED LIMIT 1
  ) UPDATE account_cleanup_operations AS op SET claim_token=gen_random_uuid(),
@@ -37,6 +38,7 @@ func (q CleanupQueue) Steps(ctx context.Context, c *accountcleanup.Claim) ([]acc
 	rows, err := q.DB.Pool.Query(ctx, `SELECT s.service,s.status='completed' FROM account_cleanup_steps s
  JOIN account_cleanup_operations o ON o.id=s.operation_id
  WHERE o.id=$1 AND o.user_id=$2 AND o.claim_token=$3 AND o.status='pending' AND o.locked_until>clock_timestamp()
+ AND EXISTS (SELECT 1 FROM users WHERE users.id=o.user_id AND users.is_active=false)
  ORDER BY CASE s.service WHEN 'workspace' THEN 0 WHEN 'ai' THEN 1 ELSE 2 END`, c.OperationID, c.UserID, c.Token)
 	if err != nil {
 		return nil, err
@@ -60,7 +62,8 @@ func (q CleanupQueue) Steps(ctx context.Context, c *accountcleanup.Claim) ([]acc
 }
 func (q CleanupQueue) Renew(ctx context.Context, c *accountcleanup.Claim) error {
 	tag, err := q.DB.Pool.Exec(ctx, `UPDATE account_cleanup_operations SET locked_until=clock_timestamp()+interval '60 seconds'
- WHERE id=$1 AND user_id=$2 AND claim_token=$3 AND status='pending' AND locked_until>clock_timestamp()`, c.OperationID, c.UserID, c.Token)
+ WHERE id=$1 AND user_id=$2 AND claim_token=$3 AND status='pending' AND locked_until>clock_timestamp()
+ AND EXISTS (SELECT 1 FROM users WHERE users.id=account_cleanup_operations.user_id AND users.is_active=false)`, c.OperationID, c.UserID, c.Token)
 	if err != nil {
 		return err
 	}
@@ -72,7 +75,8 @@ func (q CleanupQueue) Renew(ctx context.Context, c *accountcleanup.Claim) error 
 func (q CleanupQueue) CompleteStep(ctx context.Context, c *accountcleanup.Claim, service string) error {
 	return q.DB.WithTx(ctx, func(tx pgx.Tx) error {
 		var id string
-		err := tx.QueryRow(ctx, `SELECT id::text FROM account_cleanup_operations WHERE id=$1 AND user_id=$2 AND claim_token=$3 AND status='pending' AND locked_until>clock_timestamp() FOR UPDATE`, c.OperationID, c.UserID, c.Token).Scan(&id)
+		err := tx.QueryRow(ctx, `SELECT id::text FROM account_cleanup_operations WHERE id=$1 AND user_id=$2 AND claim_token=$3 AND status='pending' AND locked_until>clock_timestamp()
+  AND EXISTS (SELECT 1 FROM users WHERE users.id=account_cleanup_operations.user_id AND users.is_active=false) FOR UPDATE`, c.OperationID, c.UserID, c.Token).Scan(&id)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrCleanupLeaseLost
 		}
@@ -117,7 +121,7 @@ func (q CleanupQueue) Release(ctx context.Context, c *accountcleanup.Claim, reas
 // an existing service step. The check is repeated for every delivery attempt.
 func (q CleanupQueue) AuthorizeDelivery(ctx context.Context, c *accountcleanup.Claim, service string) (bool, error) {
 	var allowed bool
-	err := q.DB.Pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM account_cleanup_operations o JOIN account_cleanup_steps s ON s.operation_id=o.id WHERE o.id=$1 AND o.user_id=$2 AND o.claim_token=$3 AND o.status='pending' AND o.locked_until>clock_timestamp() AND s.service=$4)`, c.OperationID, c.UserID, c.Token, service).Scan(&allowed)
+	err := q.DB.Pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM account_cleanup_operations o JOIN account_cleanup_steps s ON s.operation_id=o.id WHERE o.id=$1 AND o.user_id=$2 AND o.claim_token=$3 AND o.status='pending' AND o.locked_until>clock_timestamp() AND s.service=$4 AND EXISTS (SELECT 1 FROM users WHERE users.id=o.user_id AND users.is_active=false))`, c.OperationID, c.UserID, c.Token, service).Scan(&allowed)
 	return allowed, err
 }
 

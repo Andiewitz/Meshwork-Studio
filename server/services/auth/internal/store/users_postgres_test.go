@@ -248,6 +248,15 @@ func TestFindEligibleUsersByIDsPostgres(t *testing.T) {
 		if err := queue.Finish(ctx, second); err == nil {
 			t.Fatal("finished with active user")
 		}
+		if allowed, err := queue.AuthorizeDelivery(ctx, second, "ai"); err != nil || allowed {
+			t.Fatalf("active user authorized for cleanup: %v %v", allowed, err)
+		}
+		if err := queue.Renew(ctx, second); !errors.Is(err, ErrCleanupLeaseLost) {
+			t.Fatalf("active user lease renewed: %v", err)
+		}
+		if err := queue.CompleteStep(ctx, second, "ai"); !errors.Is(err, ErrCleanupLeaseLost) {
+			t.Fatalf("active user step completed: %v", err)
+		}
 		var csrfCount int
 		if err := pool.QueryRow(ctx, `SELECT count(*) FROM auth_csrf_secrets WHERE session_id_hash='queue-session'`).Scan(&csrfCount); err != nil || csrfCount != 1 {
 			t.Fatalf("failed finalization did not roll back: %d %v", csrfCount, err)
