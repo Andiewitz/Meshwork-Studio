@@ -15,11 +15,12 @@ wait for Canvas completion. Team removes memberships in other owners' teams.
 Disposable PostgreSQL tests cover the owner-specific storage operations.
 
 A lease-fenced Identity worker and authenticated internal Node bridge now
-coordinate the three required commands. A complete write/session fence and a
-safe transition out of `fencing` are still missing, so no normal operation is
-claimable and no public deletion endpoint is enabled. The formerly nonfunctional
-Settings control remains disabled. PostgreSQL tests exercise retries and lease
-fencing; the full DynamoDB-backed workflow remains unverified.
+coordinate the three required commands. An offline single-host operator tool
+can move an operation out of `fencing` after services are stopped and assertions
+expire; see `docs/operations/ACCOUNT-CLEANUP.md`. There is no online or
+distributed write fence, and no public deletion endpoint is enabled. The Settings
+control remains disabled. PostgreSQL tests exercise retries, lease fencing, and
+the offline transition; the full DynamoDB-backed workflow remains unverified.
 
 ## Proposed solution
 
