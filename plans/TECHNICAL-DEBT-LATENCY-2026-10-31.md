@@ -68,8 +68,9 @@ problem or prove that an earlier design had the same runtime behavior.
   copies had been tracked and called for credential rotation. The report is
   historical evidence, not proof the keys are still valid, rotated, or exposed
   in the current tree. No credentials were printed or re-tested in this review.
-- A search of repository documentation found no confirmation of rotation. Provider
-  status has not been checked.
+- The historical report identifies database credentials and a session secret.
+  A search of repository documentation found no confirmation of rotation, and
+  the user is unsure whether it occurred. Provider status has not been checked.
 - Next: check the credential-response records and provider-side rotation status;
   if any historical credential remains active, rotate it and follow
   `docs/operations/CREDENTIAL-RESPONSE.md`. Do not infer safety from `.gitignore`.
