@@ -107,6 +107,7 @@ jobs:
       WORKSPACE_DATABASE_URL: postgresql://user:password@localhost:5432/test_workspace_db
       OUTBOX_TEST_DATABASE_URL: postgresql://user:password@localhost:5432/test_workspace_db
       MIGRATION_TEST_DATABASE_URL: postgresql://user:password@localhost:5432/test_workspace_db
+      ACCOUNT_CLEANUP_TEST_DATABASE_URL: postgresql://user:password@localhost:5432/test_workspace_db
       TEAM_TEST_DATABASE_URL: postgresql://user:password@localhost:5432/test_team_db
       AI_TEST_DATABASE_URL: postgresql://user:password@localhost:5432/test_ai_db
       TEAM_DATABASE_URL: postgresql://user:password@localhost:5432/test_team_db
@@ -123,6 +124,13 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
       - run: npm ci
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.9"
+          cache-dependency-path: server/services/auth/go.sum
+      - name: Download Identity dependencies for system tests
+        working-directory: server/services/auth
+        run: go mod download
       - name: Create isolated service databases
         run: node scripts/ci/create-test-databases.mjs
       - name: Wait for DynamoDB Local

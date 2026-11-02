@@ -2,8 +2,10 @@
 
 This operator workflow prepares the durable Identity cleanup worker. It is for a
 single application host only. Account deletion remains unavailable in the UI;
-this is not a live self-service deletion workflow. The full Canvas cleanup has
-not yet been verified against real DynamoDB/S3.
+this is not a live self-service deletion workflow. A PostgreSQL-backed system test exercises the Identity worker, internal bridge,
+and Workspace, Team, and AI handlers with a simulated Canvas consumer, including
+an injected failure and retry. The full Canvas cleanup has not yet been verified
+against real DynamoDB/S3.
 
 The operator must stop **all** Node app and Go identity processes, drain any
 in-flight work, and keep them stopped throughout the fencing period. In Docker,
