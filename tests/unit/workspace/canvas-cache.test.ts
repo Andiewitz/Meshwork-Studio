@@ -143,4 +143,11 @@ describe("Canvas Caching Utilities (Unit)", () => {
     expect(saveCanvasToLocalCache("workspace", [], [], 1, 3)).toBe(false);
     vi.mocked(console.warn).mockRestore();
   });
+  it("does not clear another editor's draft with the same generation", () => {
+    saveCanvasToLocalCache("w", [], [], 1, 3, false, "editor-b");
+    expect(clearCanvasLocalCache("w", 1, "editor-a")).toBe(false);
+    expect(clearCanvasLocalCache("w", undefined, "editor-a")).toBe(false);
+    expect(getCanvasFromLocalCache("w")?.owner).toBe("editor-b");
+    expect(clearCanvasLocalCache("w", 1, "editor-b")).toBe(true);
+  });
 });

@@ -12,6 +12,8 @@ export interface CanvasCache {
   baseRevision?: number;
   /** Live events may have been missed since the draft was last synchronized. */
   requiresReview?: boolean;
+  /** Identifies the editor instance that wrote this generation. */
+  owner?: string;
 }
 
 export function saveCanvasToLocalCache(
@@ -21,6 +23,7 @@ export function saveCanvasToLocalCache(
   generation?: number,
   baseRevision?: number,
   requiresReview = false,
+  owner?: string,
 ) {
   try {
     const cache: CanvasCache = {
@@ -30,6 +33,7 @@ export function saveCanvasToLocalCache(
       generation,
       baseRevision,
       requiresReview,
+      owner,
     };
     localStorage.setItem(
       `${CANVAS_CACHE_PREFIX}${workspaceId}`,
@@ -57,10 +61,17 @@ export function getCanvasFromLocalCache(
 export function clearCanvasLocalCache(
   workspaceId: string | number,
   acknowledgedGeneration?: number,
+  acknowledgedOwner?: string,
 ) {
-  if (acknowledgedGeneration !== undefined) {
+  if (acknowledgedGeneration !== undefined || acknowledgedOwner !== undefined) {
     const cache = getCanvasFromLocalCache(workspaceId);
-    if (!cache || cache.generation !== acknowledgedGeneration) return false;
+    if (
+      !cache ||
+      (acknowledgedGeneration !== undefined &&
+        cache.generation !== acknowledgedGeneration) ||
+      (acknowledgedOwner !== undefined && cache.owner !== acknowledgedOwner)
+    )
+      return false;
   }
   localStorage.removeItem(`${CANVAS_CACHE_PREFIX}${workspaceId}`);
   return true;

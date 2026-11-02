@@ -233,6 +233,11 @@ import {
 function WorkspaceView() {
   const { id } = useParams<{ id?: string }>();
   const workspaceId = id || "";
+  const [cacheOwner] = useState(() =>
+    Array.from(crypto.getRandomValues(new Uint8Array(16)), (value) =>
+      value.toString(16).padStart(2, "0"),
+    ).join(""),
+  );
   const activeWorkspaceIdRef = useRef(workspaceId);
   activeWorkspaceIdRef.current = workspaceId;
   const {
@@ -588,6 +593,7 @@ function WorkspaceView() {
           ++saveGenerationRef.current,
           draftBaseRevisionRef.current,
           true,
+          cacheOwner,
         );
       setSaveStatus(cached ? "offline_saved" : "unsaved");
       if (!cached) {
@@ -870,6 +876,7 @@ function WorkspaceView() {
           generation,
           draftBaseRevisionRef.current,
           true,
+          cacheOwner,
         );
       }
       setSaveStatus(cached ? "offline_saved" : "unsaved");
@@ -885,7 +892,7 @@ function WorkspaceView() {
         variant: "destructive",
       });
     },
-    [workspaceId, toast],
+    [workspaceId, toast, cacheOwner],
   );
 
   const takeSnapshot = useCallback(() => {
@@ -990,6 +997,7 @@ function WorkspaceView() {
             ++saveGenerationRef.current,
             localCache.baseRevision,
             true,
+            cacheOwner,
           );
         setNodes(
           orderNodesByHierarchy(normalizeNodeDimensions(localCache.nodes)),
@@ -1025,6 +1033,7 @@ function WorkspaceView() {
             ++saveGenerationRef.current,
             canvasData.revision,
             true,
+            cacheOwner,
           );
           setSaveStatus(cached ? "offline_saved" : "unsaved");
           toast({
@@ -1074,6 +1083,7 @@ function WorkspaceView() {
         ? draftBaseRevisionRef.current
         : canvasRevisionRef.current,
       draftConflictRef.current,
+      cacheOwner,
     );
     setSaveStatus("unsaved");
     if (draftConflictRef.current) {
@@ -1097,7 +1107,7 @@ function WorkspaceView() {
           )
         : ({ kind: "full" } as const);
       if (plan.kind === "none") {
-        clearCanvasLocalCache(workspaceId, cacheGeneration);
+        clearCanvasLocalCache(workspaceId, cacheGeneration, cacheOwner);
         setSaveStatus("saved");
         return;
       }
@@ -1108,6 +1118,7 @@ function WorkspaceView() {
           edges: persistedCanvas.edges,
           baseRevision: canvasRevisionRef.current,
           cacheGeneration,
+          cacheOwner,
           ...(plan.kind === "delta" ? { changes: plan.changes } : {}),
         },
         {
@@ -1153,6 +1164,7 @@ function WorkspaceView() {
     sync,
     reportCanvasSaveFailure,
     hydrationEpoch,
+    cacheOwner,
   ]);
 
   useEffect(() => {
@@ -1420,6 +1432,8 @@ function WorkspaceView() {
       persistedCanvas.edges,
       cacheGeneration,
       canvasRevisionRef.current,
+      false,
+      cacheOwner,
     );
     const baseline = lastSyncedCanvasRef.current;
     const plan = baseline
@@ -1431,7 +1445,7 @@ function WorkspaceView() {
         )
       : ({ kind: "full" } as const);
     if (plan.kind === "none") {
-      clearCanvasLocalCache(workspaceId, cacheGeneration);
+      clearCanvasLocalCache(workspaceId, cacheGeneration, cacheOwner);
       setSaveStatus("saved");
       return;
     }
@@ -1442,6 +1456,7 @@ function WorkspaceView() {
         edges: persistedCanvas.edges,
         baseRevision: canvasRevisionRef.current,
         cacheGeneration,
+        cacheOwner,
         ...(plan.kind === "delta" ? { changes: plan.changes } : {}),
       },
       {
@@ -1990,7 +2005,23 @@ function WorkspaceView() {
                         "Discard this local draft and load the server version? Export a copy first if you need it.",
                       )
                     ) {
-                      clearCanvasLocalCache(workspaceId);
+                      const cache = getCanvasFromLocalCache(workspaceId);
+                      if (
+                        cache &&
+                        !clearCanvasLocalCache(
+                          workspaceId,
+                          cache.generation,
+                          cacheOwner,
+                        )
+                      ) {
+                        toast({
+                          title: "Draft changed in another editor",
+                          description:
+                            "Export your draft and close the other editor before reloading.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
                       window.location.reload();
                     }
                   }}

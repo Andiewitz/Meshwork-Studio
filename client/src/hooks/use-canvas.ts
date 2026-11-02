@@ -16,6 +16,7 @@ export interface CanvasSyncInput {
   edges: Edge[];
   baseRevision: number;
   cacheGeneration?: number;
+  cacheOwner?: string;
   changes?: CanvasSaveChanges;
 }
 
@@ -60,7 +61,11 @@ export function useCanvas(workspaceId: string | number | null | undefined) {
     },
     onSuccess: (data, variables) => {
       if (workspaceId)
-        clearCanvasLocalCache(workspaceId, variables.cacheGeneration);
+        clearCanvasLocalCache(
+          workspaceId,
+          variables.cacheGeneration,
+          variables.cacheOwner,
+        );
       queryClient.setQueryData<{
         nodes: Node[];
         edges: Edge[];
