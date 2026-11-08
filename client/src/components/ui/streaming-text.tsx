@@ -12,7 +12,6 @@ import {
 } from "@heroicons/react/24/outline";
 
 const WORD_MS = 55;
-const HOLD_MS = 99999; // don't loop — hold forever once done
 
 export interface StreamingTextProps {
   content: string;
@@ -57,20 +56,17 @@ export default function StreamingText({
       setCount(tokens.length);
       return;
     }
+    if (done) return;
     const t = setTimeout(
-      () =>
-        setCount((c) => {
-          const next = c + 1;
-          if (next >= tokens.length) {
-            onComplete?.();
-            return tokens.length;
-          }
-          return next;
-        }),
-      done ? HOLD_MS : WORD_MS,
+      () => setCount((c) => Math.min(c + 1, tokens.length)),
+      WORD_MS,
     );
     return () => clearTimeout(t);
-  }, [count, done, tokens.length, isStreaming, onComplete]);
+  }, [count, done, tokens.length, isStreaming]);
+
+  useEffect(() => {
+    if (isStreaming && done) onComplete?.();
+  }, [done, isStreaming, onComplete]);
 
   const handleCopy = () => {
     if (!content) return;
