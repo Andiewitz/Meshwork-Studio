@@ -156,12 +156,61 @@
   stroke: #8295ac;
   stroke-linejoin: round;
 }
+.dashboard-preview-detail {
+  fill: none;
+  stroke: #8295ac;
+}
+.dashboard-preview-group {
+  fill: transparent;
+  stroke: #8295ac;
+  stroke-dasharray: 10 6;
+}
+.dashboard-preview-edge {
+  fill: #1c2432;
+  stroke: #567fb8;
+}
+.dashboard-preview-compute {
+  fill: #252331;
+  stroke: #8275af;
+}
+.dashboard-preview-data {
+  fill: #1a2c25;
+  stroke: #4d9070;
+}
+.dashboard-preview-async {
+  fill: #30271c;
+  stroke: #ad8044;
+}
+.dashboard-preview-client {
+  fill: #29211f;
+  stroke: #a86d5a;
+}
+.dashboard-preview-external {
+  fill: #30202b;
+  stroke: #a8628c;
+  stroke-dasharray: 8 5;
+}
+.dashboard-preview-detail-data {
+  stroke: #4d9070;
+}
+.dashboard-preview-detail-async {
+  stroke: #ad8044;
+}
 :root[data-theme="light"] .dashboard-preview-link {
   stroke: #73868d;
 }
 :root[data-theme="light"] .dashboard-preview-node {
   fill: #e5e8f3;
   stroke: #aab9ce;
+}
+:root[data-theme="light"] .dashboard-preview-group {
+  stroke: #9caebc;
+}
+:root[data-theme="light"] .dashboard-preview-detail-data {
+  stroke: #76b890;
+}
+:root[data-theme="light"] .dashboard-preview-detail-async {
+  stroke: #c69244;
 }
 :root[data-theme="light"] .dashboard-preview-edge {
   fill: #d9e7ff;

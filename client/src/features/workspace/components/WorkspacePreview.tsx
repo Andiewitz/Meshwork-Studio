@@ -3,6 +3,7 @@ import { useCanvas } from "@/hooks/use-canvas";
 import { getAbsoluteNodePosition } from "@/features/workspace/utils/containment";
 import { getNodeDimensions } from "@/features/workspace/utils/nodeGeometry";
 import { nodePresentation } from "@/components/canvas/nodes/nodePresentation";
+import { CONTAINER_TYPES } from "@/features/workspace/utils/nodeRegistry";
 
 function Diagram({ workspaceId }: { workspaceId: string }) {
   const { data, isError } = useCanvas(workspaceId);
@@ -36,6 +37,20 @@ function Diagram({ workspaceId }: { workspaceId: string }) {
       viewBox={`${left - padding} ${top - padding} ${right - left + padding * 2} ${bottom - top + padding * 2}`}
       preserveAspectRatio="xMidYMid meet"
     >
+      {frames
+        .filter(({ node }) => CONTAINER_TYPES.has(node.type || ""))
+        .map(({ node, x, y, width, height }) => (
+          <rect
+            key={node.id}
+            x={x}
+            y={y}
+            width={width}
+            height={height}
+            rx={Math.min(width, height) * 0.08}
+            className="dashboard-preview-group"
+            strokeWidth={Math.max(2, padding / 20)}
+          />
+        ))}
       {data.edges.slice(0, 400).map((edge) => {
         const source = byId.get(edge.source);
         const target = byId.get(edge.target);
@@ -49,24 +64,46 @@ function Diagram({ workspaceId }: { workspaceId: string }) {
             y2={target.y + target.height / 2}
             className="dashboard-preview-link"
             strokeWidth={Math.max(2, padding / 20)}
+            strokeDasharray={edge.style?.strokeDasharray}
           />
         );
       })}
-      {frames.map(({ node, x, y, width, height }) => (
-        <rect
-          key={node.id}
-          x={x}
-          y={y}
-          width={width}
-          height={height}
-          rx={
-            Math.min(width, height) *
-            (nodePresentation(node.type || "").shape === "pill" ? 0.5 : 0.15)
-          }
-          className={`dashboard-preview-node dashboard-preview-${nodePresentation(node.type || "").layer}`}
-          strokeWidth={Math.max(2, padding / 20)}
-        />
-      ))}
+      {frames
+        .filter(({ node }) => !CONTAINER_TYPES.has(node.type || ""))
+        .map(({ node, x, y, width, height }) => {
+          const { shape, layer } = nodePresentation(node.type || "");
+          const strokeWidth = Math.max(2, padding / 20);
+          return (
+            <g key={node.id}>
+              <rect
+                x={x}
+                y={y}
+                width={width}
+                height={height}
+                rx={
+                  Math.min(width, height) *
+                  (shape === "pill" ? 0.5 : shape === "database" ? 0.08 : 0.15)
+                }
+                className={`dashboard-preview-node dashboard-preview-${layer}`}
+                strokeWidth={strokeWidth}
+              />
+              {shape === "database" && (
+                <path
+                  d={`M ${x} ${y + height * 0.17} Q ${x + width / 2} ${y + height * 0.32} ${x + width} ${y + height * 0.17}`}
+                  className={`dashboard-preview-detail dashboard-preview-detail-${layer}`}
+                  strokeWidth={strokeWidth}
+                />
+              )}
+              {shape === "queue" && (
+                <path
+                  d={`M ${x + width * 0.08} ${y + height * 0.08} V ${y + height * 0.92} M ${x + width * 0.92} ${y + height * 0.08} V ${y + height * 0.92}`}
+                  className={`dashboard-preview-detail dashboard-preview-detail-${layer}`}
+                  strokeWidth={strokeWidth}
+                />
+              )}
+            </g>
+          );
+        })}
     </svg>
   );
 }
