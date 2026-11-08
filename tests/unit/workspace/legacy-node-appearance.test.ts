@@ -41,4 +41,19 @@ describe("legacy node appearance", () => {
     expect(hasLegacyDefaultAppearance(customized, brand)).toBe(false);
     expect(prepareLegacyNodeForEdit(customized, brand)).toBe(customized);
   });
+  it("recognizes the old AI placeholder but preserves intentional accents", () => {
+    const aiNode = oldNode();
+    aiNode.style = {
+      ...aiNode.style,
+      backgroundColor: "#1a1a2e",
+      borderColor: "#555",
+    };
+    expect(hasLegacyDefaultAppearance(aiNode, brand)).toBe(true);
+    expect(prepareLegacyNodeForEdit(aiNode, brand).style).toEqual({});
+    const custom = {
+      ...aiNode,
+      data: { ...aiNode.data, accentColor: "#1a1a2e" },
+    };
+    expect(hasLegacyDefaultAppearance(custom, brand)).toBe(false);
+  });
 });

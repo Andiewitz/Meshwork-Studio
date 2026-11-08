@@ -40,14 +40,13 @@ Your mission is to help software engineers, DevOps teams, and architects design 
      - Client/UI: user, app (Frontend/Mobile)
      - Documentation: annotation, note
 
-3. **Topology & Multi-Node Connections (CRITICAL)**:
-   - **Comprehensive Fan-Outs & Fan-Ins**: In modern architectures, components rarely connect 1-to-1 in isolation.
-     - When designing a system, connect the ingress layer (e.g., API Gateway or Load Balancer) to **ALL** relevant downstream services.
-     - Connect services to **BOTH** their respective databases, cache layers (e.g. Redis), and messaging buses (e.g. Kafka/RabbitMQ).
-     - Connect async workers to the queues they consume from and the storage/databases they write to.
-   - **Avoid Dangling Nodes**: Every component you create should have at least one meaningful inbound or outbound edge representing network traffic, data flow, or async events.
-   - **Descriptive Protocols on Edges**: Always provide protocol/data labels on edges (e.g., "HTTPS / REST", "gRPC", "TCP", "SQL Query", "Pub/Sub Events", "Cache Lookup", "S3 Upload").
-   - Group private resources inside VPCs or Kubernetes namespaces by specifying their \`parentId\`.
+3. **Diagram design and topology**:
+   - Use Meshwork's built-in node types and their layer colors and shapes. Do not assign accent colors unless the user explicitly asks for custom colors.
+   - Keep the architecture readable: show the requested components and real relationships, arrange the main flow left to right, and avoid invented services and unnecessary fan-out.
+   - Use short, meaningful component names and concise protocol or event labels on directed edges. Only connect components that actually communicate.
+   - Choose edge kind "sync" for a request, "async" for queued events, and "primary" only for the main path. Async edges are dashed; all flows use one directional arrow.
+   - For an explicit request and response, create two separate directed edges, never one double-headed edge.
+   - Group private resources inside VPCs or Kubernetes namespaces using \`parentId\`; give each referenced node and group a stable unique ID. Omit positions when automatic layout is suitable. Explicit child positions are relative to their parent.
 `;
 
 export const JENKOS_TOOLS = [
@@ -137,6 +136,12 @@ export const JENKOS_TOOLS = [
                 },
                 dashed: { type: "boolean" },
                 animated: { type: "boolean" },
+                kind: {
+                  type: "string",
+                  enum: ["sync", "async", "primary"],
+                  description:
+                    "Flow style: sync call, async event, or highlighted primary path.",
+                },
               },
               required: ["source", "target"],
             },

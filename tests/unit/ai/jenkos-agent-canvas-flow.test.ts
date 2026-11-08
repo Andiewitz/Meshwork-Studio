@@ -165,6 +165,69 @@ describe("Jenkos Agent & Architecture Generation Pipeline", () => {
   });
 
   describe("Jenkos Agent Run Loop with Tool Calling & Memory", () => {
+    it("sends the design conventions to Gemini and applies a styled tool response", async () => {
+      mockedSecureFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                tool_calls: [
+                  {
+                    id: "call_design",
+                    type: "function",
+                    function: {
+                      name: "edit_canvas",
+                      arguments: JSON.stringify({
+                        action: "add",
+                        nodes: [
+                          { id: "app", type: "app", label: "Web app" },
+                          { id: "queue", type: "queue", label: "Jobs" },
+                        ],
+                        edges: [
+                          {
+                            source: "app",
+                            target: "queue",
+                            label: "publish",
+                            kind: "async",
+                          },
+                        ],
+                      }),
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      } as Response);
+      const result = await runJenkosAgent({
+        userPrompt: "Draw a job pipeline",
+        history: [],
+        currentNodes: [],
+        currentEdges: [],
+        viewportCenter,
+      });
+      const request = mockedSecureFetch.mock.calls.at(-1)?.[1];
+      const payload = JSON.parse(String(request?.body));
+      expect(payload.provider).toBe("gemini");
+      expect(payload.messages[0].content).toContain(
+        "built-in node types and their layer colors and shapes",
+      );
+      expect(
+        payload.tools[0].function.parameters.properties.edges.items.properties
+          .kind.enum,
+      ).toContain("async");
+      expect(
+        result.canvasResult?.nodes[0].style?.backgroundColor,
+      ).toBeUndefined();
+      expect(result.canvasResult?.edges[0]).toMatchObject({
+        data: { connectionKind: "async" },
+        style: { strokeDasharray: "8 6" },
+        label: "publish",
+      });
+    });
+
     it("handles native LLM function tool call and applies canvas mutations", async () => {
       const initialNodes: Node[] = [];
       const initialEdges: Edge[] = [];

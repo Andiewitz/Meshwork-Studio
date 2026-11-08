@@ -520,6 +520,10 @@ html {
   --workspace-node-border: #40404a;
   --workspace-node-text: #f2f2f4;
   --workspace-node-icon: #b9bdc7;
+  --workspace-connection-stroke: #a8b6c8;
+  --workspace-connection-primary: #75b2ff;
+  --workspace-connection-label: #e0e7ef;
+  --workspace-connection-label-bg: #1c1c22;
 }
 :root[data-theme="light"] {
   color-scheme: light;
@@ -550,6 +554,10 @@ html {
   --workspace-node-border: #c9cdd3;
   --workspace-node-text: #24262b;
   --workspace-node-icon: #59616e;
+  --workspace-connection-stroke: #46566a;
+  --workspace-connection-primary: #1455b8;
+  --workspace-connection-label: #344254;
+  --workspace-connection-label-bg: #ffffff;
   --background: 220 14% 96%;
   --foreground: 225 10% 15%;
   --card: 0 0% 100%;

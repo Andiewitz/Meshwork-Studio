@@ -5,6 +5,7 @@ import { ReactFlow, type Node } from "@xyflow/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SystemNode } from "@/components/canvas/nodes/SystemNode";
 import { nodeAccessibleLabel } from "@/components/canvas/nodes/nodePresentation";
+import { executeEditCanvas } from "@/features/workspace/agent/tools/canvasToolExecutor";
 
 const nodeTypes = { database: SystemNode };
 
@@ -111,6 +112,23 @@ describe("node appearance through React Flow", () => {
       ?.getAttribute("d");
     expect(defaultIconPath).toBeTruthy();
     expect(customIconPath).not.toBe(defaultIconPath);
+  });
+  it("renders an AI-generated database with the layer palette instead of a generic dark box", async () => {
+    const result = executeEditCanvas([], [], {
+      action: "add",
+      nodes: [{ id: "db", type: "database", label: "Orders" }],
+    });
+    await renderNode(result.nodes[0]);
+    const surface = container.querySelector<HTMLElement>(
+      ".node-layer-surface",
+    )!;
+    expect(surface.style.backgroundColor).toBe("var(--node-layer-background)");
+    expect(surface.style.getPropertyValue("--node-light-background")).toBe(
+      "#dff2e5",
+    );
+    expect(surface.style.getPropertyValue("--node-dark-background")).toBe(
+      "#1a2c25",
+    );
   });
   it("exposes the full description when the canvas node receives keyboard focus", async () => {
     const data = {

@@ -15,11 +15,18 @@ export function hasLegacyDefaultAppearance(
   brand: LegacyBrand,
 ): boolean {
   const style = node.style;
-  const { fontColor, icon, theme } = node.data;
+  const { fontColor, icon, theme, accentColor } = node.data;
+  // Older AI-generated nodes all received the same placeholder palette.
+  // Only normalize the complete tuple and leave explicit accents untouched.
+  const oldAiPalette =
+    !accentColor &&
+    style?.backgroundColor === "#1a1a2e" &&
+    style.borderColor === "#555";
   return (
-    style?.backgroundColor === brand.color &&
-    style.borderColor === brand.borderColor &&
-    style.borderRadius === 8 &&
+    (oldAiPalette ||
+      (style?.backgroundColor === brand.color &&
+        style.borderColor === brand.borderColor)) &&
+    style?.borderRadius === 8 &&
     style.opacity === 1 &&
     style.fontSize === 13 &&
     (!theme || theme === "default") &&

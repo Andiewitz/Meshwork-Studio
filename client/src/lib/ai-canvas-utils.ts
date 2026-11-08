@@ -1,4 +1,4 @@
-import type { Node, Edge } from "@xyflow/react";
+import { MarkerType, type Node, type Edge } from "@xyflow/react";
 import {
   getNodeSize,
   resolveNodeType,
@@ -47,13 +47,19 @@ interface RawNode {
 }
 
 /** Shape of a raw edge as returned by the AI (loosely typed) */
-interface RawEdge {
+export interface RawEdge {
   id?: string;
   source: string;
   target: string;
   type?: string;
   label?: string;
   markerEnd?: unknown;
+  sourceHandle?: string | null;
+  targetHandle?: string | null;
+  kind?: "sync" | "async" | "primary";
+  dashed?: boolean;
+  animated?: boolean;
+  color?: string;
   data?: {
     label?: string;
     description?: string;
@@ -63,6 +69,109 @@ interface RawEdge {
     stroke?: string;
     strokeWidth?: number;
     strokeDasharray?: string;
+  };
+}
+
+/** Render AI connections with the same visual vocabulary as the editor. */
+export function createGeneratedEdge(
+  e: RawEdge,
+  id: string,
+  sourceNode: Node,
+  targetNode: Node,
+  nodes: Node[],
+): Edge {
+  const handles = getSmartHandleIds(sourceNode, targetNode, nodes);
+  const asyncTypes = new Set(["queue", "bus", "nats"]);
+  const explicitKind =
+    e.kind === "sync" || e.kind === "async" || e.kind === "primary"
+      ? e.kind
+      : undefined;
+  const kind =
+    explicitKind ??
+    (e.dashed ||
+    e.style?.strokeDasharray ||
+    asyncTypes.has(sourceNode.type ?? "") ||
+    asyncTypes.has(targetNode.type ?? "")
+      ? "async"
+      : "sync");
+  const stroke =
+    e.color ||
+    e.style?.stroke ||
+    (kind === "primary"
+      ? "var(--workspace-connection-primary)"
+      : "var(--workspace-connection-stroke)");
+  const dash =
+    e.style?.strokeDasharray ??
+    (e.dashed || kind === "async" ? "8 6" : undefined);
+  const label = e.label ?? e.data?.label ?? "";
+  return {
+    id,
+    source: e.source,
+    target: e.target,
+    sourceHandle: e.sourceHandle ?? handles.sourceHandle,
+    targetHandle: e.targetHandle ?? handles.targetHandle,
+    type: e.type ?? "step",
+    style: {
+      ...e.style,
+      stroke,
+      strokeWidth: e.style?.strokeWidth ?? (kind === "primary" ? 3 : 2),
+      ...(dash ? { strokeDasharray: dash } : {}),
+    },
+    markerEnd:
+      e.markerEnd && typeof e.markerEnd === "object"
+        ? (e.markerEnd as Edge["markerEnd"])
+        : { type: MarkerType.ArrowClosed, color: stroke },
+    animated: e.animated ?? false,
+    data: {
+      ...e.data,
+      label,
+      description: e.data?.description ?? "",
+      ai: { notes: e.data?.ai?.notes ?? "" },
+      connectionKind: kind,
+    },
+    ...(label
+      ? {
+          label,
+          labelStyle: {
+            fill: "var(--workspace-connection-label)",
+            fontSize: 11,
+            fontFamily: "var(--font-body)",
+            fontWeight: 500,
+          },
+          labelBgStyle: {
+            fill: "var(--workspace-connection-label-bg)",
+            fillOpacity: 0.95,
+          },
+          labelBgPadding: [6, 4] as [number, number],
+          labelBgBorderRadius: 6,
+        }
+      : {}),
+  };
+}
+
+/** Route the second direction of a request/response around the first. */
+export function separateGeneratedReturn(
+  edge: Edge,
+  existing: Edge[],
+  nodes: Node[],
+): Edge {
+  const reverse = existing.find(
+    (candidate) =>
+      candidate.source === edge.target && candidate.target === edge.source,
+  );
+  if (!reverse) return edge;
+  const source = nodes.find((node) => node.id === edge.source);
+  const target = nodes.find((node) => node.id === edge.target);
+  const sourceSide = reverse.targetHandle?.startsWith("bottom")
+    ? "top"
+    : "bottom";
+  const targetSide = reverse.sourceHandle?.startsWith("bottom")
+    ? "top"
+    : "bottom";
+  return {
+    ...edge,
+    sourceHandle: source?.type === "junction" ? null : sourceSide,
+    targetHandle: target?.type === "junction" ? null : `${targetSide}-target`,
   };
 }
 
@@ -128,9 +237,17 @@ export function validateAndRepairCanvas(
     const existingW = n.width ?? n.style?.width;
     const existingH = n.height ?? n.style?.height;
     const width =
-      typeof existingW === "number" && existingW >= 48 ? existingW : dim.w;
+      typeof existingW === "number" &&
+      Number.isFinite(existingW) &&
+      existingW >= 48
+        ? Math.min(existingW, 100_000)
+        : dim.w;
     const height =
-      typeof existingH === "number" && existingH >= 24 ? existingH : dim.h;
+      typeof existingH === "number" &&
+      Number.isFinite(existingH) &&
+      existingH >= 24
+        ? Math.min(existingH, 100_000)
+        : dim.h;
 
     // Deduplicate IDs
     let id = n.id ?? `node-${i}`;
@@ -156,10 +273,9 @@ export function validateAndRepairCanvas(
         category: n.data?.category ?? "Core",
         description: n.data?.description ?? "",
         tags: n.data?.tags ?? [],
-        fontColor:
-          (n.data?.fontColor as string | undefined) ??
-          n.style?.fontColor ??
-          "#ffffff",
+        ...((n.data?.fontColor ?? n.style?.fontColor)
+          ? { fontColor: n.data?.fontColor ?? n.style?.fontColor }
+          : {}),
         icon:
           (n.data?.icon as string | null | undefined) ?? n.style?.icon ?? null,
         theme:
@@ -174,15 +290,7 @@ export function validateAndRepairCanvas(
         ...(n.data?.accentColor ? { accentColor: n.data.accentColor } : {}),
         ...(n.data?.note ? { note: n.data.note } : {}),
       },
-      style: {
-        ...style,
-        backgroundColor:
-          n.style?.backgroundColor ?? n.data?.accentColor ?? "#1a1a2e",
-        borderColor: n.style?.borderColor ?? "#555",
-        borderRadius: n.style?.borderRadius ?? 8,
-        opacity: n.style?.opacity ?? 1,
-        fontSize: n.style?.fontSize ?? 13,
-      },
+      ...(Object.keys(style).length ? { style } : {}),
       ...(n.parentId
         ? { parentId: n.parentId, extent: "parent" as const }
         : {}),
@@ -196,56 +304,13 @@ export function validateAndRepairCanvas(
     .map((e, i) => {
       const sourceNode = nodeMap.get(e.source)!;
       const targetNode = nodeMap.get(e.target)!;
-      const { sourceHandle, targetHandle } = getSmartHandleIds(
+      return createGeneratedEdge(
+        e,
+        e.id ?? `edge-${i}`,
         sourceNode,
         targetNode,
         nodes,
       );
-      const hasDash = e.style?.strokeDasharray;
-      const hasArrow = e.markerEnd != null;
-
-      return {
-        id: e.id ?? `edge-${i}`,
-        source: e.source,
-        target: e.target,
-        sourceHandle,
-        targetHandle,
-        type: e.type ?? "smoothstep",
-        style: {
-          stroke: e.style?.stroke ?? "#555",
-          strokeWidth: e.style?.strokeWidth ?? 1.5,
-          ...(hasDash ? { strokeDasharray: e.style!.strokeDasharray } : {}),
-        },
-        data: {
-          label: e.data?.label ?? e.label ?? "",
-          description: e.data?.description ?? "",
-          ai: {
-            notes: e.data?.ai?.notes ?? "",
-          },
-        },
-        ...(hasArrow
-          ? {
-              markerEnd: {
-                type: "arrowclosed",
-                color: e.style?.stroke ?? "#555",
-              },
-            }
-          : {}),
-        ...(e.label
-          ? {
-              label: e.label,
-              labelStyle: {
-                fill: "#999",
-                fontSize: 10,
-                fontFamily: "var(--font-mono)",
-                fontWeight: 500,
-              },
-              labelBgStyle: { fill: "#1A1A1A", fillOpacity: 0.9 },
-              labelBgPadding: [6, 4] as [number, number],
-              labelBgBorderRadius: 6,
-            }
-          : {}),
-      };
     });
 
   return { nodes, edges };

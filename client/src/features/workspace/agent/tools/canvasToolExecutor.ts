@@ -1,7 +1,9 @@
 import type { Node, Edge } from "@xyflow/react";
 import {
   validateAndRepairCanvas,
+  createGeneratedEdge,
   getSmartHandleIds,
+  separateGeneratedReturn,
   TYPE_ALIASES,
 } from "@/lib/ai-canvas-utils";
 import {
@@ -42,6 +44,7 @@ export interface EditCanvasEdgeInput {
   dashed?: boolean;
   animated?: boolean;
   color?: string;
+  kind?: "sync" | "async" | "primary";
 }
 
 export interface EditCanvasToolArgs {
@@ -72,7 +75,7 @@ function uniqueNodeId(id: string, usedIds: Set<string>): string {
 
 function requestedDimension(value: unknown, minimum: number): number {
   return typeof value === "number" && Number.isFinite(value)
-    ? Math.max(24, Math.round(value))
+    ? Math.min(100_000, Math.max(24, Math.round(value)))
     : minimum;
 }
 
@@ -138,7 +141,7 @@ function arrangeAutomaticChildren(
  * Categorizes a node type into a horizontal pipeline tier (0: Entry -> 1: Routing -> 2: Compute -> 3: Data/Queues)
  */
 function getNodeTier(type: string): number {
-  const normalized = TYPE_ALIASES[type.toLowerCase()] || type.toLowerCase();
+  const normalized = (TYPE_ALIASES[type.toLowerCase()] || type).toLowerCase();
   switch (normalized) {
     case "user":
     case "app":
@@ -193,6 +196,7 @@ function getNodeTier(type: string): number {
 function computeTieredLayout(
   nodes: EditCanvasNodeInput[],
   origin: { x: number; y: number },
+  minLeft?: number,
 ): Map<number, { x: number; y: number }> {
   const tierBuckets = new Map<number, number[]>([
     [0, []],
@@ -202,24 +206,63 @@ function computeTieredLayout(
   ]);
 
   nodes.forEach((n, idx) => {
-    const tier = getNodeTier(n.type);
+    if (n.parentId) return;
+    const tier = getNodeTier(n.type || "server");
     tierBuckets.get(tier)!.push(idx);
   });
 
   const positions = new Map<number, { x: number; y: number }>();
-  const TIER_X_OFFSET = [0, 280, 580, 880]; // generous horizontal lane separation
-  const VERTICAL_GAP = 36;
+  const VERTICAL_GAP = 64;
+  const HORIZONTAL_GAP = 120;
+  const childrenByParent = new Map<string, number[]>();
+  nodes.forEach((node, index) => {
+    if (!node.parentId || node.position) return;
+    const siblings = childrenByParent.get(node.parentId) ?? [];
+    siblings.push(index);
+    childrenByParent.set(node.parentId, siblings);
+  });
+  const estimated = new Map<number, { width: number; height: number }>();
+  const estimateSize = (
+    index: number,
+    visited = new Set<number>(),
+  ): { width: number; height: number } => {
+    const node = nodes[index];
+    const fallback = getNodeSize(resolveNodeType(node.type || "server").type);
+    let width = requestedDimension(node.width, fallback.w);
+    let height = requestedDimension(node.height, fallback.h);
+    if (!node.id || visited.has(index) || visited.size >= 64)
+      return { width, height };
+    const cached = estimated.get(index);
+    if (cached) return cached;
+    const nextVisited = new Set(visited).add(index);
+    const children = (childrenByParent.get(node.id) ?? []).map((childIndex) =>
+      estimateSize(childIndex, nextVisited),
+    );
+    if (children.length) {
+      width = Math.max(width, ...children.map((child) => child.width + 48));
+      height = Math.max(
+        height,
+        48 + children.reduce((sum, child) => sum + child.height + 24, 0),
+      );
+    }
+    const result = { width, height };
+    estimated.set(index, result);
+    return result;
+  };
+  const widths = [...tierBuckets.values()].map((indices) =>
+    Math.max(0, ...indices.map((idx) => estimateSize(idx).width)),
+  );
+  const totalWidth =
+    widths.reduce((sum, width) => sum + width, 0) +
+    Math.max(0, widths.filter(Boolean).length - 1) * HORIZONTAL_GAP;
+  let tierX = Math.max(origin.x - totalWidth / 2, minLeft ?? -Infinity);
 
   tierBuckets.forEach((nodeIndices, tier) => {
     if (nodeIndices.length === 0) return;
 
     // Calculate total height of this tier column
     const heights = nodeIndices.map((idx) => {
-      const type =
-        TYPE_ALIASES[nodes[idx].type?.toLowerCase()] ||
-        nodes[idx].type ||
-        "server";
-      return getNodeSize(type).h;
+      return estimateSize(idx).height;
     });
 
     const totalColumnHeight =
@@ -227,7 +270,6 @@ function computeTieredLayout(
       (nodeIndices.length - 1) * VERTICAL_GAP;
 
     let currentY = origin.y - totalColumnHeight / 2;
-    const tierX = origin.x + TIER_X_OFFSET[tier] - 380; // center around origin
 
     nodeIndices.forEach((nodeIdx, i) => {
       positions.set(nodeIdx, {
@@ -236,7 +278,41 @@ function computeTieredLayout(
       });
       currentY += heights[i] + VERTICAL_GAP;
     });
+    tierX += widths[tier] + HORIZONTAL_GAP;
   });
+
+  // Keep model-specified positions intact, but do not place automatic nodes
+  // on top of them (or on top of another automatic node shifted out of the way).
+  const occupied = nodes.flatMap((node, index) =>
+    !node.parentId &&
+    node.position &&
+    Number.isFinite(node.position.x) &&
+    Number.isFinite(node.position.y)
+      ? [{ ...node.position, ...estimateSize(index) }]
+      : [],
+  );
+  for (const [index, position] of positions) {
+    if (nodes[index].position) continue;
+    const size = estimateSize(index);
+    let conflict = occupied.find(
+      (box) =>
+        position.x < box.x + box.width + 32 &&
+        position.x + size.width + 32 > box.x &&
+        position.y < box.y + box.height + 32 &&
+        position.y + size.height + 32 > box.y,
+    );
+    while (conflict) {
+      position.y = conflict.y + conflict.height + 64;
+      conflict = occupied.find(
+        (box) =>
+          position.x < box.x + box.width + 32 &&
+          position.x + size.width + 32 > box.x &&
+          position.y < box.y + box.height + 32 &&
+          position.y + size.height + 32 > box.y,
+      );
+    }
+    occupied.push({ ...position, ...size });
+  }
 
   return positions;
 }
@@ -292,7 +368,10 @@ export function executeEditCanvas(
         source: e.source,
         target: e.target,
         label: e.label,
-        style: e.dashed ? { strokeDasharray: "5,5" } : undefined,
+        kind: e.kind,
+        dashed: e.dashed,
+        animated: e.animated,
+        color: e.color,
       })),
     };
 
@@ -307,18 +386,29 @@ export function executeEditCanvas(
     }
 
     const automaticChildIds = new Set(
-      rawNodes
-        .filter((node) => node.parentId && !node.position)
-        .map((node, index) => node.id || `node-${index + 1}`),
+      rawNodes.flatMap((node, index) =>
+        node.parentId && !node.position ? [node.id || `node-${index + 1}`] : [],
+      ),
     );
     const nodes = arrangeAutomaticChildren(repaired.nodes, automaticChildIds);
+    const byId = new Map(nodes.map((node) => [node.id, node]));
+    const edges: Edge[] = [];
+    for (const edge of repaired.edges) {
+      const source = byId.get(edge.source);
+      const target = byId.get(edge.target);
+      const routed =
+        source && target
+          ? { ...edge, ...getSmartHandleIds(source, target, nodes) }
+          : edge;
+      edges.push(separateGeneratedReturn(routed, edges, nodes));
+    }
 
     return {
       nodes,
-      edges: repaired.edges,
+      edges,
       summary:
         args.explanation ||
-        `Created new architecture with ${nodes.length} nodes and ${repaired.edges.length} edges.`,
+        `Created new architecture with ${nodes.length} nodes and ${edges.length} edges.`,
       applied: true,
     };
   }
@@ -360,9 +450,19 @@ export function executeEditCanvas(
   }
 
   // Calculate placement baseline for newly added nodes avoiding collision
-  const maxX = workingNodes.reduce(
-    (max, n) => Math.max(max, n.position.x + getNodeDimensions(n).width),
-    viewportCenter.x - 200,
+  const maxX = workingNodes
+    .filter((node) => !node.parentId)
+    .reduce(
+      (max, n) => Math.max(max, n.position.x + getNodeDimensions(n).width),
+      viewportCenter.x - 200,
+    );
+  const automaticPositions = computeTieredLayout(
+    rawNodes,
+    {
+      x: workingNodes.length ? maxX + 500 : viewportCenter.x,
+      y: viewportCenter.y,
+    },
+    workingNodes.length ? maxX + 120 : undefined,
   );
 
   rawNodes.forEach((incoming, index) => {
@@ -408,9 +508,9 @@ export function executeEditCanvas(
 
       // Calculate position relative to viewport or offset to the right of existing canvas
       const isAutomaticChild = !incoming.position && Boolean(incoming.parentId);
-      const posX = incoming.position?.x ?? maxX + 60;
-      const posY =
-        incoming.position?.y ?? viewportCenter.y + index * (dim.h + 30) - 50;
+      const automatic = automaticPositions.get(index);
+      const posX = incoming.position?.x ?? automatic?.x ?? maxX + 60;
+      const posY = incoming.position?.y ?? automatic?.y ?? viewportCenter.y;
 
       const newNode: Node = {
         id: newId,
@@ -419,6 +519,7 @@ export function executeEditCanvas(
         width: requestedDimension(incoming.width, dim.w),
         height: requestedDimension(incoming.height, dim.h),
         data: {
+          ...incoming.data,
           label: incoming.label || type,
           category: "Core",
           description: incoming.description || "",
@@ -426,18 +527,11 @@ export function executeEditCanvas(
           provider: incoming.provider,
           accentColor: incoming.accentColor,
           note: incoming.note,
-          fontColor: "#ffffff",
           theme: "default",
           ai: { summary: "", notes: "", lastAnalyzed: null },
           ...(originalType ? { originalType } : {}),
         },
-        style: {
-          backgroundColor: incoming.accentColor || "#1a1a2e",
-          borderColor: "#555",
-          borderRadius: 8,
-          opacity: 1,
-          fontSize: 13,
-        },
+        ...(incoming.style ? { style: incoming.style as Node["style"] } : {}),
         ...(incoming.parentId
           ? {
               parentId: idRemap.get(incoming.parentId) ?? incoming.parentId,
@@ -476,48 +570,18 @@ export function executeEditCanvas(
       const edgeId = incoming.id || `edge-${Date.now()}-${idx}`;
       const sNode = existingNodeMap.get(source);
       const tNode = existingNodeMap.get(target);
-      const handles =
-        sNode && tNode
-          ? getSmartHandleIds(
-              sNode,
-              tNode,
-              Array.from(existingNodeMap.values()),
-            )
-          : { sourceHandle: undefined, targetHandle: undefined };
-
-      workingEdges.push({
-        id: edgeId,
-        source,
-        target,
-        sourceHandle: handles.sourceHandle,
-        targetHandle: handles.targetHandle,
-        type: "smoothstep",
-        style: {
-          stroke: incoming.color || "#555",
-          strokeWidth: 1.5,
-          ...(incoming.dashed ? { strokeDasharray: "5,5" } : {}),
-        },
-        animated: incoming.animated,
-        data: {
-          label: incoming.label || "",
-          description: "",
-          ai: { notes: "" },
-        },
-        ...(incoming.label
-          ? {
-              label: incoming.label,
-              labelStyle: {
-                fill: "#999",
-                fontSize: 10,
-                fontFamily: "var(--font-mono)",
-                fontWeight: 500,
-              },
-              labelBgStyle: { fill: "#1A1A1A", fillOpacity: 0.9 },
-              labelBgPadding: [6, 4],
-              labelBgBorderRadius: 6,
-            }
-          : {}),
-      });
+      if (sNode && tNode) {
+        const edge = createGeneratedEdge(
+          { ...incoming, source, target },
+          edgeId,
+          sNode,
+          tNode,
+          workingNodes,
+        );
+        workingEdges.push(
+          separateGeneratedReturn(edge, workingEdges, workingNodes),
+        );
+      }
     }
   });
 
