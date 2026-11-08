@@ -1,6 +1,7 @@
 # AWS additions for the existing EC2 deployment
 
 See [OFFLOAD-AUDIT.md](OFFLOAD-AUDIT.md) for service choices, cost caveats, and the opt-in canvas object bucket.
+The proposed complete backup and restore work is in [BACKUP-AND-RESTORE-PLAN.md](../../plans/BACKUP-AND-RESTORE-PLAN.md).
 
 Status: implemented locally; AWS deployment and live verification pending.
 
