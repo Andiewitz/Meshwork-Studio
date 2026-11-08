@@ -28,7 +28,7 @@ const lazyMap = {
   Settings: React.lazy(() => import("@/pages/Settings")),
   Workspace: React.lazy(() => import("@/pages/Workspace")),
   Dev: React.lazy(() => import("@/pages/Dev")),
-  Team: React.lazy(() => import("@/pages/Team")),
+  Connectors: React.lazy(() => import("@/pages/Connectors")),
   Templates: React.lazy(() => import("@/pages/Templates")),
   TermsOfService: React.lazy(() => import("@/pages/TermsOfService")),
   PrivacyPolicy: React.lazy(() => import("@/pages/PrivacyPolicy")),
@@ -57,7 +57,7 @@ const {
   Settings,
   Workspace,
   Dev,
-  Team,
+  Connectors,
   Templates,
   TermsOfService,
   PrivacyPolicy,
@@ -79,7 +79,8 @@ export function preloadRoute(path: string) {
     void import("@/pages/Workspace").catch(() => {});
   else if (path === "/dev" || path === "/docs")
     void import("@/pages/Dev").catch(() => {});
-  else if (path === "/team") void import("@/pages/Team").catch(() => {});
+  else if (path === "/team" || path === "/connectors")
+    void import("@/pages/Connectors").catch(() => {});
   else if (path === "/templates")
     void import("@/pages/Templates").catch(() => {});
   else if (path === "/terms")
@@ -148,7 +149,7 @@ function DashboardRoutes() {
             <Route path="/home" component={Home} />
             <Route path="/workspaces" component={Home} />
             <Route path="/settings" component={Settings} />
-            <Route path="/team" component={Team} />
+            <Route path="/connectors" component={Connectors} />
             <Route path="/dev" component={Dev} />
             <Route path="/templates" component={Templates} />
             <Route component={NotFound} />
@@ -213,6 +214,9 @@ function Router() {
         <ProtectedRoute component={DashboardRoutes} />
       </Route>
       <Route path="/team">
+        <Redirect to="/connectors" />
+      </Route>
+      <Route path="/connectors">
         <ProtectedRoute component={DashboardRoutes} />
       </Route>
       <Route path="/dev">

@@ -74,12 +74,12 @@ export function getDefaultMeshworkActions(
       onSelect: () => navigate("/templates"),
     },
     {
-      id: "nav:team",
-      label: "Team",
+      id: "nav:connectors",
+      label: "Connectors",
       icon: <Users />,
-      description: "Manage your team",
+      description: "Explore service connectors",
       category: "Navigation",
-      onSelect: () => navigate("/team"),
+      onSelect: () => navigate("/connectors"),
     },
     {
       id: "nav:settings",

@@ -108,4 +108,14 @@ describe("workspace search", () => {
     expect(container.textContent).toContain("No results for");
     expect(container.querySelectorAll('[role="option"]')).toHaveLength(0);
   });
+  it("opens connectors from navigation search", () => {
+    const input = search("connectors");
+    expect(container.textContent).toContain("Connectors");
+    act(() =>
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+      ),
+    );
+    expect(mocks.navigate).toHaveBeenCalledWith("/connectors");
+  });
 });

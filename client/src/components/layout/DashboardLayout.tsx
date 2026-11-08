@@ -35,7 +35,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
   const isOverview = location === "/home";
   const isTemplates = location === "/templates";
-  const isTeam = location === "/team";
+  const isConnectors = location === "/connectors";
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -189,10 +189,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               </button>
             </Link>
 
-            <Link href="/team">
+            <Link href="/connectors">
               <button
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-colors cursor-figma-pointer ${
-                  isTeam
+                  isConnectors
                     ? "dashboard-tint dashboard-ink"
                     : "dashboard-secondary dashboard-hover-tint dashboard-hover-ink"
                 }`}
@@ -365,6 +365,12 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           className="shrink-0 rounded-lg px-3 py-2 text-sm dashboard-ink dashboard-hover-tint"
         >
           Templates
+        </Link>
+        <Link
+          href="/connectors"
+          className="shrink-0 rounded-lg px-3 py-2 text-sm dashboard-ink dashboard-hover-tint"
+        >
+          Connectors
         </Link>
         <button
           type="button"
