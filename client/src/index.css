@@ -512,3 +512,246 @@ html {
     background-position: -200% 0;
   }
 }
+
+/* Workspace canvas colors are independent of saved node styles. */
+:root {
+  --workspace-canvas: #0a0a0a;
+  --workspace-node-bg: #1c1c22;
+  --workspace-node-border: #40404a;
+  --workspace-node-text: #f2f2f4;
+  --workspace-node-icon: #b9bdc7;
+}
+:root[data-workspace-theme="light"] {
+  --workspace-canvas: #f1f2f4;
+  --workspace-node-bg: #ffffff;
+  --workspace-node-border: #c9cdd3;
+  --workspace-node-text: #24262b;
+  --workspace-node-icon: #59616e;
+  --background: 220 14% 96%;
+  --foreground: 225 10% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 225 10% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 225 10% 15%;
+  --muted: 220 14% 93%;
+  --muted-foreground: 220 8% 40%;
+  --border: 220 12% 86%;
+  --input: 220 12% 90%;
+}
+/* The editor predates theme tokens. Map its existing neutral utilities while
+   keeping custom node colors and colored actions intact. Portals inherit this
+   scope from the document so menus and dialogs follow the canvas. */
+:root[data-workspace-theme="light"] [class~="bg-[#09090b]"] {
+  background-color: #f1f2f4;
+}
+:root[data-workspace-theme="light"] [class~="bg-[#111114]"] {
+  background-color: #f8f9fa;
+}
+:root[data-workspace-theme="light"] [class~="bg-[#0A0A0A]"] {
+  background-color: #f1f2f4;
+}
+:root[data-workspace-theme="light"] [class~="bg-[#121214]"] {
+  background-color: #ffffff;
+}
+:root[data-workspace-theme="light"] [class~="bg-[#121214]/95"] {
+  background-color: #ffffff;
+}
+:root[data-workspace-theme="light"] [class~="bg-[#121214]/90"] {
+  background-color: #ffffff;
+}
+:root[data-workspace-theme="light"] [class~="bg-[#121214]/85"] {
+  background-color: #ffffff;
+}
+:root[data-workspace-theme="light"] [class~="bg-[#0E0E0E]/95"] {
+  background-color: #ffffff;
+}
+:root[data-workspace-theme="light"] [class~="bg-[#161616]/90"] {
+  background-color: #ffffff;
+}
+:root[data-workspace-theme="light"] [class~="bg-[#18181b]"] {
+  background-color: #e9ebee;
+}
+:root[data-workspace-theme="light"] [class~="bg-[#1a1a1a]"] {
+  background-color: #f0f1f3;
+}
+:root[data-workspace-theme="light"] [class~="bg-[#171719]"] {
+  background-color: #f5f6f7;
+}
+:root[data-workspace-theme="light"] [class~="bg-[#242426]"] {
+  background-color: #e9ebee;
+}
+:root[data-workspace-theme="light"] [class~="text-white"] {
+  color: rgb(31 35 42 / 1);
+}
+:root[data-workspace-theme="light"] [class~="text-white/90"] {
+  color: rgb(31 35 42 / 0.9);
+}
+:root[data-workspace-theme="light"] [class~="text-white/80"] {
+  color: rgb(31 35 42 / 0.8);
+}
+:root[data-workspace-theme="light"] [class~="text-white/75"] {
+  color: rgb(31 35 42 / 0.75);
+}
+:root[data-workspace-theme="light"] [class~="text-white/70"] {
+  color: rgb(31 35 42 / 0.7);
+}
+:root[data-workspace-theme="light"] [class~="text-white/60"] {
+  color: rgb(31 35 42 / 0.65);
+}
+:root[data-workspace-theme="light"] [class~="text-white/50"] {
+  color: rgb(31 35 42 / 0.6);
+}
+:root[data-workspace-theme="light"] [class~="text-white/40"] {
+  color: rgb(31 35 42 / 0.55);
+}
+:root[data-workspace-theme="light"] [class~="text-white/30"] {
+  color: rgb(31 35 42 / 0.5);
+}
+:root[data-workspace-theme="light"] [class~="text-white/20"] {
+  color: rgb(31 35 42 / 0.45);
+}
+:root[data-workspace-theme="light"] [class~="text-white/10"] {
+  color: rgb(31 35 42 / 0.35);
+}
+:root[data-workspace-theme="light"] [class~="bg-white/5"] {
+  background-color: rgb(35 42 52 / 0.06);
+}
+:root[data-workspace-theme="light"] [class~="bg-white/10"] {
+  background-color: rgb(35 42 52 / 0.06);
+}
+:root[data-workspace-theme="light"] [class~="bg-white/20"] {
+  background-color: rgb(35 42 52 / 0.06);
+}
+:root[data-workspace-theme="light"] [class~="bg-white/[0.02]"] {
+  background-color: rgb(35 42 52 / 0.06);
+}
+:root[data-workspace-theme="light"] [class~="bg-white/[0.03]"] {
+  background-color: rgb(35 42 52 / 0.06);
+}
+:root[data-workspace-theme="light"] [class~="bg-white/[0.04]"] {
+  background-color: rgb(35 42 52 / 0.06);
+}
+:root[data-workspace-theme="light"] [class~="bg-white/[0.05]"] {
+  background-color: rgb(35 42 52 / 0.06);
+}
+:root[data-workspace-theme="light"] [class~="bg-white/[0.06]"] {
+  background-color: rgb(35 42 52 / 0.06);
+}
+:root[data-workspace-theme="light"] [class~="bg-white/[0.08]"] {
+  background-color: rgb(35 42 52 / 0.06);
+}
+:root[data-workspace-theme="light"] [class~="bg-white/[0.1]"] {
+  background-color: rgb(35 42 52 / 0.06);
+}
+:root[data-workspace-theme="light"] [class~="bg-white/[0.12]"] {
+  background-color: rgb(35 42 52 / 0.06);
+}
+:root[data-workspace-theme="light"] [class~="border-white/5"] {
+  border-color: rgb(35 42 52 / 0.14);
+}
+:root[data-workspace-theme="light"] [class~="border-white/10"] {
+  border-color: rgb(35 42 52 / 0.14);
+}
+:root[data-workspace-theme="light"] [class~="border-white/20"] {
+  border-color: rgb(35 42 52 / 0.14);
+}
+:root[data-workspace-theme="light"] [class~="border-white/30"] {
+  border-color: rgb(35 42 52 / 0.14);
+}
+:root[data-workspace-theme="light"] [class~="border-white/[0.05]"] {
+  border-color: rgb(35 42 52 / 0.14);
+}
+:root[data-workspace-theme="light"] [class~="border-white/[0.06]"] {
+  border-color: rgb(35 42 52 / 0.14);
+}
+:root[data-workspace-theme="light"] [class~="border-white/[0.08]"] {
+  border-color: rgb(35 42 52 / 0.14);
+}
+:root[data-workspace-theme="light"] [class~="border-white/[0.1]"] {
+  border-color: rgb(35 42 52 / 0.14);
+}
+:root[data-workspace-theme="light"] [class~="border-white/[0.12]"] {
+  border-color: rgb(35 42 52 / 0.14);
+}
+:root[data-workspace-theme="light"] [class~="border-white/[0.15]"] {
+  border-color: rgb(35 42 52 / 0.14);
+}
+
+:root[data-workspace-theme="light"] [class*="hover:bg-white/"]:hover {
+  background-color: rgb(35 42 52 / 0.08);
+}
+:root[data-workspace-theme="light"] [class*="hover:text-white"]:hover {
+  color: #17191d;
+}
+:root[data-workspace-theme="light"] .react-flow__controls {
+  background: #fff !important;
+  border-color: #dadddf !important;
+  box-shadow: 0 4px 18px #20242a1a !important;
+}
+:root[data-workspace-theme="light"] .react-flow__controls button {
+  border-color: #e2e4e8 !important;
+}
+:root[data-workspace-theme="light"] .react-flow__controls button:hover {
+  background: #eef0f2 !important;
+}
+:root[data-workspace-theme="light"] .react-flow__controls button svg {
+  fill: #4d5560 !important;
+}
+:root[data-workspace-theme="light"] .react-flow__minimap {
+  background: #fff !important;
+  border-color: #dadddf !important;
+  box-shadow: 0 4px 18px #20242a1a !important;
+}
+:root[data-workspace-theme="light"] .react-flow__minimap-mask {
+  fill: #a4abb3 !important;
+  fill-opacity: 0.25;
+}
+:root[data-workspace-theme="light"] .react-flow__node [class~="text-white/90"],
+:root[data-workspace-theme="light"] .react-flow__node [class~="text-white/70"] {
+  color: inherit;
+}
+:root[data-workspace-theme="light"] button[class*="bg-[#3B82F6]"],
+:root[data-workspace-theme="light"] button[class*="bg-gradient-to-r"] {
+  color: white;
+}
+
+:root[data-workspace-theme="light"] [class~="text-white/25"] {
+  color: rgb(31 35 42 / 0.48);
+}
+:root[data-workspace-theme="light"] [class~="text-white/35"] {
+  color: rgb(31 35 42 / 0.52);
+}
+:root[data-workspace-theme="light"] [class~="text-white/55"] {
+  color: rgb(31 35 42 / 0.62);
+}
+:root[data-workspace-theme="light"] [class~="text-white/65"] {
+  color: rgb(31 35 42 / 0.68);
+}
+:root[data-workspace-theme="light"] [class~="text-white/85"] {
+  color: rgb(31 35 42 / 0.85);
+}
+
+:root[data-workspace-theme="light"] [class~="bg-white/[0.07]"] {
+  background-color: rgb(35 42 52 / 0.06);
+}
+:root[data-workspace-theme="light"] .node-description-tooltip {
+  background: #fff;
+  border-color: #dadddf;
+}
+:root[data-workspace-theme="light"]
+  .node-description-tooltip
+  [class~="text-white/90"] {
+  color: #24262b;
+}
+:root[data-workspace-theme="light"]
+  .node-description-tooltip
+  [class~="text-white/70"] {
+  color: #555d68;
+}
+:root[data-workspace-theme="light"]
+  .react-flow__node-junction
+  .group
+  > div:first-child {
+  background: #59616e;
+  border-color: #59616e;
+}

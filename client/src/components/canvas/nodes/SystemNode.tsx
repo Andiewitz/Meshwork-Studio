@@ -17,7 +17,6 @@ import {
   legacyFallbackBrand,
 } from "./legacyNodeAppearance";
 import {
-  nodeLayerColors,
   nodePresentation,
   nodeSubtitle,
   nodeTextColor,
@@ -579,8 +578,7 @@ export function SystemNode({
   const handleCls =
     "!w-2 !h-2 !rounded-full !border-2 !border-blue-400 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm";
   const minimumDimensions = getNodeMinimumDimensions(type);
-  const { layer, shape } = nodePresentation(type);
-  const palette = nodeLayerColors[layer];
+  const { shape } = nodePresentation(type);
   const subtitle = nodeSubtitle(
     type,
     data.label,
@@ -667,10 +665,12 @@ export function SystemNode({
   const showStatus = isKubernetes && !!k8sStatus;
   const textColor =
     customFontColor ||
-    nodeTextColor(
-      customBg,
-      customTheme === "glass" || customTheme === "minimal",
-    );
+    (customBg
+      ? nodeTextColor(
+          customBg,
+          customTheme === "glass" || customTheme === "minimal",
+        )
+      : "var(--workspace-node-text)");
   const metadata = isKubernetes
     ? [
         data.replicas ? `${String(data.replicas)} replicas` : null,
@@ -770,7 +770,7 @@ export function SystemNode({
             <p
               className="leading-tight font-medium whitespace-pre-wrap break-all w-full max-w-full font-sans"
               style={{
-                color: customFontColor || "rgba(255,255,255,0.8)",
+                color: customFontColor || "var(--workspace-node-text)",
                 fontSize:
                   finalFontSize ||
                   `${Math.max(14, Math.floor((width || 160) / 10))}px`,
@@ -788,10 +788,10 @@ export function SystemNode({
                             transition-shadow
                         `}
             style={{
-              background: customBg || "#f5f5f4",
+              background: customBg || "var(--workspace-node-bg)",
               border: customBorder
                 ? `1px solid ${customBorder}`
-                : "1.5px solid #aeb5b0",
+                : "1.5px solid var(--workspace-node-border)",
               borderRadius: finalRadius,
               ...themeStyles,
             }}
@@ -800,7 +800,11 @@ export function SystemNode({
               className="leading-relaxed font-medium whitespace-pre-wrap break-words w-full max-w-full"
               style={{
                 fontFamily: "var(--font-body)",
-                color: customFontColor || nodeTextColor(customBg, false),
+                color:
+                  customFontColor ||
+                  (customBg
+                    ? nodeTextColor(customBg, false)
+                    : "var(--workspace-node-text)"),
                 fontSize:
                   finalFontSize ||
                   `${Math.max(14, Math.floor((width || 192) / 12))}px`,
@@ -827,7 +831,7 @@ export function SystemNode({
             }}
           >
             {/* Top-left corner label — type + name */}
-            <div className="m-2 flex max-w-[calc(100%-1rem)] items-center gap-1.5 self-start rounded-full bg-[#e5e8f3] px-3 py-1">
+            <div className="m-2 flex max-w-[calc(100%-1rem)] items-center gap-1.5 self-start rounded-full bg-[var(--workspace-node-bg)] px-3 py-1">
               {brand.Icon &&
                 (typeof brand.Icon === "string" ? (
                   <img
@@ -852,7 +856,7 @@ export function SystemNode({
                 className="font-semibold"
                 style={{
                   fontSize: `${zoneLabelSize}px`,
-                  color: customFontColor || "#3d527e",
+                  color: customFontColor || "var(--workspace-node-text)",
                 }}
               >
                 {brand.label}
@@ -861,7 +865,7 @@ export function SystemNode({
                 className="truncate font-medium"
                 style={{
                   fontSize: `${zoneLabelSize}px`,
-                  color: customFontColor || "#3d527e",
+                  color: customFontColor || "var(--workspace-node-text)",
                 }}
               >
                 / {data.label!}
@@ -917,27 +921,27 @@ export function SystemNode({
             {/* Namespace label — pill badge */}
             <div className="flex items-center gap-2 p-2 self-start">
               <div
-                className="px-3 py-1 rounded-full bg-[#e5e8f3] font-semibold flex items-center gap-1.5"
+                className="px-3 py-1 rounded-full bg-[var(--workspace-node-bg)] font-semibold flex items-center gap-1.5"
                 style={{
                   fontSize: `${zoneLabelSize}px`,
-                  color: customFontColor || "#3d527e",
+                  color: customFontColor || "var(--workspace-node-text)",
                 }}
               >
                 <SiKubernetes
                   style={{ width: zoneIconSize, height: zoneIconSize }}
-                  className="text-[#3d527e]"
+                  className="text-[var(--workspace-node-icon)]"
                 />
                 ns: {data.label!}
               </div>
             </div>
           </div>
         ) : (
-          /* Regular nodes use their layer for color and their role for shape. */
+          /* Regular nodes share the canvas surface while retaining role-specific shapes. */
           <div
-            className={`relative flex h-full w-full items-center gap-3 overflow-hidden px-3.5 py-2.5 font-sans transition-shadow ${selected ? "ring-2 ring-blue-500/70 ring-offset-2 ring-offset-[#0c0c0e]" : ""}`}
+            className={`relative flex h-full w-full items-center gap-3 overflow-hidden px-3.5 py-2.5 font-sans transition-shadow ${selected ? "ring-2 ring-blue-500/70 ring-offset-2 ring-offset-[var(--workspace-canvas)]" : ""}`}
             style={{
-              backgroundColor: customBg || palette.background,
-              border: `1.5px ${shape === "external" ? "dashed" : "solid"} ${customBorder || userAccent || palette.border}`,
+              backgroundColor: customBg || "var(--workspace-node-bg)",
+              border: `1.5px ${shape === "external" ? "dashed" : "solid"} ${customBorder || userAccent || "var(--workspace-node-border)"}`,
               borderRadius:
                 finalRadius ||
                 (shape === "pill"
@@ -953,7 +957,10 @@ export function SystemNode({
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-x-0 top-0 h-[19%] rounded-[50%] border-b"
                 style={{
-                  borderColor: customBorder || userAccent || palette.border,
+                  borderColor:
+                    customBorder ||
+                    userAccent ||
+                    "var(--workspace-node-border)",
                 }}
               />
             )}
@@ -962,7 +969,10 @@ export function SystemNode({
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-y-0 left-1 right-1 rounded-xl border-x"
                 style={{
-                  borderColor: customBorder || userAccent || palette.border,
+                  borderColor:
+                    customBorder ||
+                    userAccent ||
+                    "var(--workspace-node-border)",
                 }}
               />
             )}
@@ -974,7 +984,7 @@ export function SystemNode({
                   userAccent ||
                   (customBg || customTheme !== "default"
                     ? textColor
-                    : palette.icon),
+                    : "var(--workspace-node-icon)"),
               }}
             >
               <NodeIcon className="h-6 w-6" />
@@ -1020,7 +1030,7 @@ export function SystemNode({
                   e.stopPropagation();
                   fireEnterNode(id);
                 }}
-                className="nodrag absolute bottom-1 right-1.5 flex min-h-5 min-w-5 items-center justify-center rounded-md text-[#263441]/65 hover:bg-black/10 hover:text-[#263441] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700"
+                className="nodrag absolute bottom-1 right-1.5 flex min-h-5 min-w-5 items-center justify-center rounded-md text-[var(--workspace-node-text)] opacity-60 hover:bg-white/10 hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700"
                 title="Open internal workspace"
                 aria-label="Open internal workspace"
               >

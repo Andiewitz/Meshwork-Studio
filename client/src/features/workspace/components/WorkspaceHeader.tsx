@@ -35,6 +35,8 @@ import {
   ArrowUturnRightIcon,
   Bars3BottomLeftIcon,
   CommandLineIcon,
+  SunIcon,
+  MoonIcon,
 } from "@heroicons/react/24/outline";
 import { LuPanelLeft } from "react-icons/lu";
 import {
@@ -48,6 +50,8 @@ import {
 } from "@/features/workspace/utils/canvasSettings";
 
 export interface WorkspaceHeaderProps {
+  theme: "dark" | "light";
+  onToggleTheme: () => void;
   workspace: any;
   workspaceId: string;
   user: any;
@@ -94,6 +98,8 @@ export interface WorkspaceHeaderProps {
 }
 
 export function WorkspaceHeader({
+  theme,
+  onToggleTheme,
   workspace,
   workspaceId,
   user,
@@ -553,6 +559,24 @@ export function WorkspaceHeader({
                 ))}
             </PopoverContent>
           </Popover>
+
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            aria-label={
+              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+            }
+            title={
+              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+            }
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-white/60 hover:bg-white/[0.06] hover:text-white transition-colors"
+          >
+            {theme === "dark" ? (
+              <SunIcon className="h-4 w-4" />
+            ) : (
+              <MoonIcon className="h-4 w-4" />
+            )}
+          </button>
 
           {/* Share Button */}
           <button

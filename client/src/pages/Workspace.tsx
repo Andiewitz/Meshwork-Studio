@@ -346,6 +346,26 @@ function WorkspaceView() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [gridSize, setGridSize] = useState(20);
   const [bgVariant, setBgVariant] = useState<BgVariant>("dots");
+  const [workspaceTheme, setWorkspaceTheme] = useState<"dark" | "light">(() => {
+    try {
+      return localStorage.getItem("meshwork-workspace-theme") === "light"
+        ? "light"
+        : "dark";
+    } catch {
+      return "dark";
+    }
+  });
+  useEffect(() => {
+    document.documentElement.dataset.workspaceTheme = workspaceTheme;
+    try {
+      localStorage.setItem("meshwork-workspace-theme", workspaceTheme);
+    } catch {
+      /* storage can be unavailable */
+    }
+    return () => {
+      delete document.documentElement.dataset.workspaceTheme;
+    };
+  }, [workspaceTheme]);
   const [activeView, setActiveView] = useState<"ai" | "canvas" | "properties">(
     "canvas",
   );
@@ -1896,6 +1916,12 @@ function WorkspaceView() {
 
       {/* Top Navigation Header & Project Menu (Image 3) */}
       <WorkspaceHeader
+        theme={workspaceTheme}
+        onToggleTheme={() =>
+          setWorkspaceTheme((current) =>
+            current === "dark" ? "light" : "dark",
+          )
+        }
         workspace={workspace}
         workspaceId={workspaceId}
         user={user}
@@ -2127,7 +2153,7 @@ function WorkspaceView() {
                   variant={toBackgroundVariant(bgVariant)}
                   gap={gridSize}
                   size={1.2}
-                  color="#ffffff22"
+                  color={workspaceTheme === "light" ? "#8d929c55" : "#ffffff22"}
                 />
               )}
 
@@ -2149,7 +2175,7 @@ function WorkspaceView() {
                     variant={toBackgroundVariant(bgVariant)}
                     gap={gridSize}
                     size={1.5}
-                    color="#FFFFFF"
+                    color={workspaceTheme === "light" ? "#7b818b" : "#FFFFFF"}
                     className="opacity-50"
                   />
                 )}
@@ -2453,6 +2479,7 @@ function WorkspaceView() {
                   style={{ scrollbarWidth: "none" }}
                 >
                   <PropertiesSidebar
+                    workspaceTheme={workspaceTheme}
                     selectedNode={selectedNode}
                     selectedEdge={selectedEdge}
                     updateNodeData={updateNodeData}
