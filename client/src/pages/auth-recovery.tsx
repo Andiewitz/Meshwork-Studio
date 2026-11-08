@@ -13,7 +13,7 @@ import { Helmet } from "react-helmet-async";
 import { motion } from "framer-motion";
 
 const inputBase =
-  "w-full h-10 px-3.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-white/20 outline-none focus:border-white/25 transition-colors";
+  "w-full h-10 px-3.5 rounded-lg bg-foreground/[0.04] border border-border text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-border transition-colors";
 
 function AuthShell({
   title,
@@ -23,7 +23,7 @@ function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0b] p-6">
+    <div className="min-h-screen w-full flex items-center justify-center bg-background p-6">
       <Helmet>
         <title>{title} — Meshwork</title>
       </Helmet>
@@ -74,14 +74,16 @@ export function ForgotPasswordPage() {
       <AuthShell title="Check your email">
         <div className="text-center space-y-3">
           <CheckCircleIcon className="w-10 h-10 mx-auto text-green-500" />
-          <h1 className="text-lg font-semibold text-white">Check your email</h1>
-          <p className="text-xs text-white/40 leading-relaxed">
+          <h1 className="text-lg font-semibold text-foreground">
+            Check your email
+          </h1>
+          <p className="text-xs text-muted-foreground leading-relaxed">
             If an account exists for {email}, we sent a reset link. It expires
             in 30 minutes.
           </p>
           <button
             onClick={() => setLocation("/login")}
-            className="mt-4 text-xs text-white/60 hover:text-white underline underline-offset-4 cursor-pointer"
+            className="mt-4 text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 cursor-pointer"
           >
             Back to sign in
           </button>
@@ -93,16 +95,19 @@ export function ForgotPasswordPage() {
   return (
     <AuthShell title="Reset password">
       <div className="mb-6 text-center">
-        <h1 className="text-lg font-semibold text-white">
+        <h1 className="text-lg font-semibold text-foreground">
           Reset your password
         </h1>
-        <p className="mt-1 text-xs text-white/40">
+        <p className="mt-1 text-xs text-muted-foreground">
           We'll email you a secure reset link.
         </p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-3.5">
         <div className="space-y-1.5">
-          <Label htmlFor="forgot-email" className="text-[11px] text-white/50">
+          <Label
+            htmlFor="forgot-email"
+            className="text-[11px] text-muted-foreground"
+          >
             Email
           </Label>
           <input
@@ -118,7 +123,7 @@ export function ForgotPasswordPage() {
         <button
           type="submit"
           disabled={isLoading || !email}
-          className="w-full h-10 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-all disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+          className="w-full h-10 rounded-lg bg-primary text-destructive-foreground text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
         >
           {isLoading ? (
             <Loader2 className="w-4 h-4 animate-spin mx-auto" />
@@ -127,10 +132,10 @@ export function ForgotPasswordPage() {
           )}
         </button>
       </form>
-      <p className="mt-5 text-center text-[12px] text-white/35">
+      <p className="mt-5 text-center text-[12px] text-muted-foreground">
         <a
           href="/login"
-          className="text-white/60 hover:text-white underline underline-offset-4"
+          className="text-muted-foreground hover:text-foreground underline underline-offset-4"
         >
           Back to sign in
         </a>
@@ -180,12 +185,12 @@ export function ResetPasswordPage() {
       <AuthShell title="Invalid link">
         <div className="text-center space-y-3">
           <AlertCircle className="w-10 h-10 mx-auto text-red-400" />
-          <p className="text-xs text-white/50">
+          <p className="text-xs text-muted-foreground">
             This reset link is invalid or incomplete.
           </p>
           <a
             href="/forgot-password"
-            className="inline-block mt-2 text-xs text-white/60 hover:text-white underline underline-offset-4"
+            className="inline-block mt-2 text-xs text-muted-foreground hover:text-foreground underline underline-offset-4"
           >
             Request a new link
           </a>
@@ -197,7 +202,7 @@ export function ResetPasswordPage() {
   return (
     <AuthShell title="Choose a new password">
       <div className="mb-6 text-center">
-        <h1 className="text-lg font-semibold text-white">
+        <h1 className="text-lg font-semibold text-foreground">
           Choose a new password
         </h1>
       </div>
@@ -214,7 +219,10 @@ export function ResetPasswordPage() {
           )}
           <input type="hidden" name="token" value={token} />
           <div className="space-y-1.5">
-            <Label htmlFor="new-password" className="text-[11px] text-white/50">
+            <Label
+              htmlFor="new-password"
+              className="text-[11px] text-muted-foreground"
+            >
               New password
             </Label>
             <input
@@ -231,7 +239,7 @@ export function ResetPasswordPage() {
           <div className="space-y-1.5">
             <Label
               htmlFor="confirm-password"
-              className="text-[11px] text-white/50"
+              className="text-[11px] text-muted-foreground"
             >
               Confirm password
             </Label>
@@ -247,7 +255,7 @@ export function ResetPasswordPage() {
           <button
             type="submit"
             disabled={!valid || isLoading}
-            className="w-full h-10 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-all disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+            className="w-full h-10 rounded-lg bg-primary text-destructive-foreground text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <Loader2 className="w-4 h-4 animate-spin mx-auto" />
@@ -291,17 +299,21 @@ export function VerifyEmailPage() {
       <div className="text-center space-y-3">
         {state === "working" && (
           <>
-            <Loader2 className="w-8 h-8 mx-auto animate-spin text-white/40" />
-            <p className="text-xs text-white/50">Verifying your email…</p>
+            <Loader2 className="w-8 h-8 mx-auto animate-spin text-muted-foreground" />
+            <p className="text-xs text-muted-foreground">
+              Verifying your email…
+            </p>
           </>
         )}
         {state === "ok" && (
           <>
             <CheckCircleIcon className="w-10 h-10 mx-auto text-green-500" />
-            <h1 className="text-lg font-semibold text-white">Email verified</h1>
+            <h1 className="text-lg font-semibold text-foreground">
+              Email verified
+            </h1>
             <button
               onClick={() => setLocation("/login")}
-              className="mt-2 inline-block h-9 px-5 rounded-lg bg-white text-black text-xs font-semibold hover:bg-white/90 cursor-pointer"
+              className="mt-2 inline-block h-9 px-5 rounded-lg bg-primary text-destructive-foreground text-xs font-semibold hover:brightness-110 cursor-pointer"
             >
               Sign in to your account
             </button>
@@ -310,10 +322,10 @@ export function VerifyEmailPage() {
         {state === "error" && (
           <>
             <AlertCircle className="w-10 h-10 mx-auto text-red-400" />
-            <p className="text-xs text-white/50">{message}</p>
+            <p className="text-xs text-muted-foreground">{message}</p>
             <button
               onClick={() => setLocation("/login")}
-              className="mt-2 text-xs text-white/60 hover:text-white underline underline-offset-4 cursor-pointer"
+              className="mt-2 text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 cursor-pointer"
             >
               Back to sign in
             </button>

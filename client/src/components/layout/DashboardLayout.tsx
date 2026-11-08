@@ -1,3 +1,4 @@
+import "@/components/layout/dashboard-theme.css";
 import { ReactNode, useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -114,14 +115,14 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
   if (location === "/settings") {
     return (
-      <div className="bg-[#0c0c0e] text-white font-body selection:bg-white/20 selection:text-white min-h-screen antialiased flex flex-col">
+      <div className="dashboard-shell dashboard-ground dashboard-ink font-body selection:bg-primary/20 selection:text-foreground min-h-screen antialiased flex flex-col">
         {children}
       </div>
     );
   }
 
   return (
-    <div className="dashboard-shell bg-[#09090b] text-white font-body selection:bg-white/20 selection:text-white min-h-screen antialiased flex p-2.5 gap-2.5 cursor-figma">
+    <div className="dashboard-shell dashboard-ground dashboard-ink font-body selection:bg-primary/20 selection:text-foreground min-h-screen antialiased flex p-2.5 gap-2.5 cursor-figma">
       {/* ── Sidebar (240px / w-60) ── */}
       <aside className="w-60 shrink-0 flex flex-col justify-between h-[calc(100vh-20px)] sticky top-2.5 z-50 select-none">
         <div className="flex flex-col flex-1 overflow-y-auto space-y-4 pr-1 hide-scrollbar">
@@ -131,22 +132,22 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               <div className="w-5 h-5 flex items-center justify-center shrink-0">
                 <MeshworkLogo />
               </div>
-              <span className="font-headline font-bold text-white tracking-tight text-sm leading-none">
+              <span className="font-headline font-bold dashboard-ink tracking-tight text-sm leading-none">
                 Meshwork Studio
               </span>
             </div>
 
             {/* Workspace Selector Pill */}
-            <div className="w-full flex items-center justify-between gap-2 p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:border-white/15 transition-all">
+            <div className="w-full flex items-center justify-between gap-2 p-2 rounded-xl dashboard-tint border dashboard-border dashboard-hover-border transition-all">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-[10px] font-bold dashboard-brand-ink shrink-0">
                   {userInitial}
                 </div>
-                <span className="text-[12.5px] font-semibold text-white/90 truncate">
+                <span className="text-[12.5px] font-semibold dashboard-secondary truncate">
                   {userName}&apos;s Studio
                 </span>
               </div>
-              <ChevronDown className="w-3.5 h-3.5 text-white/40 shrink-0" />
+              <ChevronDown className="w-3.5 h-3.5 dashboard-muted shrink-0" />
             </div>
           </div>
 
@@ -156,8 +157,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               <button
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-colors cursor-figma-pointer ${
                   isOverview
-                    ? "bg-white/[0.08] text-white"
-                    : "text-white/50 hover:bg-white/[0.04] hover:text-white/80"
+                    ? "dashboard-tint dashboard-ink"
+                    : "dashboard-secondary dashboard-hover-tint dashboard-hover-ink"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
@@ -169,13 +170,13 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
             <button
               onClick={() => setSearchOpen(true)}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-colors cursor-figma-pointer text-white/50 hover:bg-white/[0.04] hover:text-white/80"
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-colors cursor-figma-pointer dashboard-secondary dashboard-hover-tint dashboard-hover-ink"
             >
               <div className="flex items-center gap-2.5">
                 <Search className="w-4 h-4" />
                 <span>Search</span>
               </div>
-              <kbd className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-white/40 border border-white/10">
+              <kbd className="text-[9px] font-mono px-1.5 py-0.5 rounded dashboard-tint dashboard-muted border dashboard-border">
                 ⌘K
               </kbd>
             </button>
@@ -184,8 +185,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               <button
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-colors cursor-figma-pointer ${
                   isDev
-                    ? "bg-white/[0.08] text-white"
-                    : "text-white/50 hover:bg-white/[0.04] hover:text-white/80"
+                    ? "dashboard-tint dashboard-ink"
+                    : "dashboard-secondary dashboard-hover-tint dashboard-hover-ink"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
@@ -199,8 +200,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               <button
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-colors cursor-figma-pointer ${
                   isTeam
-                    ? "bg-white/[0.08] text-white"
-                    : "text-white/50 hover:bg-white/[0.04] hover:text-white/80"
+                    ? "dashboard-tint dashboard-ink"
+                    : "dashboard-secondary dashboard-hover-tint dashboard-hover-ink"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
@@ -213,18 +214,18 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
           {/* Library Section */}
           <div className="pt-2 space-y-1">
-            <p className="px-3 text-[11px] font-semibold text-white/30 tracking-wider">
+            <p className="px-3 text-[11px] font-semibold dashboard-muted tracking-wider">
               Library
             </p>
             <div className="space-y-0.5">
               <Link href="/workspaces">
-                <button className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12.5px] text-white/45 hover:bg-white/[0.04] hover:text-white/75 transition-colors cursor-figma-pointer">
+                <button className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12.5px] dashboard-secondary dashboard-hover-tint dashboard-hover-ink transition-colors cursor-figma-pointer">
                   <Star className="w-3.5 h-3.5" />
                   <span>Starred</span>
                 </button>
               </Link>
               <Link href="/workspaces">
-                <button className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12.5px] text-white/45 hover:bg-white/[0.04] hover:text-white/75 transition-colors cursor-figma-pointer">
+                <button className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12.5px] dashboard-secondary dashboard-hover-tint dashboard-hover-ink transition-colors cursor-figma-pointer">
                   <FolderKanban className="w-3.5 h-3.5" />
                   <span>Projects</span>
                 </button>
@@ -236,17 +237,17 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           {workspaces && workspaces.length > 0 && (
             <div className="pt-2 space-y-1">
               <div className="flex items-center justify-between px-3">
-                <p className="text-[11px] font-semibold text-white/30 tracking-wider">
+                <p className="text-[11px] font-semibold dashboard-muted tracking-wider">
                   Recents
                 </p>
-                <Plus className="w-3.5 h-3.5 text-white/20 hover:text-white/50 cursor-pointer" />
+                <Plus className="w-3.5 h-3.5 dashboard-muted dashboard-hover-ink cursor-pointer" />
               </div>
               <div className="space-y-0.5">
                 {workspaces.slice(0, 6).map((ws) => (
                   <Link href={`/workspace/${ws.id}`} key={ws.id}>
-                    <button className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] text-white/40 hover:bg-white/[0.04] hover:text-white/75 transition-all cursor-figma-pointer group">
+                    <button className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] dashboard-muted dashboard-hover-tint dashboard-hover-ink transition-all cursor-figma-pointer group">
                       <svg
-                        className="w-3 h-3 text-white/25 group-hover:text-purple-400 shrink-0 transition-colors"
+                        className="w-3 h-3 dashboard-muted group-hover:text-purple-400 shrink-0 transition-colors"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -268,16 +269,16 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         {/* Bottom Section — Share Meshwork Card & Profile */}
         <div className="pt-2 space-y-2 shrink-0">
           {/* Share Referral Box */}
-          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between group hover:border-white/10 transition-colors">
+          <div className="p-3 rounded-xl dashboard-tint border dashboard-border flex items-center justify-between group dashboard-hover-border transition-colors">
             <div className="space-y-0.5">
-              <p className="text-[11.5px] font-semibold text-white/80">
+              <p className="text-[11.5px] font-semibold dashboard-secondary">
                 Share Meshwork
               </p>
-              <p className="text-[10px] text-white/35">
+              <p className="text-[10px] dashboard-muted">
                 Invite teammates to collaborate
               </p>
             </div>
-            <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/50 group-hover:text-white group-hover:bg-white/10 transition-colors">
+            <div className="w-7 h-7 rounded-lg dashboard-tint border dashboard-border flex items-center justify-center dashboard-secondary dashboard-group-hover-ink dashboard-group-hover-tint transition-colors">
               <Gift className="w-3.5 h-3.5" />
             </div>
           </div>
@@ -286,10 +287,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="relative" ref={profileRef}>
             <button
               onClick={() => setProfileOpen((v) => !v)}
-              className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.05] transition-colors cursor-figma-pointer"
+              className="w-full flex items-center justify-between p-2 rounded-xl dashboard-hover-tint transition-colors cursor-figma-pointer"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-6 h-6 rounded-full overflow-hidden bg-white/[0.08] border border-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                <div className="w-6 h-6 rounded-full overflow-hidden dashboard-tint border dashboard-border flex items-center justify-center text-[10px] font-bold dashboard-ink shrink-0">
                   {user?.profileImageUrl ? (
                     <img
                       alt=""
@@ -300,11 +301,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                     userInitial
                   )}
                 </div>
-                <span className="text-[12px] font-medium text-white/70 truncate">
+                <span className="text-[12px] font-medium dashboard-secondary truncate">
                   {userName}
                 </span>
               </div>
-              <HelpCircle className="w-3.5 h-3.5 text-white/20 shrink-0" />
+              <HelpCircle className="w-3.5 h-3.5 dashboard-muted shrink-0" />
             </button>
 
             <AnimatePresence>
@@ -314,13 +315,13 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -4 }}
                   transition={{ duration: 0.12 }}
-                  className="absolute bottom-full left-0 right-0 mb-2 bg-[#161618] border border-white/[0.08] rounded-xl overflow-hidden shadow-2xl z-50 p-1"
+                  className="absolute bottom-full left-0 right-0 mb-2 dashboard-popover border dashboard-border rounded-xl overflow-hidden shadow-2xl z-50 p-1"
                 >
-                  <div className="px-3 py-2 border-b border-white/[0.05]">
-                    <p className="text-[12px] font-semibold text-white truncate">
+                  <div className="px-3 py-2 border-b dashboard-border">
+                    <p className="text-[12px] font-semibold dashboard-ink truncate">
                       {userName}
                     </p>
-                    <p className="text-[10px] text-white/35 truncate">
+                    <p className="text-[10px] dashboard-muted truncate">
                       {user?.email}
                     </p>
                   </div>
@@ -329,7 +330,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                       href="/settings"
                       onClick={() => setProfileOpen(false)}
                     >
-                      <button className="w-full text-left px-3 py-1.5 rounded-md text-xs text-white/60 hover:text-white hover:bg-white/[0.05] flex items-center gap-2.5 transition-colors cursor-figma-pointer">
+                      <button className="w-full text-left px-3 py-1.5 rounded-md text-xs dashboard-secondary dashboard-hover-ink dashboard-hover-tint flex items-center gap-2.5 transition-colors cursor-figma-pointer">
                         <Settings className="w-3.5 h-3.5" /> Settings
                       </button>
                     </Link>
@@ -338,7 +339,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                         setProfileOpen(false);
                         logout();
                       }}
-                      className="w-full text-left px-3 py-1.5 rounded-md text-xs text-red-400/70 hover:text-red-400 hover:bg-white/[0.05] flex items-center gap-2.5 transition-colors cursor-figma-pointer"
+                      className="w-full text-left px-3 py-1.5 rounded-md text-xs text-red-400/70 hover:text-red-400 dashboard-hover-tint flex items-center gap-2.5 transition-colors cursor-figma-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5" /> Log out
                     </button>
@@ -351,7 +352,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* ── Main Canvas View Container — Curved rounded-[24px] box ── */}
-      <main className="dashboard-content flex-1 rounded-[24px] overflow-hidden border border-white/[0.08] bg-[#0c0d14] relative min-h-[calc(100vh-20px)] shadow-2xl flex flex-col">
+      <main className="dashboard-content flex-1 rounded-[24px] overflow-hidden border dashboard-border dashboard-content-surface relative min-h-[calc(100vh-20px)] shadow-2xl flex flex-col">
         <PageErrorBoundary>{children}</PageErrorBoundary>
       </main>
 

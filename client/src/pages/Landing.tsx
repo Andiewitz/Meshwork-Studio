@@ -835,7 +835,7 @@ const Home = () => {
       return (
         <h2
           id={id}
-          className="text-2xl font-semibold mt-12 mb-4 text-white/90 border-b border-white/10 pb-2 font-sans tracking-tight"
+          className="text-2xl font-semibold mt-12 mb-4 text-foreground/90 border-b border-border pb-2 font-sans tracking-tight"
           {...props}
         >
           {children}
@@ -851,7 +851,7 @@ const Home = () => {
       return (
         <h3
           id={id}
-          className="text-xl font-medium mt-8 mb-4 text-white/80 font-sans tracking-tight"
+          className="text-xl font-medium mt-8 mb-4 text-foreground/80 font-sans tracking-tight"
           {...props}
         >
           {children}
@@ -860,7 +860,7 @@ const Home = () => {
     },
     p: ({ children, node: _node, ...props }: MdProps<"p">) => (
       <p
-        className="leading-relaxed mb-6 text-white/70 font-sans font-light text-base"
+        className="leading-relaxed mb-6 text-foreground/70 font-sans font-light text-base"
         {...props}
       >
         {children}
@@ -876,7 +876,7 @@ const Home = () => {
     ),
     ul: ({ children, node: _node, ...props }: MdProps<"ul">) => (
       <ul
-        className="list-disc list-outside ml-6 mb-6 space-y-2 text-white/70 font-sans font-light"
+        className="list-disc list-outside ml-6 mb-6 space-y-2 text-foreground/70 font-sans font-light"
         {...props}
       >
         {children}
@@ -884,7 +884,7 @@ const Home = () => {
     ),
     ol: ({ children, node: _node, ...props }: MdProps<"ol">) => (
       <ol
-        className="list-decimal list-outside ml-6 mb-6 space-y-2 text-white/70 font-sans font-light"
+        className="list-decimal list-outside ml-6 mb-6 space-y-2 text-foreground/70 font-sans font-light"
         {...props}
       >
         {children}
@@ -903,7 +903,7 @@ const Home = () => {
       );
       if (textContent.includes("[!NOTE]")) {
         return (
-          <div className="border border-blue-500/30 bg-blue-500/10 p-4 rounded-lg my-8 flex gap-3 text-white/80">
+          <div className="border border-blue-500/30 bg-blue-500/10 p-4 rounded-lg my-8 flex gap-3 text-foreground/80">
             <div className="text-blue-400 mt-0.5">
               <BookOpen className="w-5 h-5" />
             </div>
@@ -913,7 +913,7 @@ const Home = () => {
       }
       if (textContent.includes("[!IMPORTANT]")) {
         return (
-          <div className="border border-purple-500/30 bg-purple-500/10 p-4 rounded-lg my-8 flex gap-3 text-white/80">
+          <div className="border border-purple-500/30 bg-purple-500/10 p-4 rounded-lg my-8 flex gap-3 text-foreground/80">
             <div className="text-purple-400 mt-0.5">
               <BookOpen className="w-5 h-5" />
             </div>
@@ -923,7 +923,7 @@ const Home = () => {
       }
       return (
         <blockquote
-          className="border-l-4 border-[#3a3a3a] pl-4 my-6 italic text-white/60"
+          className="border-l-4 border-[#3a3a3a] pl-4 my-6 italic text-muted-foreground"
           {...props}
         >
           {children}
@@ -939,11 +939,11 @@ const Home = () => {
       const match = /language-(\w+)/.exec(className ?? "");
       const isBlock = !!(className && match);
       return isBlock ? (
-        <div className="rounded-xl overflow-hidden border border-white/10 my-8 shadow-lg shadow-black/50">
-          <div className="bg-[#1a1a1a] px-4 py-2 text-xs text-white/40 font-mono border-b border-white/5 flex justify-between items-center">
+        <div className="rounded-xl overflow-hidden border border-border my-8 shadow-lg shadow-black/50">
+          <div className="bg-background px-4 py-2 text-xs text-muted-foreground font-mono border-b border-border flex justify-between items-center">
             <span>{match ? match[1] : "text"}</span>
           </div>
-          <pre className="p-5 overflow-x-auto text-[13px] bg-[#0A0A0A] leading-relaxed">
+          <pre className="p-5 overflow-x-auto text-[13px] bg-background leading-relaxed">
             <code className={className} {...props}>
               {children}
             </code>
@@ -951,7 +951,7 @@ const Home = () => {
         </div>
       ) : (
         <code
-          className="bg-white/10 px-1.5 py-0.5 rounded-md text-[0.9em] font-mono text-blue-300"
+          className="bg-foreground/10 px-1.5 py-0.5 rounded-md text-[0.9em] font-mono text-blue-300"
           {...props}
         >
           {children}
@@ -959,15 +959,18 @@ const Home = () => {
       );
     },
     table: ({ children, node: _node, ...props }: MdProps<"table">) => (
-      <div className="overflow-x-auto my-8 border border-white/10 rounded-xl">
-        <table className="w-full text-left text-sm text-white/70" {...props}>
+      <div className="overflow-x-auto my-8 border border-border rounded-xl">
+        <table
+          className="w-full text-left text-sm text-foreground/70"
+          {...props}
+        >
           {children}
         </table>
       </div>
     ),
     th: ({ children, node: _node, ...props }: MdProps<"th">) => (
       <th
-        className="bg-[#1a1a1a] px-5 py-4 font-medium text-white/90 border-b border-white/10 whitespace-nowrap"
+        className="bg-background px-5 py-4 font-medium text-foreground/90 border-b border-border whitespace-nowrap"
         {...props}
       >
         {children}
@@ -975,7 +978,7 @@ const Home = () => {
     ),
     td: ({ children, node: _node, ...props }: MdProps<"td">) => (
       <td
-        className="px-5 py-4 border-b border-white/5 last:border-0 bg-[#0A0A0A]"
+        className="px-5 py-4 border-b border-border last:border-0 bg-background"
         {...props}
       >
         {children}
@@ -984,15 +987,15 @@ const Home = () => {
   };
 
   const DocsSidebar = () => (
-    <div className="w-full h-full flex flex-col bg-[#0A0A0A] border-r border-white/10">
-      <div className="p-4 sticky top-0 bg-[#0A0A0A]/95 backdrop-blur-xl z-10 border-b border-white/5">
+    <div className="w-full h-full flex flex-col bg-background border-r border-border">
+      <div className="p-4 sticky top-0 bg-background/95 backdrop-blur-xl z-10 border-b border-border">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search docs..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 bg-[#1a1a1a] border-white/10 text-white placeholder:text-white/30 h-9 rounded-lg text-sm"
+            className="pl-9 bg-background border-border text-foreground placeholder:text-muted-foreground h-9 rounded-lg text-sm"
           />
         </div>
       </div>
@@ -1008,7 +1011,7 @@ const Home = () => {
 
           return (
             <div key={category}>
-              <h4 className="text-xs font-bold tracking-wider uppercase text-white/40 mb-3 px-2 font-sans">
+              <h4 className="text-xs font-bold tracking-wider uppercase text-muted-foreground mb-3 px-2 font-sans">
                 {category}
               </h4>
               <ul className="space-y-1">
@@ -1019,13 +1022,13 @@ const Home = () => {
                       className={cn(
                         "w-full text-left px-2 py-1.5 rounded-md text-[14px] transition-colors font-sans flex items-center justify-between group",
                         activePostId === post.id
-                          ? "bg-white/10 text-white font-medium"
-                          : "text-white/60 hover:text-white hover:bg-white/5",
+                          ? "bg-foreground/10 text-foreground font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-foreground/5",
                       )}
                     >
                       <span className="truncate">{post.title}</span>
                       {activePostId === post.id && (
-                        <ChevronRight className="w-3.5 h-3.5 text-white/40" />
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
                       )}
                     </button>
                   </li>
@@ -1046,7 +1049,7 @@ const Home = () => {
   return (
     <div
       ref={containerRef}
-      className="relative font-sans text-white min-h-screen flex flex-col bg-background overflow-x-clip"
+      className="relative font-sans text-foreground min-h-screen flex flex-col bg-background overflow-x-clip"
     >
       <Helmet>
         <title>Meshwork Studio | Design your architecture with AI</title>
@@ -1085,7 +1088,7 @@ const Home = () => {
           className={cn(
             "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
             scrolled
-              ? "bg-[#09090b]/80 backdrop-blur-xl border-b border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
+              ? "bg-background/95 backdrop-blur-xl border-b border-border shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
               : "bg-transparent border-b border-transparent shadow-none",
           )}
         >
@@ -1098,7 +1101,7 @@ const Home = () => {
               <div className="w-7 h-7 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(232,57,26,0.6)]">
                 <MeshworkLogo />
               </div>
-              <span className="text-lg font-headline font-bold tracking-tight hidden sm:block text-white leading-none">
+              <span className="text-lg font-headline font-bold tracking-tight hidden sm:block text-foreground leading-none">
                 Meshwork Studio
               </span>
             </Link>
@@ -1118,8 +1121,8 @@ const Home = () => {
                     Product
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <div className="grid w-full md:w-[680px] md:grid-cols-[1fr_.42fr] p-2 bg-[#0A0A0A]">
-                      <ul className="grid grow gap-2 p-3 md:grid-cols-2 md:border-r md:border-white/10">
+                    <div className="grid w-full md:w-[680px] md:grid-cols-[1fr_.42fr] p-2 bg-background">
+                      <ul className="grid grow gap-2 p-3 md:grid-cols-2 md:border-r md:border-border">
                         {productNavLinks.slice(0, 2).map((link) => (
                           <li key={link.title}>
                             <NavGridCard link={link} />
@@ -1162,8 +1165,8 @@ const Home = () => {
                     Documentation
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <div className="grid w-full md:w-[720px] md:grid-cols-[1fr_.45fr] p-2 bg-[#0A0A0A]">
-                      <ul className="grid grow grid-cols-2 gap-2.5 p-3 md:border-r md:border-white/10">
+                    <div className="grid w-full md:w-[720px] md:grid-cols-[1fr_.45fr] p-2 bg-background">
+                      <ul className="grid grow grid-cols-2 gap-2.5 p-3 md:border-r md:border-border">
                         {docsNavLinks.slice(0, 2).map((link, idx) => (
                           <li key={link.title}>
                             <NavGridCard
@@ -1244,13 +1247,13 @@ const Home = () => {
             >
               <button
                 onClick={() => setLocation("/login")}
-                className="h-[38px] rounded-full border border-white/20 bg-transparent px-5 text-[14px] font-medium text-white transition-colors hover:bg-white/[0.06] cursor-pointer"
+                className="h-[38px] rounded-full border border-border bg-transparent px-5 text-[14px] font-medium text-foreground transition-colors hover:bg-foreground/[0.06] cursor-pointer"
               >
                 Sign in
               </button>
               <button
                 onClick={() => setLocation("/register")}
-                className="h-[38px] rounded-full bg-white px-5 text-[14px] font-medium text-black transition-colors hover:bg-white/90 cursor-pointer"
+                className="h-[38px] rounded-full bg-primary px-5 text-[14px] font-medium text-destructive-foreground transition-colors hover:brightness-110 cursor-pointer"
               >
                 Get started
               </button>
@@ -1261,20 +1264,20 @@ const Home = () => {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="rounded-lg lg:hidden text-white hover:bg-white/10 border border-white/10 h-9 w-9 flex items-center justify-center"
+                    className="rounded-lg lg:hidden text-foreground hover:bg-foreground/10 border border-border h-9 w-9 flex items-center justify-center"
                   >
                     <MenuIcon className="size-5" />
                     <span className="sr-only">Toggle navigation</span>
                   </Button>
                 </SheetTrigger>
                 <SheetContent
-                  className="bg-[#0A0A0A]/95 backdrop-blur-2xl border-l border-white/10 w-full text-white gap-0 p-0"
+                  className="bg-background/95 backdrop-blur-2xl border-l border-border w-full text-foreground gap-0 p-0"
                   showClose={false}
                 >
-                  <div className="flex h-16 items-center justify-between border-b border-white/10 px-6">
+                  <div className="flex h-16 items-center justify-between border-b border-border px-6">
                     <div className="flex items-center gap-3">
                       <MeshworkLogo />
-                      <span className="font-headline font-bold text-white text-base">
+                      <span className="font-headline font-bold text-foreground text-base">
                         Meshwork Studio
                       </span>
                     </div>
@@ -1282,7 +1285,7 @@ const Home = () => {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="rounded-full text-white/60 hover:text-white hover:bg-white/10"
+                        className="rounded-full text-muted-foreground hover:text-foreground hover:bg-foreground/10"
                       >
                         <XIcon className="size-5" />
                         <span className="sr-only">Close</span>
@@ -1292,11 +1295,8 @@ const Home = () => {
 
                   <div className="overflow-y-auto px-6 pt-4 pb-12 space-y-6">
                     <Accordion type="single" collapsible className="w-full">
-                      <AccordionItem
-                        value="product"
-                        className="border-white/10"
-                      >
-                        <AccordionTrigger className="capitalize text-white font-medium hover:no-underline text-base py-3">
+                      <AccordionItem value="product" className="border-border">
+                        <AccordionTrigger className="capitalize text-foreground font-medium hover:no-underline text-base py-3">
                           Product Features
                         </AccordionTrigger>
                         <AccordionContent className="space-y-1">
@@ -1320,8 +1320,8 @@ const Home = () => {
                         </AccordionContent>
                       </AccordionItem>
 
-                      <AccordionItem value="docs" className="border-white/10">
-                        <AccordionTrigger className="capitalize text-white font-medium hover:no-underline text-base py-3">
+                      <AccordionItem value="docs" className="border-border">
+                        <AccordionTrigger className="capitalize text-foreground font-medium hover:no-underline text-base py-3">
                           Technical Docs
                         </AccordionTrigger>
                         <AccordionContent className="space-y-1">
@@ -1345,27 +1345,27 @@ const Home = () => {
                       </AccordionItem>
                     </Accordion>
 
-                    <div className="pt-3 border-t border-white/10 flex flex-col gap-1">
+                    <div className="pt-3 border-t border-border flex flex-col gap-1">
                       <Link href="/privacy">
                         <SheetClose asChild>
-                          <button className="w-full text-left py-2 px-3 rounded-lg text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors flex items-center justify-between cursor-pointer">
+                          <button className="w-full text-left py-2 px-3 rounded-lg text-sm text-foreground/70 hover:text-foreground hover:bg-foreground/5 transition-colors flex items-center justify-between cursor-pointer">
                             <span>Privacy Policy</span>
-                            <ChevronRight className="w-4 h-4 text-white/40" />
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
                           </button>
                         </SheetClose>
                       </Link>
                     </div>
 
-                    <div className="pt-3 border-t border-white/10 flex flex-col gap-3">
+                    <div className="pt-3 border-t border-border flex flex-col gap-3">
                       <button
                         onClick={() => setShowDocsView(true)}
-                        className="w-full py-3 rounded-lg bg-white/10 text-white font-medium text-sm hover:bg-white/15 transition-colors cursor-pointer"
+                        className="w-full py-3 rounded-lg bg-foreground/10 text-foreground font-medium text-sm hover:bg-foreground/15 transition-colors cursor-pointer"
                       >
                         Explore Documentation
                       </button>
                       <button
                         onClick={() => setLocation("/register")}
-                        className="w-full py-3 rounded-lg bg-primary text-white font-bold text-sm hover:brightness-110 transition-colors cursor-pointer"
+                        className="w-full py-3 rounded-lg bg-primary text-destructive-foreground font-bold text-sm hover:brightness-110 transition-colors cursor-pointer"
                       >
                         Get Started Free
                       </button>
@@ -1387,15 +1387,15 @@ const Home = () => {
             animate={{ opacity: 1, y: 0, filter: "blur(0px)", scale: 1 }}
             exit={{ opacity: 0, y: -20, filter: "blur(8px)", scale: 0.99 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-            className="min-h-screen bg-[#0A0A0A] flex flex-col"
+            className="min-h-screen bg-background flex flex-col"
           >
             {/* Docs Top Bar: Exit Button on left, beside Logo */}
-            <header className="h-16 border-b border-white/10 bg-[#0A0A0A]/95 backdrop-blur-xl px-6 flex items-center justify-between sticky top-0 z-50">
+            <header className="h-16 border-b border-border bg-background/95 backdrop-blur-xl px-6 flex items-center justify-between sticky top-0 z-50">
               <div className="flex items-center gap-4">
                 {/* EXIT BUTTON */}
                 <button
                   onClick={() => setShowDocsView(false)}
-                  className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors border border-white/10 flex items-center justify-center gap-2 text-sm font-medium cursor-pointer"
+                  className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-colors border border-border flex items-center justify-center gap-2 text-sm font-medium cursor-pointer"
                   title="Exit Documentation"
                   aria-label="Exit Documentation"
                 >
@@ -1411,7 +1411,7 @@ const Home = () => {
                   <div className="w-8 h-8 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(26,115,232,0.5)]">
                     <MeshworkLogo />
                   </div>
-                  <span className="text-lg font-headline font-bold tracking-tight text-white hidden sm:block">
+                  <span className="text-lg font-headline font-bold tracking-tight text-foreground hidden sm:block">
                     Meshwork Studio
                   </span>
                   <span className="text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono border border-blue-500/20">
@@ -1423,7 +1423,7 @@ const Home = () => {
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleCopyLink}
-                  className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-white/70 transition-colors"
+                  className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-foreground/5 hover:bg-foreground/10 border border-border text-xs font-medium text-foreground/70 transition-colors"
                 >
                   <Copy className="w-3.5 h-3.5" />
                   <span>Copy link</span>
@@ -1431,7 +1431,7 @@ const Home = () => {
 
                 <button
                   onClick={() => setLocation("/register")}
-                  className="bg-primary text-white rounded-lg py-1.5 px-4 text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
+                  className="bg-primary text-destructive-foreground rounded-lg py-1.5 px-4 text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
                 >
                   Get Started
                 </button>
@@ -1440,17 +1440,17 @@ const Home = () => {
 
             {/* Docs Body Layout */}
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-              <aside className="w-full lg:w-[280px] shrink-0 bg-[#0A0A0A] border-b lg:border-b-0 lg:border-r border-white/10">
+              <aside className="w-full lg:w-[280px] shrink-0 bg-background border-b lg:border-b-0 lg:border-r border-border">
                 <DocsSidebar />
               </aside>
 
-              <main className="flex-1 min-w-0 bg-[#0A0A0A] p-6 lg:p-12 overflow-y-auto max-h-[calc(100vh-4rem)]">
+              <main className="flex-1 min-w-0 bg-background p-6 lg:p-12 overflow-y-auto max-h-[calc(100vh-4rem)]">
                 <div className="max-w-4xl mx-auto">
                   {/* Breadcrumbs */}
-                  <div className="flex items-center gap-2 text-[13px] font-medium text-white/40 font-sans tracking-wide mb-8">
+                  <div className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground font-sans tracking-wide mb-8">
                     <span
                       onClick={() => setShowDocsView(false)}
-                      className="hover:text-white/70 transition-colors cursor-pointer"
+                      className="hover:text-foreground/70 transition-colors cursor-pointer"
                     >
                       Home
                     </span>
@@ -1459,7 +1459,7 @@ const Home = () => {
                     <ChevronRight className="w-3.5 h-3.5" />
                     <span>{activePost.category}</span>
                     <ChevronRight className="w-3.5 h-3.5" />
-                    <span className="text-white/70 truncate max-w-[200px]">
+                    <span className="text-foreground/70 truncate max-w-[200px]">
                       {activePost.title}
                     </span>
                   </div>
@@ -1471,15 +1471,15 @@ const Home = () => {
                     transition={{ duration: 0.3 }}
                   >
                     <div className="mb-10">
-                      <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-white mb-4 font-sans leading-tight">
+                      <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground mb-4 font-sans leading-tight">
                         {activePost.title}
                       </h1>
-                      <p className="text-base sm:text-xl text-white/60 font-sans font-light leading-relaxed">
+                      <p className="text-base sm:text-xl text-muted-foreground font-sans font-light leading-relaxed">
                         {activePost.subtitle}
                       </p>
                     </div>
 
-                    <div className="prose prose-invert prose-blue max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-p:leading-relaxed">
+                    <div className="prose theme-prose prose-blue max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-p:leading-relaxed">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={markdownComponents}
@@ -1488,7 +1488,7 @@ const Home = () => {
                       </ReactMarkdown>
                     </div>
 
-                    <div className="mt-16 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-sm text-white/40 gap-4">
+                    <div className="mt-16 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between text-sm text-muted-foreground gap-4">
                       <div>Last updated: {activePost.date}</div>
                       <div>Written by {activePost.author}</div>
                     </div>
@@ -1498,8 +1498,8 @@ const Home = () => {
 
               {/* Right TOC Sidebar */}
               {headings.length > 0 && (
-                <aside className="hidden xl:block w-[240px] shrink-0 border-l border-white/10 p-6 overflow-y-auto max-h-[calc(100vh-4rem)] scrollbar-hide bg-[#0A0A0A]">
-                  <h4 className="text-xs font-bold tracking-wider uppercase text-white/40 mb-4 font-sans">
+                <aside className="hidden xl:block w-[240px] shrink-0 border-l border-border p-6 overflow-y-auto max-h-[calc(100vh-4rem)] scrollbar-hide bg-background">
+                  <h4 className="text-xs font-bold tracking-wider uppercase text-muted-foreground mb-4 font-sans">
                     On this page
                   </h4>
                   <ul className="space-y-2.5 text-[13px] font-sans font-medium">
@@ -1514,7 +1514,7 @@ const Home = () => {
                             "block transition-colors leading-snug",
                             activeHeadingId === heading.id
                               ? "text-blue-400 font-semibold"
-                              : "text-white/50 hover:text-white/80",
+                              : "text-muted-foreground hover:text-foreground/80",
                           )}
                           onClick={(e) => {
                             e.preventDefault();
@@ -1542,7 +1542,7 @@ const Home = () => {
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
           >
             {/* HERO SECTION — subtle, elegant dark atmospheric gradient starting from bottom */}
-            <main className="w-full relative z-10 min-h-screen flex flex-col items-center justify-center overflow-x-hidden pt-16 bg-[#080911]">
+            <main className="w-full relative z-10 min-h-screen flex flex-col items-center justify-center overflow-x-hidden pt-16 bg-background">
               <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
                 {/* Subtle Top-center Deep Blue Veil — expands in */}
                 <motion.div
@@ -1586,14 +1586,14 @@ const Home = () => {
               >
                 <motion.h1
                   variants={heroItemVariants}
-                  className="text-[clamp(2rem,5vw,3.5rem)] font-bold text-white leading-[1.1] tracking-tight mb-4"
+                  className="text-[clamp(2rem,5vw,3.5rem)] font-bold text-foreground leading-[1.1] tracking-tight mb-4"
                   style={{ fontFamily: "var(--font-headline)" }}
                 >
                   Build with Meshwork Studio
                 </motion.h1>
                 <motion.p
                   variants={heroItemVariants}
-                  className="text-[15px] text-white/50 font-medium max-w-[440px] mb-10 leading-relaxed"
+                  className="text-[15px] text-muted-foreground font-medium max-w-[440px] mb-10 leading-relaxed"
                 >
                   Describe your infrastructure and Meshwork AI generates a
                   complete, interactive cloud diagram — instantly.
@@ -1625,7 +1625,7 @@ const Home = () => {
             {/* TEMPLATES SECTION */}
             <section
               id="templates"
-              className="w-full relative z-10 py-20 border-t border-white/10"
+              className="w-full relative z-10 py-20 border-t border-border"
             >
               <div className="max-w-6xl mx-auto px-6">
                 <style
@@ -1641,7 +1641,7 @@ const Home = () => {
                 />
 
                 <div className="mb-10">
-                  <h2 className="font-sans text-fluid-h1 font-bold text-white tracking-tight">
+                  <h2 className="font-sans text-fluid-h1 font-bold text-foreground tracking-tight">
                     Templates ready to Remix
                   </h2>
                 </div>
@@ -1726,7 +1726,7 @@ const Home = () => {
                     };
 
                     const logo = BRAND_LOGOS[template.slug || template.id] || (
-                      <Sparkles className="w-5 h-5 text-white/60" />
+                      <Sparkles className="w-5 h-5 text-muted-foreground" />
                     );
 
                     const BRAND_SHADOWS: Record<
@@ -1797,7 +1797,7 @@ const Home = () => {
                       <div
                         key={template.id}
                         onClick={() => handleTemplateClick(template)}
-                        className="group relative cursor-pointer rounded-xl bg-[#0d0d12] border border-white/[0.08] p-6 flex flex-col gap-4 transition-all duration-200 hover:border-white/[0.15] hover:bg-[#111117] overflow-hidden"
+                        className="group relative cursor-pointer rounded-xl bg-background border border-border p-6 flex flex-col gap-4 transition-all duration-200 hover:border-border hover:bg-background overflow-hidden"
                         style={{ boxShadow: brandStyle.shadow }}
                       >
                         {/* Glistening border sheen — brand-colored on hover */}
@@ -1816,21 +1816,21 @@ const Home = () => {
                         />
                         {/* Top: Title + Logo Badge */}
                         <div className="flex items-start justify-between gap-3">
-                          <h3 className="text-[15px] font-medium text-white/90 font-sans leading-snug">
+                          <h3 className="text-[15px] font-medium text-foreground/90 font-sans leading-snug">
                             {template.title}
                           </h3>
-                          <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-white/[0.05] border border-white/[0.08]">
+                          <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-foreground/[0.05] border border-border">
                             {logo}
                           </div>
                         </div>
 
                         {/* Description */}
-                        <p className="text-[13px] text-white/45 leading-relaxed font-sans line-clamp-3 flex-1">
+                        <p className="text-[13px] text-muted-foreground leading-relaxed font-sans line-clamp-3 flex-1">
                           {template.description}
                         </p>
 
                         {/* Footer */}
-                        <div className="flex items-center gap-1.5 text-white/35 text-[13px] font-mono pt-3 border-t border-white/[0.05]">
+                        <div className="flex items-center gap-1.5 text-muted-foreground text-[13px] font-mono pt-3 border-t border-border">
                           <span className="text-xs">☆</span>
                           <span>
                             {template.stars || `${template.nodes.length} nodes`}
@@ -1844,7 +1844,7 @@ const Home = () => {
             </section>
 
             {/* CALL TO ACTION */}
-            <section className="relative min-h-[60vh] flex items-center justify-center border-t border-white/10 overflow-hidden">
+            <section className="relative min-h-[60vh] flex items-center justify-center border-t border-border overflow-hidden">
               <div className="absolute inset-0 z-0">
                 {/* Decorative dot pattern (inline SVG, not a secret) */}
                 {/* eslint-disable-next-line no-secrets/no-secrets -- base64-encoded background SVG */}
@@ -1858,36 +1858,36 @@ const Home = () => {
                   transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                   viewport={{ once: true, margin: "-15%" }}
                 >
-                  <h2 className="font-sans text-fluid-h1 font-medium text-white tracking-tight leading-tight mb-12">
+                  <h2 className="font-sans text-fluid-h1 font-medium text-foreground tracking-tight leading-tight mb-12">
                     Bring your ideas to life
                   </h2>
 
-                  <div className="bg-[#1a1a1d] rounded-xl border border-white/[0.08] flex items-center px-5 py-3.5 gap-3 mb-8">
-                    <span className="text-white/30 text-sm font-sans flex-1 text-left">
+                  <div className="bg-background rounded-xl border border-border flex items-center px-5 py-3.5 gap-3 mb-8">
+                    <span className="text-muted-foreground text-sm font-sans flex-1 text-left">
                       Describe your infrastructure in a sentence or two
                     </span>
                     <button
                       onClick={() => setLocation("/register")}
-                      className="text-white/40 text-sm font-medium whitespace-nowrap hover:text-white/60 transition-colors cursor-pointer"
+                      className="text-muted-foreground text-sm font-medium whitespace-nowrap hover:text-muted-foreground transition-colors cursor-pointer"
                     >
                       Get started
                     </button>
                   </div>
 
                   <div className="flex flex-col items-start gap-3 max-w-md mx-auto">
-                    <div className="flex items-center gap-3 text-white/35 text-sm">
+                    <div className="flex items-center gap-3 text-muted-foreground text-sm">
                       <Network className="w-4 h-4 shrink-0" />
                       <span>
                         A multi-region Kubernetes cluster with auto-scaling
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-white/35 text-sm">
+                    <div className="flex items-center gap-3 text-muted-foreground text-sm">
                       <Sparkles className="w-4 h-4 shrink-0" />
                       <span>
                         A real-time data pipeline with event-driven triggers
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-white/35 text-sm">
+                    <div className="flex items-center gap-3 text-muted-foreground text-sm">
                       <Terminal className="w-4 h-4 shrink-0" />
                       <span>Help me design a serverless API gateway</span>
                     </div>
@@ -1908,18 +1908,18 @@ const Home = () => {
             </div>
 
             {/* FOOTER */}
-            <footer className="w-full bg-background relative z-10 border-t border-white/10">
+            <footer className="w-full bg-background relative z-10 border-t border-border">
               <div className="max-w-6xl mx-auto px-6 py-16">
                 <div className="flex flex-col md:flex-row justify-between items-start gap-14">
                   <div className="flex flex-col gap-5 max-w-xs">
-                    <h3 className="font-sans text-xl font-medium text-white leading-snug">
+                    <h3 className="font-sans text-xl font-medium text-foreground leading-snug">
                       Start exploring and building
                       <br />
                       with Meshwork Studio.
                     </h3>
                     <button
                       onClick={() => setLocation("/register")}
-                      className="text-white text-sm font-medium border border-white/20 rounded-full px-6 py-2.5 hover:bg-white/[0.06] transition-all w-fit cursor-pointer"
+                      className="text-foreground text-sm font-medium border border-border rounded-full px-6 py-2.5 hover:bg-foreground/[0.06] transition-all w-fit cursor-pointer"
                     >
                       Sign up and get started
                     </button>
@@ -1927,45 +1927,45 @@ const Home = () => {
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-14">
                     <div className="flex flex-col gap-3">
-                      <h4 className="font-sans font-semibold text-white text-sm mb-1">
+                      <h4 className="font-sans font-semibold text-foreground text-sm mb-1">
                         Platform
                       </h4>
                       <a
                         href="#features"
-                        className="text-white/40 hover:text-white transition-colors text-sm"
+                        className="text-muted-foreground hover:text-foreground transition-colors text-sm"
                       >
                         Canvas
                       </a>
                       <a href="#templates">
-                        <span className="text-white/40 hover:text-white transition-colors text-sm cursor-pointer">
+                        <span className="text-muted-foreground hover:text-foreground transition-colors text-sm cursor-pointer">
                           Templates
                         </span>
                       </a>
                     </div>
                     <div className="flex flex-col gap-3">
-                      <h4 className="font-sans font-semibold text-white text-sm mb-1">
+                      <h4 className="font-sans font-semibold text-foreground text-sm mb-1">
                         Product
                       </h4>
                       <a
                         href="#features"
-                        className="text-white/40 hover:text-white transition-colors text-sm"
+                        className="text-muted-foreground hover:text-foreground transition-colors text-sm"
                       >
                         Features
                       </a>
                       <button
                         onClick={() => setShowDocsView(true)}
-                        className="text-white/40 hover:text-white transition-colors text-sm text-left cursor-pointer"
+                        className="text-muted-foreground hover:text-foreground transition-colors text-sm text-left cursor-pointer"
                       >
                         Documentation
                       </button>
                     </div>
                     <div className="flex flex-col gap-3">
-                      <h4 className="font-sans font-semibold text-white text-sm mb-1">
+                      <h4 className="font-sans font-semibold text-foreground text-sm mb-1">
                         Resources
                       </h4>
                       <button
                         onClick={() => setShowDocsView(true)}
-                        className="text-white/40 hover:text-white transition-colors text-sm text-left cursor-pointer"
+                        className="text-muted-foreground hover:text-foreground transition-colors text-sm text-left cursor-pointer"
                       >
                         Docs & Blog
                       </button>
@@ -1973,22 +1973,22 @@ const Home = () => {
                         href="https://github.com/Andiewitz/Meshwork-Studio_/discussions"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-white/40 hover:text-white transition-colors text-sm"
+                        className="text-muted-foreground hover:text-foreground transition-colors text-sm"
                       >
                         Community
                       </a>
                     </div>
                     <div className="flex flex-col gap-3">
-                      <h4 className="font-sans font-semibold text-white text-sm mb-1">
+                      <h4 className="font-sans font-semibold text-foreground text-sm mb-1">
                         Legal
                       </h4>
                       <Link href="/privacy">
-                        <span className="text-white/40 hover:text-white transition-colors text-sm cursor-pointer">
+                        <span className="text-muted-foreground hover:text-foreground transition-colors text-sm cursor-pointer">
                           Privacy
                         </span>
                       </Link>
                       <Link href="/terms">
-                        <span className="text-white/40 hover:text-white transition-colors text-sm cursor-pointer">
+                        <span className="text-muted-foreground hover:text-foreground transition-colors text-sm cursor-pointer">
                           Terms
                         </span>
                       </Link>
@@ -2000,7 +2000,7 @@ const Home = () => {
               <div className="w-full overflow-hidden pb-8 pt-4">
                 <div className="max-w-6xl mx-auto px-6">
                   <h2
-                    className="font-sans font-bold text-[clamp(3rem,10vw,8rem)] text-white/[0.06] leading-none tracking-tighter select-none"
+                    className="font-sans font-bold text-[clamp(3rem,10vw,8rem)] text-foreground/[0.06] leading-none tracking-tighter select-none"
                     aria-hidden="true"
                   >
                     Meshwork Studio

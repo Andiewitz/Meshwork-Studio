@@ -53,12 +53,12 @@ export function CollaboratorsDialog({
         onOpenChange(value);
       }}
     >
-      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-xl border border-white/10 bg-[#171719] p-5 text-white sm:p-6">
+      <DialogContent className="workspace-dialog max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-xl border ws-border p-5 ws-ink sm:p-6">
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">
             Share workspace
           </DialogTitle>
-          <DialogDescription className="text-sm text-white/60">
+          <DialogDescription className="text-sm ws-muted">
             Give existing, verified accounts access to this workspace.
           </DialogDescription>
         </DialogHeader>
@@ -78,7 +78,7 @@ export function CollaboratorsDialog({
             >
               <label
                 htmlFor="collaborator-email"
-                className="block text-xs font-medium text-white/75"
+                className="block text-xs font-medium ws-ink"
               >
                 Email address
               </label>
@@ -91,7 +91,7 @@ export function CollaboratorsDialog({
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="name@example.com"
-                  className="h-10 min-w-0 flex-1 rounded-md border border-white/15 bg-white/[0.04] px-3 text-sm text-white placeholder:text-white/35 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00E5A0]"
+                  className="h-10 min-w-0 flex-1 rounded-md border ws-border ws-surface-soft px-3 text-sm ws-ink ws-placeholder focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00E5A0]"
                 />
                 <label
                   className="sr-only"
@@ -105,7 +105,7 @@ export function CollaboratorsDialog({
                   onChange={(event) =>
                     setPermission(event.target.value as CollaboratorPermission)
                   }
-                  className="h-10 rounded-md border border-white/15 bg-[#242426] px-3 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00E5A0]"
+                  className="h-10 rounded-md border ws-border ws-raised-surface px-3 text-sm ws-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00E5A0]"
                 >
                   <option value="view">Can view</option>
                   <option value="edit">Can edit</option>
@@ -124,18 +124,16 @@ export function CollaboratorsDialog({
                 {error}
               </p>
             )}
-            <div className="mt-5 border-t border-white/10 pt-4">
+            <div className="mt-5 border-t ws-border pt-4">
               <h3 className="text-sm font-medium">People with access</h3>
               <div className="mt-3 flex items-center justify-between gap-4 py-2 text-sm">
                 <span className="truncate">
-                  {ownerName} <span className="text-white/45">(you)</span>
+                  {ownerName} <span className="ws-muted">(you)</span>
                 </span>
-                <span className="text-xs text-white/55">Owner</span>
+                <span className="text-xs ws-muted">Owner</span>
               </div>
               {isLoading && (
-                <p className="py-3 text-sm text-white/55">
-                  Loading collaborators…
-                </p>
+                <p className="py-3 text-sm ws-muted">Loading collaborators…</p>
               )}
               {isError && (
                 <p role="alert" className="py-3 text-sm text-red-300">
@@ -146,7 +144,7 @@ export function CollaboratorsDialog({
                 </p>
               )}
               {!isLoading && !isError && data?.collaborators.length === 0 && (
-                <p className="py-3 text-sm text-white/55">
+                <p className="py-3 text-sm ws-muted">
                   No direct collaborators yet.
                 </p>
               )}
@@ -154,13 +152,13 @@ export function CollaboratorsDialog({
                 {data?.collaborators.map((member) => (
                   <li
                     key={member.userId}
-                    className="flex items-center gap-2 border-t border-white/[0.06] py-3"
+                    className="flex items-center gap-2 border-t ws-border py-3"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm">
                         {member.profile?.name || "Unavailable account"}
                       </p>
-                      <p className="truncate text-xs text-white/50">
+                      <p className="truncate text-xs ws-muted">
                         {member.profile?.email || member.userId}
                       </p>
                     </div>
@@ -181,7 +179,7 @@ export function CollaboratorsDialog({
                           data: { permission: event.target.value },
                         })
                       }
-                      className="h-9 rounded-md border border-white/15 bg-[#242426] px-2 text-xs text-white disabled:opacity-50"
+                      className="h-9 rounded-md border ws-border ws-raised-surface px-2 text-xs ws-ink disabled:opacity-50"
                     >
                       <option value="view">Can view</option>
                       <option value="edit">Can edit</option>
@@ -200,7 +198,7 @@ export function CollaboratorsDialog({
                             userId: member.userId,
                           });
                       }}
-                      className="rounded-md px-2 py-2 text-xs text-white/60 hover:bg-white/10 hover:text-white disabled:opacity-50"
+                      className="rounded-md px-2 py-2 text-xs ws-muted ws-hover-surface ws-hover-ink disabled:opacity-50"
                       aria-label={`Remove ${member.profile?.name || member.userId}`}
                     >
                       Remove
@@ -208,13 +206,13 @@ export function CollaboratorsDialog({
                   </li>
                 ))}
               </ul>
-              <p className="mt-3 text-xs leading-relaxed text-white/45">
+              <p className="mt-3 text-xs leading-relaxed ws-muted">
                 Removing a collaborator revokes their workspace access.
               </p>
             </div>
           </>
         ) : (
-          <p className="py-3 text-sm text-white/65">
+          <p className="py-3 text-sm ws-muted">
             Only the workspace owner can manage direct collaborators.
           </p>
         )}

@@ -173,30 +173,30 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
             />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-semibold text-white/90 truncate">
+            <div className="text-[13px] font-semibold ws-ink truncate">
               {selectedNode.data?.label ?? "Untitled"}
             </div>
-            <div className="text-[10px] uppercase tracking-[0.1em] font-bold text-white/25">
+            <div className="text-[10px] uppercase tracking-[0.1em] font-bold ws-dim">
               {nodeInfo?.category || "Node"}
             </div>
           </div>
           {onClose && (
             <button
               onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-white/20 hover:text-white/50 hover:bg-white/[0.05] transition-all flex-shrink-0"
+              className="w-7 h-7 flex items-center justify-center rounded-lg ws-dim ws-hover-ink ws-hover-surface transition-all flex-shrink-0"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        <div className="h-px bg-white/[0.04]" />
+        <div className="h-px ws-surface-soft" />
 
         {/* ── Name & Description ── */}
         <section className="space-y-4">
           {selectedNode.type === "note" ? (
             <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase tracking-widest font-bold text-white/30">
+              <Label className="text-[10px] uppercase tracking-widest font-bold ws-dim">
                 Note Content
               </Label>
               <Textarea
@@ -205,14 +205,14 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                 onChange={(e) =>
                   updateNodeData(selectedNode.id, { label: e.target.value })
                 }
-                className="min-h-[160px] rounded-md focus:ring-0 bg-white/5 border-white/10 text-white focus:border-white/20 text-[12px] resize-none"
+                className="min-h-[160px] rounded-md focus:ring-0 ws-surface-soft ws-border ws-ink ws-focus-border text-[12px] resize-none"
                 placeholder="Type your note here..."
               />
             </div>
           ) : (
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase tracking-widest font-bold text-white/30">
+                <Label className="text-[10px] uppercase tracking-widest font-bold ws-dim">
                   Display Name
                 </Label>
                 <Textarea
@@ -221,14 +221,14 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                   onChange={(e) =>
                     updateNodeData(selectedNode.id, { label: e.target.value })
                   }
-                  className="min-h-[40px] max-h-[80px] py-1.5 rounded-md focus:ring-0 bg-white/5 border-white/10 text-white focus:border-white/20 text-[12px] scrollbar-thin"
+                  className="min-h-[40px] max-h-[80px] py-1.5 rounded-md focus:ring-0 ws-surface-soft ws-border ws-ink ws-focus-border text-[12px] scrollbar-thin"
                   placeholder="Node Name..."
                   rows={2}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase tracking-widest font-bold text-white/30">
+                <Label className="text-[10px] uppercase tracking-widest font-bold ws-dim">
                   Description
                 </Label>
                 <Textarea
@@ -238,7 +238,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                       description: e.target.value,
                     })
                   }
-                  className="min-h-[60px] rounded-md focus:ring-0 bg-white/5 border-white/10 text-white focus:border-white/20 text-[11px] resize-none"
+                  className="min-h-[60px] rounded-md focus:ring-0 ws-surface-soft ws-border ws-ink ws-focus-border text-[11px] resize-none"
                   placeholder="Add notes about this component..."
                 />
               </div>
@@ -246,13 +246,13 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
           )}
         </section>
 
-        <div className="h-px bg-white/[0.04]" />
+        <div className="h-px ws-surface-soft" />
 
         {/* ── Tags Section ── */}
         <section className="space-y-3">
           <div className="flex items-center gap-1.5">
-            <Tag className="w-3.5 h-3.5 text-white/30" />
-            <Label className="text-[10px] uppercase tracking-widest font-bold text-white/30">
+            <Tag className="w-3.5 h-3.5 ws-dim" />
+            <Label className="text-[10px] uppercase tracking-widest font-bold ws-dim">
               Tags
             </Label>
           </div>
@@ -261,12 +261,12 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               {tags.map((t) => (
                 <span
                   key={t}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[10px] text-white/70 hover:bg-white/[0.08] transition-colors"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md ws-surface-soft border ws-border text-[10px] ws-ink ws-hover-surface transition-colors"
                 >
                   {t}
                   <button
                     onClick={() => handleRemoveTag(t)}
-                    className="w-3.5 h-3.5 flex items-center justify-center text-white/30 hover:text-white/70 rounded transition-colors"
+                    className="w-3.5 h-3.5 flex items-center justify-center ws-dim ws-hover-ink rounded transition-colors"
                   >
                     <X className="w-2.5 h-2.5" />
                   </button>
@@ -281,29 +281,27 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
               onKeyDown={handleAddTag}
-              className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
+              className="h-8 rounded-md ws-surface-soft ws-border ws-ink text-[11px]"
             />
             <button
               onClick={handleAddTagClick}
-              className="h-8 px-2.5 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-white text-[11px] font-bold transition-all"
+              className="h-8 px-2.5 rounded-md border ws-border ws-surface-soft ws-hover-surface ws-hover-border ws-ink text-[11px] font-bold transition-all"
             >
               +
             </button>
           </div>
         </section>
 
-        <div className="h-px bg-white/[0.04]" />
+        <div className="h-px ws-surface-soft" />
 
         {/* ── Size (Width/Height) ── */}
         <section className="space-y-3">
-          <Label className="text-[10px] uppercase tracking-widest font-bold text-white/30">
+          <Label className="text-[10px] uppercase tracking-widest font-bold ws-dim">
             Size
           </Label>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <div className="text-[9px] text-white/20 uppercase font-bold">
-                W
-              </div>
+              <div className="text-[9px] ws-dim uppercase font-bold">W</div>
               <Input
                 type="number"
                 min={minimumDimensions.width}
@@ -317,13 +315,11 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                     });
                   }
                 }}
-                className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
+                className="h-8 rounded-md ws-surface-soft ws-border ws-ink text-[11px]"
               />
             </div>
             <div className="space-y-1.5">
-              <div className="text-[9px] text-white/20 uppercase font-bold">
-                H
-              </div>
+              <div className="text-[9px] ws-dim uppercase font-bold">H</div>
               <Input
                 type="number"
                 min={minimumDimensions.height}
@@ -337,19 +333,19 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                     });
                   }
                 }}
-                className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
+                className="h-8 rounded-md ws-surface-soft ws-border ws-ink text-[11px]"
               />
             </div>
           </div>
         </section>
 
-        <div className="h-px bg-white/[0.04]" />
+        <div className="h-px ws-surface-soft" />
 
         {/* ── Style Customization Section (Collapsible) ── */}
         <section className="space-y-2">
           <button
             onClick={() => setStyleExpanded(!styleExpanded)}
-            className="w-full flex items-center justify-between py-1 text-white/40 hover:text-white/80 transition-colors"
+            className="w-full flex items-center justify-between py-1 ws-muted ws-hover-ink transition-colors"
           >
             <div className="flex items-center gap-1.5">
               <Palette className="w-3.5 h-3.5" />
@@ -365,10 +361,10 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
           </button>
 
           {styleExpanded && (
-            <div className="space-y-4 pt-2 border-t border-white/[0.02]">
+            <div className="space-y-4 pt-2 border-t ws-border">
               {/* Theme select */}
               <div className="space-y-1.5">
-                <Label className="text-[9px] uppercase font-bold text-white/30">
+                <Label className="text-[9px] uppercase font-bold ws-dim">
                   Visual Theme
                 </Label>
                 <select
@@ -376,18 +372,18 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                   onChange={(e) =>
                     updateNodeData(selectedNode.id, { theme: e.target.value })
                   }
-                  className="w-full h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px] focus:ring-0 px-2 outline-none"
+                  className="w-full h-8 rounded-md ws-surface-soft ws-border ws-ink text-[11px] focus:ring-0 px-2 outline-none"
                 >
-                  <option value="default" className="bg-[#121214]">
+                  <option value="default" className="ws-option">
                     Default (Solid)
                   </option>
-                  <option value="neon" className="bg-[#121214]">
+                  <option value="neon" className="ws-option">
                     Neon Glow
                   </option>
-                  <option value="glass" className="bg-[#121214]">
+                  <option value="glass" className="ws-option">
                     Glassmorphism
                   </option>
-                  <option value="minimal" className="bg-[#121214]">
+                  <option value="minimal" className="ws-option">
                     Minimal Outline
                   </option>
                 </select>
@@ -395,7 +391,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
 
               {/* Background Color */}
               <div className="space-y-1.5">
-                <Label className="text-[9px] uppercase font-bold text-white/30">
+                <Label className="text-[9px] uppercase font-bold ws-dim">
                   Background Color
                 </Label>
                 <div className="flex gap-2">
@@ -406,7 +402,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                     onChange={(e) =>
                       handleStyleChange("backgroundColor", e.target.value)
                     }
-                    className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px] font-mono flex-1"
+                    className="h-8 rounded-md ws-surface-soft ws-border ws-ink text-[11px] font-mono flex-1"
                   />
                   <input
                     type="color"
@@ -419,14 +415,14 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                     onChange={(e) =>
                       handleStyleChange("backgroundColor", e.target.value)
                     }
-                    className="w-8 h-8 rounded-md border border-white/10 bg-transparent p-0 cursor-pointer flex-shrink-0"
+                    className="w-8 h-8 rounded-md border ws-border bg-transparent p-0 cursor-pointer flex-shrink-0"
                   />
                 </div>
               </div>
 
               {/* Border Color */}
               <div className="space-y-1.5">
-                <Label className="text-[9px] uppercase font-bold text-white/30">
+                <Label className="text-[9px] uppercase font-bold ws-dim">
                   Border Color
                 </Label>
                 <div className="flex gap-2">
@@ -437,7 +433,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                     onChange={(e) =>
                       handleStyleChange("borderColor", e.target.value)
                     }
-                    className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px] font-mono flex-1"
+                    className="h-8 rounded-md ws-surface-soft ws-border ws-ink text-[11px] font-mono flex-1"
                   />
                   <input
                     type="color"
@@ -449,7 +445,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                     onChange={(e) =>
                       handleStyleChange("borderColor", e.target.value)
                     }
-                    className="w-8 h-8 rounded-md border border-white/10 bg-transparent p-0 cursor-pointer flex-shrink-0"
+                    className="w-8 h-8 rounded-md border ws-border bg-transparent p-0 cursor-pointer flex-shrink-0"
                   />
                 </div>
               </div>
@@ -457,10 +453,10 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               {/* Border Radius */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[9px] uppercase font-bold text-white/30">
+                  <Label className="text-[9px] uppercase font-bold ws-dim">
                     Border Radius
                   </Label>
-                  <span className="text-[10px] text-white/30 font-mono">
+                  <span className="text-[10px] ws-dim font-mono">
                     {nodeStyle.borderRadius === undefined
                       ? "Default"
                       : `${borderRadius}px`}
@@ -475,17 +471,17 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                   onChange={(e) =>
                     handleStyleChange("borderRadius", parseInt(e.target.value))
                   }
-                  className="w-full h-1 rounded-full appearance-none bg-white/10 accent-white/60"
+                  className="w-full h-1 rounded-full appearance-none ws-surface-soft accent-white/60"
                 />
               </div>
 
               {/* Opacity */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[9px] uppercase font-bold text-white/30">
+                  <Label className="text-[9px] uppercase font-bold ws-dim">
                     Opacity
                   </Label>
-                  <span className="text-[10px] text-white/30 font-mono">
+                  <span className="text-[10px] ws-dim font-mono">
                     {Math.round(opacity * 100)}%
                   </span>
                 </div>
@@ -498,13 +494,13 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                   onChange={(e) =>
                     handleStyleChange("opacity", parseFloat(e.target.value))
                   }
-                  className="w-full h-1 rounded-full appearance-none bg-white/10 accent-white/60"
+                  className="w-full h-1 rounded-full appearance-none ws-surface-soft accent-white/60"
                 />
               </div>
 
               {/* Font Color */}
               <div className="space-y-1.5">
-                <Label className="text-[9px] uppercase font-bold text-white/30">
+                <Label className="text-[9px] uppercase font-bold ws-dim">
                   Font Color
                 </Label>
                 <div className="flex gap-2">
@@ -517,7 +513,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                         fontColor: e.target.value,
                       })
                     }
-                    className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px] font-mono flex-1"
+                    className="h-8 rounded-md ws-surface-soft ws-border ws-ink text-[11px] font-mono flex-1"
                   />
                   <input
                     type="color"
@@ -534,14 +530,14 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                         fontColor: e.target.value,
                       })
                     }
-                    className="w-8 h-8 rounded-md border border-white/10 bg-transparent p-0 cursor-pointer flex-shrink-0"
+                    className="w-8 h-8 rounded-md border ws-border bg-transparent p-0 cursor-pointer flex-shrink-0"
                   />
                 </div>
               </div>
 
               {/* Font Size */}
               <div className="space-y-1.5">
-                <Label className="text-[9px] uppercase font-bold text-white/30">
+                <Label className="text-[9px] uppercase font-bold ws-dim">
                   Font Size
                 </Label>
                 <Input
@@ -555,13 +551,13 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                       parseInt(e.target.value) || 12,
                     )
                   }
-                  className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
+                  className="h-8 rounded-md ws-surface-soft ws-border ws-ink text-[11px]"
                 />
               </div>
 
               {/* Custom Icon Name */}
               <div className="space-y-1.5">
-                <Label className="text-[9px] uppercase font-bold text-white/30">
+                <Label className="text-[9px] uppercase font-bold ws-dim">
                   Custom Icon
                 </Label>
                 <Input
@@ -573,9 +569,9 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                       icon: e.target.value || null,
                     })
                   }
-                  className="h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px]"
+                  className="h-8 rounded-md ws-surface-soft ws-border ws-ink text-[11px]"
                 />
-                <span className="text-[9px] text-white/35 block leading-normal">
+                <span className="text-[9px] ws-dim block leading-normal">
                   Use a Heroicons name, such as ServerIcon or GlobeAltIcon.
                 </span>
               </div>
@@ -583,12 +579,12 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
           )}
         </section>
 
-        <div className="h-px bg-white/[0.04]" />
+        <div className="h-px ws-surface-soft" />
 
         {/* ── Brand Accent Color ── */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label className="text-[10px] uppercase tracking-widest font-bold text-white/30">
+            <Label className="text-[10px] uppercase tracking-widest font-bold ws-dim">
               Brand Color Accent
             </Label>
             {currentAccent && (
@@ -596,7 +592,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                 onClick={() =>
                   updateNodeData(selectedNode.id, { accentColor: undefined })
                 }
-                className="text-[9px] text-white/20 hover:text-white/50 transition-colors flex items-center gap-1 uppercase font-bold tracking-wider"
+                className="text-[9px] ws-dim ws-hover-ink transition-colors flex items-center gap-1 uppercase font-bold tracking-wider"
                 title="Reset to default brand color"
               >
                 <RotateCcw className="w-3 h-3" />
@@ -622,7 +618,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               >
                 {currentAccent === color && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />
+                    <div className="w-1.5 h-1.5 rounded-full ws-primary shadow-sm" />
                   </div>
                 )}
               </button>
@@ -633,9 +629,9 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
         {/* ── Database Collections (the one useful technical field) ── */}
         {selectedNode.type === "database" && (
           <>
-            <div className="h-px bg-white/[0.04]" />
+            <div className="h-px ws-surface-soft" />
             <section className="space-y-3">
-              <Label className="text-[10px] uppercase tracking-widest font-bold text-white/30">
+              <Label className="text-[10px] uppercase tracking-widest font-bold ws-dim">
                 Collections / Tables
               </Label>
               <Textarea
@@ -647,7 +643,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                     .filter((s) => s.trim() !== "");
                   updateNodeData(selectedNode.id, { collections: colls });
                 }}
-                className="min-h-[80px] rounded-md focus:ring-0 bg-white/5 border-white/10 text-white focus:border-white/20 resize-none text-[11px] font-mono"
+                className="min-h-[80px] rounded-md focus:ring-0 ws-surface-soft ws-border ws-ink ws-focus-border resize-none text-[11px] font-mono"
               />
             </section>
           </>
@@ -656,9 +652,9 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
         {/* ── K8s Status (only for k8s nodes) ── */}
         {selectedNode.type?.startsWith("k8s-") && (
           <>
-            <div className="h-px bg-white/[0.04]" />
+            <div className="h-px ws-surface-soft" />
             <section className="space-y-3">
-              <Label className="text-[10px] uppercase tracking-widest font-bold text-white/30">
+              <Label className="text-[10px] uppercase tracking-widest font-bold ws-dim">
                 Status
               </Label>
               <select
@@ -668,18 +664,18 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                     status: e.target.value || undefined,
                   })
                 }
-                className="w-full h-8 rounded-md bg-white/5 border-white/10 text-white text-[11px] focus:ring-0 px-2 outline-none"
+                className="w-full h-8 rounded-md ws-surface-soft ws-border ws-ink text-[11px] focus:ring-0 px-2 outline-none"
               >
-                <option value="" className="bg-[#1a1a1a]">
+                <option value="" className="ws-option">
                   Default
                 </option>
-                <option value="healthy" className="bg-[#1a1a1a]">
+                <option value="healthy" className="ws-option">
                   ✅ Healthy
                 </option>
-                <option value="error" className="bg-[#1a1a1a]">
+                <option value="error" className="ws-option">
                   ❌ Error
                 </option>
-                <option value="pending" className="bg-[#1a1a1a]">
+                <option value="pending" className="ws-option">
                   ⏳ Pending
                 </option>
               </select>
@@ -687,16 +683,16 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
           </>
         )}
 
-        <div className="h-px bg-white/[0.04]" />
+        <div className="h-px ws-surface-soft" />
 
         {/* ── AI Context (Collapsible) ── */}
         <section className="space-y-2">
           <button
             onClick={() => setAiExpanded(!aiExpanded)}
-            className="w-full flex items-center justify-between py-1 text-white/40 hover:text-white/80 transition-colors"
+            className="w-full flex items-center justify-between py-1 ws-muted ws-hover-ink transition-colors"
           >
             <div className="flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#8ab4f8]" />
+              <Sparkles className="ws-ai-icon w-3.5 h-3.5 text-[#8ab4f8]" />
               <span className="text-[10px] uppercase tracking-widest font-bold">
                 AI Metadata
               </span>
@@ -709,13 +705,13 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
           </button>
 
           {aiExpanded && (
-            <div className="space-y-3 pt-2 border-t border-white/[0.02] text-[11px]">
+            <div className="space-y-3 pt-2 border-t ws-border text-[11px]">
               {/* Summary */}
               <div className="space-y-1">
-                <Label className="text-[9px] uppercase font-bold text-white/30">
+                <Label className="text-[9px] uppercase font-bold ws-dim">
                   AI Analysis Summary
                 </Label>
-                <div className="p-2.5 rounded-md bg-white/[0.03] border border-white/[0.06] text-white/70 italic text-[11px] leading-relaxed max-h-[140px] overflow-y-auto scrollbar-thin">
+                <div className="p-2.5 rounded-md ws-surface-soft border ws-border ws-ink italic text-[11px] leading-relaxed max-h-[140px] overflow-y-auto scrollbar-thin">
                   {ai.summary ||
                     "No AI analysis summary generated yet. Ask AI Chat to analyze your canvas."}
                 </div>
@@ -723,19 +719,19 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
 
               {/* AI Notes */}
               <div className="space-y-1">
-                <Label className="text-[9px] uppercase font-bold text-white/30">
+                <Label className="text-[9px] uppercase font-bold ws-dim">
                   AI Collaboration Notes
                 </Label>
                 <Textarea
                   value={ai.notes || ""}
                   onChange={(e) => handleAiNotesChange(e.target.value)}
-                  className="min-h-[80px] rounded-md focus:ring-0 bg-white/5 border-white/10 text-white focus:border-white/20 text-[11px] resize-none"
+                  className="min-h-[80px] rounded-md focus:ring-0 ws-surface-soft ws-border ws-ink ws-focus-border text-[11px] resize-none"
                   placeholder="Enter instructions, notes or rules for the AI about this component..."
                 />
               </div>
 
               {/* Last Analyzed */}
-              <div className="flex items-center justify-between text-[9px] text-white/20 mt-1 font-mono">
+              <div className="flex items-center justify-between text-[9px] ws-dim mt-1 font-mono">
                 <span>LAST ANALYZED:</span>
                 <span>
                   {ai.lastAnalyzed
@@ -747,13 +743,13 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
           )}
         </section>
 
-        <div className="h-px bg-white/[0.04]" />
+        <div className="h-px ws-surface-soft" />
 
         {/* ── Delete Node ── */}
         <section className="pb-4">
           <button
             onClick={() => deleteNode(selectedNode.id)}
-            className="w-full h-10 flex items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400 transition-all font-bold text-[10px] uppercase tracking-widest"
+            className="w-full h-10 flex items-center justify-center gap-2 rounded-lg ws-danger-action border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400 transition-all font-bold text-[10px] uppercase tracking-widest"
           >
             <Trash2 className="w-3.5 h-3.5" />
             Delete Component
@@ -790,33 +786,33 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
       <div className="p-4 space-y-5">
         {/* ── Connection Header ── */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-white/[0.06] flex-shrink-0">
-            <ArrowRight className="w-4 h-4 text-white/50" />
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center ws-surface-soft flex-shrink-0">
+            <ArrowRight className="w-4 h-4 ws-muted" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-semibold text-white/90 truncate">
+            <div className="text-[13px] font-semibold ws-ink truncate">
               {(edgeLabel as string) || "Connection Line"}
             </div>
-            <div className="text-[10px] uppercase tracking-[0.1em] font-bold text-white/25">
+            <div className="text-[10px] uppercase tracking-[0.1em] font-bold ws-dim">
               Flow Edge
             </div>
           </div>
           {onClose && (
             <button
               onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-white/20 hover:text-white/50 hover:bg-white/[0.05] transition-all flex-shrink-0"
+              className="w-7 h-7 flex items-center justify-center rounded-lg ws-dim ws-hover-ink ws-hover-surface transition-all flex-shrink-0"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        <div className="h-px bg-white/[0.04]" />
+        <div className="h-px ws-surface-soft" />
 
         {/* ── Name & Description ── */}
         <section className="space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-[10px] uppercase tracking-widest font-bold text-white/30">
+            <Label className="text-[10px] uppercase tracking-widest font-bold ws-dim">
               Connection Label
             </Label>
             <Input
@@ -824,13 +820,13 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               data-property-input="true"
               value={edgeLabel as string}
               onChange={(e) => handleEdgeFieldChange("label", e.target.value)}
-              className="h-9 rounded-md bg-white/5 border-white/10 text-white text-[12px]"
+              className="h-9 rounded-md ws-surface-soft ws-border ws-ink text-[12px]"
               placeholder="e.g. JSON/HTTPS, gRPC, Queue Event"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[10px] uppercase tracking-widest font-bold text-white/30">
+            <Label className="text-[10px] uppercase tracking-widest font-bold ws-dim">
               Description
             </Label>
             <Textarea
@@ -838,38 +834,38 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               onChange={(e) =>
                 handleEdgeFieldChange("description", e.target.value)
               }
-              className="min-h-[80px] rounded-md focus:ring-0 bg-white/5 border-white/10 text-white focus:border-white/20 text-[11px] resize-none"
+              className="min-h-[80px] rounded-md focus:ring-0 ws-surface-soft ws-border ws-ink ws-focus-border text-[11px] resize-none"
               placeholder="What does this connection represent or transmit?"
             />
           </div>
         </section>
 
-        <div className="h-px bg-white/[0.04]" />
+        <div className="h-px ws-surface-soft" />
 
         {/* ── AI Notes Section ── */}
         <section className="space-y-3">
           <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#8ab4f8]" />
-            <Label className="text-[10px] uppercase tracking-widest font-bold text-white/30">
+            <Sparkles className="ws-ai-icon w-3.5 h-3.5 text-[#8ab4f8]" />
+            <Label className="text-[10px] uppercase tracking-widest font-bold ws-dim">
               AI Collaboration Notes
             </Label>
           </div>
           <Textarea
             value={edgeAi.notes || ""}
             onChange={(e) => handleEdgeAiChange(e.target.value)}
-            className="min-h-[100px] rounded-md focus:ring-0 bg-white/5 border-white/10 text-white focus:border-white/20 text-[11px] resize-none"
+            className="min-h-[100px] rounded-md focus:ring-0 ws-surface-soft ws-border ws-ink ws-focus-border text-[11px] resize-none"
             placeholder="Provide details about security policies, protocol requirements, data formats, or bandwidth settings for the AI..."
           />
         </section>
 
-        <div className="h-px bg-white/[0.04]" />
+        <div className="h-px ws-surface-soft" />
 
         {/* ── Delete Connection ── */}
         {deleteEdge && (
           <section className="pb-4">
             <button
               onClick={() => deleteEdge(selectedEdge.id)}
-              className="w-full h-10 flex items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400 transition-all font-bold text-[10px] uppercase tracking-widest"
+              className="w-full h-10 flex items-center justify-center gap-2 rounded-lg ws-danger-action border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400 transition-all font-bold text-[10px] uppercase tracking-widest"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Delete Connection

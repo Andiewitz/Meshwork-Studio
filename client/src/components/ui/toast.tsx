@@ -27,10 +27,10 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-white/[0.1] bg-surface text-foreground",
+        default: "border-border bg-surface text-foreground",
         destructive:
-          "destructive border-destructive/25 bg-[#291719] text-foreground",
-        success: "success border-success/25 bg-[#14251d] text-foreground",
+          "destructive border-destructive/25 bg-destructive/10 text-foreground",
+        success: "success border-success/25 bg-success/10 text-foreground",
       },
     },
     defaultVariants: {
@@ -61,7 +61,7 @@ const ToastAction = React.forwardRef<
   <ToastPrimitives.Action
     ref={ref}
     className={cn(
-      "inline-flex min-h-9 shrink-0 items-center justify-center rounded-md px-2 text-sm font-semibold text-[#f7826d] transition-colors hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:text-red-300 group-[.success]:text-green-300",
+      "inline-flex min-h-9 shrink-0 items-center justify-center rounded-md px-2 text-sm font-semibold text-[#f7826d] transition-colors hover:bg-foreground/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:text-red-300 group-[.success]:text-green-300",
       className,
     )}
     {...props}
@@ -76,7 +76,7 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/[0.07] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-foreground/[0.07] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
       className,
     )}
     aria-label="Dismiss notification"

@@ -1873,22 +1873,22 @@ function WorkspaceView() {
 
   if (isError || (!isLoading && !workspace)) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#000000] text-white font-sans">
-        <Box className="w-16 h-16 text-white/10 mb-6" />
+      <div className="ws-error-screen h-screen w-screen flex flex-col items-center justify-center ws-ink font-sans">
+        <Box className="w-16 h-16 ws-dim mb-6" />
         <h1 className="text-2xl font-black uppercase tracking-widest mb-3">
           Project Not Found
         </h1>
-        <p className="text-white/40 mb-3 max-w-md text-center text-sm leading-relaxed">
+        <p className="ws-muted mb-3 max-w-md text-center text-sm leading-relaxed">
           The architecture project you are looking for does not exist, has been
           deleted, or you do not have permission to access it.
         </p>
         {(canvasError ?? workspaceError) && (
-          <p className="text-white/50 mb-8 max-w-md text-center font-mono text-xs leading-relaxed">
+          <p className="ws-muted mb-8 max-w-md text-center font-mono text-xs leading-relaxed">
             {formatUserErrorMessage(canvasError ?? workspaceError)}
           </p>
         )}
         <Link href="/">
-          <button className="px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-md transition-colors text-[11px] font-bold tracking-[0.2em] uppercase text-white/80 hover:text-white">
+          <button className="px-6 py-2.5 ws-surface-soft ws-hover-surface border ws-border rounded-md transition-colors text-[11px] font-bold tracking-[0.2em] uppercase ws-ink ws-hover-ink">
             Return to Library
           </button>
         </Link>
@@ -1897,7 +1897,7 @@ function WorkspaceView() {
   }
 
   return (
-    <div className="workspace-editor-shell h-screen w-screen overflow-hidden font-sans text-sm selection:bg-white/10 bg-[#09090b] text-white flex flex-col relative">
+    <div className="workspace-editor-shell h-screen w-screen overflow-hidden font-sans text-sm selection:bg-white/10 bg-[#09090b] ws-ink flex flex-col relative">
       <Helmet>
         <title>{workspace?.title || "Workspace"}</title>
       </Helmet>
@@ -1998,8 +1998,8 @@ function WorkspaceView() {
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className={`workspace-canvas flex-1 h-full relative bg-[#0A0A0A] overflow-hidden transition-all duration-300 ease-in-out ${
               isSidebarOpen && canEdit
-                ? "rounded-tl-2xl border-t border-l border-white/[0.08]"
-                : "border-t border-white/[0.08]"
+                ? "rounded-tl-2xl border-t border-l ws-border"
+                : "border-t ws-border"
             }`}
             data-cursor={drawingMode}
             style={{ cursor: drawingMode === "pan" ? "grab" : undefined }}
@@ -2007,7 +2007,7 @@ function WorkspaceView() {
             {draftConflict && (
               <div
                 role="alert"
-                className="absolute top-4 left-4 right-4 z-[1000] flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/40 bg-[#1c1914] p-3 text-sm text-white"
+                className="absolute top-4 left-4 right-4 z-[1000] flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/40 ws-warning p-3 text-sm ws-ink"
               >
                 <span className="flex-1">
                   This local draft may conflict with the server or may be
@@ -2015,7 +2015,7 @@ function WorkspaceView() {
                   version; automatic saving is paused.
                 </span>
                 <button
-                  className="rounded-md border border-white/30 px-3 py-2 text-white disabled:opacity-50"
+                  className="rounded-md border ws-border px-3 py-2 ws-ink disabled:opacity-50"
                   disabled={canvasTransition !== "idle"}
                   onClick={() => {
                     const draft = materializeRootCanvas(canvasStack, {
@@ -2032,7 +2032,7 @@ function WorkspaceView() {
                   Export draft
                 </button>
                 <button
-                  className="rounded-md bg-white px-3 py-2 text-black"
+                  className="rounded-md ws-primary px-3 py-2"
                   onClick={() => {
                     if (
                       window.confirm(
@@ -2072,7 +2072,7 @@ function WorkspaceView() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.18, ease: "easeInOut" }}
-                  className="absolute inset-0 z-[999] bg-[#0A0A0A] pointer-events-none"
+                  className="workspace-canvas-overlay absolute inset-0 z-[999] pointer-events-none"
                 />
               )}
             </AnimatePresence>
@@ -2127,11 +2127,11 @@ function WorkspaceView() {
             >
               <Controls
                 position="bottom-left"
-                className="!bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !text-white/50 !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl overflow-hidden !m-6 [&_button]:!bg-transparent [&_button]:!border-white/[0.05] [&_button]:hover:!bg-white/10 [&_button_svg]:!fill-white/70"
+                className="workspace-flow-controls !bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !text-white/50 !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl overflow-hidden !m-6 [&_button]:!bg-transparent [&_button]:!border-white/[0.05] [&_button]:hover:!bg-white/10 [&_button_svg]:!fill-white/70"
               />
               <MiniMap
                 position="bottom-right"
-                className="!bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl !mr-6 !mb-6 overflow-hidden [&_.react-flow__minimap-mask]:!fill-white/80"
+                className="workspace-minimap !bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl !mr-6 !mb-6 overflow-hidden [&_.react-flow__minimap-mask]:!fill-white/80"
               />
               {bgVariant !== "none" && (
                 <Background
@@ -2173,7 +2173,7 @@ function WorkspaceView() {
                   animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
                   transition={{ type: "spring", damping: 20, stiffness: 300 }}
                   style={{ top: menu.top, left: menu.left }}
-                  className="fixed rounded-xl py-1.5 z-[100] min-w-[200px] bg-[#121214]/85 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)]"
+                  className="workspace-popover fixed rounded-xl py-1.5 z-[100] min-w-[200px] ws-option backdrop-blur-2xl border ws-border shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)]"
                   onClick={() => setMenu(null)}
                 >
                   {menu.type === "node" ? (
@@ -2191,13 +2191,13 @@ function WorkspaceView() {
                                 setSelectedNodeId(menu.id);
                                 setActiveTab("properties");
                               }}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors ws-hover-surface ws-ink ws-hover-ink"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                               <span className="flex-1 text-left">
                                 Edit Properties
                               </span>
-                              <span className="text-[10px] text-white/20 font-mono">
+                              <span className="text-[10px] ws-dim font-mono">
                                 Dbl-click
                               </span>
                             </button>
@@ -2210,17 +2210,17 @@ function WorkspaceView() {
                                   )
                                 : duplicateNode(menu.id)
                             }
-                            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors ws-hover-surface ws-ink ws-hover-ink"
                           >
                             <Copy className="w-3.5 h-3.5" />
                             <span className="flex-1 text-left">
                               Duplicate{isMultiSelect ? " All" : ""}
                             </span>
-                            <span className="text-[10px] text-white/20 font-mono">
+                            <span className="text-[10px] ws-dim font-mono">
                               ⌘D
                             </span>
                           </button>
-                          <div className="h-px my-1 mx-2 bg-white/[0.04]" />
+                          <div className="h-px my-1 mx-2 ws-surface-soft" />
                           <button
                             onClick={() => {
                               takeSnapshot();
@@ -2247,7 +2247,7 @@ function WorkspaceView() {
                                 }),
                               );
                             }}
-                            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors ws-hover-surface ws-ink ws-hover-ink"
                           >
                             <Grid className="w-3.5 h-3.5" />
                             <span className="flex-1 text-left">
@@ -2285,7 +2285,7 @@ function WorkspaceView() {
                                     }),
                                   );
                                 }}
-                                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors ws-hover-surface ws-ink ws-hover-ink"
                               >
                                 <AlignVerticalJustifyCenter className="w-3.5 h-3.5" />
                                 <span className="flex-1 text-left">
@@ -2321,7 +2321,7 @@ function WorkspaceView() {
                                     }),
                                   );
                                 }}
-                                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors ws-hover-surface ws-ink ws-hover-ink"
                               >
                                 <AlignHorizontalJustifyCenter className="w-3.5 h-3.5" />
                                 <span className="flex-1 text-left">
@@ -2330,7 +2330,7 @@ function WorkspaceView() {
                               </button>
                             </>
                           )}
-                          <div className="h-px my-1 mx-2 bg-white/[0.04]" />
+                          <div className="h-px my-1 mx-2 ws-surface-soft" />
                           <button
                             onClick={() => {
                               const selectedIds = nodes
@@ -2362,7 +2362,7 @@ function WorkspaceView() {
                   ) : (
                     /* ── Pane context menu: quick-add favorites ── */
                     <>
-                      <div className="px-3.5 py-1.5 text-[9px] uppercase font-bold text-white/20 tracking-[0.15em]">
+                      <div className="px-3.5 py-1.5 text-[9px] uppercase font-bold ws-dim tracking-[0.15em]">
                         Quick Add
                       </div>
                       {favoriteNodes.map((node) => (
@@ -2378,13 +2378,13 @@ function WorkspaceView() {
                               y: Math.round(pos.y / 12) * 12,
                             });
                           }}
-                          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors ws-hover-surface ws-ink ws-hover-ink"
                         >
-                          <node.icon className="w-3.5 h-3.5 text-white/40" />
+                          <node.icon className="w-3.5 h-3.5 ws-muted" />
                           {node.label}
                         </button>
                       ))}
-                      <div className="h-px my-1 mx-2 bg-white/[0.04]" />
+                      <div className="h-px my-1 mx-2 ws-surface-soft" />
                       <button
                         onClick={() => {
                           const pos = screenToFlowPosition({
@@ -2396,9 +2396,9 @@ function WorkspaceView() {
                             y: Math.round(pos.y / 12) * 12,
                           });
                         }}
-                        className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors ws-hover-surface ws-ink ws-hover-ink"
                       >
-                        <Type className="w-3.5 h-3.5 text-white/40" />
+                        <Type className="w-3.5 h-3.5 ws-muted" />
                         Sticky Note
                       </button>
                       <button
@@ -2412,9 +2412,9 @@ function WorkspaceView() {
                             y: Math.round(pos.y / 12) * 12,
                           });
                         }}
-                        className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors hover:bg-white/[0.06] text-white/70 hover:text-white"
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors ws-hover-surface ws-ink ws-hover-ink"
                       >
-                        <Circle className="w-3.5 h-3.5 text-white/40" />
+                        <Circle className="w-3.5 h-3.5 ws-muted" />
                         Junction
                       </button>
                     </>
@@ -2457,7 +2457,7 @@ function WorkspaceView() {
                 animate={{ opacity: 1, width: 320 }}
                 exit={{ opacity: 0, width: 0 }}
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="workspace-properties-frame h-full min-h-0 overflow-hidden border-l border-t border-white/[0.08] bg-[#111114] shrink-0"
+                className="workspace-properties-frame h-full min-h-0 overflow-hidden border-l border-t ws-border bg-[#111114] shrink-0"
               >
                 <div
                   className="h-full overflow-y-auto"
@@ -2486,13 +2486,13 @@ function WorkspaceView() {
 
       {/* Workspace Settings Dialog */}
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="max-w-[480px] w-full bg-[#0E0E0E]/95 backdrop-blur-2xl border border-[#252525] shadow-[0_32px_64px_rgba(0,0,0,0.7)] rounded-2xl text-white p-6 space-y-4">
-          <DialogHeader className="border-b border-white/[0.06] pb-3">
+        <DialogContent className="workspace-dialog max-w-[480px] w-full ws-option backdrop-blur-2xl border ws-border shadow-[0_32px_64px_rgba(0,0,0,0.7)] rounded-2xl ws-ink p-6 space-y-4">
+          <DialogHeader className="border-b ws-border pb-3">
             <DialogTitle className="text-[15px] font-bold uppercase tracking-wider flex items-center gap-2">
-              <Settings className="w-4 h-4 text-white/50" />
+              <Settings className="w-4 h-4 ws-muted" />
               Workspace Settings
             </DialogTitle>
-            <DialogDescription className="text-[11px] text-white/40">
+            <DialogDescription className="text-[11px] ws-muted">
               Edit details for your architecture project.
             </DialogDescription>
           </DialogHeader>
@@ -2500,44 +2500,44 @@ function WorkspaceView() {
           <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1 scrollbar-thin">
             {/* Author */}
             <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase tracking-widest font-bold text-white/40">
+              <Label className="text-[10px] uppercase tracking-widest font-bold ws-muted">
                 Author / Architect
               </Label>
               <Input
                 type="text"
                 value={wsAuthor}
                 onChange={(e) => setWsAuthor(e.target.value)}
-                className="h-9 rounded-lg bg-white/5 border-white/10 text-white text-[12px]"
+                className="h-9 rounded-lg ws-surface-soft ws-border ws-ink text-[12px]"
                 placeholder="e.g. garden-hoser67"
               />
             </div>
 
             {/* Description */}
             <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase tracking-widest font-bold text-white/40">
+              <Label className="text-[10px] uppercase tracking-widest font-bold ws-muted">
                 Project Description
               </Label>
               <Textarea
                 value={wsDescription}
                 onChange={(e) => setWsDescription(e.target.value)}
-                className="min-h-[80px] rounded-lg bg-white/5 border-white/10 text-white text-[12px] resize-none"
+                className="min-h-[80px] rounded-lg ws-surface-soft ws-border ws-ink text-[12px] resize-none"
                 placeholder="Describe the system architecture, its components and layout..."
               />
             </div>
 
             {/* AI Context */}
             <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase tracking-widest font-bold text-white/40 flex items-center gap-1">
+              <Label className="text-[10px] uppercase tracking-widest font-bold ws-muted flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-[#8ab4f8]" />
                 AI Architectural Context
               </Label>
               <Textarea
                 value={wsAiContext}
                 onChange={(e) => setWsAiContext(e.target.value)}
-                className="min-h-[100px] rounded-lg bg-white/5 border-white/10 text-white text-[12px] resize-none"
+                className="min-h-[100px] rounded-lg ws-surface-soft ws-border ws-ink text-[12px] resize-none"
                 placeholder="Provide specific guidelines, design rules, or background context..."
               />
-              <span className="text-[9px] text-white/30 block leading-normal">
+              <span className="text-[9px] ws-dim block leading-normal">
                 This context helps the AI understand the intent of this diagram
                 during architectural reviews.
               </span>
@@ -2545,7 +2545,7 @@ function WorkspaceView() {
 
             {/* Tags */}
             <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase tracking-widest font-bold text-white/40">
+              <Label className="text-[10px] uppercase tracking-widest font-bold ws-muted">
                 Workspace Tags
               </Label>
               {wsTags.length > 0 && (
@@ -2553,14 +2553,14 @@ function WorkspaceView() {
                   {wsTags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[10px] text-white/70"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full ws-surface-soft border ws-border text-[10px] ws-ink"
                     >
                       {tag}
                       <button
                         onClick={() =>
                           setWsTags(wsTags.filter((t) => t !== tag))
                         }
-                        className="w-3.5 h-3.5 flex items-center justify-center text-white/30 hover:text-white/75 rounded"
+                        className="w-3.5 h-3.5 flex items-center justify-center ws-dim ws-hover-ink rounded"
                       >
                         <X className="w-2.5 h-2.5" />
                       </button>
@@ -2584,7 +2584,7 @@ function WorkspaceView() {
                       setNewWsTag("");
                     }
                   }}
-                  className="h-8 rounded-lg bg-white/5 border-white/10 text-white text-[11px]"
+                  className="h-8 rounded-lg ws-surface-soft ws-border ws-ink text-[11px]"
                 />
                 <button
                   onClick={() => {
@@ -2594,7 +2594,7 @@ function WorkspaceView() {
                     }
                     setNewWsTag("");
                   }}
-                  className="h-8 px-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-white text-[11px] font-bold"
+                  className="h-8 px-3 rounded-lg border ws-border ws-surface-soft ws-hover-surface ws-ink text-[11px] font-bold"
                 >
                   +
                 </button>
@@ -2603,7 +2603,7 @@ function WorkspaceView() {
 
             {/* Groups */}
             <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase tracking-widest font-bold text-white/40">
+              <Label className="text-[10px] uppercase tracking-widest font-bold ws-muted">
                 Architectural Groups
               </Label>
               {wsGroups.length > 0 && (
@@ -2611,14 +2611,14 @@ function WorkspaceView() {
                   {wsGroups.map((group) => (
                     <span
                       key={group}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[10px] text-white/70"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full ws-surface-soft border ws-border text-[10px] ws-ink"
                     >
                       {group}
                       <button
                         onClick={() =>
                           setWsGroups(wsGroups.filter((g) => g !== group))
                         }
-                        className="w-3.5 h-3.5 flex items-center justify-center text-white/30 hover:text-white/75 rounded"
+                        className="w-3.5 h-3.5 flex items-center justify-center ws-dim ws-hover-ink rounded"
                       >
                         <X className="w-2.5 h-2.5" />
                       </button>
@@ -2642,7 +2642,7 @@ function WorkspaceView() {
                       setNewWsGroup("");
                     }
                   }}
-                  className="h-8 rounded-lg bg-white/5 border-white/10 text-white text-[11px]"
+                  className="h-8 rounded-lg ws-surface-soft ws-border ws-ink text-[11px]"
                 />
                 <button
                   onClick={() => {
@@ -2652,7 +2652,7 @@ function WorkspaceView() {
                     }
                     setNewWsGroup("");
                   }}
-                  className="h-8 px-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-white text-[11px] font-bold"
+                  className="h-8 px-3 rounded-lg border ws-border ws-surface-soft ws-hover-surface ws-ink text-[11px] font-bold"
                 >
                   +
                 </button>
@@ -2660,11 +2660,11 @@ function WorkspaceView() {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] pt-3 mt-2">
+          <div className="flex items-center justify-end gap-2 border-t ws-border pt-3 mt-2">
             <button
               type="button"
               onClick={() => setIsSettingsOpen(false)}
-              className="px-4 py-2 text-[12px] font-medium text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-all"
+              className="px-4 py-2 text-[12px] font-medium ws-muted ws-hover-ink rounded-lg ws-hover-surface transition-all"
             >
               Cancel
             </button>

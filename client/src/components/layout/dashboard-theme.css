@@ -1,0 +1,152 @@
+/* Dashboard surfaces are themed by role, not by swapping every white utility. */
+.dashboard-shell,
+.create-workspace-dialog,
+.dashboard-workspace-menu {
+  --dashboard-ground: #09090b;
+  --dashboard-content: #0c0d14;
+  --dashboard-home: #0a0c16;
+  --dashboard-panel: #14151d;
+  --dashboard-popover: #1d1e25;
+  --dashboard-ink: #f5f5f7;
+  --dashboard-secondary: #b5b7c0;
+  --dashboard-muted: #9699a5;
+  --dashboard-line: #32343e;
+  --dashboard-tint: rgba(255, 255, 255, 0.06);
+  --dashboard-hover: rgba(255, 255, 255, 0.1);
+  --dashboard-primary: #fff;
+  --dashboard-primary-ink: #15161b;
+  --dashboard-preview: #11141c;
+  color: var(--dashboard-ink);
+}
+:root[data-theme="light"]
+  :is(.dashboard-shell, .create-workspace-dialog, .dashboard-workspace-menu) {
+  --dashboard-ground: #eef1f5;
+  --dashboard-content: #fff;
+  --dashboard-home: #f5f7fb;
+  --dashboard-panel: #fff;
+  --dashboard-popover: #fff;
+  --dashboard-ink: #212936;
+  --dashboard-secondary: #505d6d;
+  --dashboard-muted: #667383;
+  --dashboard-line: #d9dfe7;
+  --dashboard-tint: #eef1f5;
+  --dashboard-hover: #e2e9f2;
+  --dashboard-primary: #263b59;
+  --dashboard-primary-ink: #fff;
+  --dashboard-preview: #edf2f8;
+}
+.dashboard-ground {
+  background: var(--dashboard-ground);
+}
+.dashboard-content-surface {
+  background: var(--dashboard-content);
+}
+.dashboard-home-surface {
+  background: var(--dashboard-home);
+}
+.dashboard-projects-surface {
+  background: var(--dashboard-panel);
+}
+.dashboard-popover,
+.dashboard-workspace-menu {
+  background: var(--dashboard-popover);
+  border: 1px solid var(--dashboard-line);
+}
+.dashboard-dialog-surface {
+  background: var(--dashboard-panel);
+}
+.dashboard-dialog-footer {
+  background: var(--dashboard-ground);
+}
+.dashboard-ink {
+  color: var(--dashboard-ink);
+}
+.dashboard-secondary {
+  color: var(--dashboard-secondary);
+}
+.dashboard-muted {
+  color: var(--dashboard-muted);
+}
+.dashboard-brand-ink {
+  color: #fff;
+}
+.dashboard-tint {
+  background: var(--dashboard-tint);
+}
+.dashboard-border {
+  border-color: var(--dashboard-line);
+}
+.dashboard-divider {
+  background: var(--dashboard-line);
+}
+.dashboard-ring {
+  --tw-ring-color: var(--dashboard-line);
+}
+.dashboard-placeholder::placeholder {
+  color: var(--dashboard-muted);
+}
+.dashboard-hover-ink:hover,
+.dashboard-focus-ink:focus {
+  color: var(--dashboard-ink);
+}
+.dashboard-hover-tint:hover {
+  background: var(--dashboard-hover);
+}
+.dashboard-hover-border:hover,
+.dashboard-focus-border:focus {
+  border-color: var(--dashboard-secondary);
+}
+.group:hover .dashboard-group-hover-ink {
+  color: var(--dashboard-ink);
+}
+.group:hover .dashboard-group-hover-tint {
+  background: var(--dashboard-hover);
+}
+.dashboard-primary {
+  background: var(--dashboard-primary);
+  color: var(--dashboard-primary-ink);
+}
+.dashboard-primary-hover:hover {
+  filter: brightness(0.93);
+}
+.dashboard-workspace-card {
+  background: var(--dashboard-panel);
+  border: 1px solid var(--dashboard-line);
+}
+.dashboard-workspace-card:hover {
+  border-color: var(--dashboard-secondary);
+}
+.dashboard-workspace-preview {
+  background: var(--dashboard-preview);
+}
+:root[data-theme="light"] .dashboard-ambience {
+  opacity: 0.22;
+}
+:root[data-theme="light"] .dashboard-content {
+  box-shadow: none;
+}
+:root[data-theme="light"] .dashboard-projects-surface {
+  box-shadow: 0 8px 28px rgb(25 35 50 / 0.08);
+}
+:root[data-theme="light"] .create-workspace-dialog {
+  box-shadow: 0 24px 64px rgb(25 35 50 / 0.2);
+}
+:root[data-theme="light"] .workspace-shared-badge {
+  color: #235c9e;
+  background: #e6f1ff;
+  border-color: #adc9eb;
+}
+:root[data-theme="light"] .workspace-shared-badge svg,
+:root[data-theme="light"] .workspace-shared-badge span {
+  color: inherit;
+}
+:root[data-theme="light"] .workspace-copy-failed {
+  color: #a42d32;
+  background: #fff0ef;
+  border-color: #e9b4b4;
+}
+:root[data-theme="light"] .workspace-copy-pending {
+  color: #805314;
+  background: #fff5df;
+  border-color: #e7ce96;
+}

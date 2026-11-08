@@ -142,12 +142,12 @@ export default function Team() {
         {/* ─── Page Header ─── */}
         <motion.div variants={itemVariants} className="mb-12">
           <h1
-            className="text-3xl font-bold tracking-tight text-white leading-none"
+            className="text-3xl font-bold tracking-tight text-foreground leading-none"
             style={{ fontFamily: "var(--font-sans)" }}
           >
             Teams
           </h1>
-          <p className="text-sm text-white/30 mt-2 max-w-md">
+          <p className="text-sm text-muted-foreground mt-2 max-w-md">
             Manage your teams and invite members.
           </p>
         </motion.div>
@@ -165,7 +165,7 @@ export default function Team() {
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 onKeyDown={(e) => e.key === "Enter" && handleJoinTeam()}
                 placeholder="Enter invite code"
-                className="w-full bg-white/[0.02] border border-white/[0.06] rounded-lg px-4 py-2.5 text-sm text-white font-mono placeholder:text-white/15 focus:outline-none focus:border-primary/40 transition-colors tracking-wider"
+                className="w-full bg-surface-low border border-border rounded-lg px-4 py-2.5 text-sm text-foreground font-mono placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 transition-colors tracking-wider"
                 maxLength={8}
               />
             </div>
@@ -174,7 +174,7 @@ export default function Team() {
               whileTap={{ scale: 0.97 }}
               onClick={handleJoinTeam}
               disabled={joinTeam.isPending || !joinCode.trim()}
-              className="px-4 py-2.5 bg-white/[0.04] border border-white/[0.06] text-white/60 hover:text-white hover:border-white/20 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-30"
+              className="px-4 py-2.5 bg-surface-low border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-30"
             >
               Join
             </motion.button>
@@ -188,7 +188,7 @@ export default function Team() {
               }}
               whileTap={{ scale: 0.97 }}
               onClick={() => setShowCreateForm(!showCreateForm)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-black font-bold text-xs uppercase tracking-[0.12em] rounded-lg transition-all shadow-lg shadow-primary/20"
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground font-bold text-xs uppercase tracking-[0.12em] rounded-lg transition-all shadow-lg shadow-primary/20"
             >
               <Plus className="w-3.5 h-3.5" />
               Create Team
@@ -205,8 +205,8 @@ export default function Team() {
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
               style={{ overflow: "hidden" }}
             >
-              <div className="bg-white/[0.02] border border-primary/15 rounded-xl p-6">
-                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/25 mb-4 font-sans">
+              <div className="bg-surface-low border border-primary/15 rounded-xl p-6">
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 font-sans">
                   New Team
                 </p>
                 <div className="flex gap-3">
@@ -215,7 +215,7 @@ export default function Team() {
                     onChange={(e) => setNewTeamName(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleCreateTeam()}
                     placeholder="Team name"
-                    className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-white/15 focus:outline-none focus:border-primary/40 transition-colors"
+                    className="flex-1 bg-surface-low border border-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 transition-colors"
                     maxLength={64}
                     autoFocus
                   />
@@ -224,7 +224,7 @@ export default function Team() {
                     whileTap={{ scale: 0.97 }}
                     onClick={handleCreateTeam}
                     disabled={createTeam.isPending || !newTeamName.trim()}
-                    className="px-6 py-2.5 bg-primary text-black font-bold text-xs uppercase tracking-widest rounded-lg disabled:opacity-30 transition-all"
+                    className="px-6 py-2.5 bg-primary text-primary-foreground font-bold text-xs uppercase tracking-widest rounded-lg disabled:opacity-30 transition-all"
                   >
                     {createTeam.isPending ? "..." : "Create"}
                   </motion.button>
@@ -238,26 +238,26 @@ export default function Team() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* ─── Left: Team List ─── */}
           <motion.div variants={itemVariants} className="lg:col-span-4">
-            <h3 className="text-xs font-bold font-sans tracking-[0.2em] uppercase text-[#555] mb-6">
+            <h3 className="text-xs font-bold font-sans tracking-[0.2em] uppercase text-muted-foreground mb-6">
               Your Teams
             </h3>
 
             {isLoading ? (
               <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-5 h-5 animate-spin text-white/15" />
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
               </div>
             ) : !teams || teams.length === 0 ? (
               <div className="py-16 text-center">
-                <div className="w-12 h-12 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-5 h-5 text-white/10" />
+                <div className="w-12 h-12 rounded-xl bg-surface-low border border-border flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-5 h-5 text-muted-foreground" />
                 </div>
                 <p
-                  className="text-sm text-white/25 font-medium"
+                  className="text-sm text-muted-foreground font-medium"
                   style={{ fontFamily: "var(--font-sans)" }}
                 >
                   No teams yet
                 </p>
-                <p className="text-xs text-white/15 mt-1.5 max-w-[220px] mx-auto leading-relaxed">
+                <p className="text-xs text-muted-foreground mt-1.5 max-w-[220px] mx-auto leading-relaxed">
                   Create a team to bring your members together with others.
                 </p>
               </div>
@@ -266,23 +266,20 @@ export default function Team() {
                 {teams.map((team) => (
                   <motion.button
                     key={team.id}
-                    whileHover={{
-                      scale: 1.015,
-                      backgroundColor: "rgba(255,255,255,0.03)",
-                    }}
+                    whileHover={{ scale: 1.015 }}
                     whileTap={{ scale: 0.985 }}
                     onClick={() => setSelectedTeamId(team.id)}
                     className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
                       selectedTeamId === team.id
                         ? "border-primary/30 bg-primary/[0.04]"
-                        : "border-white/[0.04] bg-transparent hover:border-white/[0.08]"
+                        : "border-border bg-transparent hover:border-primary/30 hover:bg-surface-high"
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span
-                            className="text-sm font-semibold text-white truncate"
+                            className="text-sm font-semibold text-foreground truncate"
                             style={{ fontFamily: "var(--font-sans)" }}
                           >
                             {team.name}
@@ -291,13 +288,13 @@ export default function Team() {
                             <Crown className="w-3 h-3 text-primary/60 flex-shrink-0" />
                           )}
                         </div>
-                        <span className="text-[10px] text-white/20 mt-0.5 block">
+                        <span className="text-[10px] text-muted-foreground mt-0.5 block">
                           {team.memberCount} member
                           {team.memberCount !== 1 ? "s" : ""}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 ml-3">
-                        <code className="text-[9px] font-mono text-white/15 tracking-wider">
+                        <code className="text-[9px] font-mono text-muted-foreground tracking-wider">
                           {team.inviteCode}
                         </code>
                         <button
@@ -305,7 +302,7 @@ export default function Team() {
                             e.stopPropagation();
                             handleCopyCode(team.inviteCode);
                           }}
-                          className="p-1 rounded text-white/10 hover:text-primary transition-colors"
+                          className="p-1 rounded text-muted-foreground hover:text-primary transition-colors"
                         >
                           {copiedCode === team.inviteCode ? (
                             <Check className="w-3 h-3 text-emerald-400" />
@@ -332,16 +329,16 @@ export default function Team() {
                   exit={{ opacity: 0 }}
                 >
                   <div className="space-y-3">
-                    <div className="h-7 w-48 bg-white/[0.03] rounded-lg animate-pulse" />
+                    <div className="h-7 w-48 bg-surface-low rounded-lg animate-pulse" />
                     <div className="flex gap-3">
-                      <div className="h-5 w-20 bg-white/[0.03] rounded animate-pulse" />
-                      <div className="h-5 w-16 bg-white/[0.03] rounded animate-pulse" />
+                      <div className="h-5 w-20 bg-surface-low rounded animate-pulse" />
+                      <div className="h-5 w-16 bg-surface-low rounded animate-pulse" />
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-6">
                       {[1, 2, 3, 4].map((i) => (
                         <div
                           key={i}
-                          className="h-16 bg-white/[0.02] rounded-lg animate-pulse"
+                          className="h-16 bg-surface-low rounded-lg animate-pulse"
                         />
                       ))}
                     </div>
@@ -359,13 +356,13 @@ export default function Team() {
                   <div className="flex items-start justify-between mb-8">
                     <div>
                       <h2
-                        className="text-2xl font-extrabold tracking-tight text-white"
+                        className="text-2xl font-extrabold tracking-tight text-foreground"
                         style={{ fontFamily: "var(--font-sans)" }}
                       >
                         {teamDetail.name}
                       </h2>
                       <div className="flex items-center gap-3 mt-2">
-                        <span className="text-[10px] text-white/20 flex items-center gap-1">
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           {new Date(
                             teamDetail.createdAt || Date.now(),
@@ -376,13 +373,13 @@ export default function Team() {
 
                     <div className="flex items-center gap-2">
                       {/* Invite code bar */}
-                      <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-lg">
+                      <div className="flex items-center gap-2 px-3 py-2 bg-surface-low border border-border rounded-lg">
                         <code className="text-xs font-mono text-primary/70 tracking-widest">
                           {teamDetail.inviteCode}
                         </code>
                         <button
                           onClick={() => handleCopyCode(teamDetail.inviteCode)}
-                          className="p-1.5 rounded text-white/20 hover:text-white hover:bg-white/[0.04] transition-all"
+                          className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-surface-high transition-all"
                           title="Copy invite code"
                         >
                           {copiedCode === teamDetail.inviteCode ? (
@@ -396,7 +393,7 @@ export default function Team() {
                             onClick={() =>
                               regenerateCode.mutate(selectedTeamId)
                             }
-                            className="p-1.5 rounded text-white/20 hover:text-white hover:bg-white/[0.04] transition-all"
+                            className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-surface-high transition-all"
                             title="Regenerate invite code"
                           >
                             <RefreshCw
@@ -438,14 +435,14 @@ export default function Team() {
 
                   {/* Members Section */}
                   <div className="mb-12">
-                    <h3 className="text-xs font-bold font-sans tracking-[0.2em] uppercase text-[#555] mb-4 flex items-center gap-2">
+                    <h3 className="text-xs font-bold font-sans tracking-[0.2em] uppercase text-muted-foreground mb-4 flex items-center gap-2">
                       <Users className="w-3.5 h-3.5" /> Members
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {teamDetail.members.map((member) => (
                         <div
                           key={member.id}
-                          className="flex items-center gap-3 px-4 py-3 rounded-lg border border-white/[0.04] hover:border-white/[0.08] hover:bg-white/[0.015] transition-all group"
+                          className="flex items-center gap-3 px-4 py-3 rounded-lg border border-border hover:border-primary/30 hover:bg-surface-high transition-all group"
                         >
                           <div className="relative flex-shrink-0">
                             <div
@@ -469,15 +466,15 @@ export default function Team() {
                             </div>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-white/70 font-medium truncate">
+                            <p className="text-xs text-muted-foreground font-medium truncate">
                               {member.firstName || member.email.split("@")[0]}
                               {member.userId === user?.id && (
-                                <span className="ml-1 text-[9px] text-white/15">
+                                <span className="ml-1 text-[9px] text-muted-foreground">
                                   (you)
                                 </span>
                               )}
                             </p>
-                            <p className="text-[9px] text-white/15 font-mono uppercase tracking-wider">
+                            <p className="text-[9px] text-muted-foreground font-mono uppercase tracking-wider">
                               {member.role}
                             </p>
                           </div>
@@ -498,7 +495,7 @@ export default function Team() {
                                   },
                                 )
                               }
-                              className="p-1 rounded text-white/0 group-hover:text-white/15 hover:!text-red-400 transition-all flex-shrink-0"
+                              className="p-1 rounded text-muted-foreground opacity-0 group-hover:opacity-100 focus:opacity-100 hover:!text-red-400 transition-all flex-shrink-0"
                             >
                               <UserMinus className="w-3.5 h-3.5" />
                             </button>
@@ -515,11 +512,11 @@ export default function Team() {
                   animate={{ opacity: 1 }}
                   className="flex flex-col items-center justify-center text-center py-24"
                 >
-                  <Users className="w-10 h-10 text-white/[0.04] mb-4" />
-                  <p className="text-xs text-white/15 uppercase tracking-[0.15em] font-sans font-bold">
+                  <Users className="w-10 h-10 text-muted-foreground mb-4" />
+                  <p className="text-xs text-muted-foreground uppercase tracking-[0.15em] font-sans font-bold">
                     Select a team
                   </p>
-                  <p className="text-[11px] text-white/10 mt-1 max-w-[200px]">
+                  <p className="text-[11px] text-muted-foreground mt-1 max-w-[200px]">
                     Pick a team from the left to manage its members.
                   </p>
                 </motion.div>
@@ -536,20 +533,20 @@ export default function Team() {
           if (!open) setConfirmAction(null);
         }}
       >
-        <AlertDialogContent className="bg-[#111] border border-white/[0.08] rounded-xl shadow-2xl max-w-sm">
+        <AlertDialogContent className="bg-popover border border-border rounded-xl shadow-2xl max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle
-              className="text-white text-sm font-semibold"
+              className="text-foreground text-sm font-semibold"
               style={{ fontFamily: "var(--font-sans)" }}
             >
               {confirmAction?.title}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-white/30 text-xs leading-relaxed">
+            <AlertDialogDescription className="text-muted-foreground text-xs leading-relaxed">
               {confirmAction?.description}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 mt-2">
-            <AlertDialogCancel className="bg-white/[0.03] border-white/[0.06] text-white/40 hover:bg-white/[0.06] hover:text-white rounded-lg text-xs h-9">
+            <AlertDialogCancel className="bg-surface-low border-border text-muted-foreground hover:bg-surface-high hover:text-foreground rounded-lg text-xs h-9">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction

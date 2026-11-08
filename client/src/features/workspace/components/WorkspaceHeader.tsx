@@ -172,13 +172,13 @@ export function WorkspaceHeader({
 
   return (
     <>
-      <header className="workspace-header h-11 w-full bg-[#111114] flex items-center justify-between px-3 relative z-30 select-none shrink-0 text-white font-sans text-xs">
+      <header className="workspace-header h-11 w-full bg-[#111114] flex items-center justify-between px-3 relative z-30 select-none shrink-0 ws-ink font-sans text-xs">
         {/* ── Left Section: Logo, Project Name, Status, Undo/Redo (always fixed on left) ── */}
         <div className="flex items-center gap-2 min-w-0 z-10">
           {/* Logo */}
           <Link href="/home">
             <button
-              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/[0.06] transition-all shrink-0"
+              className="w-7 h-7 flex items-center justify-center rounded-lg ws-hover-surface transition-all shrink-0"
               title="Dashboard"
             >
               <MeshworkLogo />
@@ -189,39 +189,39 @@ export function WorkspaceHeader({
           <Popover open={projectMenuOpen} onOpenChange={setProjectMenuOpen}>
             <PopoverTrigger asChild>
               <button
-                className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-white/[0.06] transition-all group min-w-0"
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md ws-hover-surface transition-all group min-w-0"
                 title="Project Menu"
               >
-                <span className="text-[13px] font-semibold text-white/90 group-hover:text-white truncate max-w-[130px]">
+                <span className="text-[13px] font-semibold ws-ink ws-group-hover-ink truncate max-w-[130px]">
                   {workspace?.title || "Bright Financial Companion"}
                 </span>
-                <ChevronDownIcon className="w-3 h-3 text-white/40 group-hover:text-white/70 transition-transform shrink-0" />
+                <ChevronDownIcon className="w-3 h-3 ws-muted ws-group-hover-ink transition-transform shrink-0" />
               </button>
             </PopoverTrigger>
 
             <PopoverContent
-              className="workspace-popover w-72 p-2 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_24px_54px_rgba(0,0,0,0.85)] z-[200] space-y-1 text-white"
+              className="workspace-popover w-72 p-2 ws-option backdrop-blur-2xl border ws-border rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_24px_54px_rgba(0,0,0,0.85)] z-[200] space-y-1 ws-ink"
               side="bottom"
               align="start"
               sideOffset={8}
             >
               <Link href="/home">
-                <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] font-medium text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
-                  <ChevronLeftIcon className="w-4 h-4 text-white/40" />
+                <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] font-medium ws-ink ws-hover-ink ws-hover-surface transition-all">
+                  <ChevronLeftIcon className="w-4 h-4 ws-muted" />
                   Dashboard
                 </button>
               </Link>
 
-              <div className="p-2.5 my-1 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between">
+              <div className="p-2.5 my-1 rounded-xl ws-surface-soft border ws-border flex items-center justify-between">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-[11px] font-bold text-white shrink-0 shadow-md">
                     {userInitial}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[12px] font-semibold text-white/90 truncate">
+                    <div className="text-[12px] font-semibold ws-ink truncate">
                       {userName}&apos;s Workspace
                     </div>
-                    <div className="text-[10px] text-white/40 capitalize">
+                    <div className="text-[10px] ws-muted capitalize">
                       {userRole} Role
                     </div>
                   </div>
@@ -234,10 +234,10 @@ export function WorkspaceHeader({
                     setProjectMenuOpen(false);
                     handleStartRename();
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[12px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[12px] ws-ink ws-hover-ink ws-hover-surface transition-all"
                 >
                   <span className="flex items-center gap-2.5">
-                    <PencilSquareIcon className="w-3.5 h-3.5 text-white/40" />
+                    <PencilSquareIcon className="w-3.5 h-3.5 ws-muted" />
                     Rename
                   </span>
                 </button>
@@ -249,9 +249,9 @@ export function WorkspaceHeader({
                     setProjectMenuOpen(false);
                     openSettings();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] ws-ink ws-hover-ink ws-hover-surface transition-all"
                 >
-                  <Cog6ToothIcon className="w-3.5 h-3.5 text-white/40" />
+                  <Cog6ToothIcon className="w-3.5 h-3.5 ws-muted" />
                   Settings
                 </button>
               )}
@@ -262,55 +262,53 @@ export function WorkspaceHeader({
                     setProjectMenuOpen(false);
                     handleDuplicate();
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[12px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[12px] ws-ink ws-hover-ink ws-hover-surface transition-all"
                 >
                   <span className="flex items-center gap-2.5">
-                    <DocumentDuplicateIcon className="w-3.5 h-3.5 text-white/40" />
+                    <DocumentDuplicateIcon className="w-3.5 h-3.5 ws-muted" />
                     Duplicate Project
                   </span>
-                  <span className="text-[10px] font-mono text-white/30">
-                    ⌘D
-                  </span>
+                  <span className="text-[10px] font-mono ws-dim">⌘D</span>
                 </button>
               )}
 
               <Popover>
                 <PopoverTrigger asChild>
-                  <button className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[12px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
+                  <button className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[12px] ws-ink ws-hover-ink ws-hover-surface transition-all">
                     <span className="flex items-center gap-2.5">
-                      <Squares2X2Icon className="w-3.5 h-3.5 text-white/40" />
+                      <Squares2X2Icon className="w-3.5 h-3.5 ws-muted" />
                       Appearance & Grid
                     </span>
-                    <ChevronRightIcon className="w-3 h-3 text-white/30" />
+                    <ChevronRightIcon className="w-3 h-3 ws-dim" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="workspace-popover w-60 p-3 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_20px_48px_rgba(0,0,0,0.8)] z-[300] space-y-3"
+                  className="workspace-popover w-60 p-3 ws-option backdrop-blur-2xl border ws-border rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_20px_48px_rgba(0,0,0,0.8)] z-[300] space-y-3"
                   side="right"
                   align="start"
                   sideOffset={8}
                 >
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-white/40">
+                  <div className="text-[10px] font-bold uppercase tracking-wider ws-muted">
                     Grid & Snapping
                   </div>
                   <button
                     onClick={() => setSnapToGrid(!snapToGrid)}
-                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${snapToGrid ? "text-emerald-400 bg-emerald-500/10" : "text-white/50 hover:bg-white/[0.06]"}`}
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${snapToGrid ? "text-emerald-400 bg-emerald-500/10" : "ws-muted ws-hover-surface"}`}
                   >
                     Snap to Grid
                     <div
-                      className={`w-6 h-3.5 rounded-full transition-all ${snapToGrid ? "bg-emerald-500" : "bg-white/10"}`}
+                      className={`w-6 h-3.5 rounded-full transition-all ${snapToGrid ? "bg-emerald-500" : "ws-surface-soft"}`}
                     >
                       <div
-                        className={`w-2.5 h-2.5 rounded-full bg-white mt-0.5 transition-all ${snapToGrid ? "ml-3" : "ml-0.5"}`}
+                        className={`w-2.5 h-2.5 rounded-full ws-toggle-knob mt-0.5 transition-all ${snapToGrid ? "ml-3" : "ml-0.5"}`}
                       />
                     </div>
                   </button>
 
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between text-[11px] text-white/60">
+                    <div className="flex items-center justify-between text-[11px] ws-muted">
                       <span>Grid Size</span>
-                      <span className="font-mono text-[10px] text-white/40">
+                      <span className="font-mono text-[10px] ws-muted">
                         {gridSize}px
                       </span>
                     </div>
@@ -321,12 +319,12 @@ export function WorkspaceHeader({
                       step={5}
                       value={gridSize}
                       onChange={(e) => setGridSize(Number(e.target.value))}
-                      className="w-full h-1 rounded-full appearance-none bg-white/10 accent-[#00E5A0]"
+                      className="w-full h-1 rounded-full appearance-none ws-surface-soft accent-[#00E5A0]"
                     />
                   </div>
 
                   <div className="space-y-1 pt-1">
-                    <span className="text-[10px] uppercase font-bold text-white/40">
+                    <span className="text-[10px] uppercase font-bold ws-muted">
                       Pattern
                     </span>
                     <div className="grid grid-cols-4 gap-1">
@@ -334,7 +332,7 @@ export function WorkspaceHeader({
                         <button
                           key={v}
                           onClick={() => setBgVariant(v)}
-                          className={`py-1 px-1.5 rounded-md text-[10px] font-medium transition-all ${bgVariant === v ? "bg-white/15 text-white font-semibold" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}
+                          className={`py-1 px-1.5 rounded-md text-[10px] font-medium transition-all ${bgVariant === v ? "ws-surface-soft ws-ink font-semibold" : "ws-muted ws-hover-ink ws-hover-surface"}`}
                         >
                           {BG_VARIANT_LABELS[v]}
                         </button>
@@ -349,25 +347,25 @@ export function WorkspaceHeader({
                   setProjectMenuOpen(false);
                   setShortcutsOpen(true);
                 }}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[12px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[12px] ws-ink ws-hover-ink ws-hover-surface transition-all"
               >
                 <span className="flex items-center gap-2.5">
-                  <CommandLineIcon className="w-3.5 h-3.5 text-white/40" />
+                  <CommandLineIcon className="w-3.5 h-3.5 ws-muted" />
                   Shortcuts
                 </span>
-                <span className="text-[10px] font-mono text-white/30">?</span>
+                <span className="text-[10px] font-mono ws-dim">?</span>
               </button>
 
-              <div className="h-px bg-white/[0.06] my-1" />
+              <div className="h-px ws-surface-soft my-1" />
 
               <button
                 onClick={() => {
                   setProjectMenuOpen(false);
                   handleExportPng();
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] ws-ink ws-hover-ink ws-hover-surface transition-all"
               >
-                <PhotoIcon className="w-3.5 h-3.5 text-white/40" />
+                <PhotoIcon className="w-3.5 h-3.5 ws-muted" />
                 Export as PNG
               </button>
               <button
@@ -375,9 +373,9 @@ export function WorkspaceHeader({
                   setProjectMenuOpen(false);
                   handleExportSvg();
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] ws-ink ws-hover-ink ws-hover-surface transition-all"
               >
-                <PhotoIcon className="w-3.5 h-3.5 text-white/40" />
+                <PhotoIcon className="w-3.5 h-3.5 ws-muted" />
                 Export as SVG
               </button>
               <button
@@ -385,9 +383,9 @@ export function WorkspaceHeader({
                   setProjectMenuOpen(false);
                   handleExportJson();
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] ws-ink ws-hover-ink ws-hover-surface transition-all"
               >
-                <DocumentTextIcon className="w-3.5 h-3.5 text-white/40" />
+                <DocumentTextIcon className="w-3.5 h-3.5 ws-muted" />
                 Export as JSON
               </button>
 
@@ -395,9 +393,9 @@ export function WorkspaceHeader({
                 <>
                   <button
                     onClick={() => importFileRef.current?.click()}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] ws-ink ws-hover-ink ws-hover-surface transition-all"
                   >
-                    <ArrowUpTrayIcon className="w-3.5 h-3.5 text-white/40" />
+                    <ArrowUpTrayIcon className="w-3.5 h-3.5 ws-muted" />
                     Import JSON
                   </button>
                   <input
@@ -412,7 +410,7 @@ export function WorkspaceHeader({
 
               {canDelete && (
                 <>
-                  <div className="h-px bg-white/[0.06] my-1" />
+                  <div className="h-px ws-surface-soft my-1" />
                   <button
                     onClick={() => {
                       setProjectMenuOpen(false);
@@ -444,18 +442,18 @@ export function WorkspaceHeader({
             ) : (
               <CheckCircleIcon
                 className={`w-3.5 h-3.5 ${
-                  saveStatus === "saved" ? "text-emerald-400" : "text-white/20"
+                  saveStatus === "saved" ? "text-emerald-400" : "ws-dim"
                 }`}
               />
             )}
           </div>
 
-          <div className="w-px h-3.5 bg-white/[0.08] mx-0.5" />
+          <div className="w-px h-3.5 ws-surface-soft mx-0.5" />
 
           {/* Undo (Always fixed on the left) */}
           <button
             onClick={undo}
-            className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/[0.06] transition-all"
+            className="w-7 h-7 flex items-center justify-center rounded-md ws-muted ws-hover-ink ws-hover-surface transition-all"
             title="Undo (Ctrl+Z)"
           >
             <ArrowUturnLeftIcon className="w-3.5 h-3.5" />
@@ -464,7 +462,7 @@ export function WorkspaceHeader({
           {/* Redo (Always fixed on the left) */}
           <button
             onClick={redo}
-            className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/[0.06] transition-all"
+            className="w-7 h-7 flex items-center justify-center rounded-md ws-muted ws-hover-ink ws-hover-surface transition-all"
             title="Redo (Ctrl+Shift+Z)"
           >
             <ArrowUturnRightIcon className="w-3.5 h-3.5" />
@@ -473,10 +471,10 @@ export function WorkspaceHeader({
           {/* Sidebar Toggle when collapsed */}
           {!isSidebarOpen && (
             <>
-              <div className="w-px h-3.5 bg-white/[0.08] mx-0.5" />
+              <div className="w-px h-3.5 ws-surface-soft mx-0.5" />
               <button
                 onClick={() => setIsSidebarOpen(true)}
-                className="w-7 h-7 flex items-center justify-center rounded-md text-white/50 hover:text-white hover:bg-white/[0.06] transition-all"
+                className="w-7 h-7 flex items-center justify-center rounded-md ws-muted ws-hover-ink ws-hover-surface transition-all"
                 title="Open Sidebar"
               >
                 <LuPanelLeft className="w-4 h-4" />
@@ -490,7 +488,7 @@ export function WorkspaceHeader({
           <div className="absolute left-[324px] z-20 transition-all duration-300">
             <button
               onClick={() => setIsSidebarOpen(false)}
-              className="w-7 h-7 flex items-center justify-center rounded-md text-white/60 hover:text-white hover:bg-white/[0.08] transition-all"
+              className="w-7 h-7 flex items-center justify-center rounded-md ws-muted ws-hover-ink ws-hover-surface transition-all"
               title="Collapse Sidebar"
             >
               <LuPanelLeft className="w-4 h-4" />
@@ -500,7 +498,7 @@ export function WorkspaceHeader({
 
         {/* ── Center Section: Centralized Project Title ── */}
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none z-0">
-          <span className="font-semibold text-white/80 text-[13px] tracking-wide truncate max-w-[320px]">
+          <span className="font-semibold ws-ink text-[13px] tracking-wide truncate max-w-[320px]">
             {workspace?.title ?? "Untitled Project"}
           </span>
         </div>
@@ -512,7 +510,7 @@ export function WorkspaceHeader({
             onClick={onOpenSearch}
             aria-label="Search workspaces and canvas"
             title="Search (Ctrl/⌘ K)"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white/60 hover:bg-white/[0.06] hover:text-white transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg ws-muted ws-hover-surface ws-hover-ink transition-colors"
           >
             <MagnifyingGlassIcon className="h-4 w-4" />
           </button>
@@ -552,20 +550,15 @@ export function WorkspaceHeader({
                 </div>
               </button>
             </PopoverTrigger>
-            <PopoverContent className="workspace-popover w-64 p-2 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl text-white z-[200]">
-              <div className="text-[11px] font-bold text-white/60 mb-1">
+            <PopoverContent className="workspace-popover w-64 p-2 ws-option backdrop-blur-2xl border ws-border rounded-xl ws-ink z-[200]">
+              <div className="text-[11px] font-bold ws-muted mb-1">
                 People online
               </div>
-              <div className="py-1 text-[11px] text-white/80">
-                {userName} (you)
-              </div>
+              <div className="py-1 text-[11px] ws-ink">{userName} (you)</div>
               {collaborators
                 .filter((person) => person.userId !== user?.id)
                 .map((person) => (
-                  <div
-                    key={person.userId}
-                    className="py-1 text-[11px] text-white/80"
-                  >
+                  <div key={person.userId} className="py-1 text-[11px] ws-ink">
                     {person.name}
                   </div>
                 ))}
@@ -581,7 +574,7 @@ export function WorkspaceHeader({
             title={
               theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
             }
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white/60 hover:bg-white/[0.06] hover:text-white transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg ws-muted ws-hover-surface ws-hover-ink transition-colors"
           >
             {theme === "dark" ? (
               <SunIcon className="h-4 w-4" />
@@ -593,7 +586,7 @@ export function WorkspaceHeader({
           {/* Share Button */}
           <button
             onClick={() => setSharingOpen(true)}
-            className="workspace-header-secondary flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-[11px] font-medium text-white/80 hover:text-white transition-all shadow-sm"
+            className="workspace-header-secondary flex items-center gap-1.5 px-3 py-1.5 rounded-lg ws-surface-soft ws-hover-surface border ws-border text-[11px] font-medium ws-ink ws-hover-ink transition-all shadow-sm"
           >
             <ShareIcon className="w-3 h-3" />
             <span>Share</span>
@@ -628,7 +621,7 @@ export function WorkspaceHeader({
 
       {/* Rename Dialog */}
       <Dialog open={isRenaming} onOpenChange={setIsRenaming}>
-        <DialogContent className="max-w-sm bg-[#121214] border border-white/[0.08] text-white rounded-2xl p-5 space-y-3">
+        <DialogContent className="workspace-dialog max-w-sm ws-option border ws-border ws-ink rounded-2xl p-5 space-y-3">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold">
               Rename Project
@@ -643,13 +636,13 @@ export function WorkspaceHeader({
               if (e.key === "Enter") handleFinishRename();
               if (e.key === "Escape") setIsRenaming(false);
             }}
-            className="w-full h-9 rounded-xl bg-white/[0.04] border border-white/[0.1] px-3 text-sm text-white outline-none focus:border-[#00E5A0]/50"
+            className="w-full h-9 rounded-xl ws-surface-soft border ws-border px-3 text-sm ws-ink outline-none focus:border-[#00E5A0]/50"
             placeholder="Project name..."
           />
           <div className="flex justify-end gap-2 pt-1">
             <button
               onClick={() => setIsRenaming(false)}
-              className="px-3 py-1.5 text-xs text-white/50 hover:text-white rounded-lg"
+              className="px-3 py-1.5 text-xs ws-muted ws-hover-ink rounded-lg"
             >
               Cancel
             </button>

@@ -104,3 +104,145 @@
   background: var(--editor-shell);
   color: var(--editor-ink);
 }
+
+/* Named workspace roles work in editor panels and portaled dialogs alike. */
+:root {
+  --ws-ink: #f3f3f5;
+  --ws-muted: #b1b2bc;
+  --ws-dim: #8d8f9b;
+  --ws-surface: #1b1b21;
+  --ws-surface-soft: #ffffff0d;
+  --ws-surface-hover: #ffffff17;
+  --ws-border: #ffffff1c;
+  --ws-border-hover: #ffffff38;
+  --ws-primary: #f3f3f5;
+  --ws-primary-ink: #16161a;
+}
+:root[data-theme="light"] {
+  --ws-ink: #202a38;
+  --ws-muted: #596777;
+  --ws-dim: #6c7785;
+  --ws-surface: #ffffff;
+  --ws-surface-soft: #edf1f6;
+  --ws-surface-hover: #e2e8f0;
+  --ws-border: #d7dee7;
+  --ws-border-hover: #b9c5d2;
+  --ws-primary: #263b58;
+  --ws-primary-ink: #ffffff;
+}
+.ws-ink {
+  color: var(--ws-ink);
+}
+.ws-muted {
+  color: var(--ws-muted);
+}
+.ws-dim {
+  color: var(--ws-dim);
+}
+.ws-hover-ink:hover {
+  color: var(--ws-ink);
+}
+.ws-placeholder::placeholder {
+  color: var(--ws-dim);
+  opacity: 1;
+}
+.ws-surface-soft {
+  background-color: var(--ws-surface-soft);
+}
+.ws-hover-surface:hover {
+  background-color: var(--ws-surface-hover);
+}
+.ws-border {
+  border-color: var(--ws-border);
+}
+.ws-hover-border:hover,
+.ws-focus-border:focus {
+  border-color: var(--ws-border-hover);
+}
+.ws-primary {
+  background-color: var(--ws-primary);
+  color: var(--ws-primary-ink);
+}
+.ws-primary:hover {
+  filter: brightness(0.92);
+}
+.ws-option,
+.ws-raised-surface,
+.workspace-dialog {
+  background: var(--ws-surface);
+  color: var(--ws-ink);
+}
+.workspace-dialog {
+  border-color: var(--ws-border);
+}
+:root[data-theme="light"] .workspace-dialog {
+  box-shadow: 0 16px 48px rgba(30, 44, 64, 0.18);
+}
+
+.ws-focus-within-border:focus-within {
+  border-color: var(--ws-border-hover);
+}
+
+:root[data-theme="light"] .workspace-toolbar .ws-infrastructure-active {
+  color: #08765a;
+  background: #e1f4ed;
+  border-color: #a8ddc9;
+  box-shadow: none;
+}
+:root[data-theme="light"] .workspace-toolbar .ws-annotation-active {
+  color: #a7451f;
+  background: #fff0e8;
+  border-color: #f1c6b2;
+  box-shadow: none;
+}
+:root[data-theme="light"] .ws-ai-icon {
+  color: #386cae;
+}
+:root[data-theme="light"] .ws-danger-action {
+  color: #b33131;
+}
+
+.group:hover .ws-group-hover-ink {
+  color: var(--ws-ink);
+}
+.ws-toggle-knob {
+  background: #fff;
+}
+.ws-warning {
+  background: #1c1914;
+  color: #f8ead3;
+}
+:root[data-theme="light"] .ws-warning {
+  background: #fff6e5;
+  border-color: #e6c790;
+  color: #5d4323;
+}
+
+.ws-error-screen {
+  background: #0a0a0a;
+}
+:root[data-theme="light"] .ws-error-screen {
+  background: #f7f8fa;
+}
+.workspace-canvas-overlay {
+  background: var(--editor-canvas);
+}
+:root[data-theme="light"] .workspace-flow-controls,
+:root[data-theme="light"] .workspace-minimap {
+  background: #fff !important;
+  border-color: #d7dee7 !important;
+  box-shadow: 0 6px 22px rgba(37, 54, 77, 0.12) !important;
+}
+:root[data-theme="light"] .workspace-flow-controls button {
+  border-color: #e1e6ed !important;
+}
+:root[data-theme="light"] .workspace-flow-controls button:hover {
+  background: #edf1f6 !important;
+}
+:root[data-theme="light"] .workspace-flow-controls button svg {
+  fill: #506276 !important;
+}
+:root[data-theme="light"] .workspace-minimap .react-flow__minimap-mask {
+  fill: #9aabba !important;
+  fill-opacity: 0.25;
+}

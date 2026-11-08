@@ -1,3 +1,4 @@
+import "@/components/layout/dashboard-theme.css";
 import { Workspace } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
 import { motion } from "framer-motion";
@@ -219,7 +220,7 @@ export function WorkspaceCard({
             e.stopPropagation();
             setIsRenaming(true);
           }}
-          className="cursor-figma-pointer focus:bg-surface-container-high focus:text-white"
+          className="cursor-figma-pointer focus:bg-surface-container-high dashboard-focus-ink"
         >
           <PencilIcon className="w-4 h-4 mr-2" /> Rename
         </DropdownMenuItem>
@@ -229,7 +230,7 @@ export function WorkspaceCard({
           e.stopPropagation();
           handleDuplicate();
         }}
-        className="cursor-figma-pointer focus:bg-surface-container-high focus:text-white"
+        className="cursor-figma-pointer focus:bg-surface-container-high dashboard-focus-ink"
       >
         <DocumentDuplicateIcon className="w-4 h-4 mr-2" /> Duplicate
       </DropdownMenuItem>
@@ -239,7 +240,7 @@ export function WorkspaceCard({
             event.stopPropagation();
             void handleRetryCanvasCopy();
           }}
-          className="cursor-figma-pointer focus:bg-surface-container-high focus:text-white"
+          className="cursor-figma-pointer focus:bg-surface-container-high dashboard-focus-ink"
         >
           <ArrowPathIcon className="w-4 h-4 mr-2" /> Retry canvas copy
         </DropdownMenuItem>
@@ -268,7 +269,7 @@ export function WorkspaceCard({
           layout
           whileHover={viewMode === "grid" ? { y: -4 } : { x: 4 }}
           className={cn(
-            "group transition-all duration-300 cursor-figma-pointer relative glass-card glass-card-hover",
+            "group transition-all duration-300 cursor-figma-pointer relative dashboard-workspace-card",
             viewMode === "grid"
               ? "p-1 rounded-xl flex flex-col"
               : "p-3 rounded-xl flex flex-row items-center gap-6",
@@ -286,7 +287,7 @@ export function WorkspaceCard({
           {/* Thumbnail */}
           <div
             className={cn(
-              "overflow-hidden rounded-sm relative shrink-0 technical-gradient",
+              "overflow-hidden rounded-sm relative shrink-0 dashboard-workspace-preview",
               viewMode === "grid"
                 ? "aspect-video mb-3 w-full"
                 : "w-32 aspect-video",
@@ -294,12 +295,12 @@ export function WorkspaceCard({
           >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,var(--color-outline-variant)_1px,transparent_0)] [background-size:20px_20px] opacity-20" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <Icon className="w-10 h-10 text-outline group-hover:text-primary transition-colors duration-500 group-hover:scale-110" />
+              <Icon className="w-10 h-10 dashboard-muted group-hover:text-primary transition-colors duration-500 group-hover:scale-110" />
             </div>
 
             {/* Shared badge */}
             {isShared && (
-              <div className="absolute top-3 left-3 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 backdrop-blur-sm">
+              <div className="workspace-shared-badge absolute top-3 left-3 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 backdrop-blur-sm">
                 <UserGroupIcon className="w-3 h-3 text-blue-400" />
                 <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">
                   Shared
@@ -312,8 +313,8 @@ export function WorkspaceCard({
                 className={cn(
                   "absolute bottom-3 left-3 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full border backdrop-blur-sm",
                   canvasCopyFailed
-                    ? "bg-red-500/20 border-red-400/30 text-red-300"
-                    : "bg-amber-500/20 border-amber-300/30 text-amber-200",
+                    ? "workspace-copy-failed bg-red-500/20 border-red-400/30 text-red-300"
+                    : "workspace-copy-pending bg-amber-500/20 border-amber-300/30 text-amber-200",
                 )}
               >
                 {canvasCopyFailed ? (
@@ -335,7 +336,7 @@ export function WorkspaceCard({
                   "absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200 z-20",
                   workspace.isFavorite
                     ? "text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]"
-                    : "text-white/20 opacity-0 group-hover:opacity-100 hover:text-white/60",
+                    : "dashboard-muted opacity-0 group-hover:opacity-100 dashboard-hover-ink",
                 )}
               >
                 {workspace.isFavorite ? (
@@ -370,12 +371,12 @@ export function WorkspaceCard({
                     }
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-transparent font-sans font-semibold text-white border-b border-primary outline-none py-0 w-full mb-2"
+                  className="bg-transparent font-sans font-semibold dashboard-ink border-b border-primary outline-none py-0 w-full mb-2"
                 />
               ) : (
                 <h4
                   className={cn(
-                    "font-sans font-semibold text-white group-hover:text-primary transition-colors",
+                    "font-sans font-semibold dashboard-ink group-hover:text-primary transition-colors",
                     viewMode === "grid" ? "text-sm mb-1.5" : "text-lg mb-1",
                   )}
                 >
@@ -383,7 +384,7 @@ export function WorkspaceCard({
                 </h4>
               )}
               {viewMode === "list" && (
-                <span className="text-[10px] text-outline font-label tracking-tight uppercase">
+                <span className="text-[10px] dashboard-muted font-label tracking-tight uppercase">
                   Last edited {updatedText}
                 </span>
               )}
@@ -396,7 +397,7 @@ export function WorkspaceCard({
               )}
             >
               {viewMode === "grid" && (
-                <span className="text-[10px] text-outline font-label tracking-tight uppercase truncate mr-4">
+                <span className="text-[10px] dashboard-muted font-label tracking-tight uppercase truncate mr-4">
                   Last edited {updatedText}
                 </span>
               )}
@@ -405,13 +406,13 @@ export function WorkspaceCard({
               <div onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="w-7 h-7 rounded-md flex items-center justify-center text-[#555] hover:text-white hover:bg-white/5 transition-all opacity-0 group-hover:opacity-100 cursor-figma-pointer">
+                    <button className="w-7 h-7 rounded-md flex items-center justify-center dashboard-muted dashboard-hover-ink dashboard-hover-tint transition-all opacity-0 group-hover:opacity-100 cursor-figma-pointer">
                       <EllipsisVerticalIcon className="w-4 h-4" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="bg-surface-container-highest border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden p-1 min-w-[160px] z-50"
+                    className="dashboard-workspace-menu rounded-xl shadow-2xl overflow-hidden p-1 min-w-[160px] z-50"
                   >
                     <MenuItems />
                   </DropdownMenuContent>
@@ -422,7 +423,7 @@ export function WorkspaceCard({
         </motion.div>
       </ContextMenuTrigger>
 
-      <ContextMenuContent className="bg-surface-container-highest border border-outline-variant/20 rounded-xl shadow-2xl p-1 min-w-[160px]">
+      <ContextMenuContent className="dashboard-workspace-menu rounded-xl shadow-2xl p-1 min-w-[160px]">
         <MenuItems />
       </ContextMenuContent>
     </ContextMenu>

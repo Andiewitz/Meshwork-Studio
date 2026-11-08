@@ -147,18 +147,18 @@ export function OnboardingFlow() {
     <div key="name" className="space-y-6">
       <div>
         <h2
-          className="text-xl font-semibold text-white mb-1"
+          className="text-xl font-semibold text-foreground mb-1"
           style={{ fontFamily: "var(--font-sans)" }}
         >
           What should we call you?
         </h2>
-        <p className="text-sm text-white/30">
+        <p className="text-sm text-muted-foreground">
           This is how you'll appear to your team.
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-[11px] text-white/40 font-medium uppercase tracking-wider mb-1.5 block">
+          <label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-1.5 block">
             First name
           </label>
           <input
@@ -166,18 +166,18 @@ export function OnboardingFlow() {
             onChange={(e) => setFirstName(e.target.value)}
             placeholder="Jane"
             autoFocus
-            className="w-full bg-white/[0.03] border border-white/[0.08] rounded-lg px-4 py-3 text-sm text-white placeholder:text-white/15 focus:outline-none focus:border-primary/40 transition-colors"
+            className="w-full bg-foreground/[0.03] border border-border rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 transition-colors"
           />
         </div>
         <div>
-          <label className="text-[11px] text-white/40 font-medium uppercase tracking-wider mb-1.5 block">
+          <label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-1.5 block">
             Last name
           </label>
           <input
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             placeholder="Doe"
-            className="w-full bg-white/[0.03] border border-white/[0.08] rounded-lg px-4 py-3 text-sm text-white placeholder:text-white/15 focus:outline-none focus:border-primary/40 transition-colors"
+            className="w-full bg-foreground/[0.03] border border-border rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 transition-colors"
           />
         </div>
       </div>
@@ -187,12 +187,12 @@ export function OnboardingFlow() {
     <div key="role" className="space-y-6">
       <div>
         <h2
-          className="text-xl font-semibold text-white mb-1"
+          className="text-xl font-semibold text-foreground mb-1"
           style={{ fontFamily: "var(--font-sans)" }}
         >
           What's your role?
         </h2>
-        <p className="text-sm text-white/30">
+        <p className="text-sm text-muted-foreground">
           Help us personalize your experience.
         </p>
       </div>
@@ -203,8 +203,8 @@ export function OnboardingFlow() {
             onClick={() => setRole(r.id)}
             className={`text-left px-4 py-3 rounded-lg border text-sm transition-all ${
               role === r.id
-                ? "border-primary/40 bg-primary/[0.06] text-white"
-                : "border-white/[0.06] bg-white/[0.015] text-white/50 hover:border-white/[0.12] hover:text-white/70"
+                ? "border-primary/40 bg-primary/[0.06] text-foreground"
+                : "border-border bg-foreground/[0.015] text-muted-foreground hover:border-border hover:text-foreground/70"
             }`}
           >
             {r.label}
@@ -217,12 +217,12 @@ export function OnboardingFlow() {
     <div key="source" className="space-y-6">
       <div>
         <h2
-          className="text-xl font-semibold text-white mb-1"
+          className="text-xl font-semibold text-foreground mb-1"
           style={{ fontFamily: "var(--font-sans)" }}
         >
           How did you find us?
         </h2>
-        <p className="text-sm text-white/30">
+        <p className="text-sm text-muted-foreground">
           We'd love to know how you discovered Meshwork.
         </p>
       </div>
@@ -233,8 +233,8 @@ export function OnboardingFlow() {
             onClick={() => setSource(s.id)}
             className={`text-left px-4 py-3 rounded-lg border text-sm transition-all ${
               source === s.id
-                ? "border-primary/40 bg-primary/[0.06] text-white"
-                : "border-white/[0.06] bg-white/[0.015] text-white/50 hover:border-white/[0.12] hover:text-white/70"
+                ? "border-primary/40 bg-primary/[0.06] text-foreground"
+                : "border-border bg-foreground/[0.015] text-muted-foreground hover:border-border hover:text-foreground/70"
             }`}
           >
             {s.label}
@@ -247,12 +247,12 @@ export function OnboardingFlow() {
     <div key="usecase" className="space-y-6">
       <div>
         <h2
-          className="text-xl font-semibold text-white mb-1"
+          className="text-xl font-semibold text-foreground mb-1"
           style={{ fontFamily: "var(--font-sans)" }}
         >
           What will you use Meshwork for?
         </h2>
-        <p className="text-sm text-white/30">
+        <p className="text-sm text-muted-foreground">
           This helps us build the right features for you.
         </p>
       </div>
@@ -263,8 +263,8 @@ export function OnboardingFlow() {
             onClick={() => setUseCase(u.id)}
             className={`text-left px-4 py-3 rounded-lg border text-sm transition-all ${
               useCase === u.id
-                ? "border-primary/40 bg-primary/[0.06] text-white"
-                : "border-white/[0.06] bg-white/[0.015] text-white/50 hover:border-white/[0.12] hover:text-white/70"
+                ? "border-primary/40 bg-primary/[0.06] text-foreground"
+                : "border-border bg-foreground/[0.015] text-muted-foreground hover:border-border hover:text-foreground/70"
             }`}
           >
             {u.label}
@@ -275,7 +275,7 @@ export function OnboardingFlow() {
   ];
 
   return (
-    <div className="fixed inset-0 z-[200] bg-[#0a0a0a] flex items-center justify-center">
+    <div className="fixed inset-0 z-[200] bg-surface flex items-center justify-center">
       <div className="w-full max-w-md px-6">
         {/* Logo + progress */}
         <div className="flex items-center justify-between mb-10">
@@ -287,7 +287,7 @@ export function OnboardingFlow() {
               <div
                 key={i}
                 className={`h-1 rounded-full transition-all duration-300 ${
-                  i <= step ? "bg-primary w-6" : "bg-white/10 w-4"
+                  i <= step ? "bg-primary w-6" : "bg-foreground/10 w-4"
                 }`}
               />
             ))}
@@ -313,7 +313,7 @@ export function OnboardingFlow() {
             {step > 0 && (
               <button
                 onClick={() => setStep(step - 1)}
-                className="text-xs text-white/30 hover:text-white/50 transition-colors"
+                className="text-xs text-muted-foreground hover:text-muted-foreground transition-colors"
               >
                 Back
               </button>
@@ -323,7 +323,7 @@ export function OnboardingFlow() {
             {step > 0 && (
               <button
                 onClick={complete}
-                className="text-xs text-white/20 hover:text-white/40 transition-colors"
+                className="text-xs text-muted-foreground hover:text-muted-foreground transition-colors"
               >
                 Skip all
               </button>

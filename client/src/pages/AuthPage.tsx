@@ -78,7 +78,7 @@ async function handlePendingPromptAndRedirect(
 }
 
 const inputBase =
-  "h-11 w-full bg-white/[0.04] border border-white/[0.1] rounded-lg px-3.5 text-white placeholder:text-white/25 text-sm focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-white/25 transition-all duration-150";
+  "h-11 w-full bg-foreground/[0.04] border border-border rounded-lg px-3.5 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-border transition-all duration-150";
 
 function GithubIcon() {
   return (
@@ -128,7 +128,7 @@ function SocialButton({
     <button
       type="button"
       onClick={onClick}
-      className="w-full h-10 flex items-center justify-center gap-2.5 rounded-lg border border-white/[0.1] bg-white/[0.03] hover:bg-white/[0.07] text-white/80 text-sm font-medium transition-all duration-150 cursor-pointer"
+      className="w-full h-10 flex items-center justify-center gap-2.5 rounded-lg border border-border bg-foreground/[0.03] hover:bg-foreground/[0.07] text-foreground/80 text-sm font-medium transition-all duration-150 cursor-pointer"
     >
       {icon}
       {label}
@@ -349,8 +349,8 @@ function LoginForm() {
         />
       </div>
       <div className="relative flex items-center justify-center mb-5">
-        <span className="absolute w-full border-t border-white/[0.08]" />
-        <span className="relative bg-[#111113] px-3 text-[11px] text-white/25 tracking-widest uppercase">
+        <span className="absolute w-full border-t border-border" />
+        <span className="relative bg-surface-lowest px-3 text-[11px] text-muted-foreground tracking-widest uppercase">
           or
         </span>
       </div>
@@ -359,7 +359,7 @@ function LoginForm() {
           <div className="space-y-1.5">
             <Label
               htmlFor="login-mfa"
-              className="text-[11px] font-medium text-white/50"
+              className="text-[11px] font-medium text-muted-foreground"
             >
               Two-factor code
             </Label>
@@ -375,7 +375,7 @@ function LoginForm() {
               required
               className={`${inputBase} tracking-[0.3em]`}
             />
-            <p className="text-[10px] text-white/30 leading-relaxed">
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
               Enter the 6-digit code from your authenticator app, or paste one
               of your backup codes.
             </p>
@@ -385,7 +385,7 @@ function LoginForm() {
             <div className="flex justify-between">
               <Label
                 htmlFor="login-email"
-                className="text-[11px] font-medium text-white/50"
+                className="text-[11px] font-medium text-muted-foreground"
               >
                 Email
               </Label>
@@ -408,10 +408,12 @@ function LoginForm() {
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.1] text-xs">
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-foreground/[0.04] border border-border text-xs">
               <div className="flex items-center gap-2 truncate">
-                <span className="text-white/40">Email:</span>
-                <span className="text-white font-medium truncate">{email}</span>
+                <span className="text-muted-foreground">Email:</span>
+                <span className="text-foreground font-medium truncate">
+                  {email}
+                </span>
               </div>
               <button
                 type="button"
@@ -420,7 +422,7 @@ function LoginForm() {
                   setPassword("");
                   setFormErrors({});
                 }}
-                className="text-xs text-white/60 hover:text-white underline underline-offset-2 shrink-0 cursor-pointer"
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 shrink-0 cursor-pointer"
               >
                 Edit
               </button>
@@ -428,7 +430,7 @@ function LoginForm() {
             <div className="space-y-1.5">
               <Label
                 htmlFor="login-password"
-                className="text-[11px] font-medium text-white/50"
+                className="text-[11px] font-medium text-muted-foreground"
               >
                 Password
               </Label>
@@ -449,7 +451,7 @@ function LoginForm() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer"
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -464,7 +466,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full h-10 mt-1 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 active:bg-white/80 transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full h-10 mt-1 rounded-lg bg-primary text-destructive-foreground text-sm font-semibold hover:brightness-110 active:brightness-90 transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isLoading ? (
             <>
@@ -481,18 +483,18 @@ function LoginForm() {
           <div className="flex justify-end -mt-1">
             <a
               href="/forgot-password"
-              className="text-[11px] text-white/35 hover:text-white/70 transition-colors"
+              className="text-[11px] text-muted-foreground hover:text-foreground/70 transition-colors"
             >
               Forgot password?
             </a>
           </div>
         )}
       </form>
-      <p className="mt-5 text-center text-[12px] text-white/35">
+      <p className="mt-5 text-center text-[12px] text-muted-foreground">
         {"Don't have an account? "}
         <a
           href="/register"
-          className="text-white/60 hover:text-white underline underline-offset-4 transition-colors"
+          className="text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors"
         >
           Create your account
         </a>
@@ -631,8 +633,8 @@ function RegisterForm() {
         />
       </div>
       <div className="relative flex items-center justify-center mb-5">
-        <span className="absolute w-full border-t border-white/[0.08]" />
-        <span className="relative bg-[#111113] px-3 text-[11px] text-white/25 tracking-widest uppercase">
+        <span className="absolute w-full border-t border-border" />
+        <span className="relative bg-surface-lowest px-3 text-[11px] text-muted-foreground tracking-widest uppercase">
           or
         </span>
       </div>
@@ -640,7 +642,7 @@ function RegisterForm() {
         <div className="space-y-1.5">
           <Label
             htmlFor="reg-email"
-            className="text-[11px] font-medium text-white/50"
+            className="text-[11px] font-medium text-muted-foreground"
           >
             Email
           </Label>
@@ -663,7 +665,7 @@ function RegisterForm() {
         <div className="space-y-1.5">
           <Label
             htmlFor="reg-password"
-            className="text-[11px] font-medium text-white/50"
+            className="text-[11px] font-medium text-muted-foreground"
           >
             Password
           </Label>
@@ -684,7 +686,7 @@ function RegisterForm() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer"
             >
               {showPassword ? (
                 <EyeOff className="w-4 h-4" />
@@ -700,9 +702,13 @@ function RegisterForm() {
             {strengthChecks.map(({ check, label }) => (
               <div key={label} className="flex items-center gap-1 text-[10px]">
                 <div
-                  className={`w-1 h-1 rounded-full transition-colors ${check ? "bg-green-400" : "bg-white/15"}`}
+                  className={`w-1 h-1 rounded-full transition-colors ${check ? "bg-green-400" : "bg-foreground/15"}`}
                 />
-                <span className={check ? "text-green-400/60" : "text-white/20"}>
+                <span
+                  className={
+                    check ? "text-green-400/60" : "text-muted-foreground"
+                  }
+                >
                   {label}
                 </span>
               </div>
@@ -712,7 +718,7 @@ function RegisterForm() {
         <div className="space-y-1.5">
           <Label
             htmlFor="reg-confirmPassword"
-            className="text-[11px] font-medium text-white/50"
+            className="text-[11px] font-medium text-muted-foreground"
           >
             Confirm password
           </Label>
@@ -734,7 +740,7 @@ function RegisterForm() {
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer"
             >
               {showConfirmPassword ? (
                 <EyeOff className="w-4 h-4" />
@@ -772,7 +778,7 @@ function RegisterForm() {
               !!import.meta.env.VITE_RECAPTCHA_SITE_KEY &&
               !captchaToken)
           }
-          className="w-full h-10 mt-1 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 active:bg-white/80 transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full h-10 mt-1 rounded-lg bg-primary text-destructive-foreground text-sm font-semibold hover:brightness-110 active:brightness-90 transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isLoading ? (
             <>
@@ -784,11 +790,11 @@ function RegisterForm() {
           )}
         </button>
       </form>
-      <p className="mt-5 text-center text-[12px] text-white/35">
+      <p className="mt-5 text-center text-[12px] text-muted-foreground">
         {"Already have an account? "}
         <a
           href="/login"
-          className="text-white/60 hover:text-white underline underline-offset-4 transition-colors"
+          className="text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors"
         >
           Sign in
         </a>
@@ -806,7 +812,7 @@ export default function AuthPage() {
       <Helmet>
         <title>{mode === "login" ? "Sign In" : "Create Account"}</title>
       </Helmet>
-      <div className="min-h-screen flex bg-[#111113]">
+      <div className="min-h-screen flex bg-surface-lowest">
         {/* Left: form panel */}
         <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 sm:p-12 relative min-h-screen">
           {/* Header / Logo — Top Left */}
@@ -815,7 +821,7 @@ export default function AuthPage() {
               <div className="w-9 h-9 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_14px_rgba(232,57,26,0.7)]">
                 <MeshworkLogo />
               </div>
-              <span className="text-[17px] font-bold text-white/90 tracking-tight group-hover:text-white transition-colors leading-none">
+              <span className="text-[17px] font-bold text-foreground/90 tracking-tight group-hover:text-foreground transition-colors leading-none">
                 Meshwork Studio
               </span>
             </a>
@@ -832,10 +838,10 @@ export default function AuthPage() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.15 }}
                 >
-                  <h1 className="text-[24px] font-bold text-white tracking-tight mb-1">
+                  <h1 className="text-[24px] font-bold text-foreground tracking-tight mb-1">
                     Log in
                   </h1>
-                  <p className="text-[13px] text-white/35 mb-7">
+                  <p className="text-[13px] text-muted-foreground mb-7">
                     Welcome back to Meshwork Studio.
                   </p>
                   <LoginForm key="login" />
@@ -848,10 +854,10 @@ export default function AuthPage() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.15 }}
                 >
-                  <h1 className="text-[24px] font-bold text-white tracking-tight mb-1">
+                  <h1 className="text-[24px] font-bold text-foreground tracking-tight mb-1">
                     Create your account
                   </h1>
-                  <p className="text-[13px] text-white/35 mb-7">
+                  <p className="text-[13px] text-muted-foreground mb-7">
                     Start designing cloud architecture for free.
                   </p>
                   <RegisterForm key="register" />
@@ -861,8 +867,11 @@ export default function AuthPage() {
           </div>
 
           {/* Footer */}
-          <div className="w-full max-w-[360px] mx-auto pb-2 flex items-center justify-between text-[11px] text-white/20">
-            <a href="/" className="hover:text-white/40 transition-colors">
+          <div className="w-full max-w-[360px] mx-auto pb-2 flex items-center justify-between text-[11px] text-muted-foreground">
+            <a
+              href="/"
+              className="hover:text-muted-foreground transition-colors"
+            >
               ← Back to home
             </a>
             <span>© {new Date().getFullYear()} Meshwork Studio</span>
@@ -871,7 +880,7 @@ export default function AuthPage() {
 
         {/* Right: animated gradient panel */}
         <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[#0d0f1a]" />
+          <div className="absolute inset-0 auth-art-ground" />
           <motion.div
             initial={{ opacity: 0, scale: 0.6 }}
             animate={{ opacity: 1, scale: 1 }}

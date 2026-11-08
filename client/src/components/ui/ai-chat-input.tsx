@@ -969,7 +969,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                   ? "transform 0.15s ease-out, opacity 0.15s ease-out"
                   : "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease-out",
               }}
-              className="border border-white/10 border-b-0 bg-[#141416]/90 backdrop-blur-xl rounded-t-2xl px-3 pt-2.5 pb-1 flex items-start gap-2.5 overflow-x-auto prompt-scrollbar"
+              className="border border-border border-b-0 bg-surface/95 backdrop-blur-xl rounded-t-2xl px-3 pt-2.5 pb-1 flex items-start gap-2.5 overflow-x-auto prompt-scrollbar"
             >
               {attachments.map((attachment, index) => (
                 <AttachmentThumb
@@ -1003,7 +1003,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
               overflow: expanded ? "visible" : "hidden",
             }}
             className={cn(
-              "relative w-full border border-white/10 bg-[#121214]/90 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] focus-within:border-white/30 hover:border-white/20 z-10 group",
+              "relative w-full border border-border bg-surface/95 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] focus-within:border-border hover:border-border z-10 group",
               expanded ? "cursor-text" : "cursor-default",
             )}
           >
@@ -1059,7 +1059,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                   : "opacity 0.3s ease-out, transform 0.3s ease-out, height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
               }}
               className={cn(
-                "prompt-scrollbar absolute top-0 inset-x-0 z-[1] w-full resize-none bg-transparent pl-5 pr-14 py-4 text-base leading-relaxed text-white outline-none placeholder:font-medium placeholder:text-white/35 cursor-text",
+                "prompt-scrollbar absolute top-0 inset-x-0 z-[1] w-full resize-none bg-transparent pl-5 pr-14 py-4 text-base leading-relaxed text-foreground outline-none placeholder:font-medium placeholder:text-muted-foreground cursor-text",
                 expanded
                   ? "opacity-100 scale-100 translate-y-0"
                   : "opacity-0 scale-95 -translate-y-1 pointer-events-none",
@@ -1070,11 +1070,11 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
 
             <div
               ref={topFadeRef}
-              className="absolute left-5 right-14 top-0 z-[2] h-8 bg-gradient-to-b from-[#121214] via-[#121214]/90 to-transparent pointer-events-none"
+              className="absolute left-5 right-14 top-0 z-[2] h-8 bg-gradient-to-b from-surface via-surface/90 to-transparent pointer-events-none"
             />
             <div
               ref={bottomFadeRef}
-              className="absolute left-5 right-14 z-[2] h-8 bg-gradient-to-t from-[#121214] via-[#121214]/90 to-transparent pointer-events-none"
+              className="absolute left-5 right-14 z-[2] h-8 bg-gradient-to-t from-surface via-surface/90 to-transparent pointer-events-none"
               style={{
                 opacity: 0,
                 top: `${textareaHeight - 32}px`,
@@ -1093,7 +1093,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                   : "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
               }}
               className={cn(
-                "absolute inset-x-0 top-0 z-[1] cursor-text pl-5 pr-14 py-4 text-left text-base font-medium leading-relaxed text-white/40 outline-none",
+                "absolute inset-x-0 top-0 z-[1] cursor-text pl-5 pr-14 py-4 text-left text-base font-medium leading-relaxed text-muted-foreground outline-none",
                 !expanded
                   ? "opacity-100 scale-100 translate-y-0"
                   : "opacity-0 scale-105 translate-y-1 pointer-events-none",
@@ -1121,9 +1121,9 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                     setIsModelSelectOpen((prev) => !prev);
                   }}
                   className={cn(
-                    "group flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white/70 transition-all duration-200 outline-none hover:bg-white/10 hover:text-white cursor-pointer bg-white/[0.04] border border-white/10",
+                    "group flex items-center gap-1.5 rounded-full px-3 py-1.5 text-foreground/70 transition-all duration-200 outline-none hover:bg-foreground/10 hover:text-foreground cursor-pointer bg-foreground/[0.04] border border-border",
                     isModelSelectOpen
-                      ? "bg-white/15 text-white border-white/25"
+                      ? "bg-foreground/15 text-foreground border-border"
                       : "",
                   )}
                   aria-label={`Select model. Current: ${selectedModel.label}`}
@@ -1140,17 +1140,17 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                 <div
                   style={{ transformOrigin: "bottom left" }}
                   className={cn(
-                    "absolute bottom-full left-0 mb-2.5 z-50 w-64 rounded-xl border border-white/10 bg-[#121214]/95 p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl flex flex-col gap-1 transition-all duration-200 cursor-default",
+                    "absolute bottom-full left-0 mb-2.5 z-50 w-64 rounded-xl border border-border bg-surface/95 p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl flex flex-col gap-1 transition-all duration-200 cursor-default",
                     isModelSelectOpen
                       ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
                       : "opacity-0 scale-95 translate-y-2 pointer-events-none",
                   )}
                 >
-                  <div className="px-2.5 py-1.5 border-b border-white/[0.06] flex items-center justify-between">
-                    <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider font-mono">
+                  <div className="px-2.5 py-1.5 border-b border-border flex items-center justify-between">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider font-mono">
                       AI Model
                     </span>
-                    <span className="text-[10px] text-white/30 font-mono">
+                    <span className="text-[10px] text-muted-foreground font-mono">
                       Google Gemini
                     </span>
                   </div>
@@ -1170,8 +1170,8 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                           className={cn(
                             "group flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-medium transition-all cursor-pointer outline-none",
                             isSelected
-                              ? "bg-white/10 text-white font-semibold shadow-inner"
-                              : "text-white/70 hover:bg-white/[0.06] hover:text-white",
+                              ? "bg-foreground/10 text-foreground font-semibold shadow-inner"
+                              : "text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground",
                           )}
                         >
                           <span className="flex items-center gap-2.5 min-w-0">
@@ -1182,7 +1182,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                             <span className="truncate">{m.label}</span>
                           </span>
                           {isSelected && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-white/80 shrink-0" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-foreground/80 shrink-0" />
                           )}
                         </button>
                       );
@@ -1195,7 +1195,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={cycleEffort}
-                className="group flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white/60 transition-all duration-200 hover:bg-white/10 hover:text-white outline-none cursor-pointer bg-white/[0.03] border border-white/5"
+                className="group flex items-center gap-1.5 rounded-full px-3 py-1.5 text-muted-foreground transition-all duration-200 hover:bg-foreground/10 hover:text-foreground outline-none cursor-pointer bg-foreground/[0.03] border border-border"
               >
                 <DynamicBarsIcon level={efforts[effortIndex]} />
                 <span className="text-xs font-semibold select-none transition-colors">
@@ -1208,7 +1208,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={openFileChooser}
                 disabled={attachments.length >= maxAttachments}
-                className="ml-auto flex size-8 items-center justify-center rounded-full text-white/50 transition-all duration-200 hover:bg-white/10 hover:text-white outline-none cursor-pointer disabled:opacity-40 disabled:pointer-events-none bg-white/[0.03]"
+                className="ml-auto flex size-8 items-center justify-center rounded-full text-muted-foreground transition-all duration-200 hover:bg-foreground/10 hover:text-foreground outline-none cursor-pointer disabled:opacity-40 disabled:pointer-events-none bg-foreground/[0.03]"
               >
                 <PlusIcon />
               </button>
@@ -1225,7 +1225,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
               {audioData.map((val, i) => (
                 <div
                   key={i}
-                  className="w-1.5 rounded-full bg-white/50 transition-[height] duration-75 ease-out"
+                  className="w-1.5 rounded-full bg-foreground/50 transition-[height] duration-75 ease-out"
                   style={{ height: `${Math.max(4, val * 28)}px` }}
                 />
               ))}
@@ -1246,7 +1246,7 @@ export const PromptInput = React.forwardRef<HTMLDivElement, PromptInputProps>(
                     : "Use voice input"
               }
               style={{ borderRadius: 9999 }}
-              className="absolute right-3 bottom-3 z-[10] flex h-10 w-10 items-center justify-center bg-primary text-white font-bold shadow-md transition-all duration-300 hover:scale-105 hover:brightness-110 active:scale-95 outline-none cursor-pointer"
+              className="absolute right-3 bottom-3 z-[10] flex h-10 w-10 items-center justify-center bg-primary text-primary-foreground font-bold shadow-md transition-all duration-300 hover:scale-105 hover:brightness-110 active:scale-95 outline-none cursor-pointer"
             >
               <span className="relative flex h-full w-full items-center justify-center">
                 <span

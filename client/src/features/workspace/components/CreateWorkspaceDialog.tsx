@@ -1,3 +1,4 @@
+import "@/components/layout/dashboard-theme.css";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
@@ -120,7 +121,7 @@ export function CreateWorkspaceDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="p-0 gap-0 max-w-[420px] w-full overflow-hidden bg-[#0E0E0E] border border-[#252525] shadow-[0_32px_64px_rgba(0,0,0,0.7)] rounded-2xl tracking-tight text-white font-body"
+        className="create-workspace-dialog p-0 gap-0 max-w-[420px] w-full overflow-hidden dashboard-dialog-surface border dashboard-border shadow-[0_32px_64px_rgba(0,0,0,0.7)] rounded-2xl tracking-tight dashboard-ink font-body"
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
@@ -136,12 +137,12 @@ export function CreateWorkspaceDialog({
             </div>
             <div>
               <h3
-                className="text-base font-semibold text-white mb-1.5"
+                className="text-base font-semibold dashboard-ink mb-1.5"
                 style={{ fontFamily: "var(--font-sans)" }}
               >
                 Workspace limit reached
               </h3>
-              <p className="text-sm text-white/35 leading-relaxed max-w-xs mx-auto">
+              <p className="text-sm dashboard-muted leading-relaxed max-w-xs mx-auto">
                 Free accounts are limited to {FREE_TIER_LIMIT} workspaces.
                 Delete an existing workspace to create a new one, or upgrade for
                 unlimited access.
@@ -150,12 +151,12 @@ export function CreateWorkspaceDialog({
             <div className="flex items-center gap-3 mt-2">
               <button
                 onClick={handleClose}
-                className="px-4 py-2 text-[12px] font-medium text-[#888] hover:text-white rounded-lg hover:bg-white/5 transition-all"
+                className="px-4 py-2 text-[12px] font-medium dashboard-muted dashboard-hover-ink rounded-lg dashboard-hover-tint transition-all"
               >
                 Go back
               </button>
               <button
-                className="px-5 py-2 text-[12px] font-semibold bg-primary text-white rounded-lg hover:brightness-110 transition-all opacity-50 cursor-not-allowed"
+                className="px-5 py-2 text-[12px] font-semibold bg-primary dashboard-brand-ink rounded-lg hover:brightness-110 transition-all opacity-50 cursor-not-allowed"
                 disabled
               >
                 Upgrade — Coming soon
@@ -171,10 +172,10 @@ export function CreateWorkspaceDialog({
                 <div
                   className={cn(
                     "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300",
-                    "bg-[#1A1A1A] border border-[#2A2A2A]",
+                    "dashboard-tint border dashboard-border",
                   )}
                 >
-                  <SelectedIconComp className="w-5 h-5 text-white/70" />
+                  <SelectedIconComp className="w-5 h-5 dashboard-secondary" />
                 </div>
                 <div className="flex-1 min-w-0 pt-0.5">
                   <input
@@ -182,12 +183,12 @@ export function CreateWorkspaceDialog({
                     placeholder="Workspace name"
                     autoFocus
                     className={cn(
-                      "w-full bg-transparent border-none p-0 font-sans font-bold text-[17px] text-white",
-                      "placeholder:text-[#555] placeholder:font-normal",
+                      "w-full bg-transparent border-none p-0 font-sans font-bold text-[17px] dashboard-ink",
+                      "dashboard-placeholder placeholder:font-normal",
                       "focus:outline-none caret-primary",
                     )}
                   />
-                  <p className="text-[11px] text-[#555] mt-1 font-body">
+                  <p className="text-[11px] dashboard-muted mt-1 font-body">
                     {typeof titleValue === "string" && titleValue
                       ? `${titleValue.length}/16 characters`
                       : "Give your workspace a name"}
@@ -203,11 +204,13 @@ export function CreateWorkspaceDialog({
             </div>
 
             {/* ── Divider ───────────────────────────────────────────────── */}
-            <div className="h-px bg-[#1E1E1E] mx-4" />
+            <div className="h-px dashboard-divider mx-4" />
 
             {/* ── Icon Selection ────────────────────────────────────────── */}
             <div className="px-6 py-4">
-              <p className="text-[11px] text-[#666] font-medium mb-3">Icon</p>
+              <p className="text-[11px] dashboard-muted font-medium mb-3">
+                Icon
+              </p>
               <div className="flex gap-1.5">
                 {PROJECT_ICONS.map(({ id, Icon }) => (
                   <button
@@ -217,8 +220,8 @@ export function CreateWorkspaceDialog({
                     className={cn(
                       "w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-200 cursor-figma-pointer",
                       selectedIcon === id
-                        ? "bg-white/10 text-white ring-1 ring-white/20"
-                        : "text-[#555] hover:text-white/70 hover:bg-white/5",
+                        ? "dashboard-tint dashboard-ink ring-1 dashboard-ring"
+                        : "dashboard-muted dashboard-hover-ink dashboard-hover-tint",
                     )}
                   >
                     <Icon className="w-4 h-4" />
@@ -228,28 +231,28 @@ export function CreateWorkspaceDialog({
             </div>
 
             {/* ── Divider ───────────────────────────────────────────────── */}
-            <div className="h-px bg-[#1E1E1E] mx-4" />
+            <div className="h-px dashboard-divider mx-4" />
 
             {/* ── Templates link ────────────────────────────────────────── */}
             <Link href="/templates" onClick={() => onOpenChange(false)}>
-              <div className="mx-4 my-3 flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.03] transition-colors cursor-figma-pointer group">
-                <span className="text-[12px] text-[#666] group-hover:text-[#888] transition-colors">
+              <div className="mx-4 my-3 flex items-center justify-between px-3 py-2.5 rounded-lg dashboard-hover-tint transition-colors cursor-figma-pointer group">
+                <span className="text-[12px] dashboard-muted dashboard-group-hover-ink transition-colors">
                   Or start from a template
                 </span>
-                <ChevronRightIcon className="w-3.5 h-3.5 text-[#444] group-hover:text-[#666] transition-colors" />
+                <ChevronRightIcon className="w-3.5 h-3.5 dashboard-muted dashboard-group-hover-ink transition-colors" />
               </div>
             </Link>
 
             {/* ── Footer ────────────────────────────────────────────────── */}
-            <div className="flex items-center justify-between gap-2 px-5 py-4 bg-[#0A0A0A] border-t border-[#1A1A1A]">
-              <span className="text-[10px] text-[#444]">
+            <div className="flex items-center justify-between gap-2 px-5 py-4 dashboard-dialog-footer border-t dashboard-border">
+              <span className="text-[10px] dashboard-muted">
                 {workspaces?.length ?? 0}/{FREE_TIER_LIMIT} workspaces used
               </span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="px-4 py-2 text-[12px] font-medium text-[#888] hover:text-white rounded-lg hover:bg-white/5 transition-all cursor-figma-pointer"
+                  className="px-4 py-2 text-[12px] font-medium dashboard-muted dashboard-hover-ink rounded-lg dashboard-hover-tint transition-all cursor-figma-pointer"
                 >
                   Cancel
                 </button>
@@ -259,7 +262,7 @@ export function CreateWorkspaceDialog({
                   onClick={form.handleSubmit(onSubmit)}
                   disabled={createWorkspace.isPending}
                   className={cn(
-                    "bg-primary text-white text-[12px] font-semibold px-5 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 cursor-figma-pointer",
+                    "bg-primary dashboard-brand-ink text-[12px] font-semibold px-5 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 cursor-figma-pointer",
                     "hover:brightness-110 hover:shadow-md",
                     "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:brightness-100",
                   )}

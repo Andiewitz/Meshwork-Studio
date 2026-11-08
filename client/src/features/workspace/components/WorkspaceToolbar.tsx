@@ -65,7 +65,7 @@ export function WorkspaceToolbar({
         initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-        className="workspace-toolbar flex items-center rounded-2xl p-1 gap-0.5 bg-[#121214]/90 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_40px_rgba(0,0,0,0.6)] select-none"
+        className="workspace-toolbar flex items-center rounded-2xl p-1 gap-0.5 ws-option backdrop-blur-2xl border ws-border shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_40px_rgba(0,0,0,0.6)] select-none"
       >
         {/* Select Tool */}
         <Tooltip>
@@ -77,8 +77,8 @@ export function WorkspaceToolbar({
               onClick={() => setDrawingMode("select")}
               className={`w-8 h-8 rounded-xl transition-all ${
                 drawingMode === "select"
-                  ? "bg-white/[0.15] text-white shadow-sm"
-                  : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
+                  ? "ws-surface-soft ws-ink shadow-sm"
+                  : "ws-muted ws-hover-ink ws-hover-surface"
               }`}
             >
               <FiMousePointer className="w-3.5 h-3.5" />
@@ -97,8 +97,8 @@ export function WorkspaceToolbar({
               onClick={() => setDrawingMode("pan")}
               className={`w-8 h-8 rounded-xl transition-all ${
                 drawingMode === "pan"
-                  ? "bg-white/[0.15] text-white shadow-sm"
-                  : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
+                  ? "ws-surface-soft ws-ink shadow-sm"
+                  : "ws-muted ws-hover-ink ws-hover-surface"
               }`}
             >
               <FaHand className="w-3.5 h-3.5" />
@@ -107,7 +107,7 @@ export function WorkspaceToolbar({
           <TooltipContent side="top">Pan canvas (H)</TooltipContent>
         </Tooltip>
 
-        <div className="w-px h-3.5 bg-white/[0.08] mx-0.5" />
+        <div className="w-px h-3.5 ws-surface-soft mx-0.5" />
 
         {/* Infrastructure Zone (VPC) */}
         <Tooltip>
@@ -124,8 +124,8 @@ export function WorkspaceToolbar({
               }
               className={`w-8 h-8 rounded-xl transition-all ${
                 drawingMode === "infrastructure"
-                  ? "bg-[#00E5A0]/20 text-[#00E5A0] border border-[#00E5A0]/30 shadow-[0_0_12px_rgba(0,229,160,0.2)]"
-                  : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
+                  ? "ws-infrastructure-active bg-[#00E5A0]/20 text-[#00E5A0] border border-[#00E5A0]/30 shadow-[0_0_12px_rgba(0,229,160,0.2)]"
+                  : "ws-muted ws-hover-ink ws-hover-surface"
               }`}
             >
               <FiSquare className="w-3.5 h-3.5" />
@@ -142,7 +142,7 @@ export function WorkspaceToolbar({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="w-8 h-8 rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+                  className="w-8 h-8 rounded-xl ws-muted ws-hover-ink ws-hover-surface transition-all"
                 >
                   <FiShare2 className="w-3.5 h-3.5" />
                 </Button>
@@ -151,13 +151,13 @@ export function WorkspaceToolbar({
             </Tooltip>
           </PopoverTrigger>
           <PopoverContent
-            className="workspace-popover w-64 p-3 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)] z-[150] space-y-3.5 text-white"
+            className="workspace-popover w-64 p-3 ws-option backdrop-blur-2xl border ws-border rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)] z-[150] space-y-3.5 ws-ink"
             side="top"
             align="center"
             sideOffset={14}
           >
             <div className="space-y-1.5">
-              <div className="text-[10px] uppercase font-bold tracking-wider text-white/40 px-1">
+              <div className="text-[10px] uppercase font-bold tracking-wider ws-muted px-1">
                 Line Style
               </div>
               <div className="grid grid-cols-3 gap-1">
@@ -215,8 +215,8 @@ export function WorkspaceToolbar({
                       }}
                       className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl border transition-all ${
                         isSelected
-                          ? "bg-white/15 border-white/20 text-white font-semibold"
-                          : "border-transparent text-white/40 hover:bg-white/5 hover:text-white/70"
+                          ? "ws-surface-soft ws-border ws-ink font-semibold"
+                          : "border-transparent ws-muted ws-hover-surface ws-hover-ink"
                       }`}
                     >
                       <style.icon className="w-3 h-3" />
@@ -228,7 +228,7 @@ export function WorkspaceToolbar({
             </div>
 
             <div className="space-y-1.5">
-              <div className="text-[10px] uppercase font-bold tracking-wider text-white/40 px-1">
+              <div className="text-[10px] uppercase font-bold tracking-wider ws-muted px-1">
                 Line Shape
               </div>
               <div className="grid grid-cols-3 gap-1">
@@ -261,8 +261,8 @@ export function WorkspaceToolbar({
                     }}
                     className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl border transition-all ${
                       edgeType === tool.id
-                        ? "bg-white text-black border-white shadow-md font-semibold"
-                        : "border-white/5 text-white/40 hover:bg-white/5 hover:text-white/70"
+                        ? "ws-primary ws-border shadow-md font-semibold"
+                        : "ws-border ws-muted ws-hover-surface ws-hover-ink"
                     }`}
                   >
                     <tool.icon
@@ -284,7 +284,7 @@ export function WorkspaceToolbar({
                 variant="ghost"
                 size="icon"
                 onClick={onAddNote}
-                className="w-8 h-8 rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+                className="w-8 h-8 rounded-xl ws-muted ws-hover-ink ws-hover-surface transition-all"
               >
                 <FiFileText className="w-3.5 h-3.5" />
               </Button>
@@ -306,8 +306,8 @@ export function WorkspaceToolbar({
               }
               className={`w-8 h-8 rounded-xl transition-all ${
                 drawingMode === "annotation"
-                  ? "bg-[#FF6B35]/20 text-[#FF6B35] border border-[#FF6B35]/30 shadow-[0_0_12px_rgba(255,107,53,0.2)]"
-                  : "text-white/40 hover:text-white/80 hover:bg-white/[0.05]"
+                  ? "ws-annotation-active bg-[#FF6B35]/20 text-[#FF6B35] border border-[#FF6B35]/30 shadow-[0_0_12px_rgba(255,107,53,0.2)]"
+                  : "ws-muted ws-hover-ink ws-hover-surface"
               }`}
             >
               <FiEdit3 className="w-3.5 h-3.5" />
@@ -316,7 +316,7 @@ export function WorkspaceToolbar({
           <TooltipContent side="top">Annotation Tool (A)</TooltipContent>
         </Tooltip>
 
-        <div className="w-px h-3.5 bg-white/[0.08] mx-0.5" />
+        <div className="w-px h-3.5 ws-surface-soft mx-0.5" />
 
         {/* Fit View */}
         <Tooltip>
@@ -325,7 +325,7 @@ export function WorkspaceToolbar({
               variant="ghost"
               size="icon"
               onClick={() => fitView({ duration: 600 })}
-              className="w-8 h-8 rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+              className="w-8 h-8 rounded-xl ws-muted ws-hover-ink ws-hover-surface transition-all"
             >
               <FiMaximize2 className="w-3.5 h-3.5" />
             </Button>

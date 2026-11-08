@@ -41,11 +41,11 @@ export function RedirectLoading({
         </div>
         {message && (
           <div className="flex flex-col items-center gap-1">
-            <p className="text-xs font-medium text-white/70 tracking-wider uppercase">
+            <p className="text-xs font-medium text-foreground/70 tracking-wider uppercase">
               {message}
             </p>
             {subMessage && (
-              <p className="text-[11px] text-white/30">{subMessage}</p>
+              <p className="text-[11px] text-muted-foreground">{subMessage}</p>
             )}
           </div>
         )}
@@ -106,7 +106,7 @@ export function DefaultLoading({
   return (
     <div
       className={cn(
-        "relative flex flex-col items-center justify-center bg-[#09090b] text-white overflow-hidden select-none",
+        "relative flex flex-col items-center justify-center bg-surface text-foreground overflow-hidden select-none",
         fullScreen
           ? "fixed inset-0 z-[100] min-h-screen w-screen"
           : "w-full min-h-[360px] py-12",
@@ -135,7 +135,7 @@ export function DefaultLoading({
         className="flex flex-col items-center gap-5 text-center px-6 relative z-10"
       >
         {/* White Spinner */}
-        <Spinner size={size} speed="normal" className="text-white" />
+        <Spinner size={size} speed="normal" className="text-foreground" />
 
         {/* Dynamic cycling status message */}
         <div className="h-7 flex items-center justify-center min-w-[220px]">
@@ -146,7 +146,7 @@ export function DefaultLoading({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -5 }}
               transition={{ duration: 0.22, ease: "easeInOut" }}
-              className="text-[13px] font-medium tracking-tight text-white/75 font-sans"
+              className="text-[13px] font-medium tracking-tight text-foreground/75 font-sans"
             >
               {currentText}
             </motion.p>

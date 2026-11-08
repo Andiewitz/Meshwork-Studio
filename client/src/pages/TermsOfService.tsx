@@ -97,7 +97,7 @@ export default function TermsOfService() {
   return (
     <div
       ref={containerRef}
-      className="relative font-sans text-white min-h-screen flex flex-col bg-background"
+      className="relative font-sans text-foreground min-h-screen flex flex-col bg-background"
     >
       <Helmet>
         <title>Terms of Service</title>
@@ -114,18 +114,18 @@ export default function TermsOfService() {
       </div>
 
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/40 backdrop-blur-2xl border-b border-white/[0.05] shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 border-b border-border">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-9 h-9 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(26,115,232,0.5)]">
               <MeshworkLogo />
             </div>
-            <span className="text-lg font-headline font-bold tracking-tight hidden sm:block text-white">
+            <span className="text-lg font-headline font-bold tracking-tight hidden sm:block text-foreground">
               Meshwork Studio
             </span>
           </Link>
           <Link href="/">
-            <button className="flex items-center gap-2 text-sm font-medium text-white/60 hover:text-white transition-colors cursor-pointer">
+            <button className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
               <ArrowLeftIcon className="w-4 h-4" />
               Back to Home
             </button>
@@ -143,13 +143,13 @@ export default function TermsOfService() {
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="mb-16"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-xs font-bold tracking-widest uppercase text-white/50 mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-foreground/[0.05] border border-border text-xs font-bold tracking-widest uppercase text-muted-foreground mb-6">
               Legal
             </div>
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-4">
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground mb-4">
               Terms of Service
             </h1>
-            <p className="text-white/40 text-base font-medium">
+            <p className="text-muted-foreground text-base font-medium">
               Effective Date: {EFFECTIVE_DATE}
             </p>
           </motion.div>
@@ -165,14 +165,14 @@ export default function TermsOfService() {
                 variants={sectionVariants}
                 className="group"
               >
-                <h2 className="text-lg font-bold text-white mb-3 tracking-tight">
+                <h2 className="text-lg font-bold text-foreground mb-3 tracking-tight">
                   {section.title}
                 </h2>
-                <p className="text-white/50 text-[15px] leading-[1.8] font-medium">
+                <p className="text-muted-foreground text-[15px] leading-[1.8] font-medium">
                   {section.content}
                 </p>
                 {i < sections.length - 1 && (
-                  <div className="mt-10 border-t border-white/[0.04]" />
+                  <div className="mt-10 border-t border-border" />
                 )}
               </motion.div>
             ))}
@@ -183,17 +183,17 @@ export default function TermsOfService() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.2, duration: 0.5 }}
-            className="mt-20 pt-10 border-t border-white/[0.06] flex items-center justify-between"
+            className="mt-20 pt-10 border-t border-border flex items-center justify-between"
           >
             <Link
               href="/privacy"
-              className="text-sm text-white/40 hover:text-white transition-colors font-medium"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               Privacy Policy →
             </Link>
             <Link
               href="/"
-              className="text-sm text-white/40 hover:text-white transition-colors font-medium"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               Back to Home
             </Link>

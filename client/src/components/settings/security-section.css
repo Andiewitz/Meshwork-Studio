@@ -1,0 +1,20 @@
+.security-success {
+  color: #72dca0;
+}
+.security-status-enabled {
+  color: #72dca0;
+  background: rgba(34, 197, 94, 0.14);
+}
+.security-warning {
+  color: #f5cb79;
+}
+:root[data-theme="light"] .security-success {
+  color: #147346;
+}
+:root[data-theme="light"] .security-status-enabled {
+  color: #147346;
+  background: #def2e6;
+}
+:root[data-theme="light"] .security-warning {
+  color: #83501a;
+}

@@ -89,7 +89,7 @@ export default function StreamingText({
     <div className={`w-full ${className}`}>
       {/* Streaming paragraph — words fade in one-by-one */}
       {isStreaming && !done ? (
-        <p className="text-[13px] leading-relaxed text-white/90 select-text">
+        <p className="text-[13px] leading-relaxed text-foreground/90 select-text">
           {tokens.slice(0, count).map((token, i) => (
             <span
               key={i}
@@ -101,13 +101,13 @@ export default function StreamingText({
           ))}
           {/* blinking cursor */}
           <span
-            className="ml-0.5 inline-block h-3 w-0.5 translate-y-0.5 rounded-full bg-white/70"
+            className="ml-0.5 inline-block h-3 w-0.5 translate-y-0.5 rounded-full bg-foreground/70"
             style={{ animation: "fade-in 150ms ease-out both" }}
           />
         </p>
       ) : (
         /* Done — render full markdown */
-        <div className="text-[13px] leading-relaxed text-white/90 select-text prose prose-invert prose-sm max-w-none prose-p:my-1.5 prose-p:leading-relaxed prose-headings:text-white/95 prose-headings:font-semibold prose-headings:my-2 prose-ul:my-1.5 prose-li:my-0.5 prose-li:text-white/80 prose-strong:text-white prose-code:text-white/90 prose-code:bg-white/[0.08] prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[12px] prose-code:font-mono">
+        <div className="text-[13px] leading-relaxed text-foreground/90 select-text prose theme-prose prose-sm max-w-none prose-p:my-1.5 prose-p:leading-relaxed prose-headings:text-foreground/95 prose-headings:font-semibold prose-headings:my-2 prose-ul:my-1.5 prose-li:my-0.5 prose-li:text-foreground/80 prose-strong:text-foreground prose-code:text-foreground/90 prose-code:bg-foreground/[0.08] prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[12px] prose-code:font-mono">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>
       )}
@@ -125,7 +125,7 @@ export default function StreamingText({
             type="button"
             onClick={handleCopy}
             title={copied ? "Copied" : "Copy"}
-            className="flex h-6 w-6 items-center justify-center rounded-md text-white/40 hover:bg-white/[0.08] hover:text-white/80 transition-colors"
+            className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground/80 transition-colors"
           >
             {copied ? (
               <CheckIcon className="w-3.5 h-3.5" />
@@ -139,7 +139,7 @@ export default function StreamingText({
               type="button"
               onClick={onRetry}
               title="Regenerate"
-              className="flex h-6 w-6 items-center justify-center rounded-md text-white/40 hover:bg-white/[0.08] hover:text-white/80 transition-colors"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground/80 transition-colors"
             >
               <ArrowPathIcon className="w-3.5 h-3.5" />
             </button>
@@ -151,8 +151,8 @@ export default function StreamingText({
             title="Good response"
             className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
               feedback === "up"
-                ? "text-white/90 bg-white/10"
-                : "text-white/40 hover:bg-white/[0.08] hover:text-white/80"
+                ? "text-foreground/90 bg-foreground/10"
+                : "text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground/80"
             }`}
           >
             <HandThumbUpIcon className="w-3.5 h-3.5" />
@@ -164,8 +164,8 @@ export default function StreamingText({
             title="Poor response"
             className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
               feedback === "down"
-                ? "text-white/90 bg-white/10"
-                : "text-white/40 hover:bg-white/[0.08] hover:text-white/80"
+                ? "text-foreground/90 bg-foreground/10"
+                : "text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground/80"
             }`}
           >
             <HandThumbDownIcon className="w-3.5 h-3.5" />
@@ -182,7 +182,7 @@ export default function StreamingText({
             pointerEvents: done ? "auto" : "none",
           }}
         >
-          <p className="text-[12px] font-medium text-white/40 mb-0.5">
+          <p className="text-[12px] font-medium text-muted-foreground mb-0.5">
             Follow-ups
           </p>
           <div className="flex flex-col">
@@ -191,7 +191,7 @@ export default function StreamingText({
                 key={text}
                 type="button"
                 onClick={() => onFollowUpClick?.(text)}
-                className="-mx-1.5 flex items-center gap-2 border-b border-white/[0.06] px-1.5 py-1.5 text-left text-[12.5px] text-white/70 transition-colors duration-100 hover:bg-white/[0.04] hover:text-white/90"
+                className="-mx-1.5 flex items-center gap-2 border-b border-border px-1.5 py-1.5 text-left text-[12.5px] text-foreground/70 transition-colors duration-100 hover:bg-foreground/[0.04] hover:text-foreground/90"
                 style={
                   done
                     ? {
@@ -209,7 +209,7 @@ export default function StreamingText({
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className="shrink-0 text-white/30"
+                  className="shrink-0 text-muted-foreground"
                 >
                   <path d="M9 10l-5 5 5 5" />
                   <path d="M20 4v7a4 4 0 0 1-4 4H4" />

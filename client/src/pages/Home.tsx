@@ -141,9 +141,9 @@ export default function Home() {
       )}
 
       {/* Main Canvas view sitting inside DashboardLayout's rounded container */}
-      <div className="home-canvas relative flex-1 flex flex-col justify-between overflow-hidden bg-[#0a0c16] min-h-full">
+      <div className="home-canvas relative flex-1 flex flex-col justify-between overflow-hidden dashboard-home-surface min-h-full">
         {/* ── Rich Gradient Blobs Background ── */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden -z-0">
+        <div className="dashboard-ambience absolute inset-0 pointer-events-none overflow-hidden -z-0">
           {/* Top blue veil */}
           <motion.div
             initial={{ opacity: 0, scale: 0.6 }}
@@ -203,15 +203,15 @@ export default function Home() {
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
             className="flex flex-col items-center text-center"
           >
-            <h1 className="text-[clamp(2.2rem,4vw,3.2rem)] font-bold text-white leading-tight tracking-tight mb-3 font-headline">
+            <h1 className="text-[clamp(2.2rem,4vw,3.2rem)] font-bold dashboard-ink leading-tight tracking-tight mb-3 font-headline">
               What should we build, {firstName}?
             </h1>
-            <p className="text-[14.5px] text-white/45 mb-8 max-w-md leading-relaxed">
+            <p className="text-[14.5px] dashboard-secondary mb-8 max-w-md leading-relaxed">
               Design, auto-sync, and manage cloud infrastructure diagrams.
             </p>
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-black font-semibold text-sm hover:bg-white/90 active:scale-95 transition-all shadow-[0_0_25px_rgba(255,255,255,0.15)] cursor-figma-pointer"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl dashboard-primary font-semibold text-sm dashboard-primary-hover active:scale-95 transition-all shadow-[0_0_25px_rgba(255,255,255,0.15)] cursor-figma-pointer"
             >
               <Plus className="w-4 h-4" />
               New workspace
@@ -225,20 +225,20 @@ export default function Home() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-            className="home-projects w-full bg-[#111218]/90 backdrop-blur-2xl border border-white/[0.09] rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col min-h-[480px] max-h-[600px]"
+            className="home-projects w-full dashboard-projects-surface backdrop-blur-2xl border dashboard-border rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col min-h-[480px] max-h-[600px]"
           >
             {/* Header / Tabs */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-3">
+            <div className="flex items-center justify-between pb-3 border-b dashboard-border mb-3">
               <div className="flex items-center gap-2">
                 {/* Search icon button */}
                 <div className="relative flex items-center">
-                  <Search className="absolute left-2.5 w-3.5 h-3.5 text-white/30" />
+                  <Search className="absolute left-2.5 w-3.5 h-3.5 dashboard-muted" />
                   <input
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     type="text"
                     placeholder="Search..."
-                    className="bg-white/[0.04] border border-white/[0.08] rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-white/20 transition-colors w-36 sm:w-44"
+                    className="dashboard-tint border dashboard-border rounded-xl pl-8 pr-3 py-1.5 text-xs dashboard-ink dashboard-placeholder outline-none dashboard-focus-border transition-colors w-36 sm:w-44"
                   />
                 </div>
 
@@ -249,8 +249,8 @@ export default function Home() {
                     onClick={() => setActiveTab(tab)}
                     className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all cursor-figma-pointer ${
                       activeTab === tab
-                        ? "bg-white/[0.08] text-white"
-                        : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
+                        ? "dashboard-tint dashboard-ink"
+                        : "dashboard-muted dashboard-hover-ink dashboard-hover-tint"
                     }`}
                   >
                     {tab}
@@ -260,13 +260,13 @@ export default function Home() {
 
               <div className="flex items-center gap-2">
                 {/* View toggle */}
-                <div className="flex items-center rounded-xl border border-white/[0.08] overflow-hidden p-0.5 bg-white/[0.02]">
+                <div className="flex items-center rounded-xl border dashboard-border overflow-hidden p-0.5 dashboard-tint">
                   <button
                     onClick={() => setViewMode("grid")}
                     className={`flex h-6 w-6 items-center justify-center rounded-lg transition-colors cursor-figma-pointer ${
                       viewMode === "grid"
-                        ? "bg-white/[0.1] text-white"
-                        : "text-white/30 hover:text-white/60"
+                        ? "dashboard-tint dashboard-ink"
+                        : "dashboard-muted dashboard-hover-ink"
                     }`}
                   >
                     <LayoutGrid className="h-3.5 w-3.5" />
@@ -275,8 +275,8 @@ export default function Home() {
                     onClick={() => setViewMode("list")}
                     className={`flex h-6 w-6 items-center justify-center rounded-lg transition-colors cursor-figma-pointer ${
                       viewMode === "list"
-                        ? "bg-white/[0.1] text-white"
-                        : "text-white/30 hover:text-white/60"
+                        ? "dashboard-tint dashboard-ink"
+                        : "dashboard-muted dashboard-hover-ink"
                     }`}
                   >
                     <List className="h-3.5 w-3.5" />
@@ -285,7 +285,7 @@ export default function Home() {
 
                 {!isWorkspacesPage && filteredWorkspaces.length > 20 && (
                   <Link href="/workspaces">
-                    <span className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-figma-pointer font-medium ml-2">
+                    <span className="text-xs dashboard-muted dashboard-hover-ink transition-colors cursor-figma-pointer font-medium ml-2">
                       Browse all →
                     </span>
                   </Link>
@@ -298,7 +298,7 @@ export default function Home() {
               {isWorkspacesError && (
                 <div
                   role="alert"
-                  className="mb-3 rounded-lg border border-white/10 p-3 text-xs text-white/70"
+                  className="mb-3 rounded-lg border dashboard-border p-3 text-xs dashboard-secondary"
                 >
                   <p>
                     {formatUserErrorMessage(
@@ -317,7 +317,7 @@ export default function Home() {
                     onClick={() => {
                       void refetchWorkspaces();
                     }}
-                    className="mt-2 rounded-lg bg-white/10 px-3 py-1 text-white hover:bg-white/15 disabled:opacity-50"
+                    className="mt-2 rounded-lg dashboard-tint px-3 py-1 dashboard-ink dashboard-hover-tint disabled:opacity-50"
                   >
                     Retry
                   </button>
@@ -328,7 +328,7 @@ export default function Home() {
                   {[1, 2, 3, 4, 5].map((i) => (
                     <div
                       key={i}
-                      className="h-28 rounded-xl border border-white/[0.06] bg-white/[0.02] animate-pulse"
+                      className="h-28 rounded-xl border dashboard-border dashboard-tint animate-pulse"
                     />
                   ))}
                 </div>
@@ -336,13 +336,13 @@ export default function Home() {
                 !workspaces ? null : filteredWorkspaces.length === 0 &&
                 !searchTerm ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
-                  <Package className="h-6 w-6 text-white/20" />
-                  <p className="text-xs font-medium text-white/60">
+                  <Package className="h-6 w-6 dashboard-muted" />
+                  <p className="text-xs font-medium dashboard-secondary">
                     No workspaces yet
                   </p>
                   <button
                     onClick={() => setIsCreateOpen(true)}
-                    className="px-3 py-1 rounded-lg bg-white/10 text-xs text-white hover:bg-white/15 transition-all cursor-figma-pointer"
+                    className="px-3 py-1 rounded-lg dashboard-tint text-xs dashboard-ink dashboard-hover-tint transition-all cursor-figma-pointer"
                   >
                     Create one
                   </button>

@@ -627,7 +627,7 @@ export default function DevDocs() {
       return (
         <h2
           id={id}
-          className="text-2xl font-semibold mt-16 mb-4 text-white/90 border-b border-white/10 pb-2 font-sans tracking-tight"
+          className="text-2xl font-semibold mt-16 mb-4 text-foreground/90 border-b border-border pb-2 font-sans tracking-tight"
           {...props}
         >
           {children}
@@ -643,7 +643,7 @@ export default function DevDocs() {
       return (
         <h3
           id={id}
-          className="text-xl font-medium mt-8 mb-4 text-white/80 font-sans tracking-tight"
+          className="text-xl font-medium mt-8 mb-4 text-foreground/80 font-sans tracking-tight"
           {...props}
         >
           {children}
@@ -652,7 +652,7 @@ export default function DevDocs() {
     },
     p: ({ children, node: _node, ...props }: MdProps<"p">) => (
       <p
-        className="leading-relaxed mb-6 text-white/70 font-sans font-light"
+        className="leading-relaxed mb-6 text-foreground/70 font-sans font-light"
         {...props}
       >
         {children}
@@ -668,7 +668,7 @@ export default function DevDocs() {
     ),
     ul: ({ children, node: _node, ...props }: MdProps<"ul">) => (
       <ul
-        className="list-disc list-outside ml-6 mb-6 space-y-2 text-white/70 font-sans font-light"
+        className="list-disc list-outside ml-6 mb-6 space-y-2 text-foreground/70 font-sans font-light"
         {...props}
       >
         {children}
@@ -676,7 +676,7 @@ export default function DevDocs() {
     ),
     ol: ({ children, node: _node, ...props }: MdProps<"ol">) => (
       <ol
-        className="list-decimal list-outside ml-6 mb-6 space-y-2 text-white/70 font-sans font-light"
+        className="list-decimal list-outside ml-6 mb-6 space-y-2 text-foreground/70 font-sans font-light"
         {...props}
       >
         {children}
@@ -696,7 +696,7 @@ export default function DevDocs() {
       );
       if (textContent.includes("[!NOTE]")) {
         return (
-          <div className="border border-blue-500/30 bg-blue-500/10 p-4 rounded-lg my-8 flex gap-3 text-white/80">
+          <div className="border border-blue-500/30 bg-blue-500/10 p-4 rounded-lg my-8 flex gap-3 text-foreground/80">
             <div className="text-blue-400 mt-0.5">
               <BookOpen className="w-5 h-5" />
             </div>
@@ -706,7 +706,7 @@ export default function DevDocs() {
       }
       if (textContent.includes("[!IMPORTANT]")) {
         return (
-          <div className="border border-purple-500/30 bg-purple-500/10 p-4 rounded-lg my-8 flex gap-3 text-white/80">
+          <div className="border border-purple-500/30 bg-purple-500/10 p-4 rounded-lg my-8 flex gap-3 text-foreground/80">
             <div className="text-purple-400 mt-0.5">
               <BookOpen className="w-5 h-5" />
             </div>
@@ -716,7 +716,7 @@ export default function DevDocs() {
       }
       return (
         <blockquote
-          className="border-l-4 border-[#3a3a3a] pl-4 my-6 italic text-white/60"
+          className="border-l-4 border-[#3a3a3a] pl-4 my-6 italic text-muted-foreground"
           {...props}
         >
           {children}
@@ -732,11 +732,11 @@ export default function DevDocs() {
       const match = /language-(\w+)/.exec(className ?? "");
       const isBlock = !!(className && match);
       return isBlock ? (
-        <div className="rounded-xl overflow-hidden border border-white/10 my-8 shadow-lg shadow-black/50">
-          <div className="bg-[#1a1a1a] px-4 py-2.5 text-xs text-white/40 font-mono border-b border-white/5 flex justify-between items-center">
+        <div className="rounded-xl overflow-hidden border border-border my-8 shadow-lg shadow-black/50">
+          <div className="bg-background px-4 py-2.5 text-xs text-muted-foreground font-mono border-b border-border flex justify-between items-center">
             <span>{match ? match[1] : "text"}</span>
           </div>
-          <pre className="p-5 overflow-x-auto text-[13px] bg-[#0A0A0A] leading-relaxed">
+          <pre className="p-5 overflow-x-auto text-[13px] bg-background leading-relaxed">
             <code className={className} {...props}>
               {children}
             </code>
@@ -744,7 +744,7 @@ export default function DevDocs() {
         </div>
       ) : (
         <code
-          className="bg-white/10 px-1.5 py-0.5 rounded-md text-[0.9em] font-mono text-blue-300"
+          className="bg-foreground/10 px-1.5 py-0.5 rounded-md text-[0.9em] font-mono text-blue-300"
           {...props}
         >
           {children}
@@ -752,15 +752,18 @@ export default function DevDocs() {
       );
     },
     table: ({ children, node: _node, ...props }: MdProps<"table">) => (
-      <div className="overflow-x-auto my-8 border border-white/10 rounded-xl">
-        <table className="w-full text-left text-sm text-white/70" {...props}>
+      <div className="overflow-x-auto my-8 border border-border rounded-xl">
+        <table
+          className="w-full text-left text-sm text-foreground/70"
+          {...props}
+        >
           {children}
         </table>
       </div>
     ),
     th: ({ children, node: _node, ...props }: MdProps<"th">) => (
       <th
-        className="bg-[#1a1a1a] px-5 py-4 font-medium text-white/90 border-b border-white/10 whitespace-nowrap"
+        className="bg-background px-5 py-4 font-medium text-foreground/90 border-b border-border whitespace-nowrap"
         {...props}
       >
         {children}
@@ -768,7 +771,7 @@ export default function DevDocs() {
     ),
     td: ({ children, node: _node, ...props }: MdProps<"td">) => (
       <td
-        className="px-5 py-4 border-b border-white/5 last:border-0 bg-[#0A0A0A]"
+        className="px-5 py-4 border-b border-border last:border-0 bg-background"
         {...props}
       >
         {children}
@@ -777,15 +780,15 @@ export default function DevDocs() {
   };
 
   const Sidebar = () => (
-    <div className="w-full h-full flex flex-col bg-[#0A0A0A] border-r border-white/10">
-      <div className="p-4 sticky top-0 bg-[#0A0A0A]/95 backdrop-blur-xl z-10 border-b border-white/5">
+    <div className="w-full h-full flex flex-col bg-background border-r border-border">
+      <div className="p-4 sticky top-0 bg-background/95 backdrop-blur-xl z-10 border-b border-border">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search docs..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 bg-[#1a1a1a] border-white/10 text-white placeholder:text-white/30 h-9 rounded-lg text-sm"
+            className="pl-9 bg-background border-border text-foreground placeholder:text-muted-foreground h-9 rounded-lg text-sm"
           />
         </div>
       </div>
@@ -801,7 +804,7 @@ export default function DevDocs() {
 
           return (
             <div key={category}>
-              <h4 className="text-xs font-bold tracking-wider uppercase text-white/40 mb-3 px-2 font-sans">
+              <h4 className="text-xs font-bold tracking-wider uppercase text-muted-foreground mb-3 px-2 font-sans">
                 {category}
               </h4>
               <ul className="space-y-1">
@@ -816,13 +819,13 @@ export default function DevDocs() {
                       className={cn(
                         "w-full text-left px-2 py-1.5 rounded-md text-[14px] transition-colors font-sans flex items-center justify-between group",
                         activePostId === post.id
-                          ? "bg-white/10 text-white font-medium"
-                          : "text-white/60 hover:text-white hover:bg-white/5",
+                          ? "bg-foreground/10 text-foreground font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-foreground/5",
                       )}
                     >
                       <span className="truncate">{post.title}</span>
                       {activePostId === post.id && (
-                        <ChevronRight className="w-3.5 h-3.5 text-white/40" />
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
                       )}
                     </button>
                   </li>
@@ -844,7 +847,7 @@ export default function DevDocs() {
   const pageDescription = activePost.subtitle;
 
   return (
-    <div className="flex min-h-screen bg-[#0A0A0A] text-white">
+    <div className="flex min-h-screen bg-background text-foreground">
       <Helmet>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
@@ -867,14 +870,14 @@ export default function DevDocs() {
       </aside>
 
       {/* Mobile Nav Toggle */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-[#0A0A0A]/90 backdrop-blur-xl border-b border-white/10 z-50 flex items-center justify-between px-4">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-background/90 backdrop-blur-xl border-b border-border z-50 flex items-center justify-between px-4">
         <div className="flex items-center gap-2 font-medium text-sm">
           <BookOpen className="w-4 h-4 text-blue-400" />
           <span>Documentation</span>
         </div>
         <button
           onClick={() => setIsMobileNavOpen(true)}
-          className="p-2 -mr-2 text-white/60 hover:text-white"
+          className="p-2 -mr-2 text-muted-foreground hover:text-foreground"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -896,12 +899,12 @@ export default function DevDocs() {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 left-0 bottom-0 w-[280px] bg-[#0A0A0A] z-[70] lg:hidden shadow-2xl border-r border-white/10"
+              className="fixed top-0 left-0 bottom-0 w-[280px] bg-background z-[70] lg:hidden shadow-2xl border-r border-border"
             >
               <div className="absolute top-2 right-2 z-10">
                 <button
                   onClick={() => setIsMobileNavOpen(false)}
-                  className="p-2 text-white/50 hover:text-white"
+                  className="p-2 text-muted-foreground hover:text-foreground"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -913,25 +916,28 @@ export default function DevDocs() {
       </AnimatePresence>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 bg-[#0A0A0A] flex pt-14 lg:pt-0">
+      <main className="flex-1 min-w-0 bg-background flex pt-14 lg:pt-0">
         <div className="flex-1 px-6 lg:px-12 py-10 lg:py-16 max-w-[800px] mx-auto lg:mx-0 w-full">
           {/* Breadcrumbs & Copy */}
           <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-2 text-[13px] font-medium text-white/40 font-sans tracking-wide">
-              <a href="/docs" className="hover:text-white/70 transition-colors">
+            <div className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground font-sans tracking-wide">
+              <a
+                href="/docs"
+                className="hover:text-foreground/70 transition-colors"
+              >
                 Docs
               </a>
               <ChevronRight className="w-3.5 h-3.5" />
               <span>{activePost.category}</span>
               <ChevronRight className="w-3.5 h-3.5" />
-              <span className="text-white/70 truncate max-w-[200px]">
+              <span className="text-foreground/70 truncate max-w-[200px]">
                 {activePost.title}
               </span>
             </div>
 
             <button
               onClick={handleCopyLink}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-white/70 transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-foreground/5 hover:bg-foreground/10 border border-border text-xs font-medium text-foreground/70 transition-colors"
             >
               <Copy className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Copy page</span>
@@ -946,16 +952,16 @@ export default function DevDocs() {
           >
             {/* Header */}
             <div className="mb-12">
-              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-6 font-sans leading-tight">
+              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground mb-6 font-sans leading-tight">
                 {activePost.title}
               </h1>
-              <p className="text-lg sm:text-xl text-white/60 font-sans font-light leading-relaxed">
+              <p className="text-lg sm:text-xl text-muted-foreground font-sans font-light leading-relaxed">
                 {activePost.subtitle}
               </p>
             </div>
 
             {/* Markdown Body */}
-            <div className="prose prose-invert prose-blue max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-p:leading-relaxed">
+            <div className="prose theme-prose prose-blue max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-p:leading-relaxed">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={markdownComponents}
@@ -965,7 +971,7 @@ export default function DevDocs() {
             </div>
 
             {/* Footer */}
-            <div className="mt-20 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-sm text-white/40 gap-4">
+            <div className="mt-20 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between text-sm text-muted-foreground gap-4">
               <div>Last updated: {activePost.date}</div>
               <div>Written by {activePost.author}</div>
             </div>
@@ -974,8 +980,8 @@ export default function DevDocs() {
 
         {/* Right Sidebar (Table of Contents) */}
         {headings.length > 0 && (
-          <aside className="hidden xl:block w-[240px] shrink-0 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto py-16 pr-8 pl-4 border-l border-white/5 scrollbar-hide">
-            <h4 className="text-xs font-bold tracking-wider uppercase text-white/40 mb-4 font-sans">
+          <aside className="hidden xl:block w-[240px] shrink-0 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto py-16 pr-8 pl-4 border-l border-border scrollbar-hide">
+            <h4 className="text-xs font-bold tracking-wider uppercase text-muted-foreground mb-4 font-sans">
               On this page
             </h4>
             <ul className="space-y-2.5 text-[13px] font-sans font-medium">
@@ -990,7 +996,7 @@ export default function DevDocs() {
                       "block transition-colors leading-snug",
                       activeHeadingId === heading.id
                         ? "text-blue-400"
-                        : "text-white/50 hover:text-white/80",
+                        : "text-muted-foreground hover:text-foreground/80",
                     )}
                     onClick={(e) => {
                       e.preventDefault();

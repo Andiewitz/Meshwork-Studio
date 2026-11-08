@@ -105,7 +105,7 @@ export default function PrivacyPolicy() {
   return (
     <div
       ref={containerRef}
-      className="relative font-sans text-white min-h-screen flex flex-col bg-background"
+      className="relative font-sans text-foreground min-h-screen flex flex-col bg-background"
     >
       <Helmet>
         <title>Privacy Policy</title>
@@ -122,18 +122,18 @@ export default function PrivacyPolicy() {
       </div>
 
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/40 backdrop-blur-2xl border-b border-white/[0.05] shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 border-b border-border">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-9 h-9 flex items-center justify-center transition-all group-hover:drop-shadow-[0_0_12px_rgba(26,115,232,0.5)]">
               <MeshworkLogo />
             </div>
-            <span className="text-lg font-headline font-bold tracking-tight hidden sm:block text-white">
+            <span className="text-lg font-headline font-bold tracking-tight hidden sm:block text-foreground">
               Meshwork Studio
             </span>
           </Link>
           <Link href="/">
-            <button className="flex items-center gap-2 text-sm font-medium text-white/60 hover:text-white transition-colors cursor-pointer">
+            <button className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
               <ArrowLeftIcon className="w-4 h-4" />
               Back to Home
             </button>
@@ -151,13 +151,13 @@ export default function PrivacyPolicy() {
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="mb-16"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-xs font-bold tracking-widest uppercase text-white/50 mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-foreground/[0.05] border border-border text-xs font-bold tracking-widest uppercase text-muted-foreground mb-6">
               Legal
             </div>
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-4">
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground mb-4">
               Privacy Policy
             </h1>
-            <p className="text-white/40 text-base font-medium">
+            <p className="text-muted-foreground text-base font-medium">
               Effective Date: {EFFECTIVE_DATE}
             </p>
           </motion.div>
@@ -167,7 +167,7 @@ export default function PrivacyPolicy() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.5 }}
-            className="text-white/50 text-[15px] leading-[1.8] font-medium mb-8"
+            className="text-muted-foreground text-[15px] leading-[1.8] font-medium mb-8"
           >
             At Meshwork Studio, we take your privacy seriously. This Privacy
             Policy explains what information we collect, how we use it, how we
@@ -180,14 +180,14 @@ export default function PrivacyPolicy() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.4 }}
-            className="p-4 sm:p-5 mb-14 bg-white/[0.03] border border-white/10 rounded-none flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            className="p-4 sm:p-5 mb-14 bg-foreground/[0.03] border border-border rounded-none flex flex-col sm:flex-row sm:items-center justify-between gap-4"
           >
             <div className="space-y-1">
-              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
                 <span className="w-2 h-2 rounded-none bg-emerald-400 inline-block" />
                 Cookie &amp; Tracking Controls
               </h3>
-              <p className="text-xs text-white/50 leading-relaxed">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 You can inspect or adjust your cookie permissions and telemetry
                 preferences at any time.
               </p>
@@ -199,7 +199,7 @@ export default function PrivacyPolicy() {
                   new CustomEvent("meshwork:open-cookie-preferences"),
                 );
               }}
-              className="shrink-0 px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-mono text-xs uppercase tracking-wider rounded-none flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              className="shrink-0 px-4 py-2.5 bg-foreground/10 hover:bg-foreground/20 border border-border text-foreground font-mono text-xs uppercase tracking-wider rounded-none flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <AdjustmentsHorizontalIcon className="w-3.5 h-3.5 text-indigo-400" />
               <span>Customize Preferences</span>
@@ -217,7 +217,7 @@ export default function PrivacyPolicy() {
                 variants={sectionVariants}
                 className="group"
               >
-                <h2 className="text-lg font-bold text-white mb-3 tracking-tight">
+                <h2 className="text-lg font-bold text-foreground mb-3 tracking-tight">
                   {section.title}
                 </h2>
 
@@ -226,23 +226,23 @@ export default function PrivacyPolicy() {
                   <div className="space-y-5">
                     {section.subsections.map((sub, j) => (
                       <div key={j}>
-                        <h3 className="text-sm font-bold text-white/70 mb-1.5 tracking-wide uppercase">
+                        <h3 className="text-sm font-bold text-foreground/70 mb-1.5 tracking-wide uppercase">
                           {sub.subtitle}
                         </h3>
-                        <p className="text-white/50 text-[15px] leading-[1.8] font-medium">
+                        <p className="text-muted-foreground text-[15px] leading-[1.8] font-medium">
                           {sub.content}
                         </p>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-white/50 text-[15px] leading-[1.8] font-medium">
+                  <p className="text-muted-foreground text-[15px] leading-[1.8] font-medium">
                     {section.content}
                   </p>
                 )}
 
                 {i < sections.length - 1 && (
-                  <div className="mt-10 border-t border-white/[0.04]" />
+                  <div className="mt-10 border-t border-border" />
                 )}
               </motion.div>
             ))}
@@ -253,17 +253,17 @@ export default function PrivacyPolicy() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.2, duration: 0.5 }}
-            className="mt-20 pt-10 border-t border-white/[0.06] flex items-center justify-between"
+            className="mt-20 pt-10 border-t border-border flex items-center justify-between"
           >
             <Link
               href="/terms"
-              className="text-sm text-white/40 hover:text-white transition-colors font-medium"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               ← Terms of Service
             </Link>
             <Link
               href="/"
-              className="text-sm text-white/40 hover:text-white transition-colors font-medium"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               Back to Home
             </Link>

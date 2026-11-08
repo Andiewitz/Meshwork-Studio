@@ -287,7 +287,7 @@ export function WorkspaceLeftSidebar({
           <div className="px-3 pt-2 flex justify-end">
             <button
               onClick={() => setMessages([])}
-              className="text-[9px] text-white/25 hover:text-red-400 flex items-center gap-1 transition-colors"
+              className="text-[9px] ws-dim hover:text-red-400 flex items-center gap-1 transition-colors"
             >
               <TrashIcon className="w-2.5 h-2.5" />
               Clear
@@ -301,7 +301,7 @@ export function WorkspaceLeftSidebar({
           <div className="flex items-center justify-between pb-1">
             <button
               type="button"
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-lg ws-muted ws-hover-ink ws-hover-surface transition-colors"
               title="Chat History"
             >
               <LuHistory className="w-4 h-4" />
@@ -310,7 +310,7 @@ export function WorkspaceLeftSidebar({
             <button
               type="button"
               onClick={() => setMessages([])}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-lg ws-muted ws-hover-ink ws-hover-surface transition-colors"
               title="New Chat"
             >
               <LuPlus className="w-4 h-4" />
@@ -320,14 +320,12 @@ export function WorkspaceLeftSidebar({
           {messages.length === 0 && (
             <div className="workspace-assistant-intro py-2 flex flex-col">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-5 h-5 rounded-md bg-white/[0.07] border border-white/[0.08] flex items-center justify-center shrink-0">
-                  <CpuChipIcon className="w-3 h-3 text-white/70" />
+                <div className="w-5 h-5 rounded-md ws-surface-soft border ws-border flex items-center justify-center shrink-0">
+                  <CpuChipIcon className="w-3 h-3 ws-ink" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-medium text-white/80">
-                    Jenkos
-                  </p>
-                  <p className="text-[10px] text-white/35">
+                  <p className="text-[11px] font-medium ws-ink">Jenkos</p>
+                  <p className="text-[10px] ws-dim">
                     Describe any system or ask to design cloud topologies.
                   </p>
                 </div>
@@ -343,7 +341,7 @@ export function WorkspaceLeftSidebar({
                       setInput(s);
                       textareaRef.current?.focus();
                     }}
-                    className="flex items-center gap-2 border-b border-white/[0.06] py-2 px-0.5 text-left text-[11.5px] text-white/55 hover:bg-white/[0.04] hover:text-white/85 transition-colors duration-100 cursor-pointer rounded-sm"
+                    className="flex items-center gap-2 border-b ws-border py-2 px-0.5 text-left text-[11.5px] ws-muted ws-hover-surface ws-hover-ink transition-colors duration-100 cursor-pointer rounded-sm"
                   >
                     <svg
                       width="10"
@@ -354,7 +352,7 @@ export function WorkspaceLeftSidebar({
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      className="shrink-0 text-white/25"
+                      className="shrink-0 ws-dim"
                     >
                       <path d="M9 10l-5 5 5 5" />
                       <path d="M20 4v7a4 4 0 0 1-4 4H4" />
@@ -374,14 +372,14 @@ export function WorkspaceLeftSidebar({
             >
               {msg.role === "user" ? (
                 <div className="flex justify-end">
-                  <div className="workspace-user-message max-w-[85%] rounded-xl rounded-tr-sm px-3 py-2 text-[11px] text-white">
+                  <div className="workspace-user-message max-w-[85%] rounded-xl rounded-tr-sm px-3 py-2 text-[11px] ws-ink">
                     <span className="whitespace-pre-wrap">{msg.content}</span>
                   </div>
                 </div>
               ) : (
                 /* Assistant — no bubble */
                 <div className="flex gap-2">
-                  <div className="w-5 h-5 rounded-md bg-white/[0.07] border border-white/[0.08] flex items-center justify-center shrink-0 mt-0.5 text-white/70">
+                  <div className="w-5 h-5 rounded-md ws-surface-soft border ws-border flex items-center justify-center shrink-0 mt-0.5 ws-ink">
                     <CpuChipIcon className="w-3 h-3" />
                   </div>
                   <div className="flex-1 min-w-0 pt-0.5">
@@ -400,20 +398,20 @@ export function WorkspaceLeftSidebar({
                     />
 
                     {msg.toolCalls && msg.toolCalls.length > 0 && (
-                      <div className="space-y-1.5 mt-2 pt-2 border-t border-white/[0.06]">
+                      <div className="space-y-1.5 mt-2 pt-2 border-t ws-border">
                         {msg.toolCalls.map((tc) => (
                           <div
                             key={tc.id}
-                            className="flex items-start gap-2 p-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[10px] text-white/70 font-mono"
+                            className="flex items-start gap-2 p-1.5 rounded-lg ws-surface-soft border ws-border text-[10px] ws-ink font-mono"
                           >
-                            <SparklesIcon className="w-3 h-3 mt-0.5 text-white/50 shrink-0" />
+                            <SparklesIcon className="w-3 h-3 mt-0.5 ws-muted shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-white/80">
+                              <div className="font-semibold ws-ink">
                                 {tc.name === "edit_canvas"
                                   ? "🛠️ Canvas Action"
                                   : `🛠️ ${tc.name}`}
                               </div>
-                              <div className="text-white/60 text-[9px] mt-0.5 whitespace-normal">
+                              <div className="ws-muted text-[9px] mt-0.5 whitespace-normal">
                                 {tc.result?.summary ||
                                   tc.args.explanation ||
                                   "Modified architecture components."}
@@ -425,8 +423,8 @@ export function WorkspaceLeftSidebar({
                     )}
 
                     {msg.appliedToCanvas && !msg.toolCalls && (
-                      <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-white/40 font-medium">
-                        <div className="w-1 h-1 rounded-full bg-white/40" />
+                      <div className="flex items-center gap-1.5 mt-1.5 text-[9px] ws-muted font-medium">
+                        <div className="w-1 h-1 rounded-full ws-surface-soft" />
                         Applied to canvas
                       </div>
                     )}
@@ -449,7 +447,7 @@ export function WorkspaceLeftSidebar({
         <div className="p-2.5 pt-1">
           <form
             onSubmit={handleSubmit}
-            className="workspace-composer rounded-2xl bg-white/[0.04] border border-white/[0.08] focus-within:border-white/20 transition-all p-2.5 space-y-2"
+            className="workspace-composer rounded-2xl ws-surface-soft border ws-border ws-focus-within-border transition-all p-2.5 space-y-2"
           >
             <textarea
               ref={textareaRef}
@@ -457,11 +455,11 @@ export function WorkspaceLeftSidebar({
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder="Queue follow-up..."
-              className="w-full bg-transparent border-0 resize-none outline-none text-white text-[12px] placeholder:text-white/30 px-0.5 py-0.5 leading-relaxed min-h-[44px] max-h-28 scrollbar-thin"
+              className="w-full bg-transparent border-0 resize-none outline-none ws-ink text-[12px] ws-placeholder px-0.5 py-0.5 leading-relaxed min-h-[44px] max-h-28 scrollbar-thin"
               rows={1}
             />
 
-            <div className="flex items-center justify-between pt-1 border-t border-white/[0.04]">
+            <div className="flex items-center justify-between pt-1 border-t ws-border">
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
@@ -469,7 +467,7 @@ export function WorkspaceLeftSidebar({
                     setInput((prev) => prev + " @context");
                     textareaRef.current?.focus();
                   }}
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/[0.06] transition-all"
+                  className="w-6 h-6 rounded-full flex items-center justify-center ws-muted ws-hover-ink ws-hover-surface transition-all"
                   title="Add context"
                 >
                   <PlusIcon className="w-3.5 h-3.5" />
@@ -478,13 +476,13 @@ export function WorkspaceLeftSidebar({
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
-                  className="h-6 px-2 rounded-full bg-white/[0.06] border border-white/[0.08] text-white text-[10px] font-medium outline-none cursor-pointer hover:bg-white/[0.1] transition-all"
+                  className="h-6 px-2 rounded-full ws-surface-soft border ws-border ws-ink text-[10px] font-medium outline-none cursor-pointer ws-hover-surface transition-all"
                 >
                   {AVAILABLE_MODELS.map((m) => (
                     <option
                       key={m.id}
                       value={m.id}
-                      className="bg-[#18181b] text-white"
+                      className="ws-option ws-ink"
                     >
                       Build ▾ ({m.name.split(" ")[0]})
                     </option>
@@ -496,7 +494,7 @@ export function WorkspaceLeftSidebar({
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="h-7 px-3.5 rounded-full flex items-center gap-1.5 bg-white text-black font-semibold text-[11px] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 active:scale-95 transition-all shadow-sm cursor-pointer"
+                  className="h-7 px-3.5 rounded-full flex items-center gap-1.5 ws-primary font-semibold text-[11px] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all shadow-sm cursor-pointer"
                 >
                   <PaperAirplaneIcon className="w-3 h-3" />
                   <span>Build</span>
