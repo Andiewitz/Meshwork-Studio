@@ -17,6 +17,7 @@ async function main() {
   const allowed = new Set([
     "BACKUP_S3_URI",
     "ARTIFACT_S3_BUCKET",
+    "CANVAS_S3_BUCKET",
     "COGNITO_DOMAIN",
     "COGNITO_CLIENT_ID",
     "COGNITO_POOL_ID",

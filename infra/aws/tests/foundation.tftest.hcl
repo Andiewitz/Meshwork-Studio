@@ -17,6 +17,10 @@ variables {
 run "portfolio_plan" {
   command = plan
   assert {
+    condition     = length(aws_s3_bucket.canvas_documents) == 0
+    error_message = "Canvas document storage must be opt-in to avoid silently changing existing storage."
+  }
+  assert {
     condition     = aws_s3_bucket.backups.force_destroy == false && aws_s3_bucket_public_access_block.backups.block_public_policy
     error_message = "Backups must remain private and protected from force deletion."
   }
@@ -31,6 +35,19 @@ run "portfolio_plan" {
   assert {
     condition     = aws_cognito_user_pool.users.user_pool_tier == "LITE" && length(aws_cloudwatch_metric_alarm.service) <= 10
     error_message = "Keep the low-cost Cognito tier and alarm count."
+  }
+}
+
+run "canvas_bucket_opt_in" {
+  command = plan
+  variables { enable_canvas_object_bucket = true }
+  assert {
+    condition     = length(aws_s3_bucket.canvas_documents) == 1 && !aws_s3_bucket.canvas_documents[0].force_destroy && aws_s3_bucket_public_access_block.canvas_documents[0].block_public_policy
+    error_message = "Canvas documents must have a private bucket protected from force deletion."
+  }
+  assert {
+    condition     = aws_ssm_parameter.canvas_documents[0].name == "/meshwork-prod/runtime/CANVAS_S3_BUCKET"
+    error_message = "The canvas bucket must be exposed in the runtime configuration."
   }
 }
 

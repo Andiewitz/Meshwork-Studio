@@ -17,6 +17,22 @@ resource "aws_iam_role_policy" "ec2" {
     { Effect = "Allow", Action = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"], Resource = "arn:${local.partition}:ssm:${var.aws_region}:${var.aws_account_id}:parameter/${local.name}/*" }
   ] })
 }
+resource "aws_iam_role_policy" "canvas_documents" {
+  count = var.enable_canvas_object_bucket ? 1 : 0
+  name  = "${local.name}-canvas-documents"
+  role  = var.ec2_role_name
+  policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Effect = "Allow", Action = ["s3:ListBucket"], Resource = aws_s3_bucket.canvas_documents[0].arn, Condition = { StringLike = { "s3:prefix" = "canvases/*" } } },
+    { Effect = "Allow", Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], Resource = "${aws_s3_bucket.canvas_documents[0].arn}/canvases/*" }
+  ] })
+}
+resource "aws_ssm_parameter" "canvas_documents" {
+  count = var.enable_canvas_object_bucket ? 1 : 0
+  name  = "/${local.name}/runtime/CANVAS_S3_BUCKET"
+  type  = "String"
+  tier  = "Standard"
+  value = aws_s3_bucket.canvas_documents[0].id
+}
 resource "aws_ssm_parameter" "runtime" {
   for_each = {
     BACKUP_S3_URI      = "s3://${aws_s3_bucket.backups.id}/${local.backup_prefix}"

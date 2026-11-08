@@ -79,6 +79,11 @@ variable "canvas_table_name" {
   type        = string
   default     = "meshwork-canvas"
 }
+variable "enable_canvas_object_bucket" {
+  description = "Create a private S3 bucket for canvas documents. Enable only after checking whether CANVAS_S3_BUCKET already points to existing data; this does not migrate it."
+  type        = bool
+  default     = false
+}
 variable "github_repository" {
   type    = string
   default = "Andiewitz/Meshwork-Studio"

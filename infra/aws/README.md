@@ -1,5 +1,7 @@
 # AWS additions for the existing EC2 deployment
 
+See [OFFLOAD-AUDIT.md](OFFLOAD-AUDIT.md) for service choices, cost caveats, and the opt-in canvas object bucket.
+
 Status: implemented locally; AWS deployment and live verification pending.
 
 This root adds Cognito Lite, encrypted SQS email delivery, Lambda/SES workers,
