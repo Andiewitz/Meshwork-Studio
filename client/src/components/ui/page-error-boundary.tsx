@@ -1,9 +1,11 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { ErrorState } from "@/components/ui/error-state";
+import { isChunkError, retryStaleChunkOnce } from "@/lib/chunk-recovery";
 
 interface Props {
   children?: ReactNode;
   fallbackTitle?: string;
+  resetKey?: string;
 }
 
 interface State {
@@ -41,16 +43,21 @@ export class PageErrorBoundary extends Component<Props, State> {
     );
 
     // Auto-reload if dynamic module import failed due to app deployment update
-    if (
-      error.name === "ChunkLoadError" ||
-      error.message?.includes("Failed to fetch dynamically imported module")
-    ) {
-      window.location.reload();
+    retryStaleChunkOnce(error);
+  }
+
+  public componentDidUpdate(previousProps: Props) {
+    if (this.state.hasError && previousProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, error: null, incidentId: "" });
     }
   }
 
   private handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    if (this.state.error && isChunkError(this.state.error)) {
+      window.location.reload();
+      return;
+    }
+    this.setState({ hasError: false, error: null, incidentId: "" });
   };
 
   public render() {

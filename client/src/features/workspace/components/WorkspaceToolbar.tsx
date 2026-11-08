@@ -139,20 +139,21 @@ export function WorkspaceToolbar({
 
         {/* Connection Settings Popover */}
         <Popover>
-          <PopoverTrigger asChild>
-            <Tooltip>
-              <TooltipTrigger asChild>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
+                  aria-label="Connection style"
                   className="w-8 h-8 rounded-xl ws-muted ws-hover-ink ws-hover-surface transition-all"
                 >
                   <FiShare2 className="w-3.5 h-3.5" />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Connection Style</TooltipContent>
-            </Tooltip>
-          </PopoverTrigger>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="top">Connection Style</TooltipContent>
+          </Tooltip>
           <PopoverContent
             className="workspace-popover w-64 p-3 ws-option backdrop-blur-2xl border ws-border rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)] z-[150] space-y-3.5 ws-ink"
             side="top"

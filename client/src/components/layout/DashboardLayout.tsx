@@ -34,7 +34,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
 
   const isOverview = location === "/home";
-  const isDev = location === "/dev";
+  const isTemplates = location === "/templates";
   const isTeam = location === "/team";
 
   const [profileOpen, setProfileOpen] = useState(false);
@@ -91,12 +91,16 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       wheelMultiplier: 1,
       touchMultiplier: 2,
     });
+    let frameId: number;
     const raf = (t: number) => {
       lenis.raf(t);
-      requestAnimationFrame(raf);
+      frameId = requestAnimationFrame(raf);
     };
-    requestAnimationFrame(raf);
-    return () => lenis.destroy();
+    frameId = requestAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(frameId);
+      lenis.destroy();
+    };
   }, []);
 
   const userName = user?.firstName || user?.email?.split("@")[0] || "User";
@@ -170,10 +174,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               </kbd>
             </button>
 
-            <Link href="/dev">
+            <Link href="/templates">
               <button
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-colors cursor-figma-pointer ${
-                  isDev
+                  isTemplates
                     ? "dashboard-tint dashboard-ink"
                     : "dashboard-secondary dashboard-hover-tint dashboard-hover-ink"
                 }`}
@@ -385,7 +389,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       </nav>
       {/* ── Main Canvas View Container — Curved rounded-[24px] box ── */}
       <main className="dashboard-content flex-1 rounded-[24px] overflow-hidden border dashboard-border dashboard-content-surface relative min-w-0 min-h-[calc(100vh-84px)] lg:min-h-[calc(100vh-20px)] shadow-2xl flex flex-col">
-        <PageErrorBoundary>{children}</PageErrorBoundary>
+        <PageErrorBoundary resetKey={location}>{children}</PageErrorBoundary>
       </main>
 
       {!onboardingComplete && <OnboardingFlow />}

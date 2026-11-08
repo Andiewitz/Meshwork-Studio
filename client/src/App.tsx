@@ -69,23 +69,35 @@ const {
 
 // Preload route chunks on hover or intent
 export function preloadRoute(path: string) {
-  if (path === "/" || path === "/landing") void import("@/pages/Landing");
+  if (path === "/" || path === "/landing")
+    void import("@/pages/Landing").catch(() => {});
   else if (path === "/home" || path === "/workspaces")
-    void import("@/pages/Home");
-  else if (path === "/settings") void import("@/pages/Settings");
-  else if (path.startsWith("/workspace/")) void import("@/pages/Workspace");
-  else if (path === "/dev" || path === "/docs") void import("@/pages/Dev");
-  else if (path === "/team") void import("@/pages/Team");
-  else if (path === "/templates") void import("@/pages/Templates");
-  else if (path === "/terms") void import("@/pages/TermsOfService");
-  else if (path === "/privacy") void import("@/pages/PrivacyPolicy");
+    void import("@/pages/Home").catch(() => {});
+  else if (path === "/settings")
+    void import("@/pages/Settings").catch(() => {});
+  else if (path.startsWith("/workspace/"))
+    void import("@/pages/Workspace").catch(() => {});
+  else if (path === "/dev" || path === "/docs")
+    void import("@/pages/Dev").catch(() => {});
+  else if (path === "/team") void import("@/pages/Team").catch(() => {});
+  else if (path === "/templates")
+    void import("@/pages/Templates").catch(() => {});
+  else if (path === "/terms")
+    void import("@/pages/TermsOfService").catch(() => {});
+  else if (path === "/privacy")
+    void import("@/pages/PrivacyPolicy").catch(() => {});
   else if (path === "/login" || path === "/register")
-    void import("@/pages/AuthPage");
+    void import("@/pages/AuthPage").catch(() => {});
 }
 
 // Preload current route immediately on initial script execution
 const initialPath = window.location.pathname;
 preloadRoute(initialPath);
+
+function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+  return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
+}
 
 function ProtectedRoute({
   component: Component,
@@ -230,11 +242,11 @@ function App() {
                 <GlobalThemeToggle />
                 <Toaster />
                 <CookieBanner />
-                <ErrorBoundary>
+                <RouteErrorBoundary>
                   <Suspense fallback={<DefaultLoading />}>
                     <Router />
                   </Suspense>
-                </ErrorBoundary>
+                </RouteErrorBoundary>
               </TooltipProvider>
             </ThemeProvider>
           </WouterRouter>

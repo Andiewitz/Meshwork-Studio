@@ -1,8 +1,10 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { ErrorState } from "@/components/ui/error-state";
+import { isChunkError, retryStaleChunkOnce } from "@/lib/chunk-recovery";
 
 interface Props {
   children?: ReactNode;
+  resetKey?: string;
 }
 
 interface State {
@@ -42,14 +44,22 @@ export class ErrorBoundary extends Component<Props, State> {
     );
 
     // Auto-reload for ChunkLoadError (user is on an old deployment version)
-    if (
-      error.name === "ChunkLoadError" ||
-      error.message.includes("Failed to fetch dynamically imported module")
-    ) {
-      // Force a hard reload from server
-      window.location.reload();
+    retryStaleChunkOnce(error);
+  }
+
+  public componentDidUpdate(previousProps: Props) {
+    if (this.state.hasError && previousProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, error: null, incidentId: "" });
     }
   }
+
+  private handleRetry = () => {
+    if (this.state.error && isChunkError(this.state.error)) {
+      window.location.reload();
+      return;
+    }
+    this.setState({ hasError: false, error: null, incidentId: "" });
+  };
 
   public render() {
     if (this.state.hasError) {
@@ -57,12 +67,13 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen bg-background">
           <ErrorState
             title="This page ran into a problem"
-            description="We couldn’t display this page. Return to your projects and try again."
+            description="We couldn’t display this page. Try again or return to your projects."
             detail={
               this.state.incidentId
                 ? `Reference: ${this.state.incidentId}`
                 : undefined
             }
+            onRetry={this.handleRetry}
             home
           />
         </div>
