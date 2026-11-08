@@ -523,7 +523,7 @@ html {
 }
 :root[data-theme="light"] {
   color-scheme: light;
-  --workspace-canvas: #f1f2f4;
+  --workspace-canvas: #ffffff;
   --surface-lowest: 0 0% 100%;
   --surface-low: 220 14% 97%;
   --surface: 0 0% 100%;

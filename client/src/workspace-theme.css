@@ -12,7 +12,7 @@
 }
 :root[data-theme="light"] .workspace-editor-shell {
   --editor-shell: #f8f9fb;
-  --editor-canvas: #edf0f4;
+  --editor-canvas: #ffffff;
   --editor-line: #d9dee6;
   --editor-panel: #ffffff;
   --editor-panel-hover: #edf1f6;
