@@ -19,6 +19,8 @@ import {
   JenkosAgentMessage,
 } from "@/features/workspace/agent/jenkosAgent";
 import { executeCanvasToolCalls } from "@/features/workspace/agent/tools/canvasToolExecutor";
+import { ArchitecturePlans } from "./ArchitecturePlans";
+import type { Node, Edge } from "@xyflow/react";
 
 const DEFAULT_SUGGESTIONS = [
   "Add a Redis caching layer to the backend",
@@ -46,11 +48,23 @@ const CATEGORY_ORDER = ["Core", "More", "Kubernetes", "Templates"];
 export interface WorkspaceLeftSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  workspaceId: string;
+  planDisabled: boolean;
+  onBeforePlanApply: () => void;
+  onPlanApplied: (
+    result: ReturnType<typeof executeCanvasToolCalls>,
+    oldNodes: Node[],
+    oldEdges: Edge[],
+  ) => void;
 }
 
 export function WorkspaceLeftSidebar({
   isOpen,
   onClose,
+  workspaceId,
+  planDisabled,
+  onBeforePlanApply,
+  onPlanApplied,
 }: WorkspaceLeftSidebarProps) {
   const [messages, setMessages] = useState<JenkosAgentMessage[]>([]);
   const [input, setInput] = useState("");
@@ -491,6 +505,15 @@ export function WorkspaceLeftSidebar({
               </div>
 
               <div className="flex items-center gap-1">
+                <ArchitecturePlans
+                  key={workspaceId}
+                  workspaceId={workspaceId}
+                  prompt={input}
+                  model={selectedModel}
+                  disabled={isLoading || planDisabled}
+                  onBeforeApply={onBeforePlanApply}
+                  onApplied={onPlanApplied}
+                />
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}

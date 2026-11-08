@@ -2025,6 +2025,25 @@ function WorkspaceView() {
           <WorkspaceLeftSidebar
             isOpen={isSidebarOpen && canEdit}
             onClose={() => setIsSidebarOpen(false)}
+            workspaceId={workspaceId}
+            planDisabled={!canEdit || draftConflict}
+            onBeforePlanApply={takeSnapshot}
+            onPlanApplied={(result, oldNodes, oldEdges) => {
+              const oldNodeIds = new Set(oldNodes.map((node) => node.id));
+              const oldEdgeIds = new Set(oldEdges.map((edge) => edge.id));
+              sendNodesChange(
+                result.nodes.map((item) =>
+                  oldNodeIds.has(item.id)
+                    ? { type: "replace" as const, id: item.id, item }
+                    : { type: "add" as const, item },
+                ),
+              );
+              sendEdgesChange(
+                result.edges
+                  .filter((edge) => !oldEdgeIds.has(edge.id))
+                  .map((item) => ({ type: "add" as const, item })),
+              );
+            }}
           />
         </div>
 
