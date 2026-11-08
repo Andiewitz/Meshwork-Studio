@@ -993,10 +993,15 @@ function WorkspaceView() {
           duration: 800,
           padding: 1.2,
         });
+        setNodes((current) =>
+          current.map((item) => ({ ...item, selected: item.id === nodeId })),
+        );
         setSelectedNodeId(nodeId);
+        setSelectedEdgeId(null);
+        setActiveTab("properties");
       }
     },
-    [nodes, fitView],
+    [nodes, fitView, setNodes],
   );
 
   useEffect(() => {
@@ -1901,6 +1906,7 @@ function WorkspaceView() {
       <WorkspaceHeader
         theme={workspaceTheme}
         onToggleTheme={toggleTheme}
+        onOpenSearch={() => setSearchOpen(true)}
         workspace={workspace}
         workspaceId={workspaceId}
         user={user}
@@ -2674,6 +2680,8 @@ function WorkspaceView() {
       </Dialog>
 
       <ActionSearchBar
+        nodes={nodes}
+        onSelectNode={focusNode}
         isModal
         isOpen={searchOpen}
         onClose={() => setSearchOpen(false)}

@@ -37,6 +37,7 @@ import {
   CommandLineIcon,
   SunIcon,
   MoonIcon,
+  MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import { LuPanelLeft } from "react-icons/lu";
 import {
@@ -52,6 +53,7 @@ import {
 export interface WorkspaceHeaderProps {
   theme: "dark" | "light";
   onToggleTheme: () => void;
+  onOpenSearch: () => void;
   workspace: any;
   workspaceId: string;
   user: any;
@@ -100,6 +102,7 @@ export interface WorkspaceHeaderProps {
 export function WorkspaceHeader({
   theme,
   onToggleTheme,
+  onOpenSearch,
   workspace,
   workspaceId,
   user,
@@ -504,6 +507,15 @@ export function WorkspaceHeader({
 
         {/* ── Right Section: Collaborators, Share, Upgrade, Publish ── */}
         <div className="flex items-center gap-2 z-10">
+          <button
+            type="button"
+            onClick={onOpenSearch}
+            aria-label="Search workspaces and canvas"
+            title="Search (Ctrl/⌘ K)"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-white/60 hover:bg-white/[0.06] hover:text-white transition-colors"
+          >
+            <MagnifyingGlassIcon className="h-4 w-4" />
+          </button>
           {/* Live Collaborators */}
           <Popover>
             <PopoverTrigger asChild>
