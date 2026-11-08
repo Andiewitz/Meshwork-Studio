@@ -121,7 +121,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="bg-[#09090b] text-white font-body selection:bg-white/20 selection:text-white min-h-screen antialiased flex p-2.5 gap-2.5 cursor-figma">
+    <div className="dashboard-shell bg-[#09090b] text-white font-body selection:bg-white/20 selection:text-white min-h-screen antialiased flex p-2.5 gap-2.5 cursor-figma">
       {/* ── Sidebar (240px / w-60) ── */}
       <aside className="w-60 shrink-0 flex flex-col justify-between h-[calc(100vh-20px)] sticky top-2.5 z-50 select-none">
         <div className="flex flex-col flex-1 overflow-y-auto space-y-4 pr-1 hide-scrollbar">
@@ -351,7 +351,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* ── Main Canvas View Container — Curved rounded-[24px] box ── */}
-      <main className="flex-1 rounded-[24px] overflow-hidden border border-white/[0.08] bg-[#0c0d14] relative min-h-[calc(100vh-20px)] shadow-2xl flex flex-col">
+      <main className="dashboard-content flex-1 rounded-[24px] overflow-hidden border border-white/[0.08] bg-[#0c0d14] relative min-h-[calc(100vh-20px)] shadow-2xl flex flex-col">
         <PageErrorBoundary>{children}</PageErrorBoundary>
       </main>
 

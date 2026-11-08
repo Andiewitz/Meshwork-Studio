@@ -65,7 +65,7 @@ export function WorkspaceToolbar({
         initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-        className="flex items-center rounded-2xl p-1 gap-0.5 bg-[#121214]/90 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_40px_rgba(0,0,0,0.6)] select-none"
+        className="workspace-toolbar flex items-center rounded-2xl p-1 gap-0.5 bg-[#121214]/90 backdrop-blur-2xl border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_40px_rgba(0,0,0,0.6)] select-none"
       >
         {/* Select Tool */}
         <Tooltip>
@@ -73,6 +73,7 @@ export function WorkspaceToolbar({
             <Button
               variant="ghost"
               size="icon"
+              aria-pressed={drawingMode === "select"}
               onClick={() => setDrawingMode("select")}
               className={`w-8 h-8 rounded-xl transition-all ${
                 drawingMode === "select"
@@ -92,6 +93,7 @@ export function WorkspaceToolbar({
             <Button
               variant="ghost"
               size="icon"
+              aria-pressed={drawingMode === "pan"}
               onClick={() => setDrawingMode("pan")}
               className={`w-8 h-8 rounded-xl transition-all ${
                 drawingMode === "pan"
@@ -149,7 +151,7 @@ export function WorkspaceToolbar({
             </Tooltip>
           </PopoverTrigger>
           <PopoverContent
-            className="w-64 p-3 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)] z-[150] space-y-3.5 text-white"
+            className="workspace-popover w-64 p-3 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)] z-[150] space-y-3.5 text-white"
             side="top"
             align="center"
             sideOffset={14}

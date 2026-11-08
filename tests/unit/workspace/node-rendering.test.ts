@@ -62,7 +62,13 @@ describe("node appearance through React Flow", () => {
     );
     expect(title).toBeTruthy();
     const surface = title!.parentElement!.parentElement!;
-    expect(surface.style.backgroundColor).toBe("#dff2e5");
+    expect(surface.style.backgroundColor).toBe("var(--node-layer-background)");
+    expect(surface.style.getPropertyValue("--node-light-background")).toBe(
+      "#dff2e5",
+    );
+    expect(surface.style.getPropertyValue("--node-dark-background")).toBe(
+      "#1a2c25",
+    );
     expect(surface.querySelector('[aria-hidden="true"]')).not.toBeNull();
     expect(style.backgroundColor).toBe("#4169E1");
   });

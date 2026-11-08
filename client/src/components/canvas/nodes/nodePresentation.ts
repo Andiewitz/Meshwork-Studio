@@ -62,13 +62,24 @@ export const nodeLayerColors: Record<
   NodeLayer,
   { background: string; border: string; icon: string }
 > = {
-  client: { background: "#f5f5f4", border: "#a8aaa9", icon: "#34383a" },
+  client: { background: "#fae9e1", border: "#d9a18b", icon: "#8a4934" },
   edge: { background: "#d9e7ff", border: "#99b9ef", icon: "#174f9f" },
   compute: { background: "#e5e8f3", border: "#abb7d1", icon: "#3d527e" },
   data: { background: "#dff2e5", border: "#98cdaa", icon: "#12643d" },
   async: { background: "#ffebcd", border: "#e8b563", icon: "#85500c" },
-  external: { background: "#f5f5f4", border: "#8a8f8d", icon: "#454b49" },
-  other: { background: "#eceeec", border: "#aeb5b0", icon: "#505a54" },
+  external: { background: "#f8e6f1", border: "#d6a1bd", icon: "#833c65" },
+  other: { background: "#e4eef1", border: "#a1bbc4", icon: "#3e626f" },
+};
+
+/** Dark surfaces retain a distinct layer hue without overwhelming the canvas. */
+export const darkNodeLayerColors: typeof nodeLayerColors = {
+  client: { background: "#29211f", border: "#a86d5a", icon: "#f6b19b" },
+  edge: { background: "#1c2432", border: "#567fb8", icon: "#8fbdff" },
+  compute: { background: "#252331", border: "#8275af", icon: "#c2b2ff" },
+  data: { background: "#1a2c25", border: "#4d9070", icon: "#84d5a9" },
+  async: { background: "#30271c", border: "#ad8044", icon: "#f1bd70" },
+  external: { background: "#30202b", border: "#a8628c", icon: "#f1a1d1" },
+  other: { background: "#222831", border: "#668291", icon: "#a6c9d8" },
 };
 
 export function nodePresentation(type: string): {

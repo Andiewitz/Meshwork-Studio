@@ -279,7 +279,7 @@ export function WorkspaceLeftSidebar({
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden select-none">
+    <div className="workspace-assistant h-full flex flex-col overflow-hidden select-none">
       {/* ── Jenkos AI Co-pilot (always-on, no tabs) ── */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Tiny clear button */}
@@ -318,7 +318,7 @@ export function WorkspaceLeftSidebar({
           </div>
 
           {messages.length === 0 && (
-            <div className="py-2 flex flex-col">
+            <div className="workspace-assistant-intro py-2 flex flex-col">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-5 h-5 rounded-md bg-white/[0.07] border border-white/[0.08] flex items-center justify-center shrink-0">
                   <CpuChipIcon className="w-3 h-3 text-white/70" />
@@ -374,13 +374,7 @@ export function WorkspaceLeftSidebar({
             >
               {msg.role === "user" ? (
                 <div className="flex justify-end">
-                  <div
-                    className="max-w-[85%] rounded-xl rounded-tr-sm px-3 py-2 text-[11px] text-white"
-                    style={{
-                      background: "rgba(255,255,255,0.08)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                  >
+                  <div className="workspace-user-message max-w-[85%] rounded-xl rounded-tr-sm px-3 py-2 text-[11px] text-white">
                     <span className="whitespace-pre-wrap">{msg.content}</span>
                   </div>
                 </div>
@@ -455,7 +449,7 @@ export function WorkspaceLeftSidebar({
         <div className="p-2.5 pt-1">
           <form
             onSubmit={handleSubmit}
-            className="rounded-2xl bg-white/[0.04] border border-white/[0.08] focus-within:border-white/20 transition-all p-2.5 space-y-2"
+            className="workspace-composer rounded-2xl bg-white/[0.04] border border-white/[0.08] focus-within:border-white/20 transition-all p-2.5 space-y-2"
           >
             <textarea
               ref={textareaRef}

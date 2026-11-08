@@ -169,7 +169,7 @@ export function WorkspaceHeader({
 
   return (
     <>
-      <header className="h-11 w-full bg-[#111114] flex items-center justify-between px-3 relative z-30 select-none shrink-0 text-white font-sans text-xs">
+      <header className="workspace-header h-11 w-full bg-[#111114] flex items-center justify-between px-3 relative z-30 select-none shrink-0 text-white font-sans text-xs">
         {/* ── Left Section: Logo, Project Name, Status, Undo/Redo (always fixed on left) ── */}
         <div className="flex items-center gap-2 min-w-0 z-10">
           {/* Logo */}
@@ -197,7 +197,7 @@ export function WorkspaceHeader({
             </PopoverTrigger>
 
             <PopoverContent
-              className="w-72 p-2 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_24px_54px_rgba(0,0,0,0.85)] z-[200] space-y-1 text-white"
+              className="workspace-popover w-72 p-2 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_24px_54px_rgba(0,0,0,0.85)] z-[200] space-y-1 text-white"
               side="bottom"
               align="start"
               sideOffset={8}
@@ -282,7 +282,7 @@ export function WorkspaceHeader({
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="w-60 p-3 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_20px_48px_rgba(0,0,0,0.8)] z-[300] space-y-3"
+                  className="workspace-popover w-60 p-3 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_20px_48px_rgba(0,0,0,0.8)] z-[300] space-y-3"
                   side="right"
                   align="start"
                   sideOffset={8}
@@ -540,7 +540,7 @@ export function WorkspaceHeader({
                 </div>
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 p-2 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl text-white z-[200]">
+            <PopoverContent className="workspace-popover w-64 p-2 bg-[#121214]/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl text-white z-[200]">
               <div className="text-[11px] font-bold text-white/60 mb-1">
                 People online
               </div>
@@ -581,7 +581,7 @@ export function WorkspaceHeader({
           {/* Share Button */}
           <button
             onClick={() => setSharingOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-[11px] font-medium text-white/80 hover:text-white transition-all shadow-sm"
+            className="workspace-header-secondary flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-[11px] font-medium text-white/80 hover:text-white transition-all shadow-sm"
           >
             <ShareIcon className="w-3 h-3" />
             <span>Share</span>
@@ -599,7 +599,7 @@ export function WorkspaceHeader({
           {/* Publish / Export Button */}
           <button
             onClick={handleExportPng}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-[11px] font-semibold transition-all shadow-[0_2px_12px_rgba(59,130,246,0.3)] active:scale-95"
+            className="workspace-header-primary flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-[11px] font-semibold transition-all shadow-[0_2px_12px_rgba(59,130,246,0.3)] active:scale-95"
           >
             <span>Publish</span>
           </button>

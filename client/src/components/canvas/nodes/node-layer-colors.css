@@ -1,0 +1,10 @@
+.node-layer-surface {
+  --node-layer-background: var(--node-dark-background);
+  --node-layer-border: var(--node-dark-border);
+  --node-layer-icon: var(--node-dark-icon);
+}
+:root[data-theme="light"] .node-layer-surface {
+  --node-layer-background: var(--node-light-background);
+  --node-layer-border: var(--node-light-border);
+  --node-layer-icon: var(--node-light-icon);
+}

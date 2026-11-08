@@ -529,6 +529,8 @@ html {
   --surface: 0 0% 100%;
   --surface-high: 220 14% 94%;
   --surface-highest: 220 12% 90%;
+  --secondary-border: rgba(35, 42, 52, 0.14);
+  --muted-border: rgba(35, 42, 52, 0.1);
   --secondary: 220 14% 92%;
   --secondary-foreground: 225 10% 15%;
   --subtle-foreground: 220 8% 42%;
@@ -635,67 +637,67 @@ html {
   color: rgb(31 35 42 / 0.35);
 }
 :root[data-theme="light"] [class~="bg-white/5"] {
-  background-color: rgb(35 42 52 / 0.06);
+  background-color: rgb(35 42 52 / 0.055);
 }
 :root[data-theme="light"] [class~="bg-white/10"] {
-  background-color: rgb(35 42 52 / 0.06);
+  background-color: rgb(35 42 52 / 0.085);
 }
 :root[data-theme="light"] [class~="bg-white/20"] {
-  background-color: rgb(35 42 52 / 0.06);
+  background-color: rgb(35 42 52 / 0.145);
 }
 :root[data-theme="light"] [class~="bg-white/[0.02]"] {
-  background-color: rgb(35 42 52 / 0.06);
+  background-color: rgb(35 42 52 / 0.037);
 }
 :root[data-theme="light"] [class~="bg-white/[0.03]"] {
-  background-color: rgb(35 42 52 / 0.06);
+  background-color: rgb(35 42 52 / 0.043);
 }
 :root[data-theme="light"] [class~="bg-white/[0.04]"] {
-  background-color: rgb(35 42 52 / 0.06);
+  background-color: rgb(35 42 52 / 0.049);
 }
 :root[data-theme="light"] [class~="bg-white/[0.05]"] {
-  background-color: rgb(35 42 52 / 0.06);
+  background-color: rgb(35 42 52 / 0.055);
 }
 :root[data-theme="light"] [class~="bg-white/[0.06]"] {
-  background-color: rgb(35 42 52 / 0.06);
+  background-color: rgb(35 42 52 / 0.061);
 }
 :root[data-theme="light"] [class~="bg-white/[0.08]"] {
-  background-color: rgb(35 42 52 / 0.06);
+  background-color: rgb(35 42 52 / 0.073);
 }
 :root[data-theme="light"] [class~="bg-white/[0.1]"] {
-  background-color: rgb(35 42 52 / 0.06);
+  background-color: rgb(35 42 52 / 0.085);
 }
 :root[data-theme="light"] [class~="bg-white/[0.12]"] {
-  background-color: rgb(35 42 52 / 0.06);
+  background-color: rgb(35 42 52 / 0.097);
 }
 :root[data-theme="light"] [class~="border-white/5"] {
-  border-color: rgb(35 42 52 / 0.14);
+  border-color: rgb(35 42 52 / 0.105);
 }
 :root[data-theme="light"] [class~="border-white/10"] {
-  border-color: rgb(35 42 52 / 0.14);
+  border-color: rgb(35 42 52 / 0.13);
 }
 :root[data-theme="light"] [class~="border-white/20"] {
-  border-color: rgb(35 42 52 / 0.14);
+  border-color: rgb(35 42 52 / 0.18);
 }
 :root[data-theme="light"] [class~="border-white/30"] {
-  border-color: rgb(35 42 52 / 0.14);
+  border-color: rgb(35 42 52 / 0.23);
 }
 :root[data-theme="light"] [class~="border-white/[0.05]"] {
-  border-color: rgb(35 42 52 / 0.14);
+  border-color: rgb(35 42 52 / 0.105);
 }
 :root[data-theme="light"] [class~="border-white/[0.06]"] {
-  border-color: rgb(35 42 52 / 0.14);
+  border-color: rgb(35 42 52 / 0.11);
 }
 :root[data-theme="light"] [class~="border-white/[0.08]"] {
-  border-color: rgb(35 42 52 / 0.14);
+  border-color: rgb(35 42 52 / 0.12);
 }
 :root[data-theme="light"] [class~="border-white/[0.1]"] {
-  border-color: rgb(35 42 52 / 0.14);
+  border-color: rgb(35 42 52 / 0.13);
 }
 :root[data-theme="light"] [class~="border-white/[0.12]"] {
   border-color: rgb(35 42 52 / 0.14);
 }
 :root[data-theme="light"] [class~="border-white/[0.15]"] {
-  border-color: rgb(35 42 52 / 0.14);
+  border-color: rgb(35 42 52 / 0.155);
 }
 
 :root[data-theme="light"] [class*="hover:bg-white/"]:hover {
@@ -753,7 +755,7 @@ html {
 }
 
 :root[data-theme="light"] [class~="bg-white/[0.07]"] {
-  background-color: rgb(35 42 52 / 0.06);
+  background-color: rgb(35 42 52 / 0.067);
 }
 :root[data-theme="light"] .node-description-tooltip {
   background: #fff;
@@ -868,7 +870,7 @@ html {
   background-color: #f8f9fa;
 }
 :root[data-theme="light"] [class~="bg-[#1c1914]"] {
-  background-color: #f8f9fa;
+  background-color: #fff7e7;
 }
 
 :root[data-theme="light"] .technical-gradient {
@@ -939,4 +941,57 @@ html {
 :root[data-theme="light"] a[class~="bg-white"][class~="text-black"]:hover {
   background: #3b3e45;
   color: #fff;
+}
+
+/* Light mode keeps the product's surface hierarchy and colored actions. */
+:root[data-theme="light"] .dashboard-shell {
+  background: #edf0f3;
+}
+:root[data-theme="light"] .dashboard-content {
+  background: #fff;
+  border-color: #dce0e5;
+  box-shadow: none;
+}
+:root[data-theme="light"] .home-canvas {
+  background: #f7f8fa;
+}
+:root[data-theme="light"] .home-projects {
+  background: #fff;
+  border-color: #dfe3e8;
+  box-shadow: 0 8px 28px rgb(25 35 50 / 0.06);
+}
+:root[data-theme="light"]
+  :is(
+    [class*="bg-gradient-to-"],
+    [class~="bg-purple-600"],
+    [class~="bg-blue-600"],
+    [class~="bg-[#1a73e8]"],
+    [class~="bg-[#3B82F6]"]
+  )
+  :is(
+    [class~="text-white"],
+    [class~="text-white/70"],
+    [class~="text-white/80"],
+    [class~="text-white/90"]
+  ) {
+  color: #fff;
+}
+:root[data-theme="light"]
+  :is(button, a)[class~="text-white"]:is(
+    [class~="bg-purple-600"],
+    [class~="bg-blue-600"],
+    [class~="bg-[#1a73e8]"],
+    [class~="bg-[#3B82F6]"]
+  ) {
+  color: #fff;
+}
+
+:root[data-theme="light"] [class~="text-white/15"] {
+  color: rgb(31 35 42 / 0.4);
+}
+:root[data-theme="light"] [class~="text-white/45"] {
+  color: rgb(31 35 42 / 0.58);
+}
+:root[data-theme="light"] [class~="text-white/95"] {
+  color: rgb(31 35 42 / 0.95);
 }

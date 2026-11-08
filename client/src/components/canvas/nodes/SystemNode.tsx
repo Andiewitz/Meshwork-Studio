@@ -18,9 +18,12 @@ import {
 } from "./legacyNodeAppearance";
 import {
   nodePresentation,
+  nodeLayerColors,
+  darkNodeLayerColors,
   nodeSubtitle,
   nodeTextColor,
 } from "./nodePresentation";
+import "./node-layer-colors.css";
 import * as HeroIcons from "@heroicons/react/24/outline";
 import {
   UserIcon,
@@ -578,7 +581,17 @@ export function SystemNode({
   const handleCls =
     "!w-2 !h-2 !rounded-full !border-2 !border-blue-400 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm";
   const minimumDimensions = getNodeMinimumDimensions(type);
-  const { shape } = nodePresentation(type);
+  const { layer, shape } = nodePresentation(type);
+  const lightPalette = nodeLayerColors[layer];
+  const darkPalette = darkNodeLayerColors[layer];
+  const paletteVariables = {
+    "--node-light-background": lightPalette.background,
+    "--node-light-border": lightPalette.border,
+    "--node-light-icon": lightPalette.icon,
+    "--node-dark-background": darkPalette.background,
+    "--node-dark-border": darkPalette.border,
+    "--node-dark-icon": darkPalette.icon,
+  } as React.CSSProperties;
   const subtitle = nodeSubtitle(
     type,
     data.label,
@@ -936,12 +949,13 @@ export function SystemNode({
             </div>
           </div>
         ) : (
-          /* Regular nodes share the canvas surface while retaining role-specific shapes. */
+          /* Layer colors and role-specific shapes make the diagram scannable. */
           <div
-            className={`relative flex h-full w-full items-center gap-3 overflow-hidden px-3.5 py-2.5 font-sans transition-shadow ${selected ? "ring-2 ring-blue-500/70 ring-offset-2 ring-offset-[var(--workspace-canvas)]" : ""}`}
+            className={`node-layer-surface relative flex h-full w-full items-center gap-3 overflow-hidden px-3.5 py-2.5 font-sans transition-shadow ${selected ? "ring-2 ring-blue-500/70 ring-offset-2 ring-offset-[var(--workspace-canvas)]" : ""}`}
             style={{
-              backgroundColor: customBg || "var(--workspace-node-bg)",
-              border: `1.5px ${shape === "external" ? "dashed" : "solid"} ${customBorder || userAccent || "var(--workspace-node-border)"}`,
+              ...paletteVariables,
+              backgroundColor: customBg || "var(--node-layer-background)",
+              border: `1.5px ${shape === "external" ? "dashed" : "solid"} ${customBorder || userAccent || "var(--node-layer-border)"}`,
               borderRadius:
                 finalRadius ||
                 (shape === "pill"
@@ -958,9 +972,7 @@ export function SystemNode({
                 className="pointer-events-none absolute inset-x-0 top-0 h-[19%] rounded-[50%] border-b"
                 style={{
                   borderColor:
-                    customBorder ||
-                    userAccent ||
-                    "var(--workspace-node-border)",
+                    customBorder || userAccent || "var(--node-layer-border)",
                 }}
               />
             )}
@@ -970,9 +982,7 @@ export function SystemNode({
                 className="pointer-events-none absolute inset-y-0 left-1 right-1 rounded-xl border-x"
                 style={{
                   borderColor:
-                    customBorder ||
-                    userAccent ||
-                    "var(--workspace-node-border)",
+                    customBorder || userAccent || "var(--node-layer-border)",
                 }}
               />
             )}
@@ -984,7 +994,7 @@ export function SystemNode({
                   userAccent ||
                   (customBg || customTheme !== "default"
                     ? textColor
-                    : "var(--workspace-node-icon)"),
+                    : "var(--node-layer-icon)"),
               }}
             >
               <NodeIcon className="h-6 w-6" />

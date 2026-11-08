@@ -141,7 +141,7 @@ export default function Home() {
       )}
 
       {/* Main Canvas view sitting inside DashboardLayout's rounded container */}
-      <div className="relative flex-1 flex flex-col justify-between overflow-hidden bg-[#0a0c16] min-h-full">
+      <div className="home-canvas relative flex-1 flex flex-col justify-between overflow-hidden bg-[#0a0c16] min-h-full">
         {/* ── Rich Gradient Blobs Background ── */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden -z-0">
           {/* Top blue veil */}
@@ -225,7 +225,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-            className="w-full bg-[#111218]/90 backdrop-blur-2xl border border-white/[0.09] rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col min-h-[480px] max-h-[600px]"
+            className="home-projects w-full bg-[#111218]/90 backdrop-blur-2xl border border-white/[0.09] rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col min-h-[480px] max-h-[600px]"
           >
             {/* Header / Tabs */}
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-3">

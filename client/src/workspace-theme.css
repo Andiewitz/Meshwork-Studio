@@ -1,0 +1,106 @@
+/* The editor has its own surface hierarchy so the canvas remains the focus. */
+.workspace-editor-shell {
+  --editor-shell: #111114;
+  --editor-canvas: #0a0a0a;
+  --editor-line: #2b2b33;
+  --editor-panel: #19191e;
+  --editor-panel-hover: #292930;
+  --editor-ink: #f5f5f7;
+  --editor-muted: #a5a7b0;
+  background: var(--editor-shell);
+  color: var(--editor-ink);
+}
+:root[data-theme="light"] .workspace-editor-shell {
+  --editor-shell: #f8f9fb;
+  --editor-canvas: #edf0f4;
+  --editor-line: #d9dee6;
+  --editor-panel: #ffffff;
+  --editor-panel-hover: #edf1f6;
+  --editor-ink: #202a38;
+  --editor-muted: #596777;
+}
+:root[data-theme] .workspace-editor-shell .workspace-header,
+:root[data-theme] .workspace-editor-shell .workspace-editor-body,
+:root[data-theme] .workspace-editor-shell .workspace-sidebar-frame,
+:root[data-theme] .workspace-editor-shell .workspace-properties-frame {
+  background: var(--editor-shell);
+}
+.workspace-editor-shell .workspace-header {
+  border-bottom: 1px solid var(--editor-line);
+  color: var(--editor-ink);
+}
+:root[data-theme] .workspace-editor-shell .workspace-canvas {
+  background: var(--editor-canvas);
+  border-color: var(--editor-line);
+}
+.workspace-editor-shell .workspace-sidebar-frame,
+.workspace-editor-shell .workspace-properties-frame {
+  border-color: var(--editor-line);
+}
+.workspace-editor-shell .workspace-user-message {
+  background: #292930;
+  border: 1px solid #3c3c45;
+}
+:root[data-theme="light"] .workspace-editor-shell .workspace-user-message {
+  background: #e6edf8;
+  border-color: #cfdbeb;
+  color: #263850;
+}
+:root[data-theme] .workspace-editor-shell .workspace-composer {
+  background: var(--editor-panel);
+  border-color: var(--editor-line);
+}
+.workspace-editor-shell .workspace-composer:focus-within {
+  border-color: #7a9ac3;
+}
+:root[data-theme="light"] .workspace-editor-shell .workspace-composer {
+  box-shadow: 0 3px 12px rgba(37, 54, 77, 0.06);
+}
+:root[data-theme="light"] .workspace-editor-shell .workspace-assistant-intro {
+  color: var(--editor-ink);
+}
+:root[data-theme="light"] .workspace-editor-shell .workspace-header-secondary {
+  background: #fff;
+  border-color: #d9dee6;
+  color: #344254;
+  box-shadow: none;
+}
+:root[data-theme="light"]
+  .workspace-editor-shell
+  .workspace-header-secondary:hover {
+  background: #edf1f6;
+  color: #202a38;
+}
+:root[data-theme="light"] .workspace-editor-shell .workspace-header-primary,
+:root[data-theme="light"]
+  .workspace-editor-shell
+  .workspace-header-primary:hover {
+  background: #316ac5;
+  color: #fff;
+  box-shadow: none;
+}
+:root[data-theme] .workspace-editor-shell .workspace-toolbar {
+  background: var(--editor-panel);
+  border-color: var(--editor-line);
+}
+:root[data-theme="light"] .workspace-editor-shell .workspace-toolbar {
+  box-shadow: 0 8px 24px rgba(37, 54, 77, 0.13);
+}
+:root[data-theme="light"]
+  .workspace-editor-shell
+  .workspace-toolbar
+  button[aria-pressed="true"] {
+  background: #e0ebfa;
+  color: #22539a;
+  box-shadow: none;
+}
+:root[data-theme="light"] .workspace-popover.workspace-popover {
+  background: #fff;
+  border-color: #d9dee6;
+  box-shadow: 0 12px 32px rgba(37, 54, 77, 0.16);
+}
+
+:root[data-theme] .workspace-editor-shell.workspace-editor-shell {
+  background: var(--editor-shell);
+  color: var(--editor-ink);
+}

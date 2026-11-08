@@ -1,3 +1,4 @@
+import "@/workspace-theme.css";
 import { useTheme } from "@/components/ThemeProvider";
 import React, {
   useCallback,
@@ -1891,7 +1892,7 @@ function WorkspaceView() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden font-sans text-sm selection:bg-white/10 bg-[#09090b] text-white flex flex-col relative">
+    <div className="workspace-editor-shell h-screen w-screen overflow-hidden font-sans text-sm selection:bg-white/10 bg-[#09090b] text-white flex flex-col relative">
       <Helmet>
         <title>{workspace?.title || "Workspace"}</title>
       </Helmet>
@@ -1966,10 +1967,10 @@ function WorkspaceView() {
       />
 
       {/* Main Workspace Layout: Sidebar connected to header + Canvas */}
-      <div className="flex-1 min-h-0 overflow-hidden flex bg-[#111114]">
+      <div className="workspace-editor-body flex-1 min-h-0 overflow-hidden flex bg-[#111114]">
         {/* Collapsible Left Sidebar connected flush to Header */}
         <div
-          className={`min-h-0 overflow-hidden transition-all duration-300 ease-in-out bg-[#111114] shrink-0 ${
+          className={`workspace-sidebar-frame min-h-0 overflow-hidden transition-all duration-300 ease-in-out bg-[#111114] shrink-0 ${
             isSidebarOpen && canEdit
               ? "w-[360px] opacity-100"
               : "w-0 opacity-0 pointer-events-none"
@@ -1982,14 +1983,14 @@ function WorkspaceView() {
         </div>
 
         {/* Canvas & Properties Section */}
-        <div className="flex-1 min-h-0 flex overflow-hidden relative bg-[#111114]">
+        <div className="workspace-editor-body flex-1 min-h-0 flex overflow-hidden relative bg-[#111114]">
           {/* Canvas Viewport: curved top-left intersection when sidebar is open */}
           <motion.main
             ref={canvasWrapperRef}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className={`flex-1 h-full relative bg-[#0A0A0A] overflow-hidden transition-all duration-300 ease-in-out ${
+            className={`workspace-canvas flex-1 h-full relative bg-[#0A0A0A] overflow-hidden transition-all duration-300 ease-in-out ${
               isSidebarOpen && canEdit
                 ? "rounded-tl-2xl border-t border-l border-white/[0.08]"
                 : "border-t border-white/[0.08]"
@@ -2450,7 +2451,7 @@ function WorkspaceView() {
                 animate={{ opacity: 1, width: 320 }}
                 exit={{ opacity: 0, width: 0 }}
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="h-full min-h-0 overflow-hidden border-l border-t border-white/[0.08] bg-[#111114] shrink-0"
+                className="workspace-properties-frame h-full min-h-0 overflow-hidden border-l border-t border-white/[0.08] bg-[#111114] shrink-0"
               >
                 <div
                   className="h-full overflow-y-auto"

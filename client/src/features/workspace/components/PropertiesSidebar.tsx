@@ -16,7 +16,12 @@ import {
   AdjustmentsHorizontalIcon as Sliders,
   ArrowRightIcon as ArrowRight,
 } from "@heroicons/react/24/outline";
-import { nodeTextColor } from "@/components/canvas/nodes/nodePresentation";
+import {
+  nodeTextColor,
+  nodePresentation,
+  nodeLayerColors,
+  darkNodeLayerColors,
+} from "@/components/canvas/nodes/nodePresentation";
 import { nodeBrands } from "@/components/canvas/nodes/SystemNode";
 import {
   hasLegacyDefaultAppearance,
@@ -90,6 +95,9 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
     const nodeStyle = (
       legacyDefault ? {} : (selectedNode.style ?? {})
     ) as NodeStyle;
+    const palette = (
+      workspaceTheme === "light" ? nodeLayerColors : darkNodeLayerColors
+    )[nodePresentation(selectedNode.type || "generic").layer];
     const backgroundColor = nodeStyle.backgroundColor ?? "";
     const borderColor = nodeStyle.borderColor ?? "";
     const borderRadius =
@@ -406,9 +414,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                       backgroundColor.startsWith("#") &&
                       backgroundColor.length === 7
                         ? backgroundColor
-                        : workspaceTheme === "light"
-                          ? "#ffffff"
-                          : "#1c1c22"
+                        : palette.background
                     }
                     onChange={(e) =>
                       handleStyleChange("backgroundColor", e.target.value)
@@ -438,9 +444,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                     value={
                       borderColor.startsWith("#") && borderColor.length === 7
                         ? borderColor
-                        : workspaceTheme === "light"
-                          ? "#c9cdd3"
-                          : "#40404a"
+                        : palette.border
                     }
                     onChange={(e) =>
                       handleStyleChange("borderColor", e.target.value)
@@ -521,10 +525,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                       fontColor.startsWith("#") && fontColor.length === 7
                         ? fontColor
                         : nodeTextColor(
-                            backgroundColor ||
-                              (workspaceTheme === "light"
-                                ? "#ffffff"
-                                : "#1c1c22"),
+                            backgroundColor || palette.background,
                             false,
                           )
                     }
