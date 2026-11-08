@@ -11,9 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MeshworkLogo } from "@/components/MeshworkLogo";
 import { CollaboratorsDialog } from "./CollaboratorsDialog";
+import { WorkspaceMembers } from "./WorkspaceMembers";
 import {
   ChevronLeftIcon,
   ChevronDownIcon,
@@ -514,56 +514,13 @@ export function WorkspaceHeader({
           >
             <MagnifyingGlassIcon className="h-4 w-4" />
           </button>
-          {/* Live Collaborators */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                aria-label="People online"
-                className="flex items-center focus:outline-none cursor-pointer hover:opacity-90 transition-opacity"
-              >
-                <div className="flex -space-x-1.5 overflow-hidden">
-                  <Avatar className="size-6 border border-[#111114] shadow-sm">
-                    <AvatarImage src={user?.profileImageUrl || ""} />
-                    <AvatarFallback className="text-[9px] font-bold bg-indigo-500/40 text-indigo-100">
-                      {userInitial}
-                    </AvatarFallback>
-                  </Avatar>
-                  {collaborators
-                    .filter((c) => c.userId !== user?.id)
-                    .slice(0, 2)
-                    .map((u) => (
-                      <Avatar
-                        key={u.userId}
-                        className="size-6 border border-[#111114]"
-                      >
-                        <AvatarFallback
-                          className="text-[9px] font-bold"
-                          style={{
-                            backgroundColor: `${u.color}30`,
-                            color: u.color,
-                          }}
-                        >
-                          {u.name[0]?.toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    ))}
-                </div>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="workspace-popover w-64 p-2 ws-option backdrop-blur-2xl border ws-border rounded-xl ws-ink z-[200]">
-              <div className="text-[11px] font-bold ws-muted mb-1">
-                People online
-              </div>
-              <div className="py-1 text-[11px] ws-ink">{userName} (you)</div>
-              {collaborators
-                .filter((person) => person.userId !== user?.id)
-                .map((person) => (
-                  <div key={person.userId} className="py-1 text-[11px] ws-ink">
-                    {person.name}
-                  </div>
-                ))}
-            </PopoverContent>
-          </Popover>
+          <WorkspaceMembers
+            workspaceId={workspaceId}
+            isOwner={Boolean(user?.id && workspace?.userId === user.id)}
+            user={user}
+            online={collaborators}
+            onShare={() => setSharingOpen(true)}
+          />
 
           <button
             type="button"
