@@ -1,4 +1,5 @@
 import React, { Suspense } from "react";
+import { ThemeProvider, GlobalThemeToggle } from "@/components/ThemeProvider";
 import {
   Switch,
   Route,
@@ -238,15 +239,18 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <WouterRouter>
-            <TooltipProvider>
-              <Toaster />
-              <CookieBanner />
-              <ErrorBoundary>
-                <Suspense fallback={<DefaultLoading />}>
-                  <Router />
-                </Suspense>
-              </ErrorBoundary>
-            </TooltipProvider>
+            <ThemeProvider>
+              <TooltipProvider>
+                <GlobalThemeToggle />
+                <Toaster />
+                <CookieBanner />
+                <ErrorBoundary>
+                  <Suspense fallback={<DefaultLoading />}>
+                    <Router />
+                  </Suspense>
+                </ErrorBoundary>
+              </TooltipProvider>
+            </ThemeProvider>
           </WouterRouter>
         </AuthProvider>
       </QueryClientProvider>

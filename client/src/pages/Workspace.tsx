@@ -1,3 +1,4 @@
+import { useTheme } from "@/components/ThemeProvider";
 import React, {
   useCallback,
   useEffect,
@@ -346,26 +347,7 @@ function WorkspaceView() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [gridSize, setGridSize] = useState(20);
   const [bgVariant, setBgVariant] = useState<BgVariant>("dots");
-  const [workspaceTheme, setWorkspaceTheme] = useState<"dark" | "light">(() => {
-    try {
-      return localStorage.getItem("meshwork-workspace-theme") === "light"
-        ? "light"
-        : "dark";
-    } catch {
-      return "dark";
-    }
-  });
-  useEffect(() => {
-    document.documentElement.dataset.workspaceTheme = workspaceTheme;
-    try {
-      localStorage.setItem("meshwork-workspace-theme", workspaceTheme);
-    } catch {
-      /* storage can be unavailable */
-    }
-    return () => {
-      delete document.documentElement.dataset.workspaceTheme;
-    };
-  }, [workspaceTheme]);
+  const { theme: workspaceTheme, toggleTheme } = useTheme();
   const [activeView, setActiveView] = useState<"ai" | "canvas" | "properties">(
     "canvas",
   );
@@ -1917,11 +1899,7 @@ function WorkspaceView() {
       {/* Top Navigation Header & Project Menu (Image 3) */}
       <WorkspaceHeader
         theme={workspaceTheme}
-        onToggleTheme={() =>
-          setWorkspaceTheme((current) =>
-            current === "dark" ? "light" : "dark",
-          )
-        }
+        onToggleTheme={toggleTheme}
         workspace={workspace}
         workspaceId={workspaceId}
         user={user}
