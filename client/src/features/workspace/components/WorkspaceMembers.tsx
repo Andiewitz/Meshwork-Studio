@@ -85,7 +85,7 @@ export function WorkspaceMembers({
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={isOwner ? "Workspace members" : "People online"}
+          aria-label={isOwner ? "Project members" : "People online"}
           className="flex min-h-8 items-center rounded-full px-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00E5A0]"
         >
           <span className="flex -space-x-1.5">
@@ -129,7 +129,7 @@ export function WorkspaceMembers({
                 : isError
                   ? "Members unavailable"
                   : `${members.length + 1} ${members.length === 0 ? "person" : "people"}`
-              : "People currently in this workspace"}
+              : "People currently in this project"}
           </p>
         </div>
         <div className="max-h-[min(360px,55vh)] overflow-y-auto px-2 pb-2">
@@ -215,7 +215,7 @@ export function WorkspaceMembers({
                       onClick={() => {
                         if (
                           window.confirm(
-                            `Remove ${memberName} from this workspace?`,
+                            `Remove ${memberName} from this project?`,
                           )
                         )
                           void update({

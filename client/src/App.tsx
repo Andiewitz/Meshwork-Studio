@@ -15,7 +15,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { useCsrfTokenInitializer } from "@/lib/secure-fetch";
 import { DefaultLoading, RedirectLoading } from "@/components/loading-states";
-import { MobileGate } from "@/components/ui/mobile-gate";
 import { AnimatePresence, motion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { HelmetProvider } from "react-helmet-async";
@@ -95,15 +94,6 @@ function ProtectedRoute({
 }) {
   const { user, isLoading, isRedirecting, isLoggingOut } = useAuth();
   const [, navigate] = useLocation();
-  const [isMobile, setIsMobile] = React.useState(false);
-
-  React.useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 1024);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
   // Redirect to landing when auth resolves to unauthenticated
   React.useEffect(() => {
     if (isLoading || user) return;
@@ -123,10 +113,6 @@ function ProtectedRoute({
   // Not authenticated — show loading while navigating
   if (!user && !isLoading) {
     return <RedirectLoading message="Redirecting to landing page..." />;
-  }
-
-  if (isMobile) {
-    return <MobileGate />;
   }
 
   return <Component />;

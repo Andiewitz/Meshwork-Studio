@@ -10,6 +10,7 @@ import React, {
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
 import { DefaultLoading } from "@/components/loading-states";
+import { ErrorState } from "@/components/ui/error-state";
 import { ActionSearchBar } from "@/components/ui/action-searchbar";
 import {
   ResizableHandle,
@@ -260,12 +261,14 @@ function WorkspaceView() {
     isSyncing,
     isError: isCanvasError,
     error: canvasError,
+    refetch: refetchCanvas,
   } = useCanvas(workspaceId);
   const {
     data: workspace,
     isLoading: isWorkspaceLoading,
     isError: isWorkspaceError,
     error: workspaceError,
+    refetch: refetchWorkspace,
   } = useWorkspace(workspaceId);
 
   const isLoading = isCanvasLoading || isWorkspaceLoading;
@@ -343,7 +346,9 @@ function WorkspaceView() {
   const [drawingMode, setDrawingMode] = useState<
     "select" | "pan" | "annotation" | "infrastructure"
   >("select");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    () => window.innerWidth >= 768,
+  );
   const [sidebarTab, setSidebarTab] = useState<"ai" | "nodes">("ai");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [gridSize, setGridSize] = useState(20);
@@ -588,7 +593,7 @@ function WorkspaceView() {
       toast({
         title: "Reconnected to collaborators",
         description:
-          "Some changes made while disconnected may be missing. Export a copy of your work before reloading the workspace.",
+          "Some changes made while disconnected may be missing. Export a copy of your work before reloading the project.",
         variant: "destructive",
       });
     },
@@ -1430,7 +1435,7 @@ function WorkspaceView() {
     if (isInitialLoad.current || lastLoadedId.current !== workspaceId) {
       toast({
         title: "Canvas is still loading",
-        description: "Wait for the workspace to finish loading before saving.",
+        description: "Wait for the project to finish loading before saving.",
       });
       return;
     }
@@ -1507,7 +1512,7 @@ function WorkspaceView() {
           if (cacheGeneration !== saveGenerationRef.current) return;
           setSaveStatus("saved");
           toast({
-            title: "Workspace changes saved",
+            title: "Project changes saved",
             description:
               "Your architecture has been successfully synchronized.",
           });
@@ -1546,12 +1551,12 @@ function WorkspaceView() {
       },
       {
         onSuccess: () => {
-          toast({ title: "Workspace settings updated successfully" });
+          toast({ title: "Project settings updated successfully" });
           setIsSettingsOpen(false);
         },
         onError: (err: any) => {
           toast({
-            title: "Failed to update workspace settings",
+            title: "Failed to update project settings",
             description: err.message,
             variant: "destructive",
           });
@@ -1873,25 +1878,29 @@ function WorkspaceView() {
 
   if (isError || (!isLoading && !workspace)) {
     return (
-      <div className="ws-error-screen h-screen w-screen flex flex-col items-center justify-center ws-ink font-sans">
-        <Box className="w-16 h-16 ws-dim mb-6" />
-        <h1 className="text-2xl font-black uppercase tracking-widest mb-3">
-          Project Not Found
-        </h1>
-        <p className="ws-muted mb-3 max-w-md text-center text-sm leading-relaxed">
-          The architecture project you are looking for does not exist, has been
-          deleted, or you do not have permission to access it.
-        </p>
-        {(canvasError ?? workspaceError) && (
-          <p className="ws-muted mb-8 max-w-md text-center font-mono text-xs leading-relaxed">
-            {formatUserErrorMessage(canvasError ?? workspaceError)}
-          </p>
-        )}
-        <Link href="/">
-          <button className="px-6 py-2.5 ws-surface-soft ws-hover-surface border ws-border rounded-md transition-colors text-[11px] font-bold tracking-[0.2em] uppercase ws-ink ws-hover-ink">
-            Return to Library
-          </button>
-        </Link>
+      <div className="ws-error-screen min-h-screen flex items-center">
+        <ErrorState
+          title={isError ? "Couldn’t load this project" : "Project not found"}
+          description={
+            isError
+              ? "Check your connection and try again. Your project may still be available."
+              : "This project may have been deleted, or you may not have access."
+          }
+          detail={
+            (canvasError ?? workspaceError)
+              ? formatUserErrorMessage(canvasError ?? workspaceError)
+              : undefined
+          }
+          onRetry={
+            isError
+              ? () => {
+                  void refetchWorkspace();
+                  void refetchCanvas();
+                }
+              : undefined
+          }
+          home
+        />
       </div>
     );
   }
@@ -1899,7 +1908,7 @@ function WorkspaceView() {
   return (
     <div className="workspace-editor-shell h-screen w-screen overflow-hidden font-sans text-sm selection:bg-white/10 bg-[#09090b] ws-ink flex flex-col relative">
       <Helmet>
-        <title>{workspace?.title || "Workspace"}</title>
+        <title>{workspace?.title || "Project"}</title>
       </Helmet>
 
       {/* Top Navigation Header & Project Menu (Image 3) */}
@@ -1973,10 +1982,10 @@ function WorkspaceView() {
       />
 
       {/* Main Workspace Layout: Sidebar connected to header + Canvas */}
-      <div className="workspace-editor-body flex-1 min-h-0 overflow-hidden flex bg-[#111114]">
+      <div className="workspace-editor-body relative flex-1 min-h-0 overflow-hidden flex bg-[#111114]">
         {/* Collapsible Left Sidebar connected flush to Header */}
         <div
-          className={`workspace-sidebar-frame min-h-0 overflow-hidden transition-all duration-300 ease-in-out bg-[#111114] shrink-0 ${
+          className={`workspace-sidebar-frame max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:z-20 max-md:max-w-[85vw] min-h-0 overflow-hidden transition-all duration-300 ease-in-out bg-[#111114] shrink-0 ${
             isSidebarOpen && canEdit
               ? "w-[360px] opacity-100"
               : "w-0 opacity-0 pointer-events-none"
@@ -2457,7 +2466,7 @@ function WorkspaceView() {
                 animate={{ opacity: 1, width: 320 }}
                 exit={{ opacity: 0, width: 0 }}
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="workspace-properties-frame h-full min-h-0 overflow-hidden border-l border-t ws-border bg-[#111114] shrink-0"
+                className="workspace-properties-frame max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-20 max-md:max-w-[85vw] h-full min-h-0 overflow-hidden border-l border-t ws-border bg-[#111114] shrink-0"
               >
                 <div
                   className="h-full overflow-y-auto"

@@ -10,7 +10,13 @@ function Diagram({ workspaceId }: { workspaceId: string }) {
   if (isError)
     return <span className="dashboard-muted text-xs">Preview unavailable</span>;
   if (!data)
-    return <span className="dashboard-muted text-xs">Loading preview…</span>;
+    return (
+      <div
+        role="status"
+        aria-label="Loading project preview"
+        className="h-1/2 w-2/3 rounded-lg dashboard-tint motion-safe:animate-pulse"
+      />
+    );
   const nodes = data.nodes
     .filter(
       (node) =>

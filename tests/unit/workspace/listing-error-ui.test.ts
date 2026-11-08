@@ -82,6 +82,6 @@ describe("workspace listing error presentation", () => {
     query.data = [{ id: "cached", title: "Cached", type: "system" }];
     const html = renderToStaticMarkup(React.createElement(Home));
     expect(html).toContain("Cached project");
-    expect(html).toContain("Previously loaded workspaces may be out of date");
+    expect(html).toContain("Previously loaded projects may be out of date");
   });
 });

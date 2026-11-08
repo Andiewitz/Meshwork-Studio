@@ -53,7 +53,7 @@ export function useWorkspaces() {
         credentials: "include",
       });
       if (!res.ok) {
-        await throwApiError(res, `Failed to fetch workspaces (${res.status})`);
+        await throwApiError(res, `Failed to fetch projects (${res.status})`);
       }
       return api.workspaces.list.responses[200].parse(await res.json());
     },
@@ -79,7 +79,7 @@ export function useWorkspace(id: string | null | undefined) {
       const url = buildUrl(api.workspaces.get.path, { id: id! });
       const res = await secureFetch(getApiUrl(url), { credentials: "include" });
       if (res.status === 404) return null;
-      if (!res.ok) await throwApiError(res, "Failed to fetch workspace");
+      if (!res.ok) await throwApiError(res, "Failed to fetch project");
       return api.workspaces.get.responses[200].parse(await res.json());
     },
     enabled: isAuthenticated && !!id,
@@ -99,7 +99,7 @@ export function useCreateWorkspace() {
         credentials: "include",
       });
 
-      if (!res.ok) await extractError(res, "Failed to create workspace");
+      if (!res.ok) await extractError(res, "Failed to create project");
       return api.workspaces.create.responses[201].parse(await res.json());
     },
     onSuccess: () => {
@@ -133,7 +133,7 @@ export function useUpdateWorkspace() {
         credentials: "include",
       });
 
-      if (!res.ok) await throwApiError(res, "Failed to update workspace");
+      if (!res.ok) await throwApiError(res, "Failed to update project");
       return api.workspaces.update.responses[200].parse(await res.json());
     },
     onMutate: async (newWorkspace): Promise<WorkspaceUpdateContext> => {
@@ -213,7 +213,7 @@ export function useDeleteWorkspace() {
         credentials: "include",
       });
 
-      if (!res.ok) await throwApiError(res, "Failed to delete workspace");
+      if (!res.ok) await throwApiError(res, "Failed to delete project");
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
@@ -237,7 +237,7 @@ export function useDuplicateWorkspace() {
         credentials: "include",
       });
 
-      if (!res.ok) await throwApiError(res, "Failed to duplicate workspace");
+      if (!res.ok) await throwApiError(res, "Failed to duplicate project");
       return api.workspaces.duplicate.responses[201].parse(await res.json());
     },
     onSuccess: () => {

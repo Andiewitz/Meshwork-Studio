@@ -893,7 +893,7 @@ export function SystemNode({
                   fireEnterNode(id);
                 }}
                 className="absolute bottom-1.5 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-white/[0.07] transition-colors group/enter"
-                title="Open internal workspace"
+                title="Open internal project"
               >
                 <svg
                   width="7"
@@ -1041,8 +1041,8 @@ export function SystemNode({
                   fireEnterNode(id);
                 }}
                 className="nodrag absolute bottom-1 right-1.5 flex min-h-5 min-w-5 items-center justify-center rounded-md text-[var(--workspace-node-text)] opacity-60 hover:bg-white/10 hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700"
-                title="Open internal workspace"
-                aria-label="Open internal workspace"
+                title="Open internal project"
+                aria-label="Open internal project"
               >
                 <HeroIcons.ArrowTopRightOnSquareIcon className="h-3 w-3" />
                 {(data.subCanvas?.nodes?.length ?? 0) > 0 && (

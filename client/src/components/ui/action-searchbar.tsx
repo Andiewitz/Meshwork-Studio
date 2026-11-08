@@ -59,7 +59,7 @@ export function getDefaultMeshworkActions(
     },
     {
       id: "nav:workspaces",
-      label: "All Workspaces",
+      label: "All projects",
       icon: <FolderKanban />,
       description: "Browse your projects",
       category: "Navigation",
@@ -138,13 +138,13 @@ export function ActionSearchBar({
         id: `workspace:${workspace.id}`,
         label: workspace.title,
         icon: <FolderKanban />,
-        description: workspace.description || workspace.type || "Workspace",
+        description: workspace.description || workspace.type || "Project",
         keywords: [
           workspace.type,
           ...(workspace.tags || []),
           ...(workspace.groups || []),
         ],
-        category: "Workspace",
+        category: "Project",
         onSelect: () => navigate(`/workspace/${workspace.id}`),
       })),
       ...getDefaultMeshworkActions(navigate),
@@ -199,7 +199,7 @@ export function ActionSearchBar({
         <input
           ref={inputRef}
           role="combobox"
-          aria-label="Search workspaces, canvas nodes, and pages"
+          aria-label="Search projects, canvas nodes, and pages"
           aria-expanded="true"
           aria-controls="mesh-search-results"
           aria-activedescendant={
@@ -208,7 +208,7 @@ export function ActionSearchBar({
               : undefined
           }
           autoComplete="off"
-          placeholder="Search workspaces, canvas nodes, and pages"
+          placeholder="Search projects, canvas nodes, and pages"
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -237,12 +237,12 @@ export function ActionSearchBar({
       </div>
       {isLoading && (
         <p className="mesh-search-status" role="status">
-          Loading workspaces…
+          Loading projects…
         </p>
       )}
       {isError && (
         <p className="mesh-search-status" role="status">
-          Could not load workspaces. Navigation and canvas results are still
+          Could not load projects. Navigation and canvas results are still
           available.
         </p>
       )}
@@ -312,7 +312,7 @@ export function ActionSearchBar({
         >
           <Dialog.Title className="sr-only">Search Meshwork</Dialog.Title>
           <Dialog.Description className="sr-only">
-            Search your workspaces, the current canvas, and navigation pages.
+            Search your projects, the current canvas, and navigation pages.
           </Dialog.Description>
           {content}
         </Dialog.Content>

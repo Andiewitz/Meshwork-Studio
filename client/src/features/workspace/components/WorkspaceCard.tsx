@@ -96,7 +96,7 @@ export function WorkspaceCard({
     } catch {
       toast({
         title: "Error",
-        description: "Failed to rename workspace.",
+        description: "Failed to rename project.",
         variant: "destructive",
       });
     }
@@ -111,7 +111,7 @@ export function WorkspaceCard({
     } catch {
       toast({
         title: "Error",
-        description: "Failed to duplicate workspace.",
+        description: "Failed to duplicate project.",
         variant: "destructive",
       });
     }
@@ -161,8 +161,8 @@ export function WorkspaceCard({
           ? "Canvas copy in progress"
           : "Canvas copy failed",
         description: canvasCopyPending
-          ? "This workspace will open when its canvas is ready."
-          : "Retry the canvas copy from this workspace's menu.",
+          ? "This project will open when its canvas is ready."
+          : "Retry the canvas copy from this project's menu.",
         variant: canvasCopyFailed ? "destructive" : undefined,
       });
       return;

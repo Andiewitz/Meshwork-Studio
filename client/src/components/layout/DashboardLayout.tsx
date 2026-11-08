@@ -25,7 +25,6 @@ import {
   OnboardingFlow,
   useOnboardingComplete,
 } from "@/components/ui/onboarding-modal";
-import { MobileGate } from "@/components/ui/mobile-gate";
 import { PageErrorBoundary } from "@/components/ui/page-error-boundary";
 import { ActionSearchBar } from "@/components/ui/action-searchbar";
 
@@ -38,7 +37,6 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const isDev = location === "/dev";
   const isTeam = location === "/team";
 
-  const [isMobile, setIsMobile] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -58,13 +56,6 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
     const handleOpen = () => setSearchOpen(true);
     window.addEventListener("meshwork:open-search", handleOpen);
     return () => window.removeEventListener("meshwork:open-search", handleOpen);
-  }, []);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 1024);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
   }, []);
 
   useEffect(() => {
@@ -111,8 +102,6 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const userName = user?.firstName || user?.email?.split("@")[0] || "User";
   const userInitial = userName.charAt(0).toUpperCase();
 
-  if (isMobile) return <MobileGate />;
-
   if (location === "/settings") {
     return (
       <div className="dashboard-shell dashboard-ground dashboard-ink font-body selection:bg-primary/20 selection:text-foreground min-h-screen antialiased flex flex-col">
@@ -122,9 +111,9 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="dashboard-shell dashboard-ground dashboard-ink font-body selection:bg-primary/20 selection:text-foreground min-h-screen antialiased flex p-2.5 gap-2.5 cursor-figma">
+    <div className="dashboard-shell dashboard-ground dashboard-ink font-body selection:bg-primary/20 selection:text-foreground min-h-screen antialiased flex flex-col lg:flex-row p-2.5 gap-2.5 cursor-figma">
       {/* ── Sidebar (240px / w-60) ── */}
-      <aside className="w-60 shrink-0 flex flex-col justify-between h-[calc(100vh-20px)] sticky top-2.5 z-50 select-none">
+      <aside className="hidden lg:flex w-60 shrink-0 flex flex-col justify-between h-[calc(100vh-20px)] sticky top-2.5 z-50 select-none">
         <div className="flex flex-col flex-1 overflow-y-auto space-y-4 pr-1 hide-scrollbar">
           {/* Logo & Workspace Dropdown Header */}
           <div className="space-y-2">
@@ -351,8 +340,51 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
+      <nav
+        aria-label="Main navigation"
+        className="flex items-center gap-1 overflow-x-auto rounded-xl border dashboard-border dashboard-content-surface p-2 lg:hidden"
+      >
+        <Link
+          href="/home"
+          className="shrink-0 rounded-lg px-3 py-2 text-sm dashboard-ink dashboard-hover-tint"
+        >
+          Home
+        </Link>
+        <Link
+          href="/workspaces"
+          className="shrink-0 rounded-lg px-3 py-2 text-sm dashboard-ink dashboard-hover-tint"
+        >
+          Projects
+        </Link>
+        <Link
+          href="/templates"
+          className="shrink-0 rounded-lg px-3 py-2 text-sm dashboard-ink dashboard-hover-tint"
+        >
+          Templates
+        </Link>
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          className="shrink-0 rounded-lg px-3 py-2 text-sm dashboard-ink dashboard-hover-tint"
+        >
+          Search
+        </button>
+        <Link
+          href="/settings"
+          className="shrink-0 rounded-lg px-3 py-2 text-sm dashboard-ink dashboard-hover-tint"
+        >
+          Settings
+        </Link>
+        <button
+          type="button"
+          onClick={() => logout()}
+          className="shrink-0 rounded-lg px-3 py-2 text-sm dashboard-ink dashboard-hover-tint"
+        >
+          Log out
+        </button>
+      </nav>
       {/* ── Main Canvas View Container — Curved rounded-[24px] box ── */}
-      <main className="dashboard-content flex-1 rounded-[24px] overflow-hidden border dashboard-border dashboard-content-surface relative min-h-[calc(100vh-20px)] shadow-2xl flex flex-col">
+      <main className="dashboard-content flex-1 rounded-[24px] overflow-hidden border dashboard-border dashboard-content-surface relative min-w-0 min-h-[calc(100vh-84px)] lg:min-h-[calc(100vh-20px)] shadow-2xl flex flex-col">
         <PageErrorBoundary>{children}</PageErrorBoundary>
       </main>
 

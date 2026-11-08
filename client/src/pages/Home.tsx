@@ -127,7 +127,7 @@ export default function Home() {
   return (
     <>
       <Helmet>
-        <title>{isWorkspacesPage ? "Workspaces" : "Home"}</title>
+        <title>{isWorkspacesPage ? "Projects" : "Home"}</title>
       </Helmet>
 
       {/* Blueprint Generation Banner */}
@@ -214,7 +214,7 @@ export default function Home() {
                 className="flex items-center gap-2 px-6 py-3 rounded-xl dashboard-primary font-semibold text-sm dashboard-primary-hover active:scale-95 transition-all shadow-[0_0_25px_rgba(255,255,255,0.15)] cursor-figma-pointer"
               >
                 <Plus className="w-4 h-4" />
-                New workspace
+                New project
               </button>
               <Link
                 href="/templates"
@@ -235,8 +235,8 @@ export default function Home() {
             className="home-projects w-full dashboard-projects-surface backdrop-blur-2xl border dashboard-border rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col min-h-[480px] max-h-[600px]"
           >
             {/* Header / Tabs */}
-            <div className="flex items-center justify-between pb-3 border-b dashboard-border mb-3">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b dashboard-border mb-3">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Search icon button */}
                 <div className="relative flex items-center">
                   <Search className="absolute left-2.5 w-3.5 h-3.5 dashboard-muted" />
@@ -310,12 +310,12 @@ export default function Home() {
                   <p>
                     {formatUserErrorMessage(
                       workspacesError,
-                      "Workspace listing is temporarily unavailable.",
+                      "Project listing is temporarily unavailable.",
                     )}
                   </p>
                   {workspaces && (
                     <p className="mt-1">
-                      Previously loaded workspaces may be out of date.
+                      Previously loaded projects may be out of date.
                     </p>
                   )}
                   <button
@@ -331,12 +331,23 @@ export default function Home() {
                 </div>
               )}
               {isWorkspacesLoading ? (
-                <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  role="status"
+                  aria-label="Loading projects"
+                  className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+                >
+                  {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="h-28 rounded-xl border dashboard-border dashboard-tint animate-pulse"
-                    />
+                      aria-hidden="true"
+                      className="overflow-hidden rounded-xl border dashboard-border motion-safe:animate-pulse"
+                    >
+                      <div className="aspect-video dashboard-tint" />
+                      <div className="space-y-2 p-4">
+                        <div className="h-4 w-2/3 rounded dashboard-tint" />
+                        <div className="h-3 w-1/2 rounded dashboard-tint" />
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : isWorkspacesError &&
@@ -345,7 +356,7 @@ export default function Home() {
                 <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
                   <Package className="h-6 w-6 dashboard-muted" />
                   <p className="text-xs font-medium dashboard-secondary">
-                    No workspaces yet
+                    No projects yet
                   </p>
                   <button
                     onClick={() => setIsCreateOpen(true)}
@@ -377,7 +388,7 @@ export default function Home() {
                         onClick={() => setIsCreateOpen(true)}
                         className="dashboard-create-tile flex min-h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                       >
-                        <Plus className="h-7 w-7" /> New workspace
+                        <Plus className="h-7 w-7" /> New project
                       </button>
                     </motion.div>
                   ) : (

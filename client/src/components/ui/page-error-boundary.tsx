@@ -1,9 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import {
-  ExclamationTriangleIcon,
-  ArrowPathIcon,
-} from "@heroicons/react/24/outline";
-import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface Props {
   children?: ReactNode;
@@ -60,45 +56,16 @@ export class PageErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="flex h-[60vh] w-full flex-col items-center justify-center p-6 text-center">
-          <div className="flex max-w-md flex-col items-center space-y-4 rounded-xl border border-border bg-foreground/[0.02] p-8 backdrop-blur-xl">
-            <div className="rounded-full bg-destructive/10 p-3">
-              <ExclamationTriangleIcon className="h-8 w-8 text-destructive" />
-            </div>
-
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold tracking-tight text-foreground">
-                {this.props.fallbackTitle || "Failed to load page content"}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                An unexpected error occurred while displaying this section.
-              </p>
-              {this.state.incidentId && (
-                <p className="font-mono text-[11px] text-muted-foreground">
-                  Quote {this.state.incidentId} when asking for help.
-                </p>
-              )}
-            </div>
-
-            {import.meta.env.DEV && this.state.error && (
-              <div className="w-full rounded-lg bg-black/50 p-3 text-left border border-border">
-                <p className="font-mono text-[11px] text-red-400 break-all">
-                  {this.state.error.toString()}
-                </p>
-              </div>
-            )}
-
-            <Button
-              onClick={this.handleReset}
-              variant="outline"
-              size="sm"
-              className="mt-2 gap-2 text-xs border-border hover:bg-foreground/10"
-            >
-              <ArrowPathIcon className="h-3.5 w-3.5" />
-              Try again
-            </Button>
-          </div>
-        </div>
+        <ErrorState
+          title={this.props.fallbackTitle || "This page couldn’t load"}
+          description="Something went wrong while displaying this section. Try again."
+          detail={
+            this.state.incidentId
+              ? `Reference: ${this.state.incidentId}`
+              : undefined
+          }
+          onRetry={this.handleReset}
+        />
       );
     }
 

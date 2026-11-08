@@ -172,7 +172,7 @@ export function WorkspaceHeader({
 
   return (
     <>
-      <header className="workspace-header h-11 w-full bg-[#111114] flex items-center justify-between px-3 relative z-30 select-none shrink-0 ws-ink font-sans text-xs">
+      <header className="workspace-header h-11 w-full bg-[#111114] flex items-center justify-between gap-4 overflow-x-auto px-3 relative z-30 select-none shrink-0 ws-ink font-sans text-xs">
         {/* ── Left Section: Logo, Project Name, Status, Undo/Redo (always fixed on left) ── */}
         <div className="flex items-center gap-2 min-w-0 z-10">
           {/* Logo */}
@@ -219,7 +219,7 @@ export function WorkspaceHeader({
                   </div>
                   <div className="min-w-0">
                     <div className="text-[12px] font-semibold ws-ink truncate">
-                      {userName}&apos;s Workspace
+                      {userName}&apos;s Project
                     </div>
                     <div className="text-[10px] ws-muted capitalize">
                       {userRole} Role
@@ -485,7 +485,7 @@ export function WorkspaceHeader({
 
         {/* ── Sidebar Toggle when open: positioned on top of the edge of the sidebar ── */}
         {isSidebarOpen && (
-          <div className="absolute left-[324px] z-20 transition-all duration-300">
+          <div className="absolute left-[324px] z-20 max-md:hidden transition-all duration-300">
             <button
               onClick={() => setIsSidebarOpen(false)}
               className="w-7 h-7 flex items-center justify-center rounded-md ws-muted ws-hover-ink ws-hover-surface transition-all"
@@ -497,7 +497,7 @@ export function WorkspaceHeader({
         )}
 
         {/* ── Center Section: Centralized Project Title ── */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none z-0">
+        <div className="absolute left-1/2 -translate-x-1/2 hidden lg:flex items-center justify-center pointer-events-none z-0">
           <span className="font-semibold ws-ink text-[13px] tracking-wide truncate max-w-[320px]">
             {workspace?.title ?? "Untitled Project"}
           </span>
@@ -508,7 +508,7 @@ export function WorkspaceHeader({
           <button
             type="button"
             onClick={onOpenSearch}
-            aria-label="Search workspaces and canvas"
+            aria-label="Search projects and canvas"
             title="Search (Ctrl/⌘ K)"
             className="flex h-8 w-8 items-center justify-center rounded-lg ws-muted ws-hover-surface ws-hover-ink transition-colors"
           >

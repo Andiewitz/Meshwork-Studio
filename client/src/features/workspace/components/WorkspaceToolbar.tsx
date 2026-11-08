@@ -60,12 +60,15 @@ export function WorkspaceToolbar({
   onAddNote,
 }: WorkspaceToolbarProps) {
   return (
-    <Panel position="bottom-center" className="mb-6 z-40">
+    <Panel
+      position="bottom-center"
+      className="mb-6 z-40 max-w-[calc(100%-2rem)]"
+    >
       <motion.div
         initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-        className="workspace-toolbar flex items-center rounded-2xl p-1 gap-0.5 ws-option backdrop-blur-2xl border ws-border shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_40px_rgba(0,0,0,0.6)] select-none"
+        className="workspace-toolbar flex items-center overflow-x-auto rounded-2xl p-1 gap-0.5 ws-option backdrop-blur-2xl border ws-border shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_40px_rgba(0,0,0,0.6)] select-none"
       >
         {/* Select Tool */}
         <Tooltip>

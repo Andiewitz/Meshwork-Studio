@@ -56,10 +56,10 @@ export function CollaboratorsDialog({
       <DialogContent className="workspace-dialog max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-xl border ws-border p-5 ws-ink sm:p-6">
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">
-            Share workspace
+            Share project
           </DialogTitle>
           <DialogDescription className="text-sm ws-muted">
-            Give existing, verified accounts access to this workspace.
+            Give existing, verified accounts access to this project.
           </DialogDescription>
         </DialogHeader>
         {isOwner ? (
@@ -190,7 +190,7 @@ export function CollaboratorsDialog({
                       onClick={() => {
                         if (
                           window.confirm(
-                            `Remove ${member.profile?.name || "this collaborator"} from this workspace?`,
+                            `Remove ${member.profile?.name || "this collaborator"} from this project?`,
                           )
                         )
                           void perform({
@@ -207,13 +207,13 @@ export function CollaboratorsDialog({
                 ))}
               </ul>
               <p className="mt-3 text-xs leading-relaxed ws-muted">
-                Removing a collaborator revokes their workspace access.
+                Removing a collaborator revokes their project access.
               </p>
             </div>
           </>
         ) : (
           <p className="py-3 text-sm ws-muted">
-            Only the workspace owner can manage direct collaborators.
+            Only the project owner can manage direct collaborators.
           </p>
         )}
       </DialogContent>

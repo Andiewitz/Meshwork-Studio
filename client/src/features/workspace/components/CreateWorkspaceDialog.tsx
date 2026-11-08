@@ -97,7 +97,7 @@ export function CreateWorkspaceDialog({
       {
         onSuccess: (newWorkspace) => {
           toast({
-            title: "Workspace created",
+            title: "Project created",
             description: `"${values.title}" is ready.`,
           });
           handleClose();
@@ -125,9 +125,9 @@ export function CreateWorkspaceDialog({
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogTitle className="sr-only">Create New Workspace</DialogTitle>
+        <DialogTitle className="sr-only">Create project</DialogTitle>
         <DialogDescription className="sr-only">
-          Configure and create a new canvas architecture workspace.
+          Configure and create a new architecture project.
         </DialogDescription>
         {isAtLimit ? (
           /* ── Free tier limit reached ──────────────────────────────────── */
@@ -140,11 +140,11 @@ export function CreateWorkspaceDialog({
                 className="text-base font-semibold dashboard-ink mb-1.5"
                 style={{ fontFamily: "var(--font-sans)" }}
               >
-                Workspace limit reached
+                Project limit reached
               </h3>
               <p className="text-sm dashboard-muted leading-relaxed max-w-xs mx-auto">
-                Free accounts are limited to {FREE_TIER_LIMIT} workspaces.
-                Delete an existing workspace to create a new one, or upgrade for
+                Free accounts are limited to {FREE_TIER_LIMIT} projects. Delete
+                an existing project to create a new one, or upgrade for
                 unlimited access.
               </p>
             </div>
@@ -180,7 +180,7 @@ export function CreateWorkspaceDialog({
                 <div className="flex-1 min-w-0 pt-0.5">
                   <input
                     {...form.register("title")}
-                    placeholder="Workspace name"
+                    placeholder="Project name"
                     autoFocus
                     className={cn(
                       "w-full bg-transparent border-none p-0 font-sans font-bold text-[17px] dashboard-ink",
@@ -191,7 +191,7 @@ export function CreateWorkspaceDialog({
                   <p className="text-[11px] dashboard-muted mt-1 font-body">
                     {typeof titleValue === "string" && titleValue
                       ? `${titleValue.length}/16 characters`
-                      : "Give your workspace a name"}
+                      : "Give your project a name"}
                   </p>
                 </div>
               </div>
@@ -246,7 +246,7 @@ export function CreateWorkspaceDialog({
             {/* ── Footer ────────────────────────────────────────────────── */}
             <div className="flex items-center justify-between gap-2 px-5 py-4 dashboard-dialog-footer border-t dashboard-border">
               <span className="text-[10px] dashboard-muted">
-                {workspaces?.length ?? 0}/{FREE_TIER_LIMIT} workspaces used
+                {workspaces?.length ?? 0}/{FREE_TIER_LIMIT} projects used
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -273,7 +273,7 @@ export function CreateWorkspaceDialog({
                       Creating...
                     </>
                   ) : (
-                    "Create"
+                    "Create project"
                   )}
                 </button>
               </div>
