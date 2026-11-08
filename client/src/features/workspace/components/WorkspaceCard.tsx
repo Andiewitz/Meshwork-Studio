@@ -9,20 +9,6 @@ import {
   ArrowTopRightOnSquareIcon,
   DocumentDuplicateIcon,
   StarIcon,
-  CubeIcon,
-  Squares2X2Icon,
-  ServerIcon,
-  GlobeAltIcon,
-  CircleStackIcon,
-  ShieldCheckIcon,
-  ShareIcon,
-  BoltIcon,
-  CpuChipIcon,
-  CloudIcon,
-  LockClosedIcon,
-  ChartBarIcon,
-  CodeBracketIcon,
-  WifiIcon,
   UserGroupIcon,
   ArrowPathIcon,
   ExclamationTriangleIcon,
@@ -50,28 +36,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-
-const ICON_MAP: Record<string, React.ComponentType<any>> = {
-  server: ServerIcon,
-  globe: GlobeAltIcon,
-  box: CubeIcon,
-  database: CircleStackIcon,
-  shield: ShieldCheckIcon,
-  git: ShareIcon,
-  zap: BoltIcon,
-  cpu: CpuChipIcon,
-  network: ShareIcon,
-  cloud: CloudIcon,
-  lock: LockClosedIcon,
-  chart: ChartBarIcon,
-  code: CodeBracketIcon,
-  wifi: WifiIcon,
-  grid: Squares2X2Icon,
-};
-
-function getWorkspaceIcon(iconId?: string): React.ComponentType<any> {
-  return ICON_MAP[iconId || "box"] || CubeIcon;
-}
+import { WorkspacePreview } from "./WorkspacePreview";
 
 interface WorkspaceCardProps {
   workspace: Workspace;
@@ -181,7 +146,6 @@ export function WorkspaceCard({
     }
   };
 
-  const Icon = getWorkspaceIcon(workspace.icon || undefined);
   const displayDate = workspace.updatedAt
     ? new Date(workspace.updatedAt)
     : workspace.createdAt
@@ -294,9 +258,7 @@ export function WorkspaceCard({
             )}
           >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,var(--color-outline-variant)_1px,transparent_0)] [background-size:20px_20px] opacity-20" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Icon className="w-10 h-10 dashboard-muted group-hover:text-primary transition-colors duration-500 group-hover:scale-110" />
-            </div>
+            <WorkspacePreview workspaceId={workspace.id} />
 
             {/* Shared badge */}
             {isShared && (
@@ -332,6 +294,11 @@ export function WorkspaceCard({
             {!isShared && (
               <button
                 onClick={handleToggleFavorite}
+                aria-label={
+                  workspace.isFavorite
+                    ? "Remove from favorites"
+                    : "Add to favorites"
+                }
                 className={cn(
                   "absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200 z-20",
                   workspace.isFavorite

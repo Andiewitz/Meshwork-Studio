@@ -17,7 +17,6 @@ import {
   Bars3Icon as List,
   CubeIcon as Package,
   PlusIcon as Plus,
-  SparklesIcon as Sparkles,
 } from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -209,13 +208,21 @@ export default function Home() {
             <p className="text-[14.5px] dashboard-secondary mb-8 max-w-md leading-relaxed">
               Design, auto-sync, and manage cloud infrastructure diagrams.
             </p>
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl dashboard-primary font-semibold text-sm dashboard-primary-hover active:scale-95 transition-all shadow-[0_0_25px_rgba(255,255,255,0.15)] cursor-figma-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              New workspace
-            </button>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button
+                onClick={() => setIsCreateOpen(true)}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl dashboard-primary font-semibold text-sm dashboard-primary-hover active:scale-95 transition-all shadow-[0_0_25px_rgba(255,255,255,0.15)] cursor-figma-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                New workspace
+              </button>
+              <Link
+                href="/templates"
+                className="dashboard-templates-button flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-colors"
+              >
+                <Package className="h-4 w-4" /> Browse templates
+              </Link>
+            </div>
           </motion.div>
         </div>
 
@@ -355,7 +362,7 @@ export default function Home() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+                      className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
                     >
                       {displayWorkspaces.map((workspace) => (
                         <WorkspaceCard
@@ -365,6 +372,13 @@ export default function Home() {
                           viewMode="grid"
                         />
                       ))}
+                      <button
+                        type="button"
+                        onClick={() => setIsCreateOpen(true)}
+                        className="dashboard-create-tile flex min-h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                      >
+                        <Plus className="h-7 w-7" /> New workspace
+                      </button>
                     </motion.div>
                   ) : (
                     <motion.div
