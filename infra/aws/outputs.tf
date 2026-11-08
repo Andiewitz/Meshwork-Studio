@@ -1,4 +1,5 @@
 output "backup_s3_uri" { value = "s3://${aws_s3_bucket.backups.id}/${local.backup_prefix}" }
+output "architecture_plans_bucket" { value = aws_s3_bucket.architecture_plans.id }
 # Only public IDs/URLs are exported. SecureString secrets are never managed here.
 output "runtime_parameters" { value = { for name, parameter in aws_ssm_parameter.runtime : name => nonsensitive(parameter.value) } }
 output "ses_dkim_records" {

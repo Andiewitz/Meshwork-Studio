@@ -16,6 +16,7 @@ async function main() {
   }
   const allowed = new Set([
     "BACKUP_S3_URI",
+    "ARTIFACT_S3_BUCKET",
     "COGNITO_DOMAIN",
     "COGNITO_CLIENT_ID",
     "COGNITO_POOL_ID",
@@ -40,7 +41,14 @@ async function main() {
       }
       next = page.NextToken;
     } while (next);
-    if ([...allowed].some((name) => !environment[name]))
+    if (
+      [
+        "BACKUP_S3_URI",
+        "COGNITO_DOMAIN",
+        "COGNITO_CLIENT_ID",
+        "COGNITO_POOL_ID",
+      ].some((name) => !environment[name])
+    )
       throw new Error("Required AWS runtime configuration is incomplete");
   } finally {
     client.destroy();

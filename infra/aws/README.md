@@ -198,3 +198,7 @@ database-backed restore was performed. Docker's local daemon was unavailable.
 The live checks above remain required after supplying deployment values and
 credentials. Passing mocked Terraform tests does not prove live IAM/service
 configuration or migrate existing production identities.
+
+# Architecture plan storage
+
+Terraform provisions a private, encrypted S3 bucket for AI architecture plans and grants the existing EC2 role access under `projects/`. Set `ARTIFACT_S3_BUCKET` in the application runtime to the `architecture_plans_bucket` output (or load the runtime SSM parameter), and set `AWS_REGION` to the bucket region. Applying Terraform and restarting the application are required before plans can be saved. Plans and their readable Markdown are stored together as JSON objects. Deleting a project purges its plan objects. S3 storage and request charges may apply; this does not provision a database.

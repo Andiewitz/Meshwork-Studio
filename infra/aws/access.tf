@@ -7,6 +7,8 @@ resource "aws_iam_role_policy" "ec2" {
   role = var.ec2_role_name
   policy = jsonencode({ Version = "2012-10-17", Statement = [
     { Effect = "Allow", Action = ["s3:PutObject", "s3:AbortMultipartUpload"], Resource = "${aws_s3_bucket.backups.arn}/${local.backup_prefix}*" },
+    { Effect = "Allow", Action = ["s3:ListBucket"], Resource = aws_s3_bucket.architecture_plans.arn, Condition = { StringLike = { "s3:prefix" = "projects/*" } } },
+    { Effect = "Allow", Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], Resource = "${aws_s3_bucket.architecture_plans.arn}/projects/*" },
     { Effect = "Allow", Action = ["dynamodb:Scan", "dynamodb:DescribeContinuousBackups"], Resource = "arn:${local.partition}:dynamodb:${var.aws_region}:${var.aws_account_id}:table/${var.canvas_table_name}" },
     { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"], Resource = ["${aws_cloudwatch_log_group.app.arn}:*", "${aws_cloudwatch_log_group.operations.arn}:*"] },
     { Effect = "Allow", Action = ["logs:CreateLogGroup"], Resource = [aws_cloudwatch_log_group.app.arn, aws_cloudwatch_log_group.operations.arn] },
@@ -17,10 +19,11 @@ resource "aws_iam_role_policy" "ec2" {
 }
 resource "aws_ssm_parameter" "runtime" {
   for_each = {
-    BACKUP_S3_URI     = "s3://${aws_s3_bucket.backups.id}/${local.backup_prefix}"
-    COGNITO_DOMAIN    = "https://${aws_cognito_user_pool_domain.users.domain}.auth.${var.aws_region}.amazoncognito.com"
-    COGNITO_CLIENT_ID = aws_cognito_user_pool_client.web.id
-    COGNITO_POOL_ID   = aws_cognito_user_pool.users.id
+    BACKUP_S3_URI      = "s3://${aws_s3_bucket.backups.id}/${local.backup_prefix}"
+    ARTIFACT_S3_BUCKET = aws_s3_bucket.architecture_plans.id
+    COGNITO_DOMAIN     = "https://${aws_cognito_user_pool_domain.users.domain}.auth.${var.aws_region}.amazoncognito.com"
+    COGNITO_CLIENT_ID  = aws_cognito_user_pool_client.web.id
+    COGNITO_POOL_ID    = aws_cognito_user_pool.users.id
   }
   name  = "/${local.name}/runtime/${each.key}"
   type  = "String"

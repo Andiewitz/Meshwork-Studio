@@ -12,6 +12,11 @@ import { createChildLogger } from "@server/lib/logger";
 import type { CanvasDependencies } from "./dependencies";
 import { copyWorkspaceCanvas } from "./copy-workspace";
 import { logTraceback } from "@server/lib/traceback";
+import {
+  architectureArtifacts,
+  closeArchitectureArtifacts,
+} from "./db/architecture-artifacts";
+import { registerArchitectureArtifactRoutes } from "./routes/architectureArtifactRoutes";
 
 const log = createChildLogger("canvas-service");
 
@@ -25,9 +30,11 @@ export class CanvasService {
     await tableSetup;
     closeCanvasDynamo();
     closeCanvasS3();
+    closeArchitectureArtifacts();
   }
   static initialize(app: Express, context: CanvasDependencies) {
     registerCanvasRoutes(app, context);
+    registerArchitectureArtifactRoutes(app, context);
     tableSetup = ensureCanvasTable();
 
     // Listen to external events
@@ -36,6 +43,7 @@ export class CanvasService {
       async ({ id }, { operationId }) => {
         try {
           await canvasStorage.deleteWorkspaces([id]);
+          await architectureArtifacts.purge(id);
           await invalidateCanvas(id);
           log.info(
             { workspaceId: id, operationId },
@@ -91,6 +99,7 @@ export class CanvasService {
         if (ids.length === 0) return { operationId, status: "completed" };
         try {
           await canvasStorage.deleteWorkspaces(ids);
+          await Promise.all(ids.map((id) => architectureArtifacts.purge(id)));
           await Promise.all(ids.map((id) => invalidateCanvas(id)));
           log.info(
             { count: ids.length, operationId },
