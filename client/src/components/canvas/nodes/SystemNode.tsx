@@ -579,7 +579,7 @@ export function SystemNode({
   }
 
   const handleCls =
-    "!w-2 !h-2 !rounded-full !border-2 !border-blue-400 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm";
+    "!z-10 !w-2 !h-2 !rounded-full !border-2 !border-blue-400 !bg-white !opacity-0 group-hover:!opacity-100 !transition-opacity !shadow-sm";
   const minimumDimensions = getNodeMinimumDimensions(type);
   const { layer, shape } = nodePresentation(type);
   const lightPalette = nodeLayerColors[layer];

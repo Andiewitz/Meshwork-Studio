@@ -8,6 +8,7 @@ import React, {
   useMemo,
 } from "react";
 import { Helmet } from "react-helmet-async";
+import { nanoid } from "nanoid";
 import { motion, AnimatePresence } from "framer-motion";
 import { DefaultLoading } from "@/components/loading-states";
 import { ErrorState } from "@/components/ui/error-state";
@@ -24,7 +25,6 @@ import {
   Background,
   useNodesState,
   useEdgesState,
-  addEdge,
   type Node,
   type Edge,
   type Connection,
@@ -181,6 +181,10 @@ import {
   prepareLegacyNodeForEdit,
   legacyFallbackBrand,
 } from "@/components/canvas/nodes/legacyNodeAppearance";
+import {
+  createConnections,
+  type ConnectionPreset,
+} from "@/features/workspace/utils/connectionStyles";
 import { nodeAccessibleLabel } from "@/components/canvas/nodes/nodePresentation";
 
 import {
@@ -342,7 +346,9 @@ function WorkspaceView() {
   const [newWsGroup, setNewWsGroup] = useState("");
   const [edgeType, setEdgeType] = useState<EdgeType>("step");
   const [edgeStyle, setEdgeStyle] = useState<EdgeStyle>("solid");
-  const [hasArrow, setHasArrow] = useState(false);
+  const [hasArrow, setHasArrow] = useState(true);
+  const [connectionPreset, setConnectionPreset] =
+    useState<ConnectionPreset>("sync");
   const [drawingMode, setDrawingMode] = useState<
     "select" | "pan" | "annotation" | "infrastructure"
   >("select");
@@ -1208,34 +1214,6 @@ function WorkspaceView() {
   ]);
 
   useEffect(() => {
-    setEdges((eds) =>
-      eds.map((edge): Edge => {
-        const currentStyle = (edge.style as Record<string, unknown>) ?? {};
-        const newStyle = {
-          ...currentStyle,
-          stroke: isSimulating ? "#FFFFFF" : "#555",
-        };
-
-        const prevMarkerEnd = edge.markerEnd;
-        const newMarkerEnd =
-          prevMarkerEnd && typeof prevMarkerEnd === "object"
-            ? {
-                ...(prevMarkerEnd as Record<string, unknown>),
-                color: isSimulating ? "#FFFFFF" : "#555",
-              }
-            : prevMarkerEnd;
-
-        return {
-          ...edge,
-          animated: isSimulating,
-          style: newStyle,
-          markerEnd: newMarkerEnd as Edge["markerEnd"],
-        };
-      }),
-    );
-  }, [isSimulating, setEdges]);
-
-  useEffect(() => {
     const handleClickOutside = () => {
       setMenu(null);
     };
@@ -1383,34 +1361,66 @@ function WorkspaceView() {
     [takeSnapshot, setEdges, selectedEdgeId],
   );
 
+  const updateSelectedConnections = useCallback(
+    (update: (edge: Edge) => Edge) => {
+      if (!canEdit) return;
+      const selected = edges.filter(
+        (edge) => edge.selected || edge.id === selectedEdgeId,
+      );
+      if (!selected.length) return;
+      takeSnapshot();
+      const changes: EdgeChange[] = selected.map((edge) => ({
+        type: "replace",
+        id: edge.id,
+        item: update(edge),
+      }));
+      setEdges((current) => applyEdgeChanges(changes, current));
+      sendEdgesChange(changes);
+    },
+    [canEdit, edges, selectedEdgeId, takeSnapshot, sendEdgesChange],
+  );
+
   const onConnect = useCallback(
     (params: Connection) => {
+      if (!canEdit) return;
+      const result = createConnections(
+        edges,
+        params,
+        connectionPreset,
+        edgeType,
+        edgeStyle,
+        hasArrow,
+        workspaceTheme === "dark",
+        nodes,
+        () => nanoid(),
+      );
+      if (!result.added.length) {
+        toast({
+          title: "Connection already exists",
+          description:
+            "Choose different handles or remove the existing connection first.",
+        });
+        return;
+      }
       takeSnapshot();
-      const style: React.CSSProperties = { stroke: "#555", strokeWidth: 2 };
-      if (edgeStyle === "dashed") style.strokeDasharray = "5 5";
-      if (edgeStyle === "dotted") style.strokeDasharray = "2 2";
-
-      setEdges((eds) =>
-        addEdge(
-          {
-            ...params,
-            type: edgeType,
-            style,
-            animated: isSimulating,
-            markerEnd: hasArrow
-              ? { type: "arrowclosed" as const, color: "#555" }
-              : undefined,
-            data: {
-              label: "",
-              description: "what this connection represents",
-              ai: { notes: "" },
-            },
-          },
-          eds,
-        ),
+      setEdges(result.edges);
+      sendEdgesChange(
+        result.added.map((item) => ({ type: "add" as const, item })),
       );
     },
-    [setEdges, isSimulating, takeSnapshot, edgeType, edgeStyle, hasArrow],
+    [
+      canEdit,
+      edges,
+      nodes,
+      connectionPreset,
+      edgeType,
+      edgeStyle,
+      hasArrow,
+      workspaceTheme,
+      toast,
+      takeSnapshot,
+      sendEdgesChange,
+    ],
   );
 
   const onPaneClick = useCallback(
@@ -1777,6 +1787,22 @@ function WorkspaceView() {
   }, []);
 
   const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
+    const kind = edge.data?.connectionKind;
+    setConnectionPreset(
+      kind === "async" || kind === "primary" || kind === "sync" ? kind : "sync",
+    );
+    const dash = edge.style?.strokeDasharray;
+    setEdgeStyle(
+      dash ? (String(dash).startsWith("2") ? "dotted" : "dashed") : "solid",
+    );
+    setHasArrow(Boolean(edge.markerEnd));
+    setEdgeType(
+      edge.type === "straight" ||
+        edge.type === "step" ||
+        edge.type === "smoothstep"
+        ? edge.type
+        : "default",
+    );
     setSelectedEdgeId(edge.id);
     setSelectedNodeId(null);
     setActiveTab("properties");
@@ -1869,6 +1895,11 @@ function WorkspaceView() {
     [nodes, setNodes, sendNodeMove],
   );
 
+  const displayedEdges = useMemo(
+    () =>
+      isSimulating ? edges.map((edge) => ({ ...edge, animated: true })) : edges,
+    [edges, isSimulating],
+  );
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
   const selectedEdge = edges.find((e) => e.id === selectedEdgeId) || null;
 
@@ -2088,7 +2119,7 @@ function WorkspaceView() {
 
             <ReactFlow
               nodes={accessibleNodes}
-              edges={edges}
+              edges={displayedEdges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
@@ -2441,7 +2472,11 @@ function WorkspaceView() {
                 setHasArrow={setHasArrow}
                 edgeType={edgeType}
                 setEdgeType={setEdgeType}
-                setEdges={setEdges}
+                preset={connectionPreset}
+                setPreset={setConnectionPreset}
+                dark={workspaceTheme === "dark"}
+                canEdit={canEdit}
+                onUpdateSelected={updateSelectedConnections}
                 fitView={fitView}
                 onAddNote={() => {
                   const pos = screenToFlowPosition({
