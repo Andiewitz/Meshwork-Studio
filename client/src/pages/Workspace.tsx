@@ -2111,7 +2111,7 @@ function WorkspaceView() {
               }}
               snapToGrid={snapToGrid}
               snapGrid={[gridSize, gridSize]}
-              colorMode="dark"
+              colorMode={workspaceTheme}
               connectionMode={ConnectionMode.Loose}
               panOnScroll={true}
               panOnDrag={drawingMode === "pan" ? true : [1, 2]}

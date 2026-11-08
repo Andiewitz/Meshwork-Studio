@@ -796,7 +796,7 @@ export function SystemNode({
         isNote ? (
           <div
             className={`
-                            relative p-4 overflow-hidden w-full h-full flex flex-col rounded-xl
+                            workspace-note relative p-4 overflow-hidden w-full h-full flex flex-col rounded-xl
                             ${selected ? "ring-2 ring-blue-500/50" : ""}
                             transition-shadow
                         `}

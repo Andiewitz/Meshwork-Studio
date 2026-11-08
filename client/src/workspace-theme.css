@@ -33,6 +33,14 @@
   background: var(--editor-canvas);
   border-color: var(--editor-line);
 }
+:root[data-theme="light"] .workspace-canvas .react-flow {
+  --xy-background-color: #fff;
+}
+:root[data-theme="light"] .workspace-canvas .node-layer-surface,
+:root[data-theme="light"] .workspace-canvas .workspace-note {
+  filter: drop-shadow(0 2px 3px rgba(32, 42, 56, 0.12))
+    drop-shadow(0 8px 14px rgba(32, 42, 56, 0.08));
+}
 .workspace-editor-shell .workspace-sidebar-frame,
 .workspace-editor-shell .workspace-properties-frame {
   border-color: var(--editor-line);
@@ -54,7 +62,9 @@
   border-color: #7a9ac3;
 }
 :root[data-theme="light"] .workspace-editor-shell .workspace-composer {
-  box-shadow: 0 3px 12px rgba(37, 54, 77, 0.06);
+  box-shadow:
+    0 2px 5px rgba(37, 54, 77, 0.08),
+    0 8px 20px rgba(37, 54, 77, 0.08);
 }
 :root[data-theme="light"] .workspace-editor-shell .workspace-assistant-intro {
   color: var(--editor-ink);
