@@ -121,7 +121,7 @@ export function CreateWorkspaceDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="create-workspace-dialog p-0 gap-0 max-w-[420px] w-full overflow-hidden dashboard-dialog-surface border dashboard-border shadow-[0_32px_64px_rgba(0,0,0,0.7)] rounded-2xl tracking-tight dashboard-ink font-body"
+        className="create-workspace-dialog p-0 gap-0 max-w-[420px] w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] overflow-y-auto dashboard-dialog-surface border dashboard-border shadow-[0_32px_64px_rgba(0,0,0,0.7)] rounded-2xl tracking-tight dashboard-ink font-body"
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
@@ -156,7 +156,7 @@ export function CreateWorkspaceDialog({
                 Go back
               </button>
               <button
-                className="px-5 py-2 text-[12px] font-semibold bg-primary dashboard-brand-ink rounded-lg hover:brightness-110 transition-all opacity-50 cursor-not-allowed"
+                className="px-5 py-2 text-[12px] font-semibold dashboard-primary rounded-lg opacity-50 cursor-not-allowed"
                 disabled
               >
                 Upgrade — Coming soon
@@ -180,12 +180,19 @@ export function CreateWorkspaceDialog({
                 <div className="flex-1 min-w-0 pt-0.5">
                   <input
                     {...form.register("title")}
+                    aria-label="Project name"
+                    aria-invalid={Boolean(form.formState.errors.title)}
+                    aria-describedby={
+                      form.formState.errors.title
+                        ? "project-title-error"
+                        : undefined
+                    }
                     placeholder="Project name"
                     autoFocus
                     className={cn(
                       "w-full bg-transparent border-none p-0 font-sans font-bold text-[17px] dashboard-ink",
                       "dashboard-placeholder placeholder:font-normal",
-                      "focus:outline-none caret-primary",
+                      "rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500",
                     )}
                   />
                   <p className="text-[11px] dashboard-muted mt-1 font-body">
@@ -197,7 +204,11 @@ export function CreateWorkspaceDialog({
               </div>
 
               {form.formState.errors.title && (
-                <p className="text-primary text-[11px] mt-2 ml-16">
+                <p
+                  id="project-title-error"
+                  role="alert"
+                  className="text-destructive text-xs mt-2 ml-16"
+                >
                   {form.formState.errors.title.message}
                 </p>
               )}
@@ -211,14 +222,20 @@ export function CreateWorkspaceDialog({
               <p className="text-[11px] dashboard-muted font-medium mb-3">
                 Icon
               </p>
-              <div className="flex gap-1.5">
-                {PROJECT_ICONS.map(({ id, Icon }) => (
+              <div
+                className="flex flex-wrap gap-1.5"
+                role="group"
+                aria-label="Project icon"
+              >
+                {PROJECT_ICONS.map(({ id, Icon, label }) => (
                   <button
                     key={id}
                     type="button"
+                    aria-label={label}
+                    aria-pressed={selectedIcon === id}
                     onClick={() => setSelectedIcon(id)}
                     className={cn(
-                      "w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-200 cursor-figma-pointer",
+                      "w-9 h-9 flex items-center justify-center rounded-lg transition-colors duration-200 cursor-figma-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500",
                       selectedIcon === id
                         ? "dashboard-tint dashboard-ink ring-1 dashboard-ring"
                         : "dashboard-muted dashboard-hover-ink dashboard-hover-tint",
@@ -262,15 +279,14 @@ export function CreateWorkspaceDialog({
                   onClick={form.handleSubmit(onSubmit)}
                   disabled={createWorkspace.isPending}
                   className={cn(
-                    "bg-primary dashboard-brand-ink text-[12px] font-semibold px-5 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 cursor-figma-pointer",
-                    "hover:brightness-110 hover:shadow-md",
+                    "dashboard-primary dashboard-primary-hover text-[12px] font-semibold px-5 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2 cursor-figma-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500",
                     "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:brightness-100",
                   )}
                 >
                   {createWorkspace.isPending ? (
                     <>
                       <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
-                      Creating...
+                      Creating…
                     </>
                   ) : (
                     "Create project"
