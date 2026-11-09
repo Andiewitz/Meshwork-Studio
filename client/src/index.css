@@ -2,6 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Toast colors are paired with an opaque surface in each theme. */
+.toast-info {
+  --toast-accent: #b3d3ff;
+  --toast-icon: #314765;
+  background: #1c2634;
+  border-color: #405675;
+}
+.toast-error {
+  --toast-accent: #ffc1c1;
+  --toast-icon: #63343b;
+  background: #342327;
+  border-color: #7b454b;
+}
+.toast-success {
+  --toast-accent: #a8e8bf;
+  --toast-icon: #24513b;
+  background: #193126;
+  border-color: #3f7558;
+}
+:root[data-theme="light"] .toast-info {
+  --toast-accent: #214f92;
+  --toast-icon: #d4e3fa;
+  background: #edf3fd;
+  border-color: #bacfeb;
+}
+:root[data-theme="light"] .toast-error {
+  --toast-accent: #95272c;
+  --toast-icon: #f6d6d6;
+  background: #fff0ef;
+  border-color: #e8babc;
+}
+:root[data-theme="light"] .toast-success {
+  --toast-accent: #116238;
+  --toast-icon: #ccebd8;
+  background: #e5f5ea;
+  border-color: #abd5ba;
+}
+.toast-accent {
+  color: var(--toast-accent);
+}
+.toast-icon {
+  background: var(--toast-icon);
+}
+
 @keyframes accordion-down {
   from {
     height: 0;

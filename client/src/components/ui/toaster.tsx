@@ -4,7 +4,6 @@ import {
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 import {
   Toast,
   ToastClose,
@@ -37,11 +36,7 @@ export function Toaster() {
           <Toast key={id} variant={variant} {...props}>
             <span
               aria-hidden="true"
-              className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[#f7826d]",
-                variant === "destructive" && "bg-destructive/15 text-red-300",
-                variant === "success" && "bg-success/15 text-green-300",
-              )}
+              className="toast-accent toast-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
             >
               <Icon className="h-5 w-5" strokeWidth={2} />
             </span>
