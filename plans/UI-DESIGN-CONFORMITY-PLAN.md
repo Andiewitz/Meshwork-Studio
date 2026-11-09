@@ -1,6 +1,6 @@
 # UI design conformity: proposed commits
 
-Status: plan only. The design documentation refresh is the first commit; the UI changes below are planned, not implemented. Use the newer dashboard and editor designs in `DESIGN.md` as the baseline. Keep the dashboard sidebar's appearance intact, preserve existing functionality and permissions, and avoid changing API responses.
+Status: the six UI changes below have been implemented in separate commits. The Templates empty state and toast variants received isolated light/dark browser spot-checks, including a narrow light viewport; authenticated editor and dialog flows still need live browser verification. Use the dashboard and editor designs in `DESIGN.md` as the baseline. Keep the dashboard sidebar's appearance intact, preserve existing functionality and permissions, and avoid changing API responses.
 
 1. **`docs: refresh current design and theming guidance`** — Update `DESIGN.md` and stale theming notes to describe the existing light/dark designs, current roles, diagrams and responsive intent. This commit also records this plan.
 2. **`fix(ui): align project creation dialog`** — Match the dashboard's themed primary action, inputs and focus treatment; give the icon choices accessible names and selection states. Preserve validation, project creation and limits. Verify light/dark, keyboard and narrow viewport.
