@@ -146,6 +146,12 @@
 .ws-muted {
   color: var(--ws-muted);
 }
+.ws-error-text {
+  color: #fca5a5;
+}
+:root[data-theme="light"] .ws-error-text {
+  color: #a42d32;
+}
 .ws-dim {
   color: var(--ws-dim);
 }

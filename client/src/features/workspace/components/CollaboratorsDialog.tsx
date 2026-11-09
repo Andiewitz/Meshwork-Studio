@@ -113,14 +113,14 @@ export function CollaboratorsDialog({
                 <button
                   type="submit"
                   disabled={change.isPending}
-                  className="h-10 rounded-md bg-[#00E5A0] px-4 text-sm font-semibold text-black hover:brightness-110 disabled:opacity-50"
+                  className="h-10 rounded-md ws-primary px-4 text-sm font-semibold disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
                 >
                   {change.isPending ? "Saving…" : "Add"}
                 </button>
               </div>
             </form>
             {error && (
-              <p role="alert" className="mt-2 text-sm text-red-300">
+              <p role="alert" className="mt-2 text-sm ws-error-text">
                 {error}
               </p>
             )}
@@ -136,7 +136,7 @@ export function CollaboratorsDialog({
                 <p className="py-3 text-sm ws-muted">Loading collaborators…</p>
               )}
               {isError && (
-                <p role="alert" className="py-3 text-sm text-red-300">
+                <p role="alert" className="py-3 text-sm ws-error-text">
                   Couldn’t load collaborators.{" "}
                   <button onClick={() => void refetch()} className="underline">
                     Try again

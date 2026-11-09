@@ -199,7 +199,7 @@ export function ArchitecturePlans({
         Plan
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="ws-surface-soft ws-ink border ws-border rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col p-5 gap-3 select-text">
+        <DialogContent className="workspace-dialog ws-ink border ws-border rounded-2xl w-[calc(100%-2rem)] max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto flex flex-col p-5 gap-3 select-text">
           <div className="flex justify-between items-center">
             <DialogTitle className="text-lg font-semibold">
               Architecture plans
@@ -214,7 +214,7 @@ export function ArchitecturePlans({
             </p>
           )}
           {error && (
-            <p role="alert" className="text-sm text-red-500">
+            <p role="alert" className="text-sm ws-error-text">
               {error}
             </p>
           )}
@@ -276,7 +276,7 @@ export function ArchitecturePlans({
                 type="button"
                 onClick={apply}
                 disabled={stale || busy || disabled}
-                className="px-4 py-2 rounded-lg ws-primary disabled:opacity-40"
+                className="px-4 py-2 rounded-lg ws-primary disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
               >
                 Apply to canvas
               </button>
