@@ -1,138 +1,92 @@
-# Meshwork Studio Design System
+---
+name: Meshwork Studio
+description: A calm, theme-aware workspace for designing architecture diagrams.
+colors:
+  dashboard-light-ground: "#eef1f5"
+  dashboard-light-surface: "#ffffff"
+  dashboard-light-ink: "#212936"
+  dashboard-light-primary: "#263b59"
+  dashboard-dark-ground: "#09090b"
+  dashboard-dark-surface: "#14151d"
+  dashboard-dark-ink: "#f5f5f7"
+  dashboard-dark-primary: "#ffffff"
+  editor-light-canvas: "#ffffff"
+  editor-dark-canvas: "#0a0a0a"
+  editor-light-header-action: "#316ac5"
+  diagram-edge: "#d9e7ff"
+  diagram-compute: "#e5e8f3"
+  diagram-data: "#dff2e5"
+  diagram-async: "#ffebcd"
+typography:
+  body:
+    fontFamily: '"DM Sans", system-ui, sans-serif'
+  display:
+    fontFamily: '"Geomini", "DM Sans", system-ui, sans-serif'
+  label:
+    fontFamily: '"Geist Mono", monospace'
+rounded:
+  sm: "3px"
+  md: "6px"
+  lg: "9px"
+---
 
-This is the single product-design reference for Meshwork Studio. It defines
-the visual language and the rules for implementing it. The executable tokens
-remain in `client/src/index.css`; Tailwind exposes them through
-`tailwind.config.ts`.
+# Meshwork Studio design system
 
-## Product character
+## Overview
 
-Meshwork is a focused, dark-first desktop workspace for architecture work.
-The interface should feel precise and calm: low-contrast surfaces establish
-structure, orange identifies an important product action, teal identifies the
-AI assistant, and infrastructure vendors retain their own identity only inside
-the diagram.
+Meshwork is a focused workspace for creating and sharing architecture diagrams. Product chrome should be calm and legible so the canvas and the user's work remain the focus. Both light and dark modes are supported; some existing components still need a theme and accessibility pass, so do not assume every surface is verified.
 
-Do not mix in a page-specific aesthetic (for example, a purple dashboard, a
-blue primary button, or the retired neo-brutalist hard shadows). Decorative
-colour is not a substitute for hierarchy.
+The current dashboard and editor implementations are the visual reference. The light dashboard has a soft mint, blue-green and sage atmosphere. The dark dashboard retains its existing gradient. The editor's light canvas is white, with subtle component shadows for contrast. Do not redesign the dashboard sidebar as part of unrelated work.
 
-## Source of truth and ownership
+## Colors
 
-| Concern           | Source of truth                                        | Use it for                                |
-| ----------------- | ------------------------------------------------------ | ----------------------------------------- |
-| Primitive values  | `client/src/index.css`                                 | CSS custom properties and global behavior |
-| Tailwind names    | `tailwind.config.ts`                                   | Application classes                       |
-| Reusable controls | `client/src/components/ui/`                            | Buttons, inputs, cards, dialogs, menus    |
-| Product layout    | `client/src/components/layout/` and feature components | Page and workspace composition            |
-| Logo              | `client/src/components/MeshworkLogo.tsx`               | Meshwork branding only                    |
+Use semantic roles and the active theme. The light dashboard uses near-white surfaces, dark blue-gray text and a deep navy primary action; the dark dashboard uses dark surfaces, light text and a light primary action. Editor header actions may use blue in light mode. Mint and sage are atmospheric accents; diagram layer colors communicate diagram meaning.
 
-New reusable styling belongs in a token or a component primitive. Do not add a
-second global stylesheet, a competing component-library theme, or a raw hex
-value merely to style an ordinary product control.
+The global `primary` token is orange-red and remains in older screens. It is not a reliable proxy for newer dashboard or workspace action colors. Use the surface-specific roles below where those designs apply rather than changing the global token across unrelated pages. Red, green and amber have feedback meanings; ensure icons, text, backgrounds and actions are legible in both themes.
 
-## Foundations
+| Area                                  | Current implementation                                                               |
+| ------------------------------------- | ------------------------------------------------------------------------------------ |
+| Shared semantic colors and typography | `client/src/index.css`, exposed through `tailwind.config.ts`                         |
+| Dashboard, project cards and previews | `client/src/components/layout/dashboard-theme.css` (`dashboard-*`)                   |
+| Editor surfaces, dialogs and controls | `client/src/workspace-theme.css` (`workspace-*`, `ws-*`)                             |
+| Settings surfaces                     | `client/src/pages/settings.css`                                                      |
+| Diagram layers and shapes             | `client/src/components/canvas/nodes/nodePresentation.ts` and `node-layer-colors.css` |
 
-### Color roles
+These files describe the current implementation. The separate token sets are not fully unified; prefer the established role for the surface being changed and improve shared primitives deliberately.
 
-Use roles rather than memorising values. Values may change; the role should
-not.
+## Typography
 
-| Role             | Token/classes                                                                 | Intended use                                               |
-| ---------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| App background   | `background`                                                                  | The outermost canvas/page                                  |
-| Surface ladder   | `surface-lowest`, `surface-low`, `surface`, `surface-high`, `surface-highest` | Increasing elevation; advance one step at a time           |
-| Content surfaces | `card`, `popover`, `input`                                                    | Cards, overlays, form controls                             |
-| Primary action   | `primary` / `primary-hover`                                                   | One clear next action in a region                          |
-| AI context       | `mosh-*`                                                                      | Jenkos/Mosh state and actions only                         |
-| Neutral action   | `secondary`, `muted`, `accent`                                                | Secondary controls and selection states                    |
-| Feedback         | `destructive`, `success`, `warning`                                           | Errors, successful completion, and warnings—not decoration |
-| Text             | `foreground`, `muted-foreground`, `subtle-foreground`                         | Primary, secondary, and quiet supporting copy              |
-| Borders/focus    | `border`, `border-strong`, `ring`                                             | Structural separation and visible keyboard focus           |
+Use DM Sans for normal UI and body copy. Geomini is available for short display and page headings; Geist Mono is for technical metadata, identifiers and shortcuts. Use sentence case for product copy and reserve uppercase tracking for short labels. Supporting text must remain readable; existing 9–10px editor labels are audit candidates, not a size target.
 
-Primary is the Meshwork orange-red. Purple, blue, and vendor colours are
-reserved for recognized third-party services, diagram node identity, or data
-visualisation. They must not replace `primary` in normal product chrome.
+## Layout
 
-### Typography
+The dashboard presents projects through a spacious main area, with previews that vary with diagram content. The editor uses a central canvas with compact surrounding controls and panels. Keep existing sidebar composition intact unless the work specifically calls for changing it.
 
-- `font-sans` / `font-body` (`DM Sans`) is the default for UI and prose.
-- `font-headline` / `font-display` (`Geomini`) is for short page and section
-  headings only.
-- `font-mono` / `font-label` (`Geist Mono`) is for shortcuts, IDs, technical
-  metadata, and compact all-caps labels.
+There is no blanket 1024px blocking gate. Layouts should adapt to available width, with scrollable overlays and reachable controls; absence of a gate does not mean every mobile editor flow has been validated. Check desktop and narrow viewports when changing a flow.
 
-Use normal sentence case for product copy. Reserve all caps and increased
-tracking for compact labels, not paragraphs. Headings are bold and tight;
-body text should be legible before it is ornamental.
+## Elevation & Depth
 
-### Shape, depth, and motion
+Dark mode separates surfaces primarily through tone and restrained borders. Light mode uses white and pale gray-blue surfaces with subtle shadows for floating controls, panels and canvas components. Avoid heavy neo-brutalist shadows. Preserve the existing dark gradient when adjusting light-mode styling.
 
-- Default control radius is 8px; compact controls may use 6px and small tags
-  3px. Use pills only for small status/identity elements.
-- Use the surface ladder, a subtle border, and a restrained shadow to show
-  elevation. Frosted overlays are appropriate for transient UI such as menus,
-  dialogs, and workspace controls.
-- Transitions should communicate cause and effect. Standard interactions are
-  150–200ms; page transitions may be about 180ms. Do not add perpetual motion
-  unless it communicates live status.
-- The canvas is an exception: node and provider colours represent the diagram's
-  content, not the application theme.
+## Shapes
 
-## Component rules
+Use softly rounded cards and controls consistent with neighboring components. Compact controls commonly use 6–9px radii; larger panels and dialogs can use more generous rounding, and pills suit compact actions and identity indicators. Prefer visual consistency and clear interaction states over forcing one radius on every component.
 
-Use the component in `client/src/components/ui/` before creating a local
-equivalent.
+The canvas encodes diagram meaning through shape and color: clients use pill shapes; databases have a cylinder form; queues have a distinct queue form; external services use a dashed treatment; other components generally use rounded cards. Light mode uses muted layer colors and dark mode uses corresponding subdued dark surfaces. Preserve user-selected and vendor-specific styles.
 
-| Need                                 | Standard                                                  |
-| ------------------------------------ | --------------------------------------------------------- |
-| Primary/secondary/destructive action | `Button` variants                                         |
-| Grouped content                      | `Card` with `CardHeader`, `CardContent`, and `CardFooter` |
-| Confirmation                         | `AlertDialog`                                             |
-| Optional/compact actions             | `DropdownMenu`, `Popover`, or a ghost button              |
-| Form labeling and validation         | `Label`, `Input`, `Textarea`, with text error feedback    |
-| Loading/empty/error states           | Existing loading and error-boundary primitives            |
+## Components
 
-Avoid importing the retired `animated-button` primitive or recreating a
-primary button using `bg-*`, `text-*`, and `hover:*` overrides. If a primitive
-lacks a legitimate shared variant, add it to that primitive with a semantic
-name and document the reason in the pull request.
+- **Actions and inputs:** Reuse existing primitives where they match the target surface; otherwise extend them with a semantic, theme-aware variant. Provide clear hover, disabled and keyboard-focus states. The current global `Button` default does not necessarily match dashboard or editor primary actions.
+- **Dialogs and popovers:** Use shared accessible dialog/popover behavior, with the owning surface's theme colors, readable contrast and scrolling at short viewport heights. Preserve actions and permissions.
+- **Project previews:** Use simplified, recognizable architecture diagrams with layer colors and varied layouts. Keep the project's actual content and meaning intact.
+- **Notifications:** Toasts use rounded surfaces, a status icon, title, optional description and action, plus a dismiss control. Choose status and action colors that work in both themes; do not rely on color alone.
+- **Loading, empty and error states:** Prefer skeletons or contextual placeholders for page and content loading. Use concise status feedback for short actions and show a useful recovery action for errors. A skeleton does not replace all progress feedback.
+- **Connections:** Sync calls use a solid arrow, asynchronous events a dashed arrow, and primary paths a highlighted arrow. Request and response are two separately editable arrows. Preserve other user-selected line types and styles.
 
-## Accessibility baseline
+## Do's and Don'ts
 
-- Every interactive control has a programmatic name and visible keyboard focus.
-- Do not convey a state using color alone; include text, an icon, or a shape.
-- Keep supporting text readable against the actual surface beneath it. Test
-  focus, hover, disabled, error, and loading states in the browser.
-- Honour reduced motion for new non-essential animation.
-- Treat the 1024px workspace gate as a product constraint. Do not claim the
-  workspace editor supports phones without changing that behavior and testing
-  it.
-
-## Theming status
-
-The supported product interface is **dark-first**. The repository previously
-advertised a light/neo-brutalist system, but its token values and much of the
-application chrome were already dark-only. That duplicate, incomplete system
-is retired rather than documented as supported behavior. A future light theme
-requires a complete semantic-token palette and visual regression coverage
-before it is exposed as a preference.
-
-## Implementation checklist
-
-Before merging a UI change:
-
-1. Use a semantic token or existing primitive for ordinary UI.
-2. Keep primary actions orange-red and AI-specific UI teal.
-3. Check keyboard focus, disabled/loading/error states, and contrast.
-4. Check the page alongside the dashboard and workspace so the surface ladder
-   does not jump unexpectedly.
-5. Update this document and `docs/features/THEMING.md` only when the design
-   contract—not just an implementation detail—changes.
-
-## Migration rule
-
-Existing hard-coded legacy values are migrated when the containing component is
-otherwise changed. Do not perform broad cosmetic search-and-replace work that
-changes semantic vendor/node colours. Replace application-chrome values first,
-then add or use a token when a repeated, non-semantic value remains.
+- Verify light and dark modes, text and non-text contrast, visible keyboard focus, reduced motion and responsive behavior on the changed surface.
+- Use existing named colors and primitives before adding a local override. Preserve the light dashboard gradient, dark gradient and editor canvas treatment.
+- Do not replace diagram semantic colors or a user's custom styles with application-chrome colors.
+- Keep user-facing copy in terms of projects; internal API and storage names may still use `workspace`.
+- Update this guide when the intended visual direction changes. Do not treat unfinished legacy styling as a new design decision.
