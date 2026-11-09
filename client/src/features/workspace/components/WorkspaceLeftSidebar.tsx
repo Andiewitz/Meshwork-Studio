@@ -13,7 +13,6 @@ import {
 import { LuHistory, LuPlus } from "react-icons/lu";
 import { useReactFlow, useNodes, useEdges } from "@xyflow/react";
 import StreamingText from "@/components/ui/streaming-text";
-import LoadingState from "@/components/ui/loading-state";
 import {
   runJenkosAgent,
   JenkosAgentMessage,
@@ -301,7 +300,7 @@ export function WorkspaceLeftSidebar({
           <div className="px-3 pt-2 flex justify-end">
             <button
               onClick={() => setMessages([])}
-              className="text-[9px] ws-dim hover:text-red-400 flex items-center gap-1 transition-colors"
+              className="text-[11px] ws-dim hover:text-red-400 flex items-center gap-1 transition-colors"
             >
               <TrashIcon className="w-2.5 h-2.5" />
               Clear
@@ -339,7 +338,7 @@ export function WorkspaceLeftSidebar({
                 </div>
                 <div>
                   <p className="text-[11px] font-medium ws-ink">Jenkos</p>
-                  <p className="text-[10px] ws-dim">
+                  <p className="text-[11px] ws-dim">
                     Describe any system or ask to design cloud topologies.
                   </p>
                 </div>
@@ -416,7 +415,7 @@ export function WorkspaceLeftSidebar({
                         {msg.toolCalls.map((tc) => (
                           <div
                             key={tc.id}
-                            className="flex items-start gap-2 p-1.5 rounded-lg ws-surface-soft border ws-border text-[10px] ws-ink font-mono"
+                            className="flex items-start gap-2 p-1.5 rounded-lg ws-surface-soft border ws-border text-[11px] ws-ink font-mono"
                           >
                             <SparklesIcon className="w-3 h-3 mt-0.5 ws-muted shrink-0" />
                             <div className="flex-1 min-w-0">
@@ -425,7 +424,7 @@ export function WorkspaceLeftSidebar({
                                   ? "🛠️ Canvas Action"
                                   : `🛠️ ${tc.name}`}
                               </div>
-                              <div className="ws-muted text-[9px] mt-0.5 whitespace-normal">
+                              <div className="ws-muted text-[11px] mt-0.5 whitespace-normal">
                                 {tc.result?.summary ||
                                   tc.args.explanation ||
                                   "Modified architecture components."}
@@ -437,7 +436,7 @@ export function WorkspaceLeftSidebar({
                     )}
 
                     {msg.appliedToCanvas && !msg.toolCalls && (
-                      <div className="flex items-center gap-1.5 mt-1.5 text-[9px] ws-muted font-medium">
+                      <div className="flex items-center gap-1.5 mt-1.5 text-[11px] ws-muted font-medium">
                         <div className="w-1 h-1 rounded-full ws-surface-soft" />
                         Applied to canvas
                       </div>
@@ -449,8 +448,19 @@ export function WorkspaceLeftSidebar({
           ))}
 
           {isLoading && (
-            <div className="flex items-center gap-2 py-1.5 pl-7">
-              <LoadingState label="Churning" variant="Drive" />
+            <div
+              role="status"
+              aria-live="polite"
+              className="pl-7 py-1.5 space-y-2"
+            >
+              <p className="text-xs ws-muted">{agentStatus}</p>
+              <div
+                aria-hidden="true"
+                className="space-y-1.5 motion-safe:animate-pulse"
+              >
+                <div className="h-2 w-4/5 rounded ws-surface-soft" />
+                <div className="h-2 w-3/5 rounded ws-surface-soft" />
+              </div>
             </div>
           )}
 
@@ -465,11 +475,12 @@ export function WorkspaceLeftSidebar({
           >
             <textarea
               ref={textareaRef}
+              aria-label="Message Jenkos"
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder="Queue follow-up..."
-              className="w-full bg-transparent border-0 resize-none outline-none ws-ink text-[12px] ws-placeholder px-0.5 py-0.5 leading-relaxed min-h-[44px] max-h-28 scrollbar-thin"
+              className="w-full bg-transparent border-0 resize-none rounded ws-ink text-[12px] ws-placeholder px-0.5 py-0.5 leading-relaxed min-h-[44px] max-h-28 scrollbar-thin focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
               rows={1}
             />
 
@@ -488,9 +499,10 @@ export function WorkspaceLeftSidebar({
                 </button>
 
                 <select
+                  aria-label="AI model"
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
-                  className="h-6 px-2 rounded-full ws-surface-soft border ws-border ws-ink text-[10px] font-medium outline-none cursor-pointer ws-hover-surface transition-all"
+                  className="h-7 px-2 rounded-full ws-surface-soft border ws-border ws-ink text-[11px] font-medium cursor-pointer ws-hover-surface transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
                 >
                   {AVAILABLE_MODELS.map((m) => (
                     <option
