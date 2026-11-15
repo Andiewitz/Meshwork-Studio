@@ -163,6 +163,13 @@
 
 /* Chat: shared spacing and concentric corners keep controls aligned. */
 .workspace-assistant {
+  --ws-ink: #f3f3f3;
+  --ws-muted: #b8b8b8;
+  --ws-dim: #999999;
+  --ws-surface: #1c1c1c;
+  --ws-primary: #f3f3f3;
+  --ws-primary-ink: #181818;
+  --editor-panel: #191919;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ws-ink);
   height: calc(100% - 20px);
@@ -175,6 +182,7 @@
     0 14px 40px rgba(0, 0, 0, 0.36);
 }
 .assistant-minimized {
+  --editor-panel: #191919;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -209,17 +217,17 @@
 ) {
   .workspace-assistant,
   .assistant-minimized {
-    background: rgba(29, 30, 33, 0.78);
-    -webkit-backdrop-filter: blur(22px) saturate(135%) brightness(0.75);
-    backdrop-filter: blur(22px) saturate(135%) brightness(0.75);
+    background: rgba(28, 28, 28, 0.8);
+    -webkit-backdrop-filter: blur(22px) grayscale(100%) brightness(0.75);
+    backdrop-filter: blur(22px) grayscale(100%) brightness(0.75);
     border-color: rgba(255, 255, 255, 0.18);
   }
   :root[data-theme="light"] .workspace-assistant,
   :root[data-theme="light"] .assistant-minimized {
-    background: rgba(250, 251, 253, 0.84);
-    -webkit-backdrop-filter: blur(22px) saturate(120%) brightness(1.05);
-    backdrop-filter: blur(22px) saturate(120%) brightness(1.05);
-    border-color: rgba(69, 80, 95, 0.2);
+    background: rgba(250, 250, 250, 0.86);
+    -webkit-backdrop-filter: blur(22px) grayscale(100%) brightness(1.05);
+    backdrop-filter: blur(22px) grayscale(100%) brightness(1.05);
+    border-color: rgba(75, 75, 75, 0.2);
   }
 }
 @media (prefers-reduced-transparency: reduce) {
@@ -236,7 +244,7 @@
   .workspace-editor-shell
   .workspace-assistant
   .workspace-composer {
-  background: rgba(15, 16, 18, 0.62);
+  background: rgba(16, 16, 16, 0.68);
   border-color: var(--ws-border);
 }
 :root[data-theme="light"]
@@ -244,6 +252,42 @@
   .workspace-assistant
   .workspace-composer {
   background: rgba(255, 255, 255, 0.68);
+}
+:root[data-theme="light"] .workspace-assistant {
+  --ws-ink: #252525;
+  --ws-muted: #5e5e5e;
+  --ws-dim: #737373;
+  --ws-surface: #ffffff;
+  --ws-surface-soft: #eeeeee;
+  --ws-surface-hover: #e4e4e4;
+  --ws-border: #d8d8d8;
+  --ws-primary: #292929;
+  --ws-primary-ink: #ffffff;
+  --editor-panel: #ffffff;
+}
+:root[data-theme="light"] .assistant-minimized {
+  --editor-panel: #ffffff;
+}
+:root[data-theme="light"]
+  .workspace-editor-shell
+  .workspace-assistant
+  .workspace-composer {
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+.workspace-assistant .workspace-user-message {
+  background: #2b2b2b;
+  border-color: #414141;
+}
+:root[data-theme="light"] .workspace-assistant .workspace-user-message {
+  background: #ededed;
+  border-color: #d8d8d8;
+  color: #252525;
+}
+:root:not([data-theme="light"]) .assistant-options {
+  --ws-surface: #1c1c1c;
+  --ws-ink: #f3f3f3;
+  --ws-muted: #b8b8b8;
+  background: var(--ws-surface);
 }
 .assistant-header-actions {
   display: flex;
