@@ -61,6 +61,106 @@
   border-color: #7a9ac3;
 }
 
+.canvas-recovery-notice {
+  position: absolute;
+  z-index: 80;
+  top: 64px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(340px, calc(100% - 32px));
+  padding: 11px 12px;
+  border: 1px solid #a97928;
+  border-radius: 16px;
+  background: #241e16;
+  color: #fff5e3;
+  box-shadow: 0 8px 24px #0004;
+}
+:root[data-theme="light"] .canvas-recovery-notice {
+  background: #fff9eb;
+  color: #3c2b0d;
+  border-color: #bd8b37;
+  box-shadow: 0 8px 24px #45300d22;
+}
+.canvas-recovery-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  color: #edb34b;
+}
+:root[data-theme="light"] .canvas-recovery-icon {
+  color: #946007;
+}
+.canvas-recovery-title {
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 18px;
+}
+.canvas-recovery-caption {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 16px;
+  opacity: 0.85;
+}
+.canvas-recovery-review {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: #ffffff1a;
+  font-size: 12px;
+  font-weight: 600;
+}
+:root[data-theme="light"] .canvas-recovery-review {
+  background: #79521218;
+}
+.canvas-recovery-review:focus-visible,
+.canvas-recovery-secondary:focus-visible,
+.canvas-recovery-primary:focus-visible,
+.canvas-recovery-dismiss:focus-visible {
+  outline: 2px solid #6199ef;
+  outline-offset: 2px;
+}
+.canvas-recovery-dialog {
+  border: 1px solid var(--ws-border);
+  border-radius: 22px;
+  padding: 24px;
+  gap: 16px;
+}
+.canvas-recovery-choice {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--ws-border);
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 19px;
+}
+.canvas-recovery-secondary,
+.canvas-recovery-primary {
+  min-height: 36px;
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.canvas-recovery-secondary {
+  border: 1px solid var(--ws-border);
+  color: var(--ws-ink);
+  background: var(--ws-surface-soft);
+}
+.canvas-recovery-secondary:disabled,
+.canvas-recovery-primary:disabled {
+  opacity: 0.5;
+}
+.canvas-recovery-dismiss {
+  justify-self: end;
+  color: var(--ws-muted);
+  font-size: 13px;
+  padding: 4px;
+}
+
 /* Chat: shared spacing and concentric corners keep controls aligned. */
 .workspace-assistant {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;

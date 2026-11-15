@@ -223,6 +223,7 @@ import {
   layoutFingerprint,
 } from "@/features/workspace/components/CanvasLayoutDialog";
 import { WorkspaceLeftSidebar } from "@/features/workspace/components/WorkspaceLeftSidebar";
+import { CanvasRecoveryNotice } from "@/features/workspace/components/CanvasRecoveryNotice";
 import { ConnectionReviewDialog } from "@/features/workspace/components/ConnectionReviewDialog";
 import { DiagramStarterChooser } from "@/features/workspace/components/DiagramStarterChooser";
 import {
@@ -2375,64 +2376,44 @@ function WorkspaceView() {
               </div>
             )}
             {draftConflict && (
-              <div
-                role="alert"
-                className="absolute top-4 left-4 right-4 z-[1000] flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/40 ws-warning p-3 text-sm ws-ink"
-              >
-                <span className="flex-1">
-                  This local draft may conflict with the server or may be
-                  missing live changes. Export a copy before loading the server
-                  version; automatic saving is paused.
-                </span>
-                <button
-                  className="rounded-md border ws-border px-3 py-2 ws-ink disabled:opacity-50"
-                  disabled={canvasTransition !== "idle"}
-                  onClick={() => {
-                    const draft = materializeRootCanvas(canvasStack, {
-                      nodes,
-                      edges,
-                    });
-                    exportAsJson(
-                      draft.nodes,
-                      draft.edges,
-                      `${workspace?.title || "canvas"}-local-draft`,
-                    );
-                  }}
-                >
-                  Export draft
-                </button>
-                <button
-                  className="rounded-md ws-primary px-3 py-2"
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        "Discard this local draft and load the server version? Export a copy first if you need it.",
-                      )
-                    ) {
-                      const cache = getCanvasFromLocalCache(workspaceId);
-                      if (
-                        cache &&
-                        !clearCanvasLocalCache(
-                          workspaceId,
-                          cache.generation,
-                          cacheOwner,
-                        )
-                      ) {
-                        toast({
-                          title: "Draft changed in another editor",
-                          description:
-                            "Export your draft and close the other editor before reloading.",
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-                      window.location.reload();
-                    }
-                  }}
-                >
-                  Discard draft and reload
-                </button>
-              </div>
+              <CanvasRecoveryNotice
+                disabled={canvasTransition !== "idle"}
+                onExport={() => {
+                  const draft = materializeRootCanvas(canvasStack, {
+                    nodes,
+                    edges,
+                  });
+                  exportAsJson(
+                    draft.nodes,
+                    draft.edges,
+                    `${workspace?.title || "canvas"}-local-draft`,
+                  );
+                }}
+                onLoadSaved={async () => {
+                  const generation = saveGenerationRef.current;
+                  const cache = getCanvasFromLocalCache(workspaceId);
+                  const result = await refetchCanvas();
+                  if (result.isError || !result.data)
+                    return "Could not reach the saved version. Your draft is still here; try again when connected.";
+                  if (
+                    activeWorkspaceIdRef.current !== workspaceId ||
+                    generation !== saveGenerationRef.current ||
+                    canvasTransition !== "idle"
+                  )
+                    return "The draft changed while checking. Review it and try again.";
+                  if (
+                    cache &&
+                    !clearCanvasLocalCache(
+                      workspaceId,
+                      cache.generation,
+                      cacheOwner,
+                    )
+                  )
+                    return "The draft changed in another editor. Export it and close the other editor before reloading.";
+                  window.location.reload();
+                  return null;
+                }}
+              />
             )}
             {/* ── Canvas transition overlay ── */}
             <AnimatePresence>
