@@ -410,5 +410,41 @@ describe("Jenkos Agent & Architecture Generation Pipeline", () => {
       expect(runResponse.canvasResult?.nodes[0].width).toBe(600);
       expect(runResponse.canvasResult?.nodes[0].height).toBe(300);
     });
+
+    it("does not replace an existing canvas with a fallback JSON response", async () => {
+      mockedSecureFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content:
+                  '```json\n{"nodes":[{"id":"new","type":"server"}],"edges":[]}\n```',
+              },
+            },
+          ],
+        }),
+      } as Response);
+      const currentNodes: Node[] = [
+        {
+          id: "existing",
+          type: "server",
+          position: { x: 0, y: 0 },
+          data: { label: "Existing" },
+        },
+      ];
+      const result = await runJenkosAgent({
+        userPrompt: "Add a server",
+        history: [],
+        currentNodes,
+        currentEdges: [],
+        viewportCenter,
+      });
+      expect(result.canvasResult).toBeUndefined();
+      expect(result.message.appliedToCanvas).toBe(false);
+      expect(result.message.content).toContain("was not applied");
+      expect(result.message.content).toContain('"id":"new"');
+      expect(currentNodes[0].id).toBe("existing");
+    });
   });
 });

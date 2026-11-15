@@ -457,7 +457,11 @@ export async function runJenkosAgent({
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[1]);
-        if (parsed.nodes || parsed.edges) {
+        if (
+          (parsed.nodes || parsed.edges) &&
+          currentNodes.length === 0 &&
+          currentEdges.length === 0
+        ) {
           canvasResult = executeEditCanvas(
             currentNodes,
             currentEdges,
@@ -472,6 +476,9 @@ export async function runJenkosAgent({
           textContent = textContent
             .replace(/```(?:json)?\n[\s\S]*?\n```/g, "")
             .trim();
+        } else if (parsed.nodes || parsed.edges) {
+          textContent +=
+            "\n\nThe generated diagram was not applied because the canvas already contains content. Ask Jenkos to make a targeted edit instead.";
         }
       } catch {
         // Ignore fallback parse failure

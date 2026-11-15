@@ -199,6 +199,11 @@ export function WorkspaceLeftSidebar({
           const canvasChangedWhileWaiting =
             initialCanvas !==
             JSON.stringify({ nodes: latestNodes, edges: latestEdges });
+          if (canvasChangedWhileWaiting && !operations?.length) {
+            throw new Error(
+              "The canvas changed while the diagram was being generated. No changes were applied; please try again.",
+            );
+          }
           const canvasResult =
             canvasChangedWhileWaiting && operations?.length
               ? executeCanvasToolCalls(latestNodes, latestEdges, operations, {
