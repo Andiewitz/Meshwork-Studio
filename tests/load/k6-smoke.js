@@ -96,10 +96,6 @@ export function smokeVU() {
     });
     const shared = (team.sharedWorkspaceIds || [])[0];
     if (shared) {
-      const groupRes = kget(`/api/v1/teams/${team.id}/workspaces`, {
-        group: "smoke",
-      });
-      check(groupRes, { "team workspaces 200": (r) => r.status === 200 });
       const canvasRes = kget(`/api/v1/workspaces/${shared}/canvas`, {
         group: "smoke",
       });

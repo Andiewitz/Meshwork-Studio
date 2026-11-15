@@ -67,20 +67,23 @@ worker; p95 high + CPU low → storage-bound; 503s → DDB write locks).
 
 ## Files
 
-| File                          | Role                                                                       |
-| ----------------------------- | -------------------------------------------------------------------------- |
-| `docker-compose.loadtest.yml` | caps + distortion shims + loadtest-only volumes                            |
-| `seed.mjs`                    | accounts, personal canvases, teams via the real API → `results/state.json` |
-| `k6-smoke.js`                 | harness sanity (cookie plumbing, WS join, write path)                      |
-| `k6-capacity.js`              | main survey, one stage per invocation                                      |
-| `k6-ws.js`                    | phase 2: WS connection ceiling                                             |
-| `report.mjs`                  | joins stage summaries + sampler CSV → report                               |
-| `k6-lib.js`                   | shared per-VU cookie/session helpers                                       |
+| File                          | Role                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| `docker-compose.loadtest.yml` | caps + distortion shims + loadtest-only volumes                                |
+| `seed.mjs`                    | accounts, personal canvases, direct collaborator grants → `results/state.json` |
+| `k6-smoke.js`                 | harness sanity (cookie plumbing, WS join, write path)                          |
+| `k6-capacity.js`              | main survey, one stage per invocation                                          |
+| `k6-ws.js`                    | phase 2: WS connection ceiling                                                 |
+| `report.mjs`                  | joins stage summaries + sampler CSV → report                                   |
+| `k6-lib.js`                   | shared per-VU cookie/session helpers                                           |
 
 `results/` artifacts (state.json, stage-*.json, sampler.csv, logs,
 capacity-report.md) — gitignored. `state.json` contains only
 loadtest.example.com account credentials; NEVER seed real accounts here and
 never run against a production deployment.
+Collaborator grants require the seeded accounts to have verified email addresses;
+the seed will stop if the load-test auth setup does not provide verified users.
+
 ## Local realtime fan-out benchmark
 
 `node node_modules/tsx/dist/cli.mjs tests/load/realtime-local-benchmark.ts` runs
@@ -92,10 +95,10 @@ until the last recipient receives each one.
 A Windows run on 2026-10-31 produced the following before and after results:
 
 | Participants | Before: simulated queries/message | After: simulated queries/message | Before: last recipient p50 | After: last recipient p50 |
-| ---: | ---: | ---: | ---: | ---: |
-| 2 | 4 | 2 | 61.93 ms | 30.87 ms |
-| 10 | 20 | 2 | 266.14 ms | 31.33 ms |
-| 50 | 100 | 2 | 1,355.23 ms | 30.66 ms |
+| -----------: | --------------------------------: | -------------------------------: | -------------------------: | ------------------------: |
+|            2 |                                 4 |                                2 |                   61.93 ms |                  30.87 ms |
+|           10 |                                20 |                                2 |                  266.14 ms |                  31.33 ms |
+|           50 |                               100 |                                2 |                1,355.23 ms |                  30.66 ms |
 
 The earlier run simulated two sequential 1 ms queries per permission lookup;
 the current run simulates the new single-query lookup and batch. The requested

@@ -1,6 +1,5 @@
 import type { Express } from "express";
 import { teamStorage } from "./db/storage";
-import { registerTeamRoutes } from "./routes/teamRoutes";
 import { registerTeamInternalRoutes } from "./db/internal-routes";
 import { createChildLogger } from "@server/lib/logger";
 import type { TeamDependencies } from "./dependencies";
@@ -9,7 +8,8 @@ const log = createChildLogger("team-service");
 
 export class TeamService {
   static initialize(app: Express, context: TeamDependencies) {
-    registerTeamRoutes(app, context);
+    // The public teams API is retired. Keep legacy cleanup and internal metrics
+    // available until old team data and in-flight account deletions are retired.
     registerTeamInternalRoutes(app);
 
     context.eventBus.registerRequired(

@@ -206,10 +206,6 @@ export function browserVU() {
   check(kget("/api/v1/workspaces", { group: "browse" }), {
     "list 200": (r) => r.status === 200,
   });
-  check(kget("/api/v1/teams", { group: "browse" }), {
-    "teams 200": (r) => r.status === 200,
-  });
-
   if (!shared) {
     sleep(2);
     return;

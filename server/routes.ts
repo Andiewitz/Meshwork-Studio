@@ -132,7 +132,7 @@ export async function registerRoutes(
     eventBus,
   });
 
-  // Initialize Team Service (handles teams, members, and shared workspaces)
+  // Retain legacy team cleanup for existing account-deletion operations.
   TeamService.initialize(app, {
     isAuthenticated: requireAuth,
     workspaces,
