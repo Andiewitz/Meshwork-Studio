@@ -427,6 +427,11 @@ function WorkspaceView() {
     () => window.innerWidth >= 768,
   );
   const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const [isChatCollapsed, setIsChatCollapsed] = useState(false);
+  const collapsedChatRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (isChatCollapsed && isSidebarOpen) collapsedChatRef.current?.focus();
+  }, [isChatCollapsed, isSidebarOpen]);
   const [sidebarTab, setSidebarTab] = useState<"ai" | "nodes">("ai");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [gridSize, setGridSize] = useState(20);
@@ -2230,7 +2235,10 @@ function WorkspaceView() {
         undo={undo}
         redo={redo}
         isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
+        setIsSidebarOpen={(open) => {
+          if (open) setIsChatCollapsed(false);
+          setIsSidebarOpen(open);
+        }}
         collaborators={collaborators}
         handleExportPng={handleExportPng}
         handleExportSvg={handleExportSvg}
@@ -2299,26 +2307,56 @@ function WorkspaceView() {
             <div
               id="workspace-ai-chat"
               aria-hidden={!isSidebarOpen || !canEdit}
-              className={`workspace-chat-overlay absolute inset-y-0 left-0 z-50 max-w-[calc(100%-16px)] overflow-hidden transition-[width] duration-200 ease-out motion-reduce:transition-none ${isSidebarOpen && canEdit ? "" : "hidden"}`}
-              style={{ width: isChatExpanded ? 720 : 395 }}
+              className={`workspace-chat-overlay absolute left-0 z-50 max-w-[calc(100%-16px)] overflow-hidden transition-[width] duration-200 ease-out motion-reduce:transition-none ${isChatCollapsed ? "top-0" : "inset-y-0"} ${isSidebarOpen && canEdit ? "" : "hidden"}`}
+              style={{
+                width: isChatCollapsed ? 160 : isChatExpanded ? 720 : 395,
+              }}
             >
-              <WorkspaceLeftSidebar
-                isOpen={isSidebarOpen && canEdit}
-                onClose={() => setIsSidebarOpen(false)}
-                expanded={isChatExpanded}
-                onToggleExpand={() =>
-                  setIsChatExpanded((expanded) => !expanded)
-                }
-                workspaceId={workspaceId}
-                planDisabled={!canEdit || draftConflict}
-                onBeforePlanApply={takeSnapshot}
-                onPlanApplied={(result, oldNodes, oldEdges) =>
-                  broadcastSnapshotChange(
-                    { nodes: oldNodes, edges: oldEdges },
-                    result,
-                  )
-                }
-              />
+              {isChatCollapsed && (
+                <button
+                  ref={collapsedChatRef}
+                  type="button"
+                  className="assistant-minimized"
+                  aria-label="Open AI chat"
+                  onClick={() => {
+                    setIsChatCollapsed(false);
+                    requestAnimationFrame(() =>
+                      document
+                        .querySelector<HTMLTextAreaElement>(
+                          '#workspace-ai-chat textarea[aria-label="Message Jenkos"]',
+                        )
+                        ?.focus(),
+                    );
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="assistant-minimized-dot"
+                  />
+                  Jenkos{" "}
+                  <span className="assistant-minimized-action">Open</span>
+                </button>
+              )}
+              <div className={isChatCollapsed ? "hidden" : "h-full"}>
+                <WorkspaceLeftSidebar
+                  isOpen={isSidebarOpen && canEdit && !isChatCollapsed}
+                  onClose={() => setIsSidebarOpen(false)}
+                  onCollapse={() => setIsChatCollapsed(true)}
+                  expanded={isChatExpanded}
+                  onToggleExpand={() =>
+                    setIsChatExpanded((expanded) => !expanded)
+                  }
+                  workspaceId={workspaceId}
+                  planDisabled={!canEdit || draftConflict}
+                  onBeforePlanApply={takeSnapshot}
+                  onPlanApplied={(result, oldNodes, oldEdges) =>
+                    broadcastSnapshotChange(
+                      { nodes: oldNodes, edges: oldEdges },
+                      result,
+                    )
+                  }
+                />
+              </div>
             </div>
             {roleError && (
               <div
@@ -2431,7 +2469,13 @@ function WorkspaceView() {
               workspaceTitle={workspace?.title || "Untitled project"}
               path={canvasStack}
               chatOffset={
-                isSidebarOpen && canEdit ? (isChatExpanded ? 730 : 405) : 0
+                isSidebarOpen && canEdit
+                  ? isChatCollapsed
+                    ? 170
+                    : isChatExpanded
+                      ? 730
+                      : 405
+                  : 0
               }
               nodes={nodes}
               selectedCount={

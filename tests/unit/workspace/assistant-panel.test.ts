@@ -33,12 +33,14 @@ it("shows a named chat, useful composer, full model names and a working close bu
   document.body.appendChild(mount);
   const root = createRoot(mount);
   const onClose = vi.fn();
+  const onCollapse = vi.fn();
   const onToggleExpand = vi.fn();
   await act(async () =>
     root.render(
       createElement(WorkspaceLeftSidebar, {
         isOpen: true,
         onClose,
+        onCollapse,
         expanded: false,
         onToggleExpand,
         workspaceId: "ws",
@@ -55,6 +57,12 @@ it("shows a named chat, useful composer, full model names and a working close bu
       .click(),
   );
   expect(onToggleExpand).toHaveBeenCalledOnce();
+  await act(async () =>
+    document
+      .querySelector<HTMLButtonElement>('[aria-label="Collapse AI chat"]')!
+      .click(),
+  );
+  expect(onCollapse).toHaveBeenCalledOnce();
   expect(document.querySelector('select[aria-label="AI model"]')).toBeNull();
   await act(async () => {
     const trigger = document.querySelector<HTMLButtonElement>(

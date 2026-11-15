@@ -12,7 +12,7 @@ import {
   ArrowsPointingOutIcon,
   ArrowsPointingInIcon,
 } from "@heroicons/react/24/outline";
-import { LuPlus, LuX } from "react-icons/lu";
+import { LuMinus, LuPlus, LuX } from "react-icons/lu";
 import { useReactFlow, useNodes, useEdges } from "@xyflow/react";
 import StreamingText from "@/components/ui/streaming-text";
 import {
@@ -65,6 +65,7 @@ const CATEGORY_ORDER = ["Core", "More", "Kubernetes", "Templates"];
 export interface WorkspaceLeftSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  onCollapse: () => void;
   expanded: boolean;
   onToggleExpand: () => void;
   workspaceId: string;
@@ -80,6 +81,7 @@ export interface WorkspaceLeftSidebarProps {
 export function WorkspaceLeftSidebar({
   isOpen,
   onClose,
+  onCollapse,
   expanded,
   onToggleExpand,
   workspaceId,
@@ -424,8 +426,8 @@ export function WorkspaceLeftSidebar({
           <button
             type="button"
             onClick={onToggleExpand}
-            aria-label={expanded ? "Collapse AI chat" : "Expand AI chat"}
-            title={expanded ? "Collapse AI chat" : "Expand AI chat"}
+            aria-label={expanded ? "Restore chat width" : "Expand AI chat"}
+            title={expanded ? "Restore chat width" : "Expand AI chat"}
             aria-pressed={expanded}
             className="assistant-icon-button"
           >
@@ -434,6 +436,15 @@ export function WorkspaceLeftSidebar({
             ) : (
               <ArrowsPointingOutIcon aria-hidden="true" className="h-4 w-4" />
             )}
+          </button>
+          <button
+            type="button"
+            onClick={onCollapse}
+            aria-label="Collapse AI chat"
+            title="Collapse AI chat"
+            className="assistant-icon-button"
+          >
+            <LuMinus aria-hidden="true" className="h-4 w-4" />
           </button>
           <button
             type="button"

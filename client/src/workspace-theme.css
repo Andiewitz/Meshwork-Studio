@@ -72,6 +72,75 @@
   background: var(--editor-panel);
   box-shadow: 0 12px 35px #0005;
 }
+.assistant-minimized {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  margin: 10px;
+  padding: 0 13px;
+  border: 1px solid var(--ws-border);
+  border-radius: 999px;
+  background: var(--editor-panel);
+  color: var(--ws-ink);
+  box-shadow: 0 8px 24px #0004;
+  font-size: 13px;
+  font-weight: 600;
+}
+.assistant-minimized:focus-visible {
+  outline: 2px solid #6199ef;
+  outline-offset: 2px;
+}
+.assistant-minimized-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.assistant-minimized-action {
+  color: var(--ws-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+@supports (
+  (-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))
+) {
+  .workspace-assistant,
+  .assistant-minimized {
+    background: rgba(25, 26, 29, 0.78);
+    -webkit-backdrop-filter: blur(24px) saturate(135%);
+    backdrop-filter: blur(24px) saturate(135%);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+  :root[data-theme="light"] .workspace-assistant,
+  :root[data-theme="light"] .assistant-minimized {
+    background: rgba(250, 251, 253, 0.82);
+    border-color: rgba(59, 72, 90, 0.18);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .workspace-assistant,
+  .assistant-minimized,
+  :root[data-theme="light"] .workspace-assistant,
+  :root[data-theme="light"] .assistant-minimized {
+    background: var(--editor-panel);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+:root[data-theme]
+  .workspace-editor-shell
+  .workspace-assistant
+  .workspace-composer {
+  background: rgba(15, 16, 18, 0.62);
+  border-color: var(--ws-border);
+}
+:root[data-theme="light"]
+  .workspace-editor-shell
+  .workspace-assistant
+  .workspace-composer {
+  background: rgba(255, 255, 255, 0.68);
+}
 .assistant-header-actions {
   display: flex;
   align-items: center;
