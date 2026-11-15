@@ -18,6 +18,7 @@ interface CanvasNavigationProps {
   nodes: Node[];
   selectedCount: number;
   disabled: boolean;
+  chatOffset?: number;
   onExit: (level: number) => void;
   onFitSelection: () => void;
   onFocusNode: (id: string) => void;
@@ -29,6 +30,7 @@ export function CanvasNavigation({
   nodes,
   selectedCount,
   disabled,
+  chatOffset = 0,
   onExit,
   onFitSelection,
   onFocusNode,
@@ -62,7 +64,10 @@ export function CanvasNavigation({
   }, [nodes, query]);
   return (
     <>
-      <div className="absolute left-3 right-3 top-3 z-10 flex items-start justify-between gap-2 pointer-events-none">
+      <div
+        className="absolute left-3 right-3 top-3 z-10 flex items-start justify-between gap-2 pointer-events-none"
+        style={chatOffset ? { left: `min(${chatOffset}px, 60%)` } : undefined}
+      >
         <nav
           ref={pathRef}
           aria-label="Canvas path"

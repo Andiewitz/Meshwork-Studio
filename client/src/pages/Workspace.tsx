@@ -2282,52 +2282,44 @@ function WorkspaceView() {
         setActiveView={setActiveView}
       />
 
-      {/* Main Workspace Layout: Sidebar connected to header + Canvas */}
+      {/* Main workspace */}
       <div className="workspace-editor-body relative flex-1 min-h-0 overflow-hidden flex bg-[#111114]">
-        {/* Collapsible Left Sidebar connected flush to Header */}
-        <div
-          id="workspace-ai-chat"
-          aria-hidden={!isSidebarOpen || !canEdit}
-          className={`workspace-sidebar-frame max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:z-20 max-w-[calc(100vw-16px)] min-h-0 overflow-hidden transition-[width] duration-200 ease-out bg-[#111114] shrink-0 ${
-            isSidebarOpen && canEdit ? "opacity-100" : "hidden"
-          }`}
-          style={{
-            width: isChatExpanded ? "min(560px, calc(100vw - 16px))" : 360,
-          }}
-        >
-          <WorkspaceLeftSidebar
-            isOpen={isSidebarOpen && canEdit}
-            onClose={() => setIsSidebarOpen(false)}
-            expanded={isChatExpanded}
-            onToggleExpand={() => setIsChatExpanded((expanded) => !expanded)}
-            workspaceId={workspaceId}
-            planDisabled={!canEdit || draftConflict}
-            onBeforePlanApply={takeSnapshot}
-            onPlanApplied={(result, oldNodes, oldEdges) =>
-              broadcastSnapshotChange(
-                { nodes: oldNodes, edges: oldEdges },
-                result,
-              )
-            }
-          />
-        </div>
-
         {/* Canvas & Properties Section */}
         <div className="workspace-editor-body flex-1 min-h-0 flex overflow-hidden relative bg-[#111114]">
-          {/* Canvas Viewport: curved top-left intersection when sidebar is open */}
+          {/* Canvas viewport */}
           <motion.main
             ref={canvasWrapperRef}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className={`workspace-canvas flex-1 h-full relative bg-[#0A0A0A] overflow-hidden transition-all duration-300 ease-in-out ${
-              isSidebarOpen && canEdit
-                ? "rounded-tl-2xl border-t border-l ws-border"
-                : "border-t ws-border"
-            }`}
+            className="workspace-canvas flex-1 h-full relative bg-[#0A0A0A] overflow-hidden border-t ws-border"
             data-cursor={drawingMode}
             style={{ cursor: drawingMode === "pan" ? "grab" : undefined }}
           >
+            <div
+              id="workspace-ai-chat"
+              aria-hidden={!isSidebarOpen || !canEdit}
+              className={`workspace-chat-overlay absolute inset-y-0 left-0 z-50 max-w-[calc(100%-16px)] overflow-hidden transition-[width] duration-200 ease-out motion-reduce:transition-none ${isSidebarOpen && canEdit ? "" : "hidden"}`}
+              style={{ width: isChatExpanded ? 720 : 395 }}
+            >
+              <WorkspaceLeftSidebar
+                isOpen={isSidebarOpen && canEdit}
+                onClose={() => setIsSidebarOpen(false)}
+                expanded={isChatExpanded}
+                onToggleExpand={() =>
+                  setIsChatExpanded((expanded) => !expanded)
+                }
+                workspaceId={workspaceId}
+                planDisabled={!canEdit || draftConflict}
+                onBeforePlanApply={takeSnapshot}
+                onPlanApplied={(result, oldNodes, oldEdges) =>
+                  broadcastSnapshotChange(
+                    { nodes: oldNodes, edges: oldEdges },
+                    result,
+                  )
+                }
+              />
+            </div>
             {roleError && (
               <div
                 role="alert"
@@ -2438,6 +2430,9 @@ function WorkspaceView() {
               key={`${workspaceId}:${canvasStack.map((level) => level.nodeId).join(":")}`}
               workspaceTitle={workspace?.title || "Untitled project"}
               path={canvasStack}
+              chatOffset={
+                isSidebarOpen && canEdit ? (isChatExpanded ? 730 : 405) : 0
+              }
               nodes={nodes}
               selectedCount={
                 nodes.filter(

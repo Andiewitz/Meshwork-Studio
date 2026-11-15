@@ -21,7 +21,6 @@
 }
 :root[data-theme] .workspace-editor-shell .workspace-header,
 :root[data-theme] .workspace-editor-shell .workspace-editor-body,
-:root[data-theme] .workspace-editor-shell .workspace-sidebar-frame,
 :root[data-theme] .workspace-editor-shell .workspace-properties-frame {
   background: var(--editor-shell);
 }
@@ -71,6 +70,7 @@
   border: 1px solid var(--ws-border);
   border-radius: 28px;
   background: var(--editor-panel);
+  box-shadow: 0 12px 35px #0005;
 }
 .assistant-header-actions {
   display: flex;
