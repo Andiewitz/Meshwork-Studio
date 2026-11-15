@@ -49,6 +49,10 @@ import {
 } from "@/hooks/use-canvas";
 import { planCanvasSave } from "@/lib/canvas-delta";
 import { canvasChangeMessages } from "@/features/workspace/utils/canvasChangeMessages";
+import {
+  mapNodeType,
+  nodeForRendering,
+} from "@/features/workspace/utils/unknownNode";
 import { isCanvasDraftCurrent } from "@/lib/canvas-cache";
 import {
   canvasSaveDelay,
@@ -200,7 +204,11 @@ import {
   registerEnterNodeHandler,
   unregisterEnterNodeHandler,
 } from "@/features/workspace/utils/canvasEvents";
-import { NODE_SIZES } from "@/features/workspace/utils/nodeRegistry";
+import {
+  CONTAINER_TYPES,
+  NODE_SIZES,
+  VALID_TYPES,
+} from "@/features/workspace/utils/nodeRegistry";
 import {
   getNodeDimensions,
   normalizeNodeDimensions,
@@ -298,12 +306,14 @@ function WorkspaceView() {
   const accessibleNodes = useMemo(
     () =>
       nodes.map((node) => {
-        if (node.ariaLabel) return node;
+        const rendered = nodeForRendering(node);
+        if (node.ariaLabel && rendered === node) return node;
         const cached = accessibleNodeCache.current.get(node);
         if (cached) return cached;
         const accessible = {
-          ...node,
-          ariaLabel: nodeAccessibleLabel(node.type, node.data),
+          ...rendered,
+          ariaLabel:
+            node.ariaLabel || nodeAccessibleLabel(rendered.type, rendered.data),
         };
         accessibleNodeCache.current.set(node, accessible);
         return accessible;
@@ -1365,6 +1375,41 @@ function WorkspaceView() {
       );
     },
     [takeSnapshot, setNodes],
+  );
+
+  const updateNodeType = useCallback(
+    (id: string, type: string) => {
+      if (!canEdit || draftConflictRef.current || !VALID_TYPES.has(type))
+        return;
+      const node = nodes.find((item) => item.id === id);
+      if (!node) return;
+      if (
+        !CONTAINER_TYPES.has(type) &&
+        nodes.some((item) => item.parentId === id)
+      ) {
+        toast({
+          title: "Choose a container type",
+          description:
+            "This node contains other nodes. Move them out before mapping it to a non-container type.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const mapped = mapNodeType(node, type);
+      const nextNodes = nodes.map((item) => (item.id === id ? mapped : item));
+      takeSnapshot();
+      setNodes(nextNodes);
+      broadcastSnapshotChange({ nodes, edges }, { nodes: nextNodes, edges });
+    },
+    [
+      nodes,
+      edges,
+      canEdit,
+      toast,
+      takeSnapshot,
+      setNodes,
+      broadcastSnapshotChange,
+    ],
   );
 
   const updateNodeStyle = useCallback(
@@ -2594,6 +2639,7 @@ function WorkspaceView() {
                     selectedEdge={selectedEdge}
                     updateNodeData={updateNodeData}
                     updateNodeStyle={updateNodeStyle}
+                    updateNodeType={updateNodeType}
                     updateEdgeData={updateEdgeData}
                     deleteNode={onDelete}
                     deleteEdge={deleteEdge}

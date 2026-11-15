@@ -28,6 +28,7 @@ import {
   legacyFallbackBrand,
 } from "@/components/canvas/nodes/legacyNodeAppearance";
 import { nodeTypesList } from "@/features/workspace/utils/nodeTypes";
+import { resolveNodeType } from "@/features/workspace/utils/nodeRegistry";
 import {
   getNodeDimensions,
   getNodeMinimumDimensions,
@@ -40,6 +41,7 @@ interface PropertiesSidebarProps {
   selectedEdge?: Edge<EdgeData> | null;
   updateNodeData: (id: string, data: Partial<NodeData>) => void;
   updateNodeStyle: (id: string, style: Partial<NodeStyle>) => void;
+  updateNodeType: (id: string, type: string) => void;
   updateEdgeData?: (id: string, data: Partial<EdgeData>) => void;
   deleteNode: (id: string) => void;
   deleteEdge?: (id: string) => void;
@@ -65,6 +67,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
   selectedEdge,
   updateNodeData,
   updateNodeStyle,
+  updateNodeType,
   updateEdgeData,
   deleteNode,
   deleteEdge,
@@ -191,6 +194,43 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
         </div>
 
         <div className="h-px ws-surface-soft" />
+
+        {((selectedNode.type === "generic" &&
+          selectedNode.data?.originalType) ||
+          (selectedNode.type &&
+            resolveNodeType(selectedNode.type).originalType)) && (
+          <div className="space-y-2">
+            <p className="text-xs ws-muted break-words">
+              Original type:{" "}
+              {selectedNode.data?.originalType || selectedNode.type}. This node
+              uses the generic appearance; its data is preserved.
+            </p>
+            <label
+              className="block text-xs ws-muted"
+              htmlFor="unknown-node-type"
+            >
+              Map to a known type
+            </label>
+            <select
+              id="unknown-node-type"
+              value=""
+              onChange={(event) => {
+                if (event.target.value)
+                  updateNodeType(selectedNode.id, event.target.value);
+              }}
+              className="w-full rounded border ws-border ws-surface-soft ws-ink px-2 py-2 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+            >
+              <option value="">Choose a type…</option>
+              {nodeTypesList
+                .filter((entry) => !entry.type.startsWith("template:"))
+                .map((entry) => (
+                  <option key={entry.type} value={entry.type}>
+                    {entry.label}
+                  </option>
+                ))}
+            </select>
+          </div>
+        )}
 
         {/* ── Name & Description ── */}
         <section className="space-y-4">
