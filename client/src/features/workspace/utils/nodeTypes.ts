@@ -55,148 +55,59 @@ export const nodeTypes = Object.fromEntries(
   NODE_DEFINITIONS.map(({ id }) => [id, SystemNode]),
 );
 
-// ── Default favorites (used when user has no usage history) ──
-export const DEFAULT_FAVORITES = [
-  { type: "server", label: "Server", icon: Server },
-  { type: "database", label: "Database", icon: Database },
-  { type: "gateway", label: "API Gateway", icon: Globe },
-  { type: "microservice", label: "Docker", icon: Box },
-  { type: "cache", label: "Redis", icon: Zap },
-  { type: "loadBalancer", label: "Load Balancer", icon: Cpu },
-];
-
 // ── All nodes for lookup (used by sidebar, context menu, properties) ──
+const PALETTE_ICONS: Record<string, React.ComponentType<any>> = {
+  Activity,
+  BarChart3,
+  Box,
+  Cpu,
+  CreditCard,
+  Database,
+  GitBranch,
+  Globe,
+  HardDrive,
+  K8sConfigMapIcon,
+  K8sCronJobIcon,
+  K8sDaemonIcon,
+  K8sDeployIcon,
+  K8sHPAIcon,
+  K8sIngressIcon,
+  K8sJobIcon,
+  K8sNamespaceIcon,
+  K8sPVCIcon,
+  K8sPodIcon,
+  K8sReplicaSetIcon,
+  K8sSecretIcon,
+  K8sServiceIcon,
+  K8sStatefulIcon,
+  Key,
+  Layers,
+  Lock,
+  MessageCircle,
+  MessageSquare,
+  Network,
+  PieChart,
+  PlayCircle,
+  Search,
+  Server,
+  Settings,
+  Share2,
+  Shield,
+  ShoppingCart,
+  Square,
+  UserIcon,
+  Zap,
+};
+
 export const nodeTypesList = [
-  // ── Core: the 17 nodes that cover 95% of diagrams ──
-  { type: "server", label: "Server", icon: Server, category: "Core" },
-  { type: "database", label: "Database", icon: Database, category: "Core" },
-  { type: "cache", label: "Redis", icon: Zap, category: "Core" },
-  { type: "gateway", label: "API Gateway", icon: Globe, category: "Core" },
-  { type: "loadBalancer", label: "Load Balancer", icon: Cpu, category: "Core" },
-  { type: "microservice", label: "Docker", icon: Box, category: "Core" },
-  { type: "worker", label: "Worker", icon: Cpu, category: "Core" },
-  { type: "logic", label: "Lambda", icon: Zap, category: "Core" },
-  { type: "queue", label: "Queue", icon: MessageSquare, category: "Core" },
-  { type: "bus", label: "Kafka", icon: Share2, category: "Core" },
-  { type: "storage", label: "Storage (S3)", icon: HardDrive, category: "Core" },
-  { type: "cdn", label: "CDN", icon: Globe, category: "Core" },
-  { type: "vpc", label: "VPC", icon: Square, category: "Core" },
-  { type: "region", label: "Region", icon: Globe, category: "Core" },
-  {
-    type: "availability-zone",
-    label: "Availability Zone",
-    icon: Square,
-    category: "Core",
-  },
-  { type: "subnet", label: "Subnet", icon: Network, category: "Core" },
-  { type: "user", label: "User", icon: UserIcon, category: "Core" },
-  { type: "app", label: "Client App", icon: Box, category: "Core" },
-  { type: "api", label: "External API", icon: Globe, category: "Core" },
-
-  // ── More: vendor-specific, collapsed by default ──
-  { type: "search", label: "Elasticsearch", icon: Search, category: "More" },
-  { type: "influxdb", label: "InfluxDB", icon: BarChart3, category: "More" },
-  { type: "snowflake", label: "Snowflake", icon: Layers, category: "More" },
-  { type: "clickhouse", label: "Clickhouse", icon: Database, category: "More" },
-  { type: "route53", label: "Route 53", icon: Globe, category: "More" },
-  { type: "nats", label: "NATS", icon: Activity, category: "More" },
-  {
-    type: "socketio",
-    label: "Socket.io",
-    icon: MessageCircle,
-    category: "More",
-  },
-  {
-    type: "github_actions",
-    label: "GitHub Actions",
-    icon: PlayCircle,
-    category: "More",
-  },
-  { type: "jenkins", label: "Jenkins", icon: Settings, category: "More" },
-  { type: "gitlab", label: "GitLab CI", icon: GitBranch, category: "More" },
-  { type: "argocd", label: "Argo CD", icon: PlayCircle, category: "More" },
-  { type: "vault", label: "Vault", icon: Lock, category: "More" },
-  { type: "auth0", label: "Auth0", icon: Key, category: "More" },
-  { type: "waf", label: "WAF", icon: Shield, category: "More" },
-  { type: "prometheus", label: "Prometheus", icon: Activity, category: "More" },
-  { type: "grafana", label: "Grafana", icon: BarChart3, category: "More" },
-  { type: "datadog", label: "Datadog", icon: PieChart, category: "More" },
-  { type: "stripe", label: "Stripe", icon: CreditCard, category: "More" },
-  { type: "twilio", label: "Twilio", icon: MessageCircle, category: "More" },
-  { type: "shopify", label: "Shopify", icon: ShoppingCart, category: "More" },
-
-  // ── Kubernetes ──
-  { type: "k8s-pod", label: "Pod", icon: K8sPodIcon, category: "Kubernetes" },
-  {
-    type: "k8s-deployment",
-    label: "Deployment",
-    icon: K8sDeployIcon,
-    category: "Kubernetes",
-  },
-  {
-    type: "k8s-replicaset",
-    label: "ReplicaSet",
-    icon: K8sReplicaSetIcon,
-    category: "Kubernetes",
-  },
-  {
-    type: "k8s-statefulset",
-    label: "StatefulSet",
-    icon: K8sStatefulIcon,
-    category: "Kubernetes",
-  },
-  {
-    type: "k8s-daemonset",
-    label: "DaemonSet",
-    icon: K8sDaemonIcon,
-    category: "Kubernetes",
-  },
-  { type: "k8s-job", label: "Job", icon: K8sJobIcon, category: "Kubernetes" },
-  {
-    type: "k8s-cronjob",
-    label: "CronJob",
-    icon: K8sCronJobIcon,
-    category: "Kubernetes",
-  },
-  {
-    type: "k8s-service",
-    label: "Service",
-    icon: K8sServiceIcon,
-    category: "Kubernetes",
-  },
-  {
-    type: "k8s-ingress",
-    label: "Ingress",
-    icon: K8sIngressIcon,
-    category: "Kubernetes",
-  },
-  {
-    type: "k8s-configmap",
-    label: "ConfigMap",
-    icon: K8sConfigMapIcon,
-    category: "Kubernetes",
-  },
-  {
-    type: "k8s-secret",
-    label: "Secret",
-    icon: K8sSecretIcon,
-    category: "Kubernetes",
-  },
-  { type: "k8s-pvc", label: "PVC", icon: K8sPVCIcon, category: "Kubernetes" },
-  {
-    type: "k8s-hpa",
-    label: "Autoscaler",
-    icon: K8sHPAIcon,
-    category: "Kubernetes",
-  },
-  {
-    type: "k8s-namespace",
-    label: "Namespace",
-    icon: K8sNamespaceIcon,
-    category: "Kubernetes",
-  },
-
-  // ── Templates ──
+  ...NODE_DEFINITIONS.filter((definition) => definition.palette)
+    .sort((a, b) => a.palette!.order - b.palette!.order)
+    .map((definition) => ({
+      type: definition.id,
+      label: definition.palette!.label,
+      icon: PALETTE_ICONS[definition.palette!.icon],
+      category: definition.palette!.category,
+    })),
   {
     type: "template:airbnb",
     label: "Airbnb",
@@ -234,6 +145,20 @@ export const nodeTypesList = [
     category: "Templates",
   },
 ];
+
+// Favorites use the same labels and icons as the palette.
+export const DEFAULT_FAVORITES = [
+  "server",
+  "database",
+  "gateway",
+  "microservice",
+  "cache",
+  "loadBalancer",
+].map((type) => {
+  const entry = nodeTypesList.find((node) => node.type === type);
+  if (!entry) throw new Error(`Missing default favorite node: ${type}`);
+  return { type: entry.type, label: entry.label, icon: entry.icon };
+});
 
 // ── Usage tracking for dynamic favorites ──
 const USAGE_KEY = "meshwork:node-usage";
@@ -294,26 +219,8 @@ export function getDynamicFavorites(): {
   });
 }
 
-export const NODE_DESCRIPTIONS: Record<string, string> = {
-  server: "General purpose compute instance (e.g. EC2, VM)",
-  database: "Relational or NoSQL database server",
-  cache: "In-memory data store (e.g. Redis, Memcached)",
-  gateway: "API Gateway for routing client requests",
-  loadBalancer: "Distributes traffic across multiple targets",
-  microservice: "Containerized application or service",
-  worker: "Background processing or job queue worker",
-  logic: "Serverless function (e.g. AWS Lambda)",
-  queue: "Message queue (e.g. SQS, RabbitMQ)",
-  bus: "Event stream / Message bus (e.g. Kafka)",
-  storage: "Object storage (e.g. S3, GCS)",
-  cdn: "Content Delivery Network for edge caching",
-  vpc: "Virtual Private Cloud network boundary",
-  region: "Cloud region or physical datacenter",
-  user: "End user or client application",
-  app: "Frontend client application (Web/Mobile)",
-  api: "External 3rd-party API service",
-  search: "Search engine or indexing service",
-  "k8s-pod": "Smallest deployable Kubernetes object",
-  "k8s-deployment": "Manages stateless applications",
-  "k8s-service": "Network endpoint for a set of Pods",
-};
+export const NODE_DESCRIPTIONS: Record<string, string> = Object.fromEntries(
+  NODE_DEFINITIONS.flatMap(({ id, description }) =>
+    description ? [[id, description]] : [],
+  ),
+);

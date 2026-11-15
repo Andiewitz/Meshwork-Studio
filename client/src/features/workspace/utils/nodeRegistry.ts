@@ -10,6 +10,8 @@ export interface NodeDefinition {
   aliases: readonly string[];
   container: boolean;
   expandable: boolean;
+  palette?: { label: string; icon: string; category: string; order: number };
+  description?: string;
 }
 
 /** Persisted node capabilities and aliases. Existing saved dimensions always win. */
@@ -21,6 +23,9 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: true,
+
+    palette: { label: "Server", icon: "Server", category: "Core", order: 0 },
+    description: "General purpose compute instance (e.g. EC2, VM)",
   },
   {
     id: "database",
@@ -36,6 +41,14 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     ],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Database",
+      icon: "Database",
+      category: "Core",
+      order: 1,
+    },
+    description: "Relational or NoSQL database server",
   },
   {
     id: "storage",
@@ -44,6 +57,14 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: ["s3", "blob", "gcs"],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Storage (S3)",
+      icon: "HardDrive",
+      category: "Core",
+      order: 10,
+    },
+    description: "Object storage (e.g. S3, GCS)",
   },
   {
     id: "microservice",
@@ -52,6 +73,9 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: ["service", "docker", "container"],
     container: false,
     expandable: true,
+
+    palette: { label: "Docker", icon: "Box", category: "Core", order: 5 },
+    description: "Containerized application or service",
   },
   {
     id: "cache",
@@ -60,6 +84,9 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: ["redis", "elasticache", "memcached"],
     container: false,
     expandable: false,
+
+    palette: { label: "Redis", icon: "Zap", category: "Core", order: 2 },
+    description: "In-memory data store (e.g. Redis, Memcached)",
   },
   {
     id: "worker",
@@ -68,6 +95,9 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: { label: "Worker", icon: "Cpu", category: "Core", order: 6 },
+    description: "Background processing or job queue worker",
   },
   {
     id: "logic",
@@ -76,6 +106,9 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: ["lambda", "aws-lambda", "azure-function"],
     container: false,
     expandable: false,
+
+    palette: { label: "Lambda", icon: "Zap", category: "Core", order: 7 },
+    description: "Serverless function (e.g. AWS Lambda)",
   },
   {
     id: "user",
@@ -84,6 +117,9 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: { label: "User", icon: "UserIcon", category: "Core", order: 16 },
+    description: "End user or client application",
   },
   {
     id: "app",
@@ -92,6 +128,9 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: ["react", "vue", "angular", "nextjs", "nuxt"],
     container: false,
     expandable: true,
+
+    palette: { label: "Client App", icon: "Box", category: "Core", order: 17 },
+    description: "Frontend client application (Web/Mobile)",
   },
   {
     id: "search",
@@ -100,6 +139,14 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Elasticsearch",
+      icon: "Search",
+      category: "More",
+      order: 19,
+    },
+    description: "Search engine or indexing service",
   },
   {
     id: "gateway",
@@ -108,6 +155,14 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: ["api-gateway", "apigw", "api_gateway"],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "API Gateway",
+      icon: "Globe",
+      category: "Core",
+      order: 3,
+    },
+    description: "API Gateway for routing client requests",
   },
   {
     id: "loadBalancer",
@@ -116,6 +171,14 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: ["nginx", "alb", "elb", "haproxy"],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Load Balancer",
+      icon: "Cpu",
+      category: "Core",
+      order: 4,
+    },
+    description: "Distributes traffic across multiple targets",
   },
   {
     id: "cdn",
@@ -124,6 +187,9 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: ["cloudfront", "fastly", "akamai"],
     container: false,
     expandable: false,
+
+    palette: { label: "CDN", icon: "Globe", category: "Core", order: 11 },
+    description: "Content Delivery Network for edge caching",
   },
   {
     id: "bus",
@@ -132,6 +198,9 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: ["kafka", "kinesis"],
     container: false,
     expandable: false,
+
+    palette: { label: "Kafka", icon: "Share2", category: "Core", order: 9 },
+    description: "Event stream / Message bus (e.g. Kafka)",
   },
   {
     id: "queue",
@@ -140,6 +209,14 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: ["rabbitmq", "sqs", "celery"],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Queue",
+      icon: "MessageSquare",
+      category: "Core",
+      order: 8,
+    },
+    description: "Message queue (e.g. SQS, RabbitMQ)",
   },
   {
     id: "route53",
@@ -148,6 +225,8 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: { label: "Route 53", icon: "Globe", category: "More", order: 23 },
   },
   {
     id: "nats",
@@ -156,6 +235,8 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: { label: "NATS", icon: "Activity", category: "More", order: 24 },
   },
   {
     id: "socketio",
@@ -164,6 +245,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Socket.io",
+      icon: "MessageCircle",
+      category: "More",
+      order: 25,
+    },
   },
   {
     id: "github_actions",
@@ -172,6 +260,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "GitHub Actions",
+      icon: "PlayCircle",
+      category: "More",
+      order: 26,
+    },
   },
   {
     id: "jenkins",
@@ -180,6 +275,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Jenkins",
+      icon: "Settings",
+      category: "More",
+      order: 27,
+    },
   },
   {
     id: "gitlab",
@@ -188,6 +290,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "GitLab CI",
+      icon: "GitBranch",
+      category: "More",
+      order: 28,
+    },
   },
   {
     id: "argocd",
@@ -196,6 +305,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Argo CD",
+      icon: "PlayCircle",
+      category: "More",
+      order: 29,
+    },
   },
   {
     id: "vault",
@@ -204,6 +320,8 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: { label: "Vault", icon: "Lock", category: "More", order: 30 },
   },
   {
     id: "auth0",
@@ -212,6 +330,8 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: { label: "Auth0", icon: "Key", category: "More", order: 31 },
   },
   {
     id: "waf",
@@ -220,6 +340,8 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: { label: "WAF", icon: "Shield", category: "More", order: 32 },
   },
   {
     id: "prometheus",
@@ -228,6 +350,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Prometheus",
+      icon: "Activity",
+      category: "More",
+      order: 33,
+    },
   },
   {
     id: "grafana",
@@ -236,6 +365,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Grafana",
+      icon: "BarChart3",
+      category: "More",
+      order: 34,
+    },
   },
   {
     id: "datadog",
@@ -244,6 +380,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Datadog",
+      icon: "PieChart",
+      category: "More",
+      order: 35,
+    },
   },
   {
     id: "stripe",
@@ -252,6 +395,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Stripe",
+      icon: "CreditCard",
+      category: "More",
+      order: 36,
+    },
   },
   {
     id: "twilio",
@@ -260,6 +410,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Twilio",
+      icon: "MessageCircle",
+      category: "More",
+      order: 37,
+    },
   },
   {
     id: "shopify",
@@ -268,6 +425,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Shopify",
+      icon: "ShoppingCart",
+      category: "More",
+      order: 38,
+    },
   },
   {
     id: "influxdb",
@@ -276,6 +440,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "InfluxDB",
+      icon: "BarChart3",
+      category: "More",
+      order: 20,
+    },
   },
   {
     id: "snowflake",
@@ -284,6 +455,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Snowflake",
+      icon: "Layers",
+      category: "More",
+      order: 21,
+    },
   },
   {
     id: "clickhouse",
@@ -292,6 +470,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Clickhouse",
+      icon: "Database",
+      category: "More",
+      order: 22,
+    },
   },
   {
     id: "api",
@@ -300,6 +485,14 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "External API",
+      icon: "Globe",
+      category: "Core",
+      order: 18,
+    },
+    description: "External 3rd-party API service",
   },
   {
     id: "annotation",
@@ -332,6 +525,9 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: true,
     expandable: true,
+
+    palette: { label: "Region", icon: "Globe", category: "Core", order: 13 },
+    description: "Cloud region or physical datacenter",
   },
   {
     id: "vpc",
@@ -340,6 +536,9 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: true,
     expandable: true,
+
+    palette: { label: "VPC", icon: "Square", category: "Core", order: 12 },
+    description: "Virtual Private Cloud network boundary",
   },
   {
     id: "availability-zone",
@@ -348,6 +547,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: ["zone", "az"],
     container: true,
     expandable: true,
+
+    palette: {
+      label: "Availability Zone",
+      icon: "Square",
+      category: "Core",
+      order: 14,
+    },
   },
   {
     id: "subnet",
@@ -356,6 +562,8 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: ["private_subnet", "public_subnet"],
     container: true,
     expandable: false,
+
+    palette: { label: "Subnet", icon: "Network", category: "Core", order: 15 },
   },
   {
     id: "k8s-namespace",
@@ -364,6 +572,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: true,
     expandable: true,
+
+    palette: {
+      label: "Namespace",
+      icon: "K8sNamespaceIcon",
+      category: "Kubernetes",
+      order: 52,
+    },
   },
   {
     id: "k8s-pod",
@@ -372,6 +587,14 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Pod",
+      icon: "K8sPodIcon",
+      category: "Kubernetes",
+      order: 39,
+    },
+    description: "Smallest deployable Kubernetes object",
   },
   {
     id: "k8s-deployment",
@@ -380,6 +603,14 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Deployment",
+      icon: "K8sDeployIcon",
+      category: "Kubernetes",
+      order: 40,
+    },
+    description: "Manages stateless applications",
   },
   {
     id: "k8s-replicaset",
@@ -388,6 +619,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "ReplicaSet",
+      icon: "K8sReplicaSetIcon",
+      category: "Kubernetes",
+      order: 41,
+    },
   },
   {
     id: "k8s-statefulset",
@@ -396,6 +634,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "StatefulSet",
+      icon: "K8sStatefulIcon",
+      category: "Kubernetes",
+      order: 42,
+    },
   },
   {
     id: "k8s-daemonset",
@@ -404,6 +649,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "DaemonSet",
+      icon: "K8sDaemonIcon",
+      category: "Kubernetes",
+      order: 43,
+    },
   },
   {
     id: "k8s-service",
@@ -412,6 +664,14 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Service",
+      icon: "K8sServiceIcon",
+      category: "Kubernetes",
+      order: 46,
+    },
+    description: "Network endpoint for a set of Pods",
   },
   {
     id: "k8s-ingress",
@@ -420,6 +680,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Ingress",
+      icon: "K8sIngressIcon",
+      category: "Kubernetes",
+      order: 47,
+    },
   },
   {
     id: "k8s-configmap",
@@ -428,6 +695,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "ConfigMap",
+      icon: "K8sConfigMapIcon",
+      category: "Kubernetes",
+      order: 48,
+    },
   },
   {
     id: "k8s-secret",
@@ -436,6 +710,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Secret",
+      icon: "K8sSecretIcon",
+      category: "Kubernetes",
+      order: 49,
+    },
   },
   {
     id: "k8s-pvc",
@@ -444,6 +725,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "PVC",
+      icon: "K8sPVCIcon",
+      category: "Kubernetes",
+      order: 50,
+    },
   },
   {
     id: "k8s-job",
@@ -452,6 +740,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Job",
+      icon: "K8sJobIcon",
+      category: "Kubernetes",
+      order: 44,
+    },
   },
   {
     id: "k8s-cronjob",
@@ -460,6 +755,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "CronJob",
+      icon: "K8sCronJobIcon",
+      category: "Kubernetes",
+      order: 45,
+    },
   },
   {
     id: "k8s-hpa",
@@ -468,6 +770,13 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     aliases: [],
     container: false,
     expandable: false,
+
+    palette: {
+      label: "Autoscaler",
+      icon: "K8sHPAIcon",
+      category: "Kubernetes",
+      order: 51,
+    },
   },
   {
     id: "pusher",

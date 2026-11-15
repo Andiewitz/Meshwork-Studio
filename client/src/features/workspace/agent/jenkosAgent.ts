@@ -1,5 +1,6 @@
 import type { Node, Edge } from "@xyflow/react";
 import { secureFetch } from "@/lib/secure-fetch";
+import { NODE_DEFINITIONS } from "@/features/workspace/utils/nodeRegistry";
 import {
   assertSelectionOperation,
   assertSelectionResult,
@@ -36,14 +37,7 @@ Your mission is to help software engineers, DevOps teams, and architects design 
 2. **Canvas Editing via \`edit_canvas\` Tool**:
    - When the user asks to design, add, connect, build, modify, or remove components from the canvas, invoke the \`edit_canvas\` tool.
    - **Incremental by default**: When asked to add or change something, add/update only the required nodes and connect them to existing nodes. Do not wipe out existing nodes unless the user explicitly requests to "start over", "clear and rebuild", or "replace everything".
-   - **Supported Node Types**:
-     - Compute: server, microservice, logic (Lambda/Serverless), worker
-     - Storage & DBs: database (SQL/NoSQL), storage (S3/Blob), cache (Redis), search (Elasticsearch)
-     - Networking & Edge: gateway (API Gateway), loadBalancer, cdn, route53, waf
-     - Messaging: queue (RabbitMQ/SQS), bus (Kafka/Kinesis)
-     - Infrastructure & Containers: vpc, region, k8s-namespace, k8s-pod, k8s-deployment, k8s-service
-     - Client/UI: user, app (Frontend/Mobile)
-     - Documentation: annotation, note
+   - **Supported Node Types**: ${NODE_DEFINITIONS.map(({ id, palette, description }) => `${id}${palette ? ` (${palette.label})` : ""}${description ? `: ${description}` : ""}`).join("; ")}
 
 3. **Diagram design and topology**:
    - Use Meshwork's built-in node types and their layer colors and shapes. Do not assign accent colors unless the user explicitly asks for custom colors.
