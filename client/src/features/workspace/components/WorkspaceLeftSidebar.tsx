@@ -5,12 +5,11 @@ import {
   CpuChipIcon,
   ArrowPathIcon,
   PaperAirplaneIcon,
-  PlusIcon,
   ArrowUpRightIcon,
   TrashIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
-import { LuHistory, LuPlus } from "react-icons/lu";
+import { LuPlus, LuX } from "react-icons/lu";
 import { useReactFlow, useNodes, useEdges } from "@xyflow/react";
 import StreamingText from "@/components/ui/streaming-text";
 import {
@@ -232,11 +231,6 @@ export function WorkspaceLeftSidebar({
             detail: { active: true, x: centerX, y: centerY },
           }),
         );
-        window.dispatchEvent(
-          new CustomEvent("jenkos:designing", {
-            detail: { active: true, x: centerX, y: centerY },
-          }),
-        );
       }
 
       try {
@@ -361,9 +355,6 @@ export function WorkspaceLeftSidebar({
         window.dispatchEvent(
           new CustomEvent("jenkos:designing", { detail: { active: false } }),
         );
-        window.dispatchEvent(
-          new CustomEvent("jenkos:designing", { detail: { active: false } }),
-        );
       }
     },
     [
@@ -414,6 +405,21 @@ export function WorkspaceLeftSidebar({
 
   return (
     <div className="workspace-assistant h-full flex flex-col overflow-hidden select-none">
+      <div className="flex items-center justify-between gap-2 border-b ws-border px-3 py-2">
+        <div>
+          <p className="text-sm font-semibold ws-ink">AI chat</p>
+          <p className="text-xs ws-muted">Jenkos assistant</p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close AI chat"
+          title="Close AI chat"
+          className="rounded p-1.5 ws-muted ws-hover-ink ws-hover-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+        >
+          <LuX aria-hidden="true" className="h-4 w-4" />
+        </button>
+      </div>
       {/* ── Jenkos AI Co-pilot (always-on, no tabs) ── */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Tiny clear button */}
@@ -433,19 +439,14 @@ export function WorkspaceLeftSidebar({
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 scrollbar-thin scrollbar-thumb-white/[0.08]">
           {/* Top action icons: reverse clock (history) and plus (new chat) */}
           <div className="flex items-center justify-between pb-1">
-            <button
-              type="button"
-              className="w-7 h-7 flex items-center justify-center rounded-lg ws-muted ws-hover-ink ws-hover-surface transition-colors"
-              title="Chat History"
-            >
-              <LuHistory className="w-4 h-4" />
-            </button>
+            <span className="text-xs ws-muted">Conversation</span>
 
             <button
               type="button"
               onClick={() => setMessages([])}
               className="w-7 h-7 flex items-center justify-center rounded-lg ws-muted ws-hover-ink ws-hover-surface transition-colors"
               title="New Chat"
+              aria-label="New chat"
             >
               <LuPlus className="w-4 h-4" />
             </button>
@@ -625,30 +626,18 @@ export function WorkspaceLeftSidebar({
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              placeholder="Queue follow-up..."
+              placeholder="Ask Jenkos or describe a diagram..."
               className="w-full bg-transparent border-0 resize-none rounded ws-ink text-[12px] ws-placeholder px-0.5 py-0.5 leading-relaxed min-h-[44px] max-h-28 scrollbar-thin focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
               rows={1}
             />
 
-            <div className="flex items-center justify-between pt-1 border-t ws-border">
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setInput((prev) => prev + " @context");
-                    textareaRef.current?.focus();
-                  }}
-                  className="w-6 h-6 rounded-full flex items-center justify-center ws-muted ws-hover-ink ws-hover-surface transition-all"
-                  title="Add context"
-                >
-                  <PlusIcon className="w-3.5 h-3.5" />
-                </button>
-
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t ws-border">
+              <div className="flex min-w-0 items-center gap-1.5">
                 <select
                   aria-label="AI model"
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
-                  className="h-7 px-2 rounded-full ws-surface-soft border ws-border ws-ink text-[11px] font-medium cursor-pointer ws-hover-surface transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                  className="h-7 max-w-full px-2 rounded-full ws-surface-soft border ws-border ws-ink text-[11px] font-medium cursor-pointer ws-hover-surface transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
                 >
                   {AVAILABLE_MODELS.map((m) => (
                     <option
@@ -656,7 +645,7 @@ export function WorkspaceLeftSidebar({
                       value={m.id}
                       className="ws-option ws-ink"
                     >
-                      Build ▾ ({m.name.split(" ")[0]})
+                      {m.name}
                     </option>
                   ))}
                 </select>
@@ -678,7 +667,7 @@ export function WorkspaceLeftSidebar({
                   className="h-7 px-3.5 rounded-full flex items-center gap-1.5 ws-primary font-semibold text-[11px] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all shadow-sm cursor-pointer"
                 >
                   <PaperAirplaneIcon className="w-3 h-3" />
-                  <span>Build</span>
+                  <span>Send</span>
                 </button>
               </div>
             </div>

@@ -292,7 +292,7 @@ export function useWorkspaceRole(workspaceId: string | null | undefined) {
         getApiUrl(`/api/v1/workspaces/${workspaceId}/role`),
         { credentials: "include" },
       );
-      if (!res.ok) return { role: "none" as WorkspaceRole };
+      if (!res.ok) throw new Error("Could not load workspace access");
       return res.json() as Promise<{ role: WorkspaceRole }>;
     },
     enabled: isAuthenticated && !!workspaceId,

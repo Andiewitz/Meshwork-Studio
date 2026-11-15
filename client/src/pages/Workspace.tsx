@@ -436,7 +436,11 @@ function WorkspaceView() {
   );
 
   // ── Role-based access control ──
-  const { data: roleData } = useWorkspaceRole(workspaceId);
+  const {
+    data: roleData,
+    isError: roleError,
+    refetch: refetchRole,
+  } = useWorkspaceRole(workspaceId);
   const userRole = roleData?.role || "none";
   const canEdit = canEditWorkspace(userRole);
   const canManage = canManageWorkspace(userRole);
@@ -2281,10 +2285,10 @@ function WorkspaceView() {
       <div className="workspace-editor-body relative flex-1 min-h-0 overflow-hidden flex bg-[#111114]">
         {/* Collapsible Left Sidebar connected flush to Header */}
         <div
+          id="workspace-ai-chat"
+          aria-hidden={!isSidebarOpen || !canEdit}
           className={`workspace-sidebar-frame max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:z-20 max-md:max-w-[85vw] min-h-0 overflow-hidden transition-all duration-300 ease-in-out bg-[#111114] shrink-0 ${
-            isSidebarOpen && canEdit
-              ? "w-[360px] opacity-100"
-              : "w-0 opacity-0 pointer-events-none"
+            isSidebarOpen && canEdit ? "w-[360px] opacity-100" : "hidden"
           }`}
         >
           <WorkspaceLeftSidebar
@@ -2318,6 +2322,22 @@ function WorkspaceView() {
             data-cursor={drawingMode}
             style={{ cursor: drawingMode === "pan" ? "grab" : undefined }}
           >
+            {roleError && (
+              <div
+                role="alert"
+                className="absolute top-16 left-4 right-4 z-[1000] rounded-lg border ws-border ws-option p-3 text-sm ws-ink"
+              >
+                Could not load your workspace permissions. Editing is
+                temporarily unavailable.{" "}
+                <button
+                  type="button"
+                  className="underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                  onClick={() => void refetchRole()}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
             {draftConflict && (
               <div
                 role="alert"

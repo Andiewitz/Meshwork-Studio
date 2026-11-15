@@ -475,33 +475,23 @@ export function WorkspaceHeader({
             <ArrowUturnRightIcon className="w-3.5 h-3.5" />
           </button>
 
-          {/* Sidebar Toggle when collapsed */}
-          {!isSidebarOpen && (
+          {canEdit && (
             <>
               <div className="w-px h-3.5 ws-surface-soft mx-0.5" />
               <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="w-7 h-7 flex items-center justify-center rounded-md ws-muted ws-hover-ink ws-hover-surface transition-all"
-                title="Open Sidebar"
+                type="button"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                aria-expanded={isSidebarOpen}
+                aria-controls="workspace-ai-chat"
+                title={isSidebarOpen ? "Close AI chat" : "Open AI chat"}
+                className="h-7 flex items-center gap-1.5 px-2 rounded-md ws-muted ws-hover-ink ws-hover-surface transition-all whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
               >
-                <LuPanelLeft className="w-4 h-4" />
+                <LuPanelLeft aria-hidden="true" className="w-4 h-4" />
+                <span>AI chat</span>
               </button>
             </>
           )}
         </div>
-
-        {/* ── Sidebar Toggle when open: positioned on top of the edge of the sidebar ── */}
-        {isSidebarOpen && (
-          <div className="absolute left-[324px] z-20 max-md:hidden transition-all duration-300">
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="w-7 h-7 flex items-center justify-center rounded-md ws-muted ws-hover-ink ws-hover-surface transition-all"
-              title="Collapse Sidebar"
-            >
-              <LuPanelLeft className="w-4 h-4" />
-            </button>
-          </div>
-        )}
 
         {/* ── Center Section: Centralized Project Title ── */}
         <div className="absolute left-1/2 -translate-x-1/2 hidden lg:flex items-center justify-center pointer-events-none z-0">

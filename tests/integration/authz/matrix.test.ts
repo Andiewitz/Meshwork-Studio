@@ -185,6 +185,38 @@ describe("authorization matrix — no 403 on your own data", () => {
 
   afterEach(() => vi.unstubAllEnvs());
 
+  it("returns the editor role for direct collaborators and denies strangers", async () => {
+    app = await buildApp({}, false, { [EDITOR]: "edit", [VIEWER]: "view" });
+    for (const [id, role] of [
+      [OWNER, "workspace-owner"],
+      [EDITOR, "editor"],
+      [VIEWER, "viewer"],
+    ]) {
+      const response = await request(app)
+        .get(`/api/v1/workspaces/${WS_ID}/role`)
+        .set("x-test-user-id", id);
+      expect(response.status).toBe(200);
+      expect(response.body.role).toBe(role);
+    }
+    expect(
+      (
+        await request(app)
+          .get(`/api/v1/workspaces/${WS_ID}/role`)
+          .set("x-test-user-id", STRANGER)
+      ).status,
+    ).toBe(403);
+    expect(
+      (await request(app).get(`/api/v1/workspaces/${WS_ID}/role`)).status,
+    ).toBe(401);
+    expect(
+      (
+        await request(app)
+          .get("/api/v1/workspaces/missing/role")
+          .set("x-test-user-id", OWNER)
+      ).status,
+    ).toBe(404);
+  });
+
   it("ignores Team-only shares after cutover while retaining direct shares", async () => {
     app = await buildApp({ [STRANGER]: "editor" }, false, {
       [VIEWER]: "view",
