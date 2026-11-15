@@ -185,7 +185,7 @@ export function ArchitecturePlans({
       <button
         type="button"
         onClick={() => void showSaved()}
-        className="h-7 px-2 rounded-full ws-muted ws-hover-ink text-[11px]"
+        className="assistant-plan-link"
         title="Open saved architecture plans"
       >
         Plans
@@ -194,7 +194,7 @@ export function ArchitecturePlans({
         type="button"
         onClick={() => void generate()}
         disabled={!prompt.trim() || disabled || busy}
-        className="h-7 px-3 rounded-full ws-surface-soft border ws-border ws-ink text-[11px] disabled:opacity-30"
+        className="assistant-plan-button"
       >
         Plan
       </button>

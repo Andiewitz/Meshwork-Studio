@@ -411,17 +411,17 @@ export function WorkspaceLeftSidebar({
 
   return (
     <div className="workspace-assistant h-full flex flex-col overflow-hidden select-none">
-      <div className="flex items-center justify-between gap-2 border-b ws-border px-3 py-2">
+      <div className="assistant-header">
         <div>
-          <p className="text-sm font-semibold ws-ink">AI chat</p>
-          <p className="text-xs ws-muted">Jenkos assistant</p>
+          <p className="assistant-title">AI chat</p>
+          <p className="assistant-subtitle">Jenkos assistant</p>
         </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close AI chat"
           title="Close AI chat"
-          className="rounded p-1.5 ws-muted ws-hover-ink ws-hover-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+          className="assistant-icon-button"
         >
           <LuX aria-hidden="true" className="h-4 w-4" />
         </button>
@@ -442,15 +442,15 @@ export function WorkspaceLeftSidebar({
         )}
 
         {/* Chat Messages Feed */}
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 scrollbar-thin scrollbar-thumb-white/[0.08]">
+        <div className="assistant-feed flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/[0.08]">
           {/* Top action icons: reverse clock (history) and plus (new chat) */}
-          <div className="flex items-center justify-between pb-1">
-            <span className="text-xs ws-muted">Conversation</span>
+          <div className="assistant-section-heading">
+            <span>Conversation</span>
 
             <button
               type="button"
               onClick={() => setMessages([])}
-              className="w-7 h-7 flex items-center justify-center rounded-lg ws-muted ws-hover-ink ws-hover-surface transition-colors"
+              className="assistant-icon-button"
               title="New Chat"
               aria-label="New chat"
             >
@@ -459,21 +459,23 @@ export function WorkspaceLeftSidebar({
           </div>
 
           {messages.length === 0 && (
-            <div className="workspace-assistant-intro py-2 flex flex-col">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-5 h-5 rounded-md ws-surface-soft border ws-border flex items-center justify-center shrink-0">
-                  <CpuChipIcon className="w-3 h-3 ws-ink" />
+            <div className="workspace-assistant-intro assistant-intro">
+              <div className="assistant-intro-heading">
+                <div className="assistant-avatar">
+                  <CpuChipIcon className="w-4 h-4 ws-ink" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-medium ws-ink">Jenkos</p>
-                  <p className="text-[11px] ws-dim">
-                    Describe any system or ask to design cloud topologies.
+                  <p className="assistant-intro-title">
+                    What are you building?
+                  </p>
+                  <p className="assistant-intro-copy">
+                    Describe a system or ask a question about your canvas.
                   </p>
                 </div>
               </div>
 
               {/* Suggestions as border-b list */}
-              <div className="flex flex-col">
+              <div className="assistant-suggestions">
                 {suggestions.map((s, sIdx) => (
                   <button
                     key={sIdx}
@@ -482,7 +484,7 @@ export function WorkspaceLeftSidebar({
                       setInput(s);
                       textareaRef.current?.focus();
                     }}
-                    className="flex items-center gap-2 border-b ws-border py-2 px-0.5 text-left text-[11.5px] ws-muted ws-hover-surface ws-hover-ink transition-colors duration-100 cursor-pointer rounded-sm"
+                    className="assistant-suggestion"
                   >
                     <svg
                       width="10"
@@ -498,7 +500,7 @@ export function WorkspaceLeftSidebar({
                       <path d="M9 10l-5 5 5 5" />
                       <path d="M20 4v7a4 4 0 0 1-4 4H4" />
                     </svg>
-                    <span className="line-clamp-2">{s}</span>
+                    <span>{s}</span>
                   </button>
                 ))}
               </div>
@@ -513,7 +515,7 @@ export function WorkspaceLeftSidebar({
             >
               {msg.role === "user" ? (
                 <div className="flex justify-end">
-                  <div className="workspace-user-message max-w-[85%] rounded-xl rounded-tr-sm px-3 py-2 text-[11px] ws-ink">
+                  <div className="workspace-user-message max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ws-ink">
                     <span className="whitespace-pre-wrap">{msg.content}</span>
                   </div>
                 </div>
@@ -596,10 +598,10 @@ export function WorkspaceLeftSidebar({
         </div>
 
         {/* ── Composer Card ── */}
-        <div className="p-2.5 pt-1">
+        <div className="assistant-composer-wrap">
           <form
             onSubmit={handleSubmit}
-            className="workspace-composer rounded-2xl ws-surface-soft border ws-border ws-focus-within-border transition-all p-2.5 space-y-2"
+            className="workspace-composer assistant-composer"
           >
             <textarea
               ref={textareaRef}
@@ -608,11 +610,11 @@ export function WorkspaceLeftSidebar({
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder="Ask Jenkos or describe a diagram..."
-              className="w-full bg-transparent border-0 resize-none rounded ws-ink text-[12px] ws-placeholder px-0.5 py-0.5 leading-relaxed min-h-[44px] max-h-28 scrollbar-thin focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+              className="assistant-input ws-placeholder"
               rows={1}
             />
 
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t ws-border">
+            <div className="assistant-composer-actions">
               <div className="flex min-w-0 items-center gap-1.5">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -620,7 +622,7 @@ export function WorkspaceLeftSidebar({
                       type="button"
                       aria-label="AI chat options"
                       title="AI chat options"
-                      className="h-8 w-8 rounded-lg flex items-center justify-center ws-muted ws-hover-ink ws-hover-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                      className="assistant-icon-button"
                     >
                       <AdjustmentsHorizontalIcon
                         aria-hidden="true"
@@ -632,10 +634,10 @@ export function WorkspaceLeftSidebar({
                     align="start"
                     side="top"
                     sideOffset={8}
-                    className="workspace-popover w-64 max-w-[calc(100vw-2rem)] ws-option ws-ink border ws-border rounded-xl p-3 space-y-3"
+                    className="workspace-popover assistant-options w-64 max-w-[calc(100vw-2rem)] ws-option ws-ink border ws-border"
                   >
-                    <p className="text-sm font-semibold">Chat options</p>
-                    <label className="block space-y-1 text-xs ws-muted">
+                    <p className="assistant-options-title">Chat options</p>
+                    <label className="assistant-options-field">
                       <span>AI model</span>
                       <select
                         aria-label="AI model"
@@ -643,7 +645,7 @@ export function WorkspaceLeftSidebar({
                         onChange={(event) =>
                           setSelectedModel(event.target.value)
                         }
-                        className="block w-full rounded border ws-border ws-surface-soft ws-ink px-2 py-2 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                        className="assistant-options-select"
                       >
                         {AVAILABLE_MODELS.map((model) => (
                           <option key={model.id} value={model.id}>
@@ -652,7 +654,7 @@ export function WorkspaceLeftSidebar({
                         ))}
                       </select>
                     </label>
-                    <label className="block space-y-1 text-xs ws-muted">
+                    <label className="assistant-options-field">
                       <span>AI edit scope</span>
                       <select
                         aria-label="AI edit scope"
@@ -662,7 +664,7 @@ export function WorkspaceLeftSidebar({
                             event.target.value as "canvas" | "selection",
                           )
                         }
-                        className="block w-full rounded border ws-border ws-surface-soft ws-ink px-2 py-2 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                        className="assistant-options-select"
                       >
                         <option value="canvas">Entire canvas</option>
                         <option value="selection">
@@ -699,7 +701,7 @@ export function WorkspaceLeftSidebar({
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="h-7 px-3.5 rounded-full flex items-center gap-1.5 ws-primary font-semibold text-[11px] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all shadow-sm cursor-pointer"
+                  className="assistant-send ws-primary"
                 >
                   <PaperAirplaneIcon className="w-3 h-3" />
                   <span>Send</span>

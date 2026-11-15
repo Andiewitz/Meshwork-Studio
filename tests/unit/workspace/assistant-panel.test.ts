@@ -48,7 +48,9 @@ it("shows a named chat, useful composer, full model names and a working close bu
   expect(document.body.textContent).toContain("AI chat");
   expect(document.querySelector('select[aria-label="AI model"]')).toBeNull();
   await act(async () => {
-    const trigger = document.querySelector('[aria-label="AI chat options"]')!;
+    const trigger = document.querySelector<HTMLButtonElement>(
+      '[aria-label="AI chat options"]',
+    )!;
     trigger.click();
   });
   expect(
@@ -61,7 +63,9 @@ it("shows a named chat, useful composer, full model names and a working close bu
   ).toContain("Gemini 3.5 Flash Lite");
   expect(document.querySelector('[title="Chat History"]')).toBeNull();
   await act(async () =>
-    document.querySelector('[aria-label="Close AI chat"]')!.click(),
+    document
+      .querySelector<HTMLButtonElement>('[aria-label="Close AI chat"]')!
+      .click(),
   );
   expect(onClose).toHaveBeenCalledOnce();
   await act(async () => root.unmount());
