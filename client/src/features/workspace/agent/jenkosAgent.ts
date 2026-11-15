@@ -452,7 +452,9 @@ export async function runJenkosAgent({
               ? JSON.parse(tc.function.arguments)
               : tc.function.arguments;
         } catch {
-          args = {};
+          throw new Error(
+            "The AI returned an invalid canvas operation. No changes were applied.",
+          );
         }
 
         if (selectionScope) assertSelectionOperation(args, selectionScope);
@@ -462,6 +464,10 @@ export async function runJenkosAgent({
           args,
           viewportCenter,
         );
+        if (!result.applied)
+          throw new Error(
+            "The AI could not complete its canvas changes. No changes were applied.",
+          );
         if (selectionScope)
           assertSelectionResult(
             workingNodes,

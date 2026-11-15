@@ -620,10 +620,10 @@ export function executeCanvasToolCalls(
   for (const operation of operations) {
     const result = executeEditCanvas(nodes, edges, operation, viewportCenter);
     latest = result;
-    if (result.applied) {
-      nodes = result.nodes;
-      edges = result.edges;
-    }
+    if (!result.applied)
+      return { ...result, nodes: currentNodes, edges: currentEdges };
+    nodes = result.nodes;
+    edges = result.edges;
   }
 
   return { ...latest, nodes, edges, applied: latest.applied };

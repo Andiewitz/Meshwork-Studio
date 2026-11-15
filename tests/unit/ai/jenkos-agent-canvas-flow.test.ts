@@ -165,6 +165,46 @@ describe("Jenkos Agent & Architecture Generation Pipeline", () => {
   });
 
   describe("Jenkos Agent Run Loop with Tool Calling & Memory", () => {
+    it("rejects the whole request when a later tool call contains invalid JSON", async () => {
+      mockedSecureFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                tool_calls: [
+                  {
+                    id: "one",
+                    function: {
+                      name: "edit_canvas",
+                      arguments: JSON.stringify({
+                        action: "add",
+                        nodes: [{ id: "new", type: "server" }],
+                      }),
+                    },
+                  },
+                  {
+                    id: "two",
+                    function: { name: "edit_canvas", arguments: "{" },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      } as Response);
+      const currentNodes: Node[] = [];
+      await expect(
+        runJenkosAgent({
+          userPrompt: "Draw",
+          history: [],
+          currentNodes,
+          currentEdges: [],
+          viewportCenter,
+        }),
+      ).rejects.toThrow(/No changes were applied/);
+      expect(currentNodes).toEqual([]);
+    });
     it("rejects a multi-call selection edit if any call targets another node", async () => {
       mockedSecureFetch.mockResolvedValueOnce({
         ok: true,

@@ -48,6 +48,7 @@ import {
   clearCanvasLocalCache,
 } from "@/hooks/use-canvas";
 import { planCanvasSave } from "@/lib/canvas-delta";
+import { canvasChangeMessages } from "@/features/workspace/utils/canvasChangeMessages";
 import { isCanvasDraftCurrent } from "@/lib/canvas-cache";
 import {
   canvasSaveDelay,
@@ -523,6 +524,19 @@ function WorkspaceView() {
   }, [handleToggleFullscreen]);
 
   // ── Real-time collaboration (cursors & presence) ──
+  const history = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
+  const redoStack = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
+  const clearHistoryForRemoteChange = useCallback(() => {
+    if (history.current.length || redoStack.current.length) {
+      history.current = [];
+      redoStack.current = [];
+      toast({
+        title: "Undo history cleared",
+        description:
+          "A collaborator changed the canvas, so older undo steps are no longer safe to apply.",
+      });
+    }
+  }, [toast]);
   const isRemoteUpdate = useRef(false);
   const draftConflictRef = useRef(false);
   const pendingConnectionGapRef = useRef(false);
@@ -533,6 +547,7 @@ function WorkspaceView() {
   const handleRemoteNodeMove = useCallback(
     (nodeId: string, x: number, y: number, parentId?: string | null) => {
       if (draftConflictRef.current) return;
+      clearHistoryForRemoteChange();
       isRemoteUpdate.current = true;
       setNodes((nds) =>
         nds.map((n) => {
@@ -553,12 +568,14 @@ function WorkspaceView() {
         isRemoteUpdate.current = false;
       });
     },
-    [setNodes],
+    [setNodes, clearHistoryForRemoteChange],
   );
 
   const handleRemoteNodesChange = useCallback(
     (changes: NodeChange[]) => {
       if (draftConflictRef.current) return;
+      if (changes.some((change) => change.type !== "select"))
+        clearHistoryForRemoteChange();
       isRemoteUpdate.current = true;
       setNodes((nds) =>
         normalizeNodeDimensions(applyNodeChanges(changes, nds)),
@@ -567,19 +584,21 @@ function WorkspaceView() {
         isRemoteUpdate.current = false;
       });
     },
-    [setNodes],
+    [setNodes, clearHistoryForRemoteChange],
   );
 
   const handleRemoteEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
       if (draftConflictRef.current) return;
+      if (changes.some((change) => change.type !== "select"))
+        clearHistoryForRemoteChange();
       isRemoteUpdate.current = true;
       setEdges((eds) => applyEdgeChanges(changes, eds));
       requestAnimationFrame(() => {
         isRemoteUpdate.current = false;
       });
     },
-    [setEdges],
+    [setEdges, clearHistoryForRemoteChange],
   );
 
   const {
@@ -717,6 +736,10 @@ function WorkspaceView() {
   }
   const [canvasStack, setCanvasStack] = useState<CanvasLevel[]>([]);
   const isNested = canvasStack.length > 0;
+  useEffect(() => {
+    history.current = [];
+    redoStack.current = [];
+  }, [workspaceId, canvasStack]);
   const [canvasTransition, setCanvasTransition] = useState<
     "idle" | "entering" | "exiting"
   >("idle");
@@ -872,8 +895,6 @@ function WorkspaceView() {
     return () => unregisterEnterNodeHandler();
   }, [nodes, enterNode]);
 
-  const history = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
-  const redoStack = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
   const lastLoadedId = useRef<string | null>(null);
 
   type SaveStatus = "saved" | "saving" | "unsaved" | "offline_saved";
@@ -948,7 +969,23 @@ function WorkspaceView() {
     [nodes, edges],
   );
 
+  const broadcastSnapshotChange = useCallback(
+    (
+      before: { nodes: Node[]; edges: Edge[] },
+      after: { nodes: Node[]; edges: Edge[] },
+    ) => {
+      if (isNested) return;
+      const changes = canvasChangeMessages(before, after);
+      if (changes.removedEdges.length) sendEdgesChange(changes.removedEdges);
+      if (changes.nodes.length) sendNodesChange(changes.nodes);
+      if (changes.edges.length) sendEdgesChange(changes.edges);
+    },
+    [isNested, sendEdgesChange, sendNodesChange],
+  );
+
   const undo = useCallback(() => {
+    if (!canEdit || draftConflictRef.current || canvasTransition !== "idle")
+      return;
     if (history.current.length === 0) return;
     const prevState = history.current.pop();
     if (prevState) {
@@ -958,10 +995,21 @@ function WorkspaceView() {
       });
       setNodes(prevState.nodes);
       setEdges(prevState.edges);
+      broadcastSnapshotChange({ nodes, edges }, prevState);
     }
-  }, [nodes, edges, setNodes, setEdges]);
+  }, [
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    canEdit,
+    canvasTransition,
+    broadcastSnapshotChange,
+  ]);
 
   const redo = useCallback(() => {
+    if (!canEdit || draftConflictRef.current || canvasTransition !== "idle")
+      return;
     if (redoStack.current.length === 0) return;
     const nextState = redoStack.current.pop();
     if (nextState) {
@@ -971,16 +1019,37 @@ function WorkspaceView() {
       });
       setNodes(nextState.nodes);
       setEdges(nextState.edges);
+      broadcastSnapshotChange({ nodes, edges }, nextState);
     }
-  }, [nodes, edges, setNodes, setEdges]);
+  }, [
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    canEdit,
+    canvasTransition,
+    broadcastSnapshotChange,
+  ]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.closest("input, textarea, select, [contenteditable='true']"))
+      )
+        return;
+      if (!canEdit || draftConflictRef.current || canvasTransition !== "idle")
+        return;
       if (e.ctrlKey || e.metaKey) {
-        if (e.key === "z") {
+        if (e.key.toLowerCase() === "z" && !e.shiftKey) {
           e.preventDefault();
           undo();
-        } else if (e.key === "y" || (e.key === "Z" && e.shiftKey)) {
+        } else if (
+          e.key.toLowerCase() === "y" ||
+          (e.key.toLowerCase() === "z" && e.shiftKey)
+        ) {
           e.preventDefault();
           redo();
         }
@@ -988,7 +1057,7 @@ function WorkspaceView() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo]);
+  }, [undo, redo, canEdit, canvasTransition]);
 
   const [menu, setMenu] = useState<{
     id: string;
@@ -2031,50 +2100,12 @@ function WorkspaceView() {
             workspaceId={workspaceId}
             planDisabled={!canEdit || draftConflict}
             onBeforePlanApply={takeSnapshot}
-            onPlanApplied={(result, oldNodes, oldEdges) => {
-              const oldNodeMap = new Map(
-                oldNodes.map((node) => [node.id, node]),
-              );
-              const oldEdgeMap = new Map(
-                oldEdges.map((edge) => [edge.id, edge]),
-              );
-              const newNodeIds = new Set(result.nodes.map((node) => node.id));
-              const newEdgeIds = new Set(result.edges.map((edge) => edge.id));
-              sendEdgesChange(
-                oldEdges
-                  .filter((edge) => !newEdgeIds.has(edge.id))
-                  .map((edge) => ({ type: "remove" as const, id: edge.id })),
-              );
-              sendNodesChange([
-                ...oldNodes
-                  .filter((node) => !newNodeIds.has(node.id))
-                  .map((node) => ({ type: "remove" as const, id: node.id })),
-                ...result.nodes
-                  .filter(
-                    (item) =>
-                      JSON.stringify(oldNodeMap.get(item.id)) !==
-                      JSON.stringify(item),
-                  )
-                  .map((item) =>
-                    oldNodeMap.has(item.id)
-                      ? { type: "replace" as const, id: item.id, item }
-                      : { type: "add" as const, item },
-                  ),
-              ]);
-              sendEdgesChange(
-                result.edges
-                  .filter(
-                    (edge) =>
-                      JSON.stringify(oldEdgeMap.get(edge.id)) !==
-                      JSON.stringify(edge),
-                  )
-                  .map((item) =>
-                    oldEdgeMap.has(item.id)
-                      ? { type: "replace" as const, id: item.id, item }
-                      : { type: "add" as const, item },
-                  ),
-              );
-            }}
+            onPlanApplied={(result, oldNodes, oldEdges) =>
+              broadcastSnapshotChange(
+                { nodes: oldNodes, edges: oldEdges },
+                result,
+              )
+            }
           />
         </div>
 
