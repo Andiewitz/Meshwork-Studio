@@ -38,6 +38,7 @@ import {
   SunIcon,
   MoonIcon,
   MagnifyingGlassIcon,
+  ClipboardDocumentCheckIcon,
 } from "@heroicons/react/24/outline";
 import { LuPanelLeft } from "react-icons/lu";
 import {
@@ -54,6 +55,7 @@ export interface WorkspaceHeaderProps {
   theme: "dark" | "light";
   onToggleTheme: () => void;
   onOpenSearch: () => void;
+  onReviewConnections: () => void;
   workspace: any;
   workspaceId: string;
   user: any;
@@ -103,6 +105,7 @@ export function WorkspaceHeader({
   theme,
   onToggleTheme,
   onOpenSearch,
+  onReviewConnections,
   workspace,
   workspaceId,
   user,
@@ -505,6 +508,17 @@ export function WorkspaceHeader({
 
         {/* ── Right Section: Collaborators, Share, Upgrade, Publish ── */}
         <div className="flex items-center gap-2 z-10">
+          {canEdit && (
+            <button
+              type="button"
+              onClick={onReviewConnections}
+              aria-label="Review connections"
+              title="Review connections"
+              className="flex h-8 w-8 items-center justify-center rounded-lg ws-muted ws-hover-surface ws-hover-ink transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+            >
+              <ClipboardDocumentCheckIcon className="h-4 w-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={onOpenSearch}

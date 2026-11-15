@@ -219,6 +219,7 @@ import { generateTemplate } from "@/features/workspace/utils/templates";
 import { PropertiesSidebar } from "@/features/workspace/components/PropertiesSidebar";
 import { WorkspaceHeader } from "@/features/workspace/components/WorkspaceHeader";
 import { WorkspaceLeftSidebar } from "@/features/workspace/components/WorkspaceLeftSidebar";
+import { ConnectionReviewDialog } from "@/features/workspace/components/ConnectionReviewDialog";
 import { WorkspaceToolbar } from "@/features/workspace/components/WorkspaceToolbar";
 import {
   calculateContainment,
@@ -349,6 +350,7 @@ function WorkspaceView() {
 
   // Workspace Settings States
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isConnectionReviewOpen, setIsConnectionReviewOpen] = useState(false);
   const [wsDescription, setWsDescription] = useState("");
   const [wsAuthor, setWsAuthor] = useState("");
   const [wsAiContext, setWsAiContext] = useState("");
@@ -1908,7 +1910,7 @@ function WorkspaceView() {
     }, 50);
   }, []);
 
-  const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
+  const selectEdge = useCallback((edge: Edge) => {
     const kind = edge.data?.connectionKind;
     setConnectionPreset(
       kind === "async" || kind === "primary" || kind === "sync" ? kind : "sync",
@@ -1929,6 +1931,10 @@ function WorkspaceView() {
     setSelectedNodeId(null);
     setActiveTab("properties");
   }, []);
+  const onEdgeClick = useCallback(
+    (_: React.MouseEvent, edge: Edge) => selectEdge(edge),
+    [selectEdge],
+  );
 
   const onNodeDragStart = useCallback(() => {
     takeSnapshot();
@@ -2069,6 +2075,7 @@ function WorkspaceView() {
         theme={workspaceTheme}
         onToggleTheme={toggleTheme}
         onOpenSearch={() => setSearchOpen(true)}
+        onReviewConnections={() => setIsConnectionReviewOpen(true)}
         workspace={workspace}
         workspaceId={workspaceId}
         user={user}
@@ -2714,6 +2721,22 @@ function WorkspaceView() {
       </div>
 
       {/* Workspace Settings Dialog */}
+      <ConnectionReviewDialog
+        open={isConnectionReviewOpen}
+        onOpenChange={setIsConnectionReviewOpen}
+        nodes={nodes}
+        edges={edges}
+        onSelectEdge={(edge) => {
+          selectEdge(edge);
+          const endpoints = nodes
+            .filter(
+              (node) => node.id === edge.source || node.id === edge.target,
+            )
+            .map((node) => ({ id: node.id }));
+          if (endpoints.length)
+            void fitView({ nodes: endpoints, duration: 300, padding: 0.4 });
+        }}
+      />
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
         <DialogContent className="workspace-dialog max-w-[480px] w-full ws-option backdrop-blur-2xl border ws-border shadow-[0_32px_64px_rgba(0,0,0,0.7)] rounded-2xl ws-ink p-6 space-y-4">
           <DialogHeader className="border-b ws-border pb-3">
