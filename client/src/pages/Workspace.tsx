@@ -217,6 +217,7 @@ import {
 import { generateTemplate } from "@/features/workspace/utils/templates";
 import { PropertiesSidebar } from "@/features/workspace/components/PropertiesSidebar";
 import { WorkspaceHeader } from "@/features/workspace/components/WorkspaceHeader";
+import { CanvasNavigation } from "@/features/workspace/components/CanvasNavigation";
 import {
   CanvasLayoutDialog,
   layoutFingerprint,
@@ -1936,6 +1937,7 @@ function WorkspaceView() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.closest('[role="dialog"]')) return;
       const isEditing =
         document.activeElement?.tagName === "INPUT" ||
         document.activeElement?.tagName === "TEXTAREA";
@@ -2406,6 +2408,31 @@ function WorkspaceView() {
                   onBlank={() => saveStarterPreference(true, "all")}
                 />
               )}
+            <CanvasNavigation
+              key={`${workspaceId}:${canvasStack.map((level) => level.nodeId).join(":")}`}
+              workspaceTitle={workspace?.title || "Untitled project"}
+              path={canvasStack}
+              nodes={nodes}
+              selectedCount={
+                nodes.filter(
+                  (node) => node.selected || node.id === selectedNodeId,
+                ).length
+              }
+              disabled={canvasTransition !== "idle"}
+              onExit={exitToLevel}
+              onFitSelection={() => {
+                const selected = nodes
+                  .filter((node) => node.selected || node.id === selectedNodeId)
+                  .map((node) => ({ id: node.id }));
+                if (selected.length)
+                  void fitView({
+                    nodes: selected,
+                    duration: 400,
+                    padding: 0.3,
+                  });
+              }}
+              onFocusNode={focusNode}
+            />
             <ReactFlow
               nodes={accessibleNodes}
               edges={displayedEdges}
@@ -2460,6 +2487,8 @@ function WorkspaceView() {
               />
               <MiniMap
                 position="bottom-right"
+                pannable
+                zoomable
                 className="workspace-minimap !bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl !mr-6 !mb-6 overflow-hidden [&_.react-flow__minimap-mask]:!fill-white/80"
               />
               {bgVariant !== "none" && (
