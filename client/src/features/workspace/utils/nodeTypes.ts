@@ -160,6 +160,25 @@ export const DEFAULT_FAVORITES = [
   return { type: entry.type, label: entry.label, icon: entry.icon };
 });
 
+/** Search the visible node catalog by role, category, aliases, or description. */
+export function searchNodeCatalog(query: string) {
+  const text = query.trim().toLowerCase();
+  const definitions = new Map(
+    NODE_DEFINITIONS.map((definition) => [definition.id, definition]),
+  );
+  return nodeTypesList.filter((entry) => {
+    if (entry.type.startsWith("template:")) return false;
+    const definition = definitions.get(entry.type);
+    return [
+      entry.type,
+      entry.label,
+      entry.category,
+      definition?.description,
+      ...(definition?.aliases ?? []),
+    ].some((value) => value?.toLowerCase().includes(text));
+  });
+}
+
 // ── Usage tracking for dynamic favorites ──
 const USAGE_KEY = "meshwork:node-usage";
 

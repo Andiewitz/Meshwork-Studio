@@ -195,6 +195,7 @@ import { nodeAccessibleLabel } from "@/components/canvas/nodes/nodePresentation"
 import {
   nodeTypes,
   nodeTypesList,
+  searchNodeCatalog,
   DEFAULT_FAVORITES as favoriteNodes,
   trackNodeUsage,
   EXPANDABLE_TYPES,
@@ -1075,6 +1076,8 @@ function WorkspaceView() {
     left: number;
     type: "node" | "pane";
   } | null>(null);
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [catalogBrowse, setCatalogBrowse] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const focusNode = useCallback(
@@ -1735,6 +1738,8 @@ function WorkspaceView() {
   const onPaneContextMenu = useCallback(
     (event: MouseEvent | React.MouseEvent) => {
       event.preventDefault();
+      setCatalogSearch("");
+      setCatalogBrowse(false);
       setMenu({
         id: "pane",
         top: event.clientY,
@@ -2338,8 +2343,22 @@ function WorkspaceView() {
                   initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
                   animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
                   transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                  style={{ top: menu.top, left: menu.left }}
-                  className="workspace-popover fixed rounded-xl py-1.5 z-[100] min-w-[200px] ws-option backdrop-blur-2xl border ws-border shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)]"
+                  style={{
+                    top: Math.max(
+                      8,
+                      Math.min(
+                        menu.top,
+                        window.innerHeight -
+                          Math.min(448, window.innerHeight * 0.75) -
+                          8,
+                      ),
+                    ),
+                    left: Math.max(
+                      8,
+                      Math.min(menu.left, window.innerWidth - 216),
+                    ),
+                  }}
+                  className="workspace-popover fixed rounded-xl py-1.5 z-[100] min-w-[200px] max-h-[min(28rem,75vh)] overflow-y-auto ws-option backdrop-blur-2xl border ws-border shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)]"
                   onClick={() => setMenu(null)}
                 >
                   {menu.type === "node" ? (
@@ -2531,7 +2550,40 @@ function WorkspaceView() {
                       <div className="px-3.5 py-1.5 text-[9px] uppercase font-bold ws-dim tracking-[0.15em]">
                         Quick Add
                       </div>
-                      {favoriteNodes.map((node) => (
+                      <div
+                        className="px-2 pb-1"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <input
+                          aria-label="Search node catalog"
+                          value={catalogSearch}
+                          onChange={(event) =>
+                            setCatalogSearch(event.target.value)
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") setMenu(null);
+                            event.stopPropagation();
+                          }}
+                          placeholder="Search all nodes"
+                          className="w-full rounded border ws-border ws-surface-soft ws-ink px-2 py-1.5 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                        />
+                      </div>
+                      {!catalogBrowse && !catalogSearch.trim() && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setCatalogBrowse(true);
+                          }}
+                          className="w-full px-3.5 py-2 text-left text-xs ws-muted ws-hover-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                        >
+                          Browse all nodes
+                        </button>
+                      )}
+                      {(catalogSearch.trim() || catalogBrowse
+                        ? searchNodeCatalog(catalogSearch)
+                        : favoriteNodes
+                      ).map((node) => (
                         <button
                           key={node.type}
                           onClick={() => {
@@ -2550,6 +2602,12 @@ function WorkspaceView() {
                           {node.label}
                         </button>
                       ))}
+                      {catalogSearch.trim() &&
+                        searchNodeCatalog(catalogSearch).length === 0 && (
+                          <p className="px-3.5 py-2 text-xs ws-muted">
+                            No matching nodes.
+                          </p>
+                        )}
                       <div className="h-px my-1 mx-2 ws-surface-soft" />
                       <button
                         onClick={() => {

@@ -56,6 +56,18 @@ const layers: Record<string, NodeLayer> = {
   "k8s-configmap": "compute",
   "k8s-secret": "compute",
   "k8s-hpa": "compute",
+  dns: "edge",
+  firewall: "edge",
+  "identity-provider": "compute",
+  "secrets-manager": "compute",
+  monitoring: "compute",
+  "log-store": "data",
+  "metrics-store": "data",
+  "trace-store": "data",
+  "container-registry": "data",
+  scheduler: "async",
+  "data-warehouse": "data",
+  "ci-pipeline": "compute",
 };
 
 export const nodeLayerColors: Record<

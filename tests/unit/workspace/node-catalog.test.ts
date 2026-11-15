@@ -4,6 +4,7 @@ import {
   nodeTypes,
   nodeTypesList,
   NODE_DESCRIPTIONS,
+  searchNodeCatalog,
 } from "@/features/workspace/utils/nodeTypes";
 
 describe("node catalog consistency", () => {
@@ -31,5 +32,20 @@ describe("node catalog consistency", () => {
     expect(
       nodeTypesList.filter(({ type }) => type.startsWith("template:")),
     ).toHaveLength(6);
+  });
+  it("finds infrastructure roles and existing aliases without listing templates", () => {
+    expect(searchNodeCatalog("firewall").map((node) => node.type)).toContain(
+      "firewall",
+    );
+    expect(searchNodeCatalog("credential").map((node) => node.type)).toContain(
+      "secrets-manager",
+    );
+    expect(searchNodeCatalog("postgres").map((node) => node.type)).toContain(
+      "database",
+    );
+    expect(
+      searchNodeCatalog("").some((node) => node.type.startsWith("template:")),
+    ).toBe(false);
+    expect(searchNodeCatalog("no-such-component-xyz")).toEqual([]);
   });
 });

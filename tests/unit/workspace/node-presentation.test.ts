@@ -16,6 +16,9 @@ describe("canvas node presentation", () => {
     ["queue", "async", "queue"],
     ["api", "external", "external"],
     ["k8s-cronjob", "async", "card"],
+    ["firewall", "edge", "card"],
+    ["log-store", "data", "card"],
+    ["scheduler", "async", "card"],
     ["unrecognized", "other", "card"],
   ] as const)(
     "classifies %s without changing its saved type",
