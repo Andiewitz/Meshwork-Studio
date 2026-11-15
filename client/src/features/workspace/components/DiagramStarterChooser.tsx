@@ -29,7 +29,7 @@ export function DiagramStarterChooser({
   return (
     <section
       aria-labelledby="diagram-starter-title"
-      className="absolute top-5 left-1/2 z-30 w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl border ws-border ws-option p-4 shadow-lg select-text"
+      className="absolute top-20 left-1/2 z-30 w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl border ws-border ws-option p-4 shadow-lg select-text"
     >
       <h2 id="diagram-starter-title" className="text-base font-semibold ws-ink">
         Start your diagram

@@ -2301,14 +2301,14 @@ function WorkspaceView() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="workspace-canvas flex-1 h-full relative bg-[#0A0A0A] overflow-hidden border-t ws-border"
+            className="workspace-canvas flex-1 h-full relative bg-[#0A0A0A] overflow-hidden"
             data-cursor={drawingMode}
             style={{ cursor: drawingMode === "pan" ? "grab" : undefined }}
           >
             <div
               id="workspace-ai-chat"
               aria-hidden={!isSidebarOpen || !canEdit}
-              className={`workspace-chat-overlay absolute left-0 z-50 max-w-[calc(100%-16px)] transition-[width] duration-200 ease-out motion-reduce:transition-none ${isChatCollapsed ? "top-0" : "inset-y-0"} ${isSidebarOpen && canEdit ? "" : "hidden"}`}
+              className={`workspace-chat-overlay absolute left-0 z-50 max-w-[calc(100%-16px)] transition-[width] duration-200 ease-out motion-reduce:transition-none ${isChatCollapsed ? "top-[56px]" : "top-[56px] bottom-0"} ${isSidebarOpen && canEdit ? "" : "hidden"}`}
               style={{
                 width: isChatCollapsed ? 160 : isChatExpanded ? 720 : 395,
               }}
@@ -2449,6 +2449,7 @@ function WorkspaceView() {
               key={`${workspaceId}:${canvasStack.map((level) => level.nodeId).join(":")}`}
               workspaceTitle={workspace?.title || "Untitled project"}
               path={canvasStack}
+              chatOpen={isSidebarOpen && canEdit && !isChatCollapsed}
               chatOffset={
                 isSidebarOpen && canEdit
                   ? isChatCollapsed
@@ -2529,7 +2530,8 @@ function WorkspaceView() {
             >
               <Controls
                 position="bottom-left"
-                className="workspace-flow-controls !bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !text-white/50 !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl overflow-hidden !m-6 [&_button]:!bg-transparent [&_button]:!border-white/[0.05] [&_button]:hover:!bg-white/10 [&_button_svg]:!fill-white/70"
+                className={`workspace-flow-controls !bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !text-white/50 !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl overflow-hidden !m-6 [&_button]:!bg-transparent [&_button]:!border-white/[0.05] [&_button]:hover:!bg-white/10 [&_button_svg]:!fill-white/70 ${isSidebarOpen && canEdit && !isChatCollapsed ? "workspace-controls-chat-open" : ""}`}
+                style={{ left: isSidebarOpen && canEdit && !isChatCollapsed ? `min(${isChatExpanded ? 720 : 395}px, calc(100% - 72px))` : undefined }}
               />
               <MiniMap
                 position="bottom-right"
@@ -2932,6 +2934,8 @@ function WorkspaceView() {
 
               {/* ── Bottom-center horizontal toolbar ── */}
               <WorkspaceToolbar
+                chatOffset={isSidebarOpen && canEdit && !isChatCollapsed ? (isChatExpanded ? 720 : 395) : 0}
+                chatExpanded={isChatExpanded}
                 drawingMode={drawingMode}
                 setDrawingMode={setDrawingMode}
                 edgeStyle={edgeStyle}

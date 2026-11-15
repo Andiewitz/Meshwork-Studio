@@ -19,6 +19,7 @@ interface CanvasNavigationProps {
   selectedCount: number;
   disabled: boolean;
   chatOffset?: number;
+  chatOpen?: boolean;
   onExit: (level: number) => void;
   onFitSelection: () => void;
   onFocusNode: (id: string) => void;
@@ -31,6 +32,7 @@ export function CanvasNavigation({
   selectedCount,
   disabled,
   chatOffset = 0,
+  chatOpen = false,
   onExit,
   onFitSelection,
   onFocusNode,
@@ -65,58 +67,62 @@ export function CanvasNavigation({
   return (
     <>
       <div
-        className="absolute left-3 right-3 top-3 z-10 flex items-start justify-between gap-2 pointer-events-none"
+        className={`workspace-canvas-navigation absolute left-3 right-3 top-[68px] z-10 flex items-start justify-between gap-2 pointer-events-none ${chatOpen ? "workspace-navigation-chat-open" : ""}`}
         style={chatOffset ? { left: `min(${chatOffset}px, 60%)` } : undefined}
       >
-        <nav
-          ref={pathRef}
-          aria-label="Canvas path"
-          className="pointer-events-auto min-w-0 max-w-[70%] overflow-x-auto rounded-lg border ws-border ws-option px-2 py-1.5 text-xs ws-ink"
-        >
-          <ol className="flex w-max max-w-none items-center gap-1">
-            <li>
-              {path.length ? (
-                <button
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => onExit(0)}
-                  className="rounded px-1 py-0.5 ws-hover-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
-                >
-                  {workspaceTitle}
-                </button>
-              ) : (
-                <span aria-current="page" className="px-1">
-                  {workspaceTitle}
-                </span>
-              )}
-            </li>
-            {path.map((level, index) => (
-              <li
-                key={`${level.nodeId}-${index}`}
-                className="flex items-center gap-1"
-              >
-                <ChevronRightIcon
-                  aria-hidden="true"
-                  className="h-3 w-3 ws-muted"
-                />
-                {index === path.length - 1 ? (
-                  <span aria-current="page" className="px-1">
-                    {level.label}
-                  </span>
-                ) : (
+        {path.length > 0 ? (
+          <nav
+            ref={pathRef}
+            aria-label="Canvas path"
+            className="pointer-events-auto min-w-0 max-w-[70%] overflow-x-auto rounded-lg border ws-border ws-option px-2 py-1.5 text-xs ws-ink"
+          >
+            <ol className="flex w-max max-w-none items-center gap-1">
+              <li>
+                {path.length ? (
                   <button
                     type="button"
                     disabled={disabled}
-                    onClick={() => onExit(index + 1)}
+                    onClick={() => onExit(0)}
                     className="rounded px-1 py-0.5 ws-hover-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
                   >
-                    {level.label}
+                    Canvas
                   </button>
+                ) : (
+                  <span aria-current="page" className="px-1">
+                    Canvas
+                  </span>
                 )}
               </li>
-            ))}
-          </ol>
-        </nav>
+              {path.map((level, index) => (
+                <li
+                  key={`${level.nodeId}-${index}`}
+                  className="flex items-center gap-1"
+                >
+                  <ChevronRightIcon
+                    aria-hidden="true"
+                    className="h-3 w-3 ws-muted"
+                  />
+                  {index === path.length - 1 ? (
+                    <span aria-current="page" className="px-1">
+                      {level.label}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => onExit(index + 1)}
+                      className="rounded px-1 py-0.5 ws-hover-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                    >
+                      {level.label}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        ) : (
+          <span aria-hidden="true" />
+        )}
         <div className="pointer-events-auto flex shrink-0 gap-1 rounded-lg border ws-border ws-option p-1">
           <button
             type="button"
