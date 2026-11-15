@@ -119,17 +119,59 @@ export const TYPE_ALIASES: Record<string, string> = {
   public_subnet: "subnet",
 };
 
-export const VALID_TYPES = new Set(Object.keys(NODE_SIZES));
-const CANONICAL_TYPES_BY_LOWERCASE = new Map(
-  Object.keys(NODE_SIZES).map((type) => [type.toLowerCase(), type]),
-);
-export const CONTAINER_TYPES = new Set([
+const CONTAINER_TYPE_IDS = new Set([
   "region",
   "vpc",
   "availability-zone",
   "subnet",
   "k8s-namespace",
 ]);
+const EXPANDABLE_TYPE_IDS = new Set([
+  "microservice",
+  "vpc",
+  "region",
+  "availability-zone",
+  "k8s-namespace",
+  "server",
+  "app",
+]);
+
+export interface NodeDefinition {
+  id: string;
+  version: 1;
+  size: NodeSize;
+  aliases: string[];
+  container: boolean;
+  expandable: boolean;
+}
+
+/** Renderer-independent definitions shared by manual, imported and AI nodes. */
+export const NODE_DEFINITIONS: readonly NodeDefinition[] = Object.entries(
+  NODE_SIZES,
+).map(([id, size]) => ({
+  id,
+  version: 1,
+  size,
+  aliases: Object.entries(TYPE_ALIASES)
+    .filter(([, target]) => target === id)
+    .map(([alias]) => alias),
+  container: CONTAINER_TYPE_IDS.has(id),
+  expandable: EXPANDABLE_TYPE_IDS.has(id),
+}));
+export const VALID_TYPES = new Set(NODE_DEFINITIONS.map(({ id }) => id));
+const CANONICAL_TYPES_BY_LOWERCASE = new Map(
+  NODE_DEFINITIONS.map(({ id }) => [id.toLowerCase(), id]),
+);
+export const CONTAINER_TYPES = new Set(
+  NODE_DEFINITIONS.filter((definition) => definition.container).map(
+    ({ id }) => id,
+  ),
+);
+export const EXPANDABLE_TYPES = new Set(
+  NODE_DEFINITIONS.filter((definition) => definition.expandable).map(
+    ({ id }) => id,
+  ),
+);
 
 export function resolveNodeType(input?: string): {
   type: string;

@@ -1,5 +1,7 @@
 import React from "react";
 import { SystemNode } from "@/components/canvas/nodes/SystemNode";
+import { NODE_DEFINITIONS } from "./nodeRegistry";
+export { EXPANDABLE_TYPES } from "./nodeRegistry";
 import {
   K8sPodIcon,
   K8sDeployIcon,
@@ -49,76 +51,9 @@ import {
 } from "@heroicons/react/24/outline";
 
 // ── Node types registry for ReactFlow ──
-export const nodeTypes = {
-  server: SystemNode,
-  database: SystemNode,
-  loadBalancer: SystemNode,
-  gateway: SystemNode,
-  queue: SystemNode,
-  storage: SystemNode,
-  logic: SystemNode,
-  cdn: SystemNode,
-  microservice: SystemNode,
-  worker: SystemNode,
-  cache: SystemNode,
-  search: SystemNode,
-  bus: SystemNode,
-  region: SystemNode,
-  vpc: SystemNode,
-  "availability-zone": SystemNode,
-  subnet: SystemNode,
-  generic: SystemNode,
-  user: SystemNode,
-  app: SystemNode,
-  api: SystemNode,
-  note: SystemNode,
-  annotation: SystemNode,
-  junction: SystemNode,
-  "k8s-pod": SystemNode,
-  "k8s-deployment": SystemNode,
-  "k8s-replicaset": SystemNode,
-  "k8s-statefulset": SystemNode,
-  "k8s-daemonset": SystemNode,
-  "k8s-service": SystemNode,
-  "k8s-ingress": SystemNode,
-  "k8s-configmap": SystemNode,
-  "k8s-secret": SystemNode,
-  "k8s-pvc": SystemNode,
-  "k8s-job": SystemNode,
-  "k8s-cronjob": SystemNode,
-  "k8s-hpa": SystemNode,
-  "k8s-namespace": SystemNode,
-  route53: SystemNode,
-  nats: SystemNode,
-  socketio: SystemNode,
-  github_actions: SystemNode,
-  jenkins: SystemNode,
-  gitlab: SystemNode,
-  argocd: SystemNode,
-  vault: SystemNode,
-  auth0: SystemNode,
-  waf: SystemNode,
-  prometheus: SystemNode,
-  grafana: SystemNode,
-  datadog: SystemNode,
-  influxdb: SystemNode,
-  snowflake: SystemNode,
-  clickhouse: SystemNode,
-  stripe: SystemNode,
-  twilio: SystemNode,
-  shopify: SystemNode,
-};
-
-// ── Expandable node types — these support nested sub-canvases ──
-export const EXPANDABLE_TYPES = new Set([
-  "microservice",
-  "vpc",
-  "region",
-  "availability-zone",
-  "k8s-namespace",
-  "server",
-  "app",
-]);
+export const nodeTypes = Object.fromEntries(
+  NODE_DEFINITIONS.map(({ id }) => [id, SystemNode]),
+);
 
 // ── Default favorites (used when user has no usage history) ──
 export const DEFAULT_FAVORITES = [

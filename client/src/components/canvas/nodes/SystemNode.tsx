@@ -7,8 +7,10 @@ import {
   Node,
   useStore,
 } from "@xyflow/react";
-import { EXPANDABLE_TYPES } from "@/features/workspace/utils/nodeTypes";
-import { CONTAINER_TYPES } from "@/features/workspace/utils/nodeRegistry";
+import {
+  CONTAINER_TYPES,
+  EXPANDABLE_TYPES,
+} from "@/features/workspace/utils/nodeRegistry";
 import { getNodeMinimumDimensions } from "@/features/workspace/utils/nodeGeometry";
 import { fireEnterNode } from "@/features/workspace/utils/canvasEvents";
 import type { NodeData } from "@/types/canvas";

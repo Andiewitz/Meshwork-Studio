@@ -3,11 +3,30 @@ import {
   CONTAINER_TYPES,
   getNodeSize,
   NODE_SIZES,
+  NODE_DEFINITIONS,
+  TYPE_ALIASES,
   resolveNodeType,
 } from "@/features/workspace/utils/nodeRegistry";
 import { validateAndRepairCanvas } from "@/lib/ai-canvas-utils";
 
 describe("node registry", () => {
+  it("defines each persisted type once with valid, unambiguous aliases", () => {
+    const ids = NODE_DEFINITIONS.map((definition) => definition.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.sort()).toEqual(Object.keys(NODE_SIZES).sort());
+    for (const definition of NODE_DEFINITIONS) {
+      expect(definition.version).toBe(1);
+      expect(definition.size.w).toBeGreaterThan(0);
+      expect(definition.size.h).toBeGreaterThan(0);
+      for (const alias of definition.aliases) {
+        expect(TYPE_ALIASES[alias]).toBe(definition.id);
+        expect(resolveNodeType(alias).type).toBe(definition.id);
+      }
+    }
+    expect(
+      NODE_DEFINITIONS.flatMap((definition) => definition.aliases).sort(),
+    ).toEqual(Object.keys(TYPE_ALIASES).sort());
+  });
   it("uses the same defaults for manual and AI-created nodes", () => {
     expect(getNodeSize("database")).toEqual({ w: 144, h: 120 });
     expect(getNodeSize("lambda")).toEqual(getNodeSize("logic"));
