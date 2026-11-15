@@ -426,6 +426,7 @@ function WorkspaceView() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(
     () => window.innerWidth >= 768,
   );
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<"ai" | "nodes">("ai");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [gridSize, setGridSize] = useState(20);
@@ -2287,13 +2288,18 @@ function WorkspaceView() {
         <div
           id="workspace-ai-chat"
           aria-hidden={!isSidebarOpen || !canEdit}
-          className={`workspace-sidebar-frame max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:z-20 max-md:max-w-[85vw] min-h-0 overflow-hidden transition-all duration-300 ease-in-out bg-[#111114] shrink-0 ${
-            isSidebarOpen && canEdit ? "w-[360px] opacity-100" : "hidden"
+          className={`workspace-sidebar-frame max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:z-20 max-w-[calc(100vw-16px)] min-h-0 overflow-hidden transition-[width] duration-200 ease-out bg-[#111114] shrink-0 ${
+            isSidebarOpen && canEdit ? "opacity-100" : "hidden"
           }`}
+          style={{
+            width: isChatExpanded ? "min(560px, calc(100vw - 16px))" : 360,
+          }}
         >
           <WorkspaceLeftSidebar
             isOpen={isSidebarOpen && canEdit}
             onClose={() => setIsSidebarOpen(false)}
+            expanded={isChatExpanded}
+            onToggleExpand={() => setIsChatExpanded((expanded) => !expanded)}
             workspaceId={workspaceId}
             planDisabled={!canEdit || draftConflict}
             onBeforePlanApply={takeSnapshot}

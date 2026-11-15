@@ -9,6 +9,8 @@ import {
   TrashIcon,
   CheckIcon,
   AdjustmentsHorizontalIcon,
+  ArrowsPointingOutIcon,
+  ArrowsPointingInIcon,
 } from "@heroicons/react/24/outline";
 import { LuPlus, LuX } from "react-icons/lu";
 import { useReactFlow, useNodes, useEdges } from "@xyflow/react";
@@ -63,6 +65,8 @@ const CATEGORY_ORDER = ["Core", "More", "Kubernetes", "Templates"];
 export interface WorkspaceLeftSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  expanded: boolean;
+  onToggleExpand: () => void;
   workspaceId: string;
   planDisabled: boolean;
   onBeforePlanApply: (snapshot?: { nodes: Node[]; edges: Edge[] }) => void;
@@ -76,6 +80,8 @@ export interface WorkspaceLeftSidebarProps {
 export function WorkspaceLeftSidebar({
   isOpen,
   onClose,
+  expanded,
+  onToggleExpand,
   workspaceId,
   planDisabled,
   onBeforePlanApply,
@@ -107,7 +113,7 @@ export function WorkspaceLeftSidebar({
     null,
   );
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageFeedRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { setNodes, setEdges, fitView, getNodes, getEdges, getViewport } =
@@ -195,10 +201,8 @@ export function WorkspaceLeftSidebar({
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(
-        () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }),
-        50,
-      );
+      const feed = messageFeedRef.current;
+      if (feed) feed.scrollTop = feed.scrollHeight;
     }
   }, [messages, isOpen]);
 
@@ -410,21 +414,37 @@ export function WorkspaceLeftSidebar({
   };
 
   return (
-    <div className="workspace-assistant h-full flex flex-col overflow-hidden select-none">
+    <div className="workspace-assistant flex flex-col overflow-hidden select-none">
       <div className="assistant-header">
         <div>
-          <p className="assistant-title">AI chat</p>
-          <p className="assistant-subtitle">Jenkos assistant</p>
+          <p className="assistant-title">Jenkos</p>
+          <p className="assistant-subtitle">AI assistant</p>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close AI chat"
-          title="Close AI chat"
-          className="assistant-icon-button"
-        >
-          <LuX aria-hidden="true" className="h-4 w-4" />
-        </button>
+        <div className="assistant-header-actions">
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            aria-label={expanded ? "Collapse AI chat" : "Expand AI chat"}
+            title={expanded ? "Collapse AI chat" : "Expand AI chat"}
+            aria-pressed={expanded}
+            className="assistant-icon-button"
+          >
+            {expanded ? (
+              <ArrowsPointingInIcon aria-hidden="true" className="h-4 w-4" />
+            ) : (
+              <ArrowsPointingOutIcon aria-hidden="true" className="h-4 w-4" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close AI chat"
+            title="Close AI chat"
+            className="assistant-icon-button"
+          >
+            <LuX aria-hidden="true" className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       {/* ── Jenkos AI Co-pilot (always-on, no tabs) ── */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -442,7 +462,10 @@ export function WorkspaceLeftSidebar({
         )}
 
         {/* Chat Messages Feed */}
-        <div className="assistant-feed flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/[0.08]">
+        <div
+          ref={messageFeedRef}
+          className="assistant-feed flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/[0.08]"
+        >
           {/* Top action icons: reverse clock (history) and plus (new chat) */}
           <div className="assistant-section-heading">
             <span>Conversation</span>
@@ -465,11 +488,9 @@ export function WorkspaceLeftSidebar({
                   <CpuChipIcon className="w-4 h-4 ws-ink" />
                 </div>
                 <div>
-                  <p className="assistant-intro-title">
-                    What are you building?
-                  </p>
+                  <p className="assistant-intro-title">What can I help with?</p>
                   <p className="assistant-intro-copy">
-                    Describe a system or ask a question about your canvas.
+                    Ask about your canvas or describe a system.
                   </p>
                 </div>
               </div>
@@ -593,8 +614,6 @@ export function WorkspaceLeftSidebar({
               </div>
             </div>
           )}
-
-          <div ref={messagesEndRef} />
         </div>
 
         {/* ── Composer Card ── */}
@@ -609,7 +628,7 @@ export function WorkspaceLeftSidebar({
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              placeholder="Ask Jenkos or describe a diagram..."
+              placeholder="Ask Jenkos..."
               className="assistant-input ws-placeholder"
               rows={1}
             />
