@@ -220,17 +220,17 @@
     background:
       linear-gradient(
         145deg,
-        rgba(255, 255, 255, 0.13),
-        rgba(255, 255, 255, 0.025) 42%,
-        rgba(255, 255, 255, 0.05)
+        rgba(255, 255, 255, 0.08),
+        rgba(255, 255, 255, 0.015) 42%,
+        rgba(255, 255, 255, 0.035)
       ),
-      rgba(112, 112, 112, 0.3);
-    -webkit-backdrop-filter: blur(22px) grayscale(100%) brightness(0.4);
-    backdrop-filter: blur(22px) grayscale(100%) brightness(0.4);
-    border-color: rgba(255, 255, 255, 0.3);
+      rgba(76, 76, 76, 0.32);
+    -webkit-backdrop-filter: blur(22px) grayscale(100%) brightness(0.36);
+    backdrop-filter: blur(22px) grayscale(100%) brightness(0.36);
+    border-color: rgba(255, 255, 255, 0.24);
     box-shadow:
-      inset 0 1px 1px rgba(255, 255, 255, 0.25),
-      inset 1px 0 0 rgba(255, 255, 255, 0.09),
+      inset 0 1px 1px rgba(255, 255, 255, 0.18),
+      inset 1px 0 0 rgba(255, 255, 255, 0.07),
       0 16px 42px rgba(0, 0, 0, 0.28);
   }
   :root[data-theme="light"] .workspace-assistant,
