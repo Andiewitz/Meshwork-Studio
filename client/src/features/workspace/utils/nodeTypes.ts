@@ -48,6 +48,11 @@ import {
   Square2StackIcon as Layers,
   ShareIcon as Network,
   DevicePhoneMobileIcon as Smartphone,
+  QuestionMarkCircleIcon as Decision,
+  ClockIcon as EventIcon,
+  ArrowDownOnSquareIcon as FlowInput,
+  ArrowUpOnSquareIcon as FlowOutput,
+  RectangleGroupIcon as LaneIcon,
 } from "@heroicons/react/24/outline";
 
 // ── Node types registry for ReactFlow ──
@@ -63,6 +68,10 @@ const PALETTE_ICONS: Record<string, React.ComponentType<any>> = {
   Cpu,
   CreditCard,
   Database,
+  Decision,
+  EventIcon,
+  FlowInput,
+  FlowOutput,
   GitBranch,
   Globe,
   HardDrive,
@@ -82,6 +91,7 @@ const PALETTE_ICONS: Record<string, React.ComponentType<any>> = {
   K8sStatefulIcon,
   Key,
   Layers,
+  LaneIcon,
   Lock,
   MessageCircle,
   MessageSquare,

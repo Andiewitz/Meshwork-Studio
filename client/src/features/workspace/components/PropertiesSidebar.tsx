@@ -279,10 +279,20 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                     {!NODE_DEFINITIONS.some(
                       (entry) =>
                         entry.id === identity.role &&
-                        entry.palette?.category === "Core",
+                        [
+                          "Core",
+                          "Infrastructure",
+                          "Workflow",
+                          "Kubernetes",
+                        ].includes(entry.palette?.category ?? ""),
                     ) && <option value={identity.role}>{roleLabel}</option>}
-                    {NODE_DEFINITIONS.filter(
-                      (entry) => entry.palette?.category === "Core",
+                    {NODE_DEFINITIONS.filter((entry) =>
+                      [
+                        "Core",
+                        "Infrastructure",
+                        "Workflow",
+                        "Kubernetes",
+                      ].includes(entry.palette?.category ?? ""),
                     )
                       .sort(
                         (a, b) =>

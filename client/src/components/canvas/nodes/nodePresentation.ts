@@ -68,6 +68,11 @@ const layers: Record<string, NodeLayer> = {
   scheduler: "async",
   "data-warehouse": "data",
   "ci-pipeline": "compute",
+  "workflow-task": "compute",
+  "workflow-decision": "other",
+  "workflow-event": "async",
+  "workflow-input": "data",
+  "workflow-output": "data",
 };
 
 export const nodeLayerColors: Record<
@@ -106,7 +111,7 @@ export function nodePresentation(type: string): {
         ? "queue"
         : layer === "external"
           ? "external"
-          : layer === "client"
+          : layer === "client" || type === "workflow-event"
             ? "pill"
             : "card";
   return { layer, shape };
@@ -131,6 +136,12 @@ const typeLabels: Record<string, string> = {
   bus: "Event stream",
   api: "External API",
   "k8s-cronjob": "Scheduled job",
+  "workflow-task": "Process step",
+  "workflow-decision": "Decision",
+  "workflow-event": "Event",
+  "workflow-input": "Input",
+  "workflow-output": "Output",
+  "workflow-lane": "Swimlane",
 };
 
 export function nodeSubtitle(

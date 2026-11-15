@@ -7,7 +7,11 @@ import { SystemNode } from "@/components/canvas/nodes/SystemNode";
 import { nodeAccessibleLabel } from "@/components/canvas/nodes/nodePresentation";
 import { executeEditCanvas } from "@/features/workspace/agent/tools/canvasToolExecutor";
 
-const nodeTypes = { database: SystemNode };
+const nodeTypes = {
+  database: SystemNode,
+  "workflow-decision": SystemNode,
+  "workflow-lane": SystemNode,
+};
 
 describe("node appearance through React Flow", () => {
   let root: Root;
@@ -36,6 +40,28 @@ describe("node appearance through React Flow", () => {
       ),
     );
   }
+  it("renders workflow decisions and swimlanes with their labels", async () => {
+    await renderNode({
+      id: "decision",
+      type: "workflow-decision",
+      position: { x: 0, y: 0 },
+      width: 168,
+      height: 72,
+      data: { label: "Approved?" },
+    });
+    expect(container.textContent).toContain("Approved?");
+    expect(container.textContent).toContain("Decision");
+    await renderNode({
+      id: "lane",
+      type: "workflow-lane",
+      position: { x: 0, y: 0 },
+      width: 552,
+      height: 336,
+      data: { label: "Support" },
+    });
+    expect(container.textContent).toContain("LANE");
+    expect(container.textContent).toContain("Support");
+  });
   it("displays the redesigned shape for older editor defaults without changing saved data", async () => {
     const style = {
       backgroundColor: "#4169E1",

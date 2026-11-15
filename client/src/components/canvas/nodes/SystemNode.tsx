@@ -90,6 +90,12 @@ interface NodeBrand {
 }
 
 export const nodeBrands: Record<string, NodeBrand> = {
+  "workflow-lane": {
+    Icon: HeroIcons.RectangleGroupIcon,
+    color: "#64748B",
+    borderColor: "#8999b9",
+    label: "LANE",
+  },
   // ── Compute ──
   server: {
     Icon: SiLinux,
@@ -620,6 +626,11 @@ export function SystemNode({
     scheduler: "ClockIcon",
     "data-warehouse": "CircleStackIcon",
     "ci-pipeline": "PlayCircleIcon",
+    "workflow-task": "Cog6ToothIcon",
+    "workflow-decision": "QuestionMarkCircleIcon",
+    "workflow-event": "ClockIcon",
+    "workflow-input": "ArrowDownOnSquareIcon",
+    "workflow-output": "ArrowUpOnSquareIcon",
     server: "ServerIcon",
     microservice: "CodeBracketSquareIcon",
     worker: "CpuChipIcon",
