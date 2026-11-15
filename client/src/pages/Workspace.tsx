@@ -217,6 +217,10 @@ import {
 import { generateTemplate } from "@/features/workspace/utils/templates";
 import { PropertiesSidebar } from "@/features/workspace/components/PropertiesSidebar";
 import { WorkspaceHeader } from "@/features/workspace/components/WorkspaceHeader";
+import {
+  CanvasLayoutDialog,
+  layoutFingerprint,
+} from "@/features/workspace/components/CanvasLayoutDialog";
 import { WorkspaceLeftSidebar } from "@/features/workspace/components/WorkspaceLeftSidebar";
 import { ConnectionReviewDialog } from "@/features/workspace/components/ConnectionReviewDialog";
 import { DiagramStarterChooser } from "@/features/workspace/components/DiagramStarterChooser";
@@ -374,6 +378,8 @@ function WorkspaceView() {
     }
   };
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [isLayoutOpen, setIsLayoutOpen] = useState(false);
+  useEffect(() => setIsLayoutOpen(false), [workspaceId]);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"layers" | "properties">("layers");
   const [isSimulating, setIsSimulating] = useState(false);
@@ -1045,6 +1051,31 @@ function WorkspaceView() {
     },
     [isNested, sendEdgesChange, sendNodesChange],
   );
+
+  const updateNodePin = (id: string, pinned: boolean) => {
+    if (
+      !canEdit ||
+      draftConflictRef.current ||
+      canvasTransition !== "idle" ||
+      isInitialLoad.current ||
+      lastLoadedId.current !== workspaceId
+    )
+      return;
+    const current = { nodes: getNodes(), edges: getEdges() };
+    const node = current.nodes.find((item) => item.id === id);
+    if (!node || (node.data.layoutPinned === true) === pinned) return;
+    const nextNodes = current.nodes.map((item) =>
+      item.id === id
+        ? { ...item, data: { ...item.data, layoutPinned: pinned } }
+        : item,
+    );
+    takeSnapshot(current);
+    setNodes(nextNodes);
+    broadcastSnapshotChange(current, {
+      nodes: nextNodes,
+      edges: current.edges,
+    });
+  };
 
   const undo = useCallback(() => {
     if (!canEdit || draftConflictRef.current || canvasTransition !== "idle")
@@ -2173,6 +2204,12 @@ function WorkspaceView() {
         onToggleTheme={toggleTheme}
         onOpenSearch={() => setSearchOpen(true)}
         onReviewConnections={() => setIsConnectionReviewOpen(true)}
+        onArrangeNodes={() => setIsLayoutOpen(true)}
+        arrangeDisabled={
+          draftConflict ||
+          canvasTransition !== "idle" ||
+          starterReadyWorkspaceId !== workspaceId
+        }
         workspace={workspace}
         workspaceId={workspaceId}
         user={user}
@@ -2870,6 +2907,13 @@ function WorkspaceView() {
                     updateNodeData={updateNodeData}
                     updateNodeStyle={updateNodeStyle}
                     updateNodeType={updateNodeType}
+                    updateNodePin={updateNodePin}
+                    layoutPinDisabled={
+                      !canEdit ||
+                      draftConflict ||
+                      canvasTransition !== "idle" ||
+                      starterReadyWorkspaceId !== workspaceId
+                    }
                     updateEdgeData={updateEdgeData}
                     deleteNode={onDelete}
                     deleteEdge={deleteEdge}
@@ -2886,6 +2930,53 @@ function WorkspaceView() {
       </div>
 
       {/* Workspace Settings Dialog */}
+      <CanvasLayoutDialog
+        key={workspaceId}
+        open={isLayoutOpen}
+        onOpenChange={setIsLayoutOpen}
+        nodes={nodes}
+        edges={edges}
+        selectedIds={nodes
+          .filter((node) => node.selected || node.id === selectedNodeId)
+          .map((node) => node.id)}
+        disabled={
+          !canEdit ||
+          draftConflict ||
+          canvasTransition !== "idle" ||
+          starterReadyWorkspaceId !== workspaceId
+        }
+        onApply={(proposedNodes, base, selection) => {
+          if (
+            !canEdit ||
+            draftConflictRef.current ||
+            canvasTransition !== "idle" ||
+            isInitialLoad.current ||
+            lastLoadedId.current !== workspaceId
+          )
+            return "The canvas is not ready to edit.";
+          const current = { nodes: getNodes(), edges: getEdges() };
+          const currentSelection = selection.length
+            ? current.nodes
+                .filter((node) => node.selected || node.id === selectedNodeId)
+                .map((node) => node.id)
+            : [];
+          if (
+            layoutFingerprint(
+              current.nodes,
+              current.edges,
+              currentSelection,
+            ) !== base
+          )
+            return "The canvas or selection changed. Preview again before applying.";
+          takeSnapshot(current);
+          setNodes(proposedNodes);
+          broadcastSnapshotChange(current, {
+            nodes: proposedNodes,
+            edges: current.edges,
+          });
+          return null;
+        }}
+      />
       <ConnectionReviewDialog
         open={isConnectionReviewOpen}
         onOpenChange={setIsConnectionReviewOpen}

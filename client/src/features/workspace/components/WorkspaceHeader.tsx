@@ -56,6 +56,8 @@ export interface WorkspaceHeaderProps {
   onToggleTheme: () => void;
   onOpenSearch: () => void;
   onReviewConnections: () => void;
+  onArrangeNodes: () => void;
+  arrangeDisabled: boolean;
   workspace: any;
   workspaceId: string;
   user: any;
@@ -106,6 +108,8 @@ export function WorkspaceHeader({
   onToggleTheme,
   onOpenSearch,
   onReviewConnections,
+  onArrangeNodes,
+  arrangeDisabled,
   workspace,
   workspaceId,
   user,
@@ -508,6 +512,18 @@ export function WorkspaceHeader({
 
         {/* ── Right Section: Collaborators, Share, Upgrade, Publish ── */}
         <div className="flex items-center gap-2 z-10">
+          {canEdit && (
+            <button
+              type="button"
+              onClick={onArrangeNodes}
+              disabled={arrangeDisabled}
+              aria-label="Arrange nodes"
+              title="Arrange nodes"
+              className="flex h-8 w-8 items-center justify-center rounded-lg ws-muted ws-hover-surface ws-hover-ink transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+            >
+              <Squares2X2Icon className="h-4 w-4" />
+            </button>
+          )}
           {canEdit && (
             <button
               type="button"

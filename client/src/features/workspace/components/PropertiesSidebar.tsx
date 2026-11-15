@@ -46,6 +46,8 @@ interface PropertiesSidebarProps {
   updateNodeData: (id: string, data: Partial<NodeData>) => void;
   updateNodeStyle: (id: string, style: Partial<NodeStyle>) => void;
   updateNodeType: (id: string, type: string) => void;
+  updateNodePin: (id: string, pinned: boolean) => void;
+  layoutPinDisabled: boolean;
   updateEdgeData?: (id: string, data: Partial<EdgeData>) => void;
   deleteNode: (id: string) => void;
   deleteEdge?: (id: string) => void;
@@ -72,6 +74,8 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
   updateNodeData,
   updateNodeStyle,
   updateNodeType,
+  updateNodePin,
+  layoutPinDisabled,
   updateEdgeData,
   deleteNode,
   deleteEdge,
@@ -202,6 +206,24 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
         </div>
 
         <div className="h-px ws-surface-soft" />
+
+        <label className="flex items-start gap-2 text-xs ws-ink">
+          <input
+            type="checkbox"
+            checked={selectedNode.data?.layoutPinned === true}
+            disabled={layoutPinDisabled}
+            onChange={(event) =>
+              updateNodePin(selectedNode.id, event.target.checked)
+            }
+            className="mt-0.5 accent-blue-500"
+          />
+          <span>
+            Keep position during layout
+            <span className="block mt-1 ws-muted">
+              Applies when arranging nodes.
+            </span>
+          </span>
+        </label>
 
         {((selectedNode.type === "generic" &&
           selectedNode.data?.originalType) ||
