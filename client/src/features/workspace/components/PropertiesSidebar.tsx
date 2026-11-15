@@ -266,6 +266,44 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                   rows={2}
                 />
               </div>
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="node-technology"
+                  className="text-[11px] uppercase tracking-widest font-bold ws-dim"
+                >
+                  Technology or product
+                </Label>
+                <Input
+                  id="node-technology"
+                  value={selectedNode.data?.technology ?? ""}
+                  onChange={(event) =>
+                    updateNodeData(selectedNode.id, {
+                      technology: event.target.value,
+                    })
+                  }
+                  placeholder="e.g. PostgreSQL"
+                  className="ws-surface-soft ws-border ws-ink text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="node-provider"
+                  className="text-[11px] uppercase tracking-widest font-bold ws-dim"
+                >
+                  Provider
+                </Label>
+                <Input
+                  id="node-provider"
+                  value={selectedNode.data?.provider ?? ""}
+                  onChange={(event) =>
+                    updateNodeData(selectedNode.id, {
+                      provider: event.target.value,
+                    })
+                  }
+                  placeholder="e.g. AWS"
+                  className="ws-surface-soft ws-border ws-ink text-xs"
+                />
+              </div>
 
               <div className="space-y-1.5">
                 <Label className="text-[11px] uppercase tracking-widest font-bold ws-dim">

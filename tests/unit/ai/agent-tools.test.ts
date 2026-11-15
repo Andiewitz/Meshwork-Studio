@@ -35,6 +35,47 @@ describe("Jenkos AI Agent Tool Calling & Execution Unit Tests", () => {
   ];
 
   describe("executeEditCanvas: Incremental Tool Mutations", () => {
+    it("preserves technology and provider independently across AI edits", () => {
+      const existing: Node[] = [
+        {
+          id: "db",
+          type: "database",
+          position: { x: 0, y: 0 },
+          data: {
+            label: "Main DB",
+            provider: "AWS",
+            technology: "PostgreSQL",
+            extra: "kept",
+          },
+        },
+      ];
+      const result = executeEditCanvas(existing, [], {
+        action: "update",
+        nodes: [{ id: "db", type: "database", technology: "MySQL" }],
+      });
+      expect(result.nodes[0].data).toMatchObject({
+        label: "Main DB",
+        provider: "AWS",
+        technology: "MySQL",
+        extra: "kept",
+      });
+      expect(result.nodes[0].type).toBe("database");
+      const created = executeEditCanvas([], [], {
+        action: "add",
+        nodes: [
+          {
+            id: "db2",
+            type: "database",
+            technology: "PostgreSQL",
+            provider: "AWS",
+          },
+        ],
+      });
+      expect(created.nodes[0].data).toMatchObject({
+        technology: "PostgreSQL",
+        provider: "AWS",
+      });
+    });
     it("should incrementally add nodes and connect them to existing nodes without overwriting", () => {
       const result = executeEditCanvas(
         initialNodes,

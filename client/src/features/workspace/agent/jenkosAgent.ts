@@ -93,6 +93,11 @@ export const JENKOS_TOOLS = [
                   type: "string",
                   description: "Cloud provider: aws, gcp, azure, k8s, etc.",
                 },
+                technology: {
+                  type: "string",
+                  description:
+                    "Specific product or technology, if known (e.g. Redis or PostgreSQL).",
+                },
                 parentId: {
                   type: "string",
                   description: "Optional parent container ID (e.g. VPC ID)",
@@ -198,6 +203,7 @@ export function formatCanvasContext(
     label: (n.data?.label as string) || n.type,
     description: (n.data?.description as string) || "",
     provider: (n.data?.provider as string) || undefined,
+    technology: (n.data?.technology as string) || undefined,
     parentId: n.parentId || undefined,
     position: n.position,
   }));

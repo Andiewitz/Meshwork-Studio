@@ -20,6 +20,8 @@ export interface NodeData extends Record<string, unknown> {
   originalType?: string;
   tags?: string[];
   provider?: string;
+  /** Optional product or technology, independent of the node's role. */
+  technology?: string;
   accentColor?: string;
   note?: string;
   /** Display / visual overrides stored in data (not in CSS style) */

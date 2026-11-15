@@ -29,6 +29,7 @@ export interface EditCanvasNodeInput {
   accentColor?: string;
   tags?: string[];
   provider?: string;
+  technology?: string;
   note?: string;
   /** Used only by the legacy React Flow JSON adapter. */
   data?: Record<string, unknown>;
@@ -354,6 +355,7 @@ export function executeEditCanvas(
           label: n.label || n.data?.label || n.type,
           description: n.description ?? n.data?.description ?? "",
           provider: n.provider ?? n.data?.provider,
+          technology: n.technology ?? n.data?.technology,
           tags: n.tags || n.data?.tags || [],
           accentColor: n.accentColor ?? n.data?.accentColor,
           note: n.note ?? n.data?.note,
@@ -485,7 +487,8 @@ export function executeEditCanvas(
             incoming.description !== undefined
               ? incoming.description
               : existing.data?.description,
-          provider: incoming.provider || existing.data?.provider,
+          provider: incoming.provider ?? existing.data?.provider,
+          technology: incoming.technology ?? existing.data?.technology,
           tags: incoming.tags || existing.data?.tags,
           accentColor: incoming.accentColor || existing.data?.accentColor,
           note: incoming.note || existing.data?.note,
@@ -525,6 +528,7 @@ export function executeEditCanvas(
           description: incoming.description || "",
           tags: incoming.tags || [],
           provider: incoming.provider,
+          technology: incoming.technology,
           accentColor: incoming.accentColor,
           note: incoming.note,
           theme: "default",
