@@ -18,6 +18,17 @@ import {
   JenkosAgentMessage,
 } from "@/features/workspace/agent/jenkosAgent";
 import { executeCanvasToolCalls } from "@/features/workspace/agent/tools/canvasToolExecutor";
+import {
+  canvasMatchesPreview,
+  describeCanvasChanges,
+  type CanvasChangePreview,
+} from "@/features/workspace/agent/tools/canvasChangePreview";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ArchitecturePlans } from "./ArchitecturePlans";
 import type { Node, Edge } from "@xyflow/react";
 
@@ -72,6 +83,17 @@ export function WorkspaceLeftSidebar({
   const [isDesigning, setIsDesigning] = useState(false);
   const [selectedModel, setSelectedModel] = useState("gemini-3.5-flash");
   const [editScope, setEditScope] = useState<"canvas" | "selection">("canvas");
+  const [pendingChange, setPendingChange] = useState<{
+    workspaceId: string;
+    base: string;
+    result: ReturnType<typeof executeCanvasToolCalls>;
+    preview: CanvasChangePreview;
+    message: JenkosAgentMessage;
+    scope: "canvas" | "selection";
+  } | null>(null);
+  const [previewError, setPreviewError] = useState("");
+  const activeWorkspaceRef = useRef(workspaceId);
+  activeWorkspaceRef.current = workspaceId;
   const editDisabledRef = useRef(planDisabled);
   editDisabledRef.current = planDisabled;
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
@@ -87,6 +109,48 @@ export function WorkspaceLeftSidebar({
     useReactFlow();
   const nodes = useNodes();
   const edges = useEdges();
+
+  const cancelPreview = () => {
+    setPendingChange(null);
+    setPreviewError("");
+    setMessages((previous) => [
+      ...previous,
+      {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "AI changes were cancelled. The canvas was not changed.",
+      },
+    ]);
+  };
+  const applyPreview = () => {
+    if (!pendingChange) return;
+    const latestNodes = getNodes();
+    const latestEdges = getEdges();
+    if (
+      editDisabledRef.current ||
+      activeWorkspaceRef.current !== pendingChange.workspaceId
+    ) {
+      setPreviewError("Editing is unavailable. No changes were applied.");
+      return;
+    }
+    if (!canvasMatchesPreview(pendingChange.base, latestNodes, latestEdges)) {
+      setPreviewError(
+        "The canvas changed since this preview was created. Cancel and ask again to review an updated proposal.",
+      );
+      return;
+    }
+    onBeforePlanApply({ nodes: latestNodes, edges: latestEdges });
+    setNodes(pendingChange.result.nodes);
+    setEdges(pendingChange.result.edges);
+    onPlanApplied(pendingChange.result, latestNodes, latestEdges);
+    setMessages((previous) => [
+      ...previous,
+      { ...pendingChange.message, appliedToCanvas: true },
+    ]);
+    setPendingChange(null);
+    setPreviewError("");
+    setTimeout(() => fitView({ duration: 700, padding: 0.2 }), 100);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -215,7 +279,10 @@ export function WorkspaceLeftSidebar({
         });
 
         if (agentResult.canvasResult?.applied) {
-          if (editDisabledRef.current)
+          if (
+            editDisabledRef.current ||
+            activeWorkspaceRef.current !== workspaceId
+          )
             throw new Error(
               "Editing is unavailable. No AI changes were applied.",
             );
@@ -227,23 +294,33 @@ export function WorkspaceLeftSidebar({
           const canvasChangedWhileWaiting =
             initialCanvas !==
             JSON.stringify({ nodes: latestNodes, edges: latestEdges });
-          if (
-            canvasChangedWhileWaiting &&
-            (selectionScope || !operations?.length)
-          ) {
+          if (canvasChangedWhileWaiting) {
             throw new Error(
               "The canvas changed while the diagram was being generated. No changes were applied; please try again.",
             );
           }
-          const canvasResult =
-            canvasChangedWhileWaiting && operations?.length
-              ? executeCanvasToolCalls(latestNodes, latestEdges, operations, {
-                  x: centerX,
-                  y: centerY,
-                })
-              : agentResult.canvasResult;
+          const canvasResult = agentResult.canvasResult;
           if (!canvasResult.applied)
             throw new Error("The AI could not apply this change.");
+          const preview = describeCanvasChanges(
+            latestNodes,
+            latestEdges,
+            canvasResult.nodes,
+            canvasResult.edges,
+            operations,
+          );
+          if (preview.requiresReview) {
+            setPreviewError("");
+            setPendingChange({
+              workspaceId,
+              base: initialCanvas,
+              result: canvasResult,
+              preview,
+              message: agentResult.message,
+              scope: selectionScope ? "selection" : "canvas",
+            });
+            return;
+          }
           onBeforePlanApply({ nodes: latestNodes, edges: latestEdges });
           setNodes(canvasResult.nodes);
           setEdges(canvasResult.edges);
@@ -295,6 +372,7 @@ export function WorkspaceLeftSidebar({
       getViewport,
       messages,
       editScope,
+      workspaceId,
       onBeforePlanApply,
       onPlanApplied,
       selectedModel,
@@ -607,6 +685,86 @@ export function WorkspaceLeftSidebar({
           </form>
         </div>
       </div>
+      <Dialog
+        open={Boolean(pendingChange)}
+        onOpenChange={(open) => {
+          if (!open && pendingChange) cancelPreview();
+        }}
+      >
+        <DialogContent className="workspace-dialog ws-ink border ws-border rounded-2xl w-[calc(100%-2rem)] max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 select-text">
+          <DialogTitle>Review AI changes</DialogTitle>
+          <DialogDescription className="ws-muted">
+            Scope:{" "}
+            {pendingChange?.scope === "selection"
+              ? "selected items"
+              : "entire canvas"}
+            . Review the affected items before applying.
+          </DialogDescription>
+          {pendingChange && (
+            <div className="space-y-4">
+              {[
+                pendingChange.preview.addedNodes,
+                pendingChange.preview.changedNodes,
+                pendingChange.preview.removedNodes,
+                pendingChange.preview.addedEdges,
+                pendingChange.preview.changedEdges,
+                pendingChange.preview.removedEdges,
+              ].every((items) => items.length === 0) && (
+                <p className="text-sm ws-muted">
+                  No item differences were found.
+                </p>
+              )}
+              {(
+                [
+                  ["Nodes to add", pendingChange.preview.addedNodes],
+                  ["Nodes to change", pendingChange.preview.changedNodes],
+                  ["Nodes to remove", pendingChange.preview.removedNodes],
+                  ["Connections to add", pendingChange.preview.addedEdges],
+                  ["Connections to change", pendingChange.preview.changedEdges],
+                  ["Connections to remove", pendingChange.preview.removedEdges],
+                ] as const
+              )
+                .filter(([, items]) => items.length > 0)
+                .map(([title, items]) => (
+                  <section key={title}>
+                    <h3 className="text-sm font-semibold ws-ink">
+                      {title} ({items.length})
+                    </h3>
+                    <ul className="mt-1 space-y-1 text-sm ws-muted">
+                      {items.map((item) => (
+                        <li key={item.id} className="break-words">
+                          {item.label}{" "}
+                          <span className="ws-dim">({item.id})</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              {previewError && (
+                <p role="alert" className="text-sm text-red-400">
+                  {previewError}
+                </p>
+              )}
+              <div className="flex justify-end gap-2 border-t ws-border pt-3">
+                <button
+                  type="button"
+                  onClick={cancelPreview}
+                  className="rounded px-3 py-2 text-sm ws-muted ws-hover-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={applyPreview}
+                  className="rounded px-3 py-2 text-sm font-semibold ws-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                >
+                  Apply changes
+                </button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
