@@ -165,6 +165,73 @@ describe("Jenkos Agent & Architecture Generation Pipeline", () => {
   });
 
   describe("Jenkos Agent Run Loop with Tool Calling & Memory", () => {
+    it("rejects a multi-call selection edit if any call targets another node", async () => {
+      mockedSecureFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                tool_calls: [
+                  {
+                    id: "one",
+                    function: {
+                      name: "edit_canvas",
+                      arguments: JSON.stringify({
+                        action: "update",
+                        nodes: [{ id: "a", type: "server", label: "Changed" }],
+                      }),
+                    },
+                  },
+                  {
+                    id: "two",
+                    function: {
+                      name: "edit_canvas",
+                      arguments: JSON.stringify({
+                        action: "delete",
+                        deleteNodeIds: ["b"],
+                      }),
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      } as Response);
+      const currentNodes: Node[] = [
+        {
+          id: "a",
+          type: "server",
+          position: { x: 0, y: 0 },
+          data: { label: "A" },
+        },
+        {
+          id: "b",
+          type: "server",
+          position: { x: 1, y: 0 },
+          data: { label: "B" },
+        },
+      ];
+      await expect(
+        runJenkosAgent({
+          userPrompt: "Update selected",
+          history: [],
+          currentNodes,
+          currentEdges: [],
+          viewportCenter,
+          selectionScope: { nodeIds: ["a"], edgeIds: [] },
+        }),
+      ).rejects.toThrow(/outside the selection/);
+      expect(currentNodes[0].data.label).toBe("A");
+      const request = mockedSecureFetch.mock.calls.at(-1)?.[1];
+      expect(JSON.parse(String(request?.body)).messages[0].content).toContain(
+        'Selected node IDs: ["a"]',
+      );
+      expect(
+        JSON.parse(String(request?.body)).messages[0].content,
+      ).not.toContain('"id": "b"');
+    });
     it("sends the design conventions to Gemini and applies a styled tool response", async () => {
       mockedSecureFetch.mockResolvedValueOnce({
         ok: true,

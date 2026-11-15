@@ -49,7 +49,7 @@ export interface WorkspaceLeftSidebarProps {
   onClose: () => void;
   workspaceId: string;
   planDisabled: boolean;
-  onBeforePlanApply: () => void;
+  onBeforePlanApply: (snapshot?: { nodes: Node[]; edges: Edge[] }) => void;
   onPlanApplied: (
     result: ReturnType<typeof executeCanvasToolCalls>,
     oldNodes: Node[],
@@ -71,6 +71,9 @@ export function WorkspaceLeftSidebar({
   const [agentStatus, setAgentStatus] = useState("Consulting Jenkos...");
   const [isDesigning, setIsDesigning] = useState(false);
   const [selectedModel, setSelectedModel] = useState("gemini-3.5-flash");
+  const [editScope, setEditScope] = useState<"canvas" | "selection">("canvas");
+  const editDisabledRef = useRef(planDisabled);
+  editDisabledRef.current = planDisabled;
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
@@ -175,6 +178,26 @@ export function WorkspaceLeftSidebar({
       try {
         const currentNodes = getNodes();
         const currentEdges = getEdges();
+        const selectionScope =
+          editScope === "selection"
+            ? {
+                nodeIds: currentNodes
+                  .filter((node) => node.selected)
+                  .map((node) => node.id),
+                edgeIds: currentEdges
+                  .filter((edge) => edge.selected)
+                  .map((edge) => edge.id),
+              }
+            : undefined;
+        if (
+          selectionScope &&
+          !selectionScope.nodeIds.length &&
+          !selectionScope.edgeIds.length
+        ) {
+          throw new Error(
+            "Select at least one node or connection, or change the scope to entire canvas.",
+          );
+        }
         const initialCanvas = JSON.stringify({
           nodes: currentNodes,
           edges: currentEdges,
@@ -185,12 +208,17 @@ export function WorkspaceLeftSidebar({
           history: messages,
           currentNodes,
           currentEdges,
+          selectionScope,
           viewportCenter: { x: centerX, y: centerY },
           model: modelToUse,
           onStatusUpdate: (status) => setAgentStatus(status),
         });
 
         if (agentResult.canvasResult?.applied) {
+          if (editDisabledRef.current)
+            throw new Error(
+              "Editing is unavailable. No AI changes were applied.",
+            );
           const latestNodes = getNodes();
           const latestEdges = getEdges();
           const operations = agentResult.message.toolCalls?.map(
@@ -199,7 +227,10 @@ export function WorkspaceLeftSidebar({
           const canvasChangedWhileWaiting =
             initialCanvas !==
             JSON.stringify({ nodes: latestNodes, edges: latestEdges });
-          if (canvasChangedWhileWaiting && !operations?.length) {
+          if (
+            canvasChangedWhileWaiting &&
+            (selectionScope || !operations?.length)
+          ) {
             throw new Error(
               "The canvas changed while the diagram was being generated. No changes were applied; please try again.",
             );
@@ -211,8 +242,12 @@ export function WorkspaceLeftSidebar({
                   y: centerY,
                 })
               : agentResult.canvasResult;
+          if (!canvasResult.applied)
+            throw new Error("The AI could not apply this change.");
+          onBeforePlanApply({ nodes: latestNodes, edges: latestEdges });
           setNodes(canvasResult.nodes);
           setEdges(canvasResult.edges);
+          onPlanApplied(canvasResult, latestNodes, latestEdges);
           setTimeout(() => fitView({ duration: 700, padding: 0.2 }), 100);
         }
 
@@ -259,6 +294,9 @@ export function WorkspaceLeftSidebar({
       getEdges,
       getViewport,
       messages,
+      editScope,
+      onBeforePlanApply,
+      onPlanApplied,
       selectedModel,
       setEdges,
       setNodes,
@@ -478,6 +516,31 @@ export function WorkspaceLeftSidebar({
             onSubmit={handleSubmit}
             className="workspace-composer rounded-2xl ws-surface-soft border ws-border ws-focus-within-border transition-all p-2.5 space-y-2"
           >
+            <label className="flex items-center justify-between gap-2 text-[11px] ws-muted">
+              <span>AI edit scope</span>
+              <select
+                aria-label="AI edit scope"
+                value={editScope}
+                onChange={(event) =>
+                  setEditScope(event.target.value as "canvas" | "selection")
+                }
+                className="h-7 px-2 rounded ws-surface-soft border ws-border ws-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+              >
+                <option value="canvas">Entire canvas</option>
+                <option value="selection">
+                  Selected items (
+                  {nodes.filter((node) => node.selected).length +
+                    edges.filter((edge) => edge.selected).length}
+                  )
+                </option>
+              </select>
+            </label>
+            {editScope === "selection" && (
+              <p className="text-[11px] ws-muted">
+                Only selected existing items can be changed or removed. Select
+                affected connections too.
+              </p>
+            )}
             <textarea
               ref={textareaRef}
               aria-label="Message Jenkos"

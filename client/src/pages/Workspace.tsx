@@ -936,14 +936,17 @@ function WorkspaceView() {
     [workspaceId, toast, cacheOwner],
   );
 
-  const takeSnapshot = useCallback(() => {
-    history.current.push({
-      nodes: JSON.parse(JSON.stringify(nodes)),
-      edges: JSON.parse(JSON.stringify(edges)),
-    });
-    if (history.current.length > 50) history.current.shift();
-    redoStack.current = [];
-  }, [nodes, edges]);
+  const takeSnapshot = useCallback(
+    (snapshot?: { nodes: Node[]; edges: Edge[] }) => {
+      history.current.push({
+        nodes: JSON.parse(JSON.stringify(snapshot?.nodes ?? nodes)),
+        edges: JSON.parse(JSON.stringify(snapshot?.edges ?? edges)),
+      });
+      if (history.current.length > 50) history.current.shift();
+      redoStack.current = [];
+    },
+    [nodes, edges],
+  );
 
   const undo = useCallback(() => {
     if (history.current.length === 0) return;
@@ -2029,19 +2032,47 @@ function WorkspaceView() {
             planDisabled={!canEdit || draftConflict}
             onBeforePlanApply={takeSnapshot}
             onPlanApplied={(result, oldNodes, oldEdges) => {
-              const oldNodeIds = new Set(oldNodes.map((node) => node.id));
-              const oldEdgeIds = new Set(oldEdges.map((edge) => edge.id));
-              sendNodesChange(
-                result.nodes.map((item) =>
-                  oldNodeIds.has(item.id)
-                    ? { type: "replace" as const, id: item.id, item }
-                    : { type: "add" as const, item },
-                ),
+              const oldNodeMap = new Map(
+                oldNodes.map((node) => [node.id, node]),
               );
+              const oldEdgeMap = new Map(
+                oldEdges.map((edge) => [edge.id, edge]),
+              );
+              const newNodeIds = new Set(result.nodes.map((node) => node.id));
+              const newEdgeIds = new Set(result.edges.map((edge) => edge.id));
+              sendEdgesChange(
+                oldEdges
+                  .filter((edge) => !newEdgeIds.has(edge.id))
+                  .map((edge) => ({ type: "remove" as const, id: edge.id })),
+              );
+              sendNodesChange([
+                ...oldNodes
+                  .filter((node) => !newNodeIds.has(node.id))
+                  .map((node) => ({ type: "remove" as const, id: node.id })),
+                ...result.nodes
+                  .filter(
+                    (item) =>
+                      JSON.stringify(oldNodeMap.get(item.id)) !==
+                      JSON.stringify(item),
+                  )
+                  .map((item) =>
+                    oldNodeMap.has(item.id)
+                      ? { type: "replace" as const, id: item.id, item }
+                      : { type: "add" as const, item },
+                  ),
+              ]);
               sendEdgesChange(
                 result.edges
-                  .filter((edge) => !oldEdgeIds.has(edge.id))
-                  .map((item) => ({ type: "add" as const, item })),
+                  .filter(
+                    (edge) =>
+                      JSON.stringify(oldEdgeMap.get(edge.id)) !==
+                      JSON.stringify(edge),
+                  )
+                  .map((item) =>
+                    oldEdgeMap.has(item.id)
+                      ? { type: "replace" as const, id: item.id, item }
+                      : { type: "add" as const, item },
+                  ),
               );
             }}
           />

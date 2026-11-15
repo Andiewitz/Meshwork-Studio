@@ -1,6 +1,11 @@
 import type { Node, Edge } from "@xyflow/react";
 import { secureFetch } from "@/lib/secure-fetch";
 import {
+  assertSelectionOperation,
+  assertSelectionResult,
+  type SelectionScope,
+} from "./tools/canvasEditScope";
+import {
   executeEditCanvas,
   EditCanvasToolArgs,
   CanvasExecutionResult,
@@ -226,6 +231,7 @@ export interface SendAgentPromptOptions {
   memories?: { key: string; content: string; category?: string }[];
   model?: string;
   onStatusUpdate?: (status: string) => void;
+  selectionScope?: SelectionScope;
 }
 
 export interface AgentRunResponse {
@@ -331,16 +337,39 @@ export async function runJenkosAgent({
   memories,
   model = "gemini-3.5-flash",
   onStatusUpdate,
+  selectionScope,
 }: SendAgentPromptOptions): Promise<AgentRunResponse> {
   onStatusUpdate?.("Consulting Jenkos...");
 
+  const selectedNodeIds = new Set(selectionScope?.nodeIds ?? []);
+  const selectedEdgeIds = new Set(selectionScope?.edgeIds ?? []);
+  const contextEdges = selectionScope
+    ? currentEdges.filter(
+        (edge) =>
+          selectedEdgeIds.has(edge.id) ||
+          selectedNodeIds.has(edge.source) ||
+          selectedNodeIds.has(edge.target),
+      )
+    : currentEdges;
+  const contextNodeIds = new Set([
+    ...selectedNodeIds,
+    ...contextEdges.flatMap((edge) => [edge.source, edge.target]),
+  ]);
+  const contextNodes = selectionScope
+    ? currentNodes.filter((node) => contextNodeIds.has(node.id))
+    : currentNodes;
   const canvasContext = formatCanvasContext(
-    currentNodes,
-    currentEdges,
+    contextNodes,
+    contextEdges,
     viewportCenter,
     memories,
   );
-  const fullSystemPrompt = JENKOS_SYSTEM_PROMPT + canvasContext;
+  const fullSystemPrompt =
+    JENKOS_SYSTEM_PROMPT +
+    canvasContext +
+    (selectionScope
+      ? `\n\nEDIT SCOPE: Only selected existing items may be updated or deleted. Do not add items, reorganize, or replace the canvas. Other items are read-only context. Selected node IDs: ${JSON.stringify(selectionScope.nodeIds)}. Selected edge IDs: ${JSON.stringify(selectionScope.edgeIds)}.`
+      : "\n\nEDIT SCOPE: Entire canvas.");
 
   const payloadMessages = [
     { role: "system" as const, content: fullSystemPrompt },
@@ -426,12 +455,21 @@ export async function runJenkosAgent({
           args = {};
         }
 
+        if (selectionScope) assertSelectionOperation(args, selectionScope);
         const result = executeEditCanvas(
           workingNodes,
           workingEdges,
           args,
           viewportCenter,
         );
+        if (selectionScope)
+          assertSelectionResult(
+            workingNodes,
+            workingEdges,
+            result.nodes,
+            result.edges,
+            selectionScope,
+          );
         if (result.applied) {
           workingNodes = result.nodes;
           workingEdges = result.edges;
