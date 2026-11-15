@@ -283,6 +283,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                           "Core",
                           "Infrastructure",
                           "Workflow",
+                          "Data pipeline",
                           "Kubernetes",
                         ].includes(entry.palette?.category ?? ""),
                     ) && <option value={identity.role}>{roleLabel}</option>}
@@ -291,6 +292,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                         "Core",
                         "Infrastructure",
                         "Workflow",
+                        "Data pipeline",
                         "Kubernetes",
                       ].includes(entry.palette?.category ?? ""),
                     )

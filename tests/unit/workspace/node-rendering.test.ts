@@ -11,6 +11,8 @@ const nodeTypes = {
   database: SystemNode,
   "workflow-decision": SystemNode,
   "workflow-lane": SystemNode,
+  "data-source": SystemNode,
+  "data-transform": SystemNode,
 };
 
 describe("node appearance through React Flow", () => {
@@ -40,6 +42,28 @@ describe("node appearance through React Flow", () => {
       ),
     );
   }
+  it("renders pipeline roles with their labels", async () => {
+    await renderNode({
+      id: "source",
+      type: "data-source",
+      position: { x: 0, y: 0 },
+      width: 168,
+      height: 72,
+      data: { label: "Orders" },
+    });
+    expect(container.textContent).toContain("Orders");
+    expect(container.textContent).toContain("Data source");
+    await renderNode({
+      id: "transform",
+      type: "data-transform",
+      position: { x: 0, y: 0 },
+      width: 168,
+      height: 72,
+      data: { label: "Clean" },
+    });
+    expect(container.textContent).toContain("Clean");
+    expect(container.textContent).toContain("Transformation");
+  });
   it("renders workflow decisions and swimlanes with their labels", async () => {
     await renderNode({
       id: "decision",

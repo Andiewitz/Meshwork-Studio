@@ -73,6 +73,12 @@ const layers: Record<string, NodeLayer> = {
   "workflow-event": "async",
   "workflow-input": "data",
   "workflow-output": "data",
+  "data-source": "data",
+  "data-transform": "compute",
+  "data-dataset": "data",
+  "data-model": "data",
+  "data-destination": "data",
+  "data-schedule": "async",
 };
 
 export const nodeLayerColors: Record<
@@ -142,6 +148,12 @@ const typeLabels: Record<string, string> = {
   "workflow-input": "Input",
   "workflow-output": "Output",
   "workflow-lane": "Swimlane",
+  "data-source": "Data source",
+  "data-transform": "Transformation",
+  "data-dataset": "Dataset",
+  "data-model": "Data model",
+  "data-destination": "Data destination",
+  "data-schedule": "Pipeline schedule",
 };
 
 export function nodeSubtitle(
