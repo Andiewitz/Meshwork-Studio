@@ -165,6 +165,113 @@ describe("Jenkos Agent & Architecture Generation Pipeline", () => {
   });
 
   describe("Jenkos Agent Run Loop with Tool Calling & Memory", () => {
+    it("rejects the whole request when a later tool call contains invalid JSON", async () => {
+      mockedSecureFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                tool_calls: [
+                  {
+                    id: "one",
+                    function: {
+                      name: "edit_canvas",
+                      arguments: JSON.stringify({
+                        action: "add",
+                        nodes: [{ id: "new", type: "server" }],
+                      }),
+                    },
+                  },
+                  {
+                    id: "two",
+                    function: { name: "edit_canvas", arguments: "{" },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      } as Response);
+      const currentNodes: Node[] = [];
+      await expect(
+        runJenkosAgent({
+          userPrompt: "Draw",
+          history: [],
+          currentNodes,
+          currentEdges: [],
+          viewportCenter,
+        }),
+      ).rejects.toThrow(/No changes were applied/);
+      expect(currentNodes).toEqual([]);
+    });
+    it("rejects a multi-call selection edit if any call targets another node", async () => {
+      mockedSecureFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                tool_calls: [
+                  {
+                    id: "one",
+                    function: {
+                      name: "edit_canvas",
+                      arguments: JSON.stringify({
+                        action: "update",
+                        nodes: [{ id: "a", type: "server", label: "Changed" }],
+                      }),
+                    },
+                  },
+                  {
+                    id: "two",
+                    function: {
+                      name: "edit_canvas",
+                      arguments: JSON.stringify({
+                        action: "delete",
+                        deleteNodeIds: ["b"],
+                      }),
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      } as Response);
+      const currentNodes: Node[] = [
+        {
+          id: "a",
+          type: "server",
+          position: { x: 0, y: 0 },
+          data: { label: "A" },
+        },
+        {
+          id: "b",
+          type: "server",
+          position: { x: 1, y: 0 },
+          data: { label: "B" },
+        },
+      ];
+      await expect(
+        runJenkosAgent({
+          userPrompt: "Update selected",
+          history: [],
+          currentNodes,
+          currentEdges: [],
+          viewportCenter,
+          selectionScope: { nodeIds: ["a"], edgeIds: [] },
+        }),
+      ).rejects.toThrow(/outside the selection/);
+      expect(currentNodes[0].data.label).toBe("A");
+      const request = mockedSecureFetch.mock.calls.at(-1)?.[1];
+      expect(JSON.parse(String(request?.body)).messages[0].content).toContain(
+        'Selected node IDs: ["a"]',
+      );
+      expect(
+        JSON.parse(String(request?.body)).messages[0].content,
+      ).not.toContain('"id": "b"');
+    });
     it("sends the design conventions to Gemini and applies a styled tool response", async () => {
       mockedSecureFetch.mockResolvedValueOnce({
         ok: true,
@@ -409,6 +516,42 @@ describe("Jenkos Agent & Architecture Generation Pipeline", () => {
       ]);
       expect(runResponse.canvasResult?.nodes[0].width).toBe(600);
       expect(runResponse.canvasResult?.nodes[0].height).toBe(300);
+    });
+
+    it("does not replace an existing canvas with a fallback JSON response", async () => {
+      mockedSecureFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content:
+                  '```json\n{"nodes":[{"id":"new","type":"server"}],"edges":[]}\n```',
+              },
+            },
+          ],
+        }),
+      } as Response);
+      const currentNodes: Node[] = [
+        {
+          id: "existing",
+          type: "server",
+          position: { x: 0, y: 0 },
+          data: { label: "Existing" },
+        },
+      ];
+      const result = await runJenkosAgent({
+        userPrompt: "Add a server",
+        history: [],
+        currentNodes,
+        currentEdges: [],
+        viewportCenter,
+      });
+      expect(result.canvasResult).toBeUndefined();
+      expect(result.message.appliedToCanvas).toBe(false);
+      expect(result.message.content).toContain("was not applied");
+      expect(result.message.content).toContain('"id":"new"');
+      expect(currentNodes[0].id).toBe("existing");
     });
   });
 });

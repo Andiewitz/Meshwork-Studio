@@ -37,17 +37,17 @@ or retry a canvas copy. A missing grant denies access.
 
 All paths are rooted at `/api/v1`.
 
-| Method and path                          | Required access  | Notes                                                                                            |
-| ---------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------ |
-| `GET /workspaces?collectionId=`          | Session          | Lists the caller's owned workspaces, optionally in one collection.                               |
-| `POST /workspaces`                       | Session + CSRF   | Creates a workspace owned by the caller. Title is 1–16 allowed characters.                       |
-| `GET /workspaces/:id`                    | Viewer or owner  | Returns metadata.                                                                                |
-| `PUT /workspaces/:id`                    | Editor or higher | Updates validated metadata.                                                                      |
-| `DELETE /workspaces/:id`                 | Owner            | Atomically removes metadata and queues durable canvas cleanup.                                   |
-| `POST /workspaces/:id/duplicate`         | Owner            | Creates a destination workspace in `copying` state and queues canvas copy.                       |
-| `POST /workspaces/:id/retry-canvas-copy` | Owner            | Requeues only a workspace in `failed` copy state.                                                |
-| `GET /workspaces/:id/role`               | Session          | Returns the Workspace collaborator role or `none`. |
-| `GET /workspaces/:id/members`            | Viewer or owner  | Returns the first sharing team and its members, or an empty list.                                |
+| Method and path                          | Required access  | Notes                                                                      |
+| ---------------------------------------- | ---------------- | -------------------------------------------------------------------------- |
+| `GET /workspaces?collectionId=`          | Session          | Lists the caller's owned workspaces, optionally in one collection.         |
+| `POST /workspaces`                       | Session + CSRF   | Creates a workspace owned by the caller. Title is 1–16 allowed characters. |
+| `GET /workspaces/:id`                    | Viewer or owner  | Returns metadata.                                                          |
+| `PUT /workspaces/:id`                    | Editor or higher | Updates validated metadata.                                                |
+| `DELETE /workspaces/:id`                 | Owner            | Atomically removes metadata and queues durable canvas cleanup.             |
+| `POST /workspaces/:id/duplicate`         | Owner            | Creates a destination workspace in `copying` state and queues canvas copy. |
+| `POST /workspaces/:id/retry-canvas-copy` | Owner            | Requeues only a workspace in `failed` copy state.                          |
+| `GET /workspaces/:id/role`               | Session          | Returns the Workspace collaborator role or `none`.                         |
+| `GET /workspaces/:id/members`            | Viewer or owner  | Returns the first sharing team and its members, or an empty list.          |
 
 `DELETE` returning `204` means the cleanup event was committed. It does not
 mean DynamoDB deletion completed synchronously.
@@ -98,8 +98,9 @@ Collections are never team-shared. They are strictly scoped to `collection.userI
 
 The owner can list and manage direct collaborators at
 `/workspaces/:id/collaborators`. Adding a collaborator requires an existing,
-verified account email and `view` or `edit` permission. Team workspace sharing
-is disabled and Team membership does not grant access.
+verified account email and `view` or `edit` permission. The public teams API is
+retired; legacy team data does not grant workspace access. Legacy cleanup is
+retained for existing account-deletion operations.
 
 ## Implementation map
 
@@ -107,6 +108,5 @@ is disabled and Team membership does not grant access.
 | --------------------------------------------------------------------------------- | --------------------------------------------------- |
 | [`workspaceRoutes.ts`](../../server/services/workspace/routes/workspaceRoutes.ts) | Workspace and collection HTTP handlers.             |
 | [`canvasRoutes.ts`](../../server/services/canvas/routes/canvasRoutes.ts)          | Canvas reads, writes, revisions, and copy failures. |
-| [`teamRoutes.ts`](../../server/services/team/routes/teamRoutes.ts)                | Team membership endpoints.              |
 | [`permissions.ts`](../../server/shared/permissions.ts)                            | Role rank and capability rules.                     |
 | [`PERSISTENCE.md`](../architecture/PERSISTENCE.md)                                | DynamoDB and browser-cache persistence details.     |

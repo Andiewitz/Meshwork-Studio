@@ -11,14 +11,13 @@ and `AUTH_SERVICE_URL` (default `http://127.0.0.1:8081`). The two keys may and
 should differ. Identity introspection retains its existing session-specific
 client and fail-closed behavior.
 
-| Owner       | Internal endpoint                                      | Response                                                     |
-| ----------- | ------------------------------------------------------ | ------------------------------------------------------------ |
-| Workspace   | `GET /internal/v1/workspace/stats`                     | `{ totalWorkspaces: number }`                                |
-| Workspace   | `GET /internal/v1/workspace/lookup?ids=a,b`            | `{ workspaces: [{ id, ownerId, title }] }`                   |
-| Team        | `GET /internal/v1/team/stats`                          | `{ totalTeams: number }`                                     |
-| Team        | `GET /internal/v1/team/users/:id/shared-workspace-ids` | `{ workspaceIds: string[] }`                                 |
-| Go identity | `GET /internal/stats/users`                            | `{ totalUsers, newUsersToday, activeUsers24h, loginsToday }` |
-| Go identity | `GET /internal/audit-search?request_id=ab-cd`          | `{ hits: [...] }`                                            |
+| Owner       | Internal endpoint                             | Response                                                     |
+| ----------- | --------------------------------------------- | ------------------------------------------------------------ |
+| Workspace   | `GET /internal/v1/workspace/stats`            | `{ totalWorkspaces: number }`                                |
+| Workspace   | `GET /internal/v1/workspace/lookup?ids=a,b`   | `{ workspaces: [{ id, ownerId, title }] }`                   |
+| Team        | `GET /internal/v1/team/stats`                 | `{ totalTeams: number }`                                     |
+| Go identity | `GET /internal/stats/users`                   | `{ totalUsers, newUsersToday, activeUsers24h, loginsToday }` |
+| Go identity | `GET /internal/audit-search?request_id=ab-cd` | `{ hits: [...] }`                                            |
 
 The ambiguous Node `/internal/stats` route is removed. Old unversioned Node
 lookup/shared-ID paths are replaced in the same release as their callers. All

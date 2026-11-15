@@ -48,6 +48,11 @@ import {
   clearCanvasLocalCache,
 } from "@/hooks/use-canvas";
 import { planCanvasSave } from "@/lib/canvas-delta";
+import { canvasChangeMessages } from "@/features/workspace/utils/canvasChangeMessages";
+import {
+  mapNodeType,
+  nodeForRendering,
+} from "@/features/workspace/utils/unknownNode";
 import { isCanvasDraftCurrent } from "@/lib/canvas-cache";
 import {
   canvasSaveDelay,
@@ -190,7 +195,7 @@ import { nodeAccessibleLabel } from "@/components/canvas/nodes/nodePresentation"
 import {
   nodeTypes,
   nodeTypesList,
-  DEFAULT_FAVORITES as favoriteNodes,
+  searchNodeCatalog,
   trackNodeUsage,
   EXPANDABLE_TYPES,
   NODE_DESCRIPTIONS,
@@ -199,7 +204,11 @@ import {
   registerEnterNodeHandler,
   unregisterEnterNodeHandler,
 } from "@/features/workspace/utils/canvasEvents";
-import { NODE_SIZES } from "@/features/workspace/utils/nodeRegistry";
+import {
+  CONTAINER_TYPES,
+  NODE_SIZES,
+  VALID_TYPES,
+} from "@/features/workspace/utils/nodeRegistry";
 import {
   getNodeDimensions,
   normalizeNodeDimensions,
@@ -208,7 +217,23 @@ import {
 import { generateTemplate } from "@/features/workspace/utils/templates";
 import { PropertiesSidebar } from "@/features/workspace/components/PropertiesSidebar";
 import { WorkspaceHeader } from "@/features/workspace/components/WorkspaceHeader";
+import { CanvasNavigation } from "@/features/workspace/components/CanvasNavigation";
+import {
+  CanvasLayoutDialog,
+  layoutFingerprint,
+} from "@/features/workspace/components/CanvasLayoutDialog";
 import { WorkspaceLeftSidebar } from "@/features/workspace/components/WorkspaceLeftSidebar";
+import { CanvasRecoveryNotice } from "@/features/workspace/components/CanvasRecoveryNotice";
+import { ConnectionReviewDialog } from "@/features/workspace/components/ConnectionReviewDialog";
+import { DiagramStarterChooser } from "@/features/workspace/components/DiagramStarterChooser";
+import {
+  canApplyDiagramStarter,
+  createDiagramStarter,
+  DIAGRAM_CONTEXTS,
+  STARTER_RECOMMENDATIONS,
+  type DiagramContext,
+  type DiagramStarter,
+} from "@/features/workspace/utils/diagramStarters";
 import { WorkspaceToolbar } from "@/features/workspace/components/WorkspaceToolbar";
 import {
   calculateContainment,
@@ -286,6 +311,8 @@ function WorkspaceView() {
     zoomOut,
     getViewport,
     setViewport,
+    getNodes,
+    getEdges,
   } = useReactFlow();
   const [, setLocation] = useLocation();
   const deleteWorkspace = useDeleteWorkspace();
@@ -297,12 +324,14 @@ function WorkspaceView() {
   const accessibleNodes = useMemo(
     () =>
       nodes.map((node) => {
-        if (node.ariaLabel) return node;
+        const rendered = nodeForRendering(node);
+        if (node.ariaLabel && rendered === node) return node;
         const cached = accessibleNodeCache.current.get(node);
         if (cached) return cached;
         const accessible = {
-          ...node,
-          ariaLabel: nodeAccessibleLabel(node.type, node.data),
+          ...rendered,
+          ariaLabel:
+            node.ariaLabel || nodeAccessibleLabel(rendered.type, rendered.data),
         };
         accessibleNodeCache.current.set(node, accessible);
         return accessible;
@@ -310,7 +339,49 @@ function WorkspaceView() {
     [nodes],
   );
   const [edges, setEdges] = useState<Edge[]>([]);
+  const starterKey = `meshwork:diagram-starter:${user?.id ?? "anonymous"}:${workspaceId}`;
+  const [starterPreference, setStarterPreference] = useState<{
+    key: string;
+    dismissed: boolean;
+    context: DiagramContext;
+  }>({ key: "", dismissed: false, context: "all" });
+  const [starterReadyWorkspaceId, setStarterReadyWorkspaceId] = useState("");
+  useEffect(() => {
+    let dismissed = false;
+    let context: DiagramContext = "all";
+    try {
+      const value: unknown = JSON.parse(
+        sessionStorage.getItem(starterKey) || "null",
+      );
+      if (value && typeof value === "object") {
+        const stored = value as Record<string, unknown>;
+        dismissed = stored.dismissed === true;
+        context =
+          DIAGRAM_CONTEXTS.find((item) => item.id === stored.context)?.id ??
+          "all";
+      }
+    } catch {
+      /* Keep the default if session storage is unavailable. */
+    }
+    setStarterPreference({ key: starterKey, dismissed, context });
+  }, [starterKey]);
+  const saveStarterPreference = (
+    dismissed: boolean,
+    context: DiagramContext,
+  ) => {
+    setStarterPreference({ key: starterKey, dismissed, context });
+    try {
+      sessionStorage.setItem(
+        starterKey,
+        JSON.stringify({ dismissed, context }),
+      );
+    } catch {
+      /* Preference remains available for this session. */
+    }
+  };
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [isLayoutOpen, setIsLayoutOpen] = useState(false);
+  useEffect(() => setIsLayoutOpen(false), [workspaceId]);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"layers" | "properties">("layers");
   const [isSimulating, setIsSimulating] = useState(false);
@@ -337,6 +408,7 @@ function WorkspaceView() {
 
   // Workspace Settings States
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isConnectionReviewOpen, setIsConnectionReviewOpen] = useState(false);
   const [wsDescription, setWsDescription] = useState("");
   const [wsAuthor, setWsAuthor] = useState("");
   const [wsAiContext, setWsAiContext] = useState("");
@@ -355,6 +427,12 @@ function WorkspaceView() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(
     () => window.innerWidth >= 768,
   );
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const [isChatCollapsed, setIsChatCollapsed] = useState(false);
+  const collapsedChatRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (isChatCollapsed && isSidebarOpen) collapsedChatRef.current?.focus();
+  }, [isChatCollapsed, isSidebarOpen]);
   const [sidebarTab, setSidebarTab] = useState<"ai" | "nodes">("ai");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [gridSize, setGridSize] = useState(20);
@@ -365,7 +443,11 @@ function WorkspaceView() {
   );
 
   // ── Role-based access control ──
-  const { data: roleData } = useWorkspaceRole(workspaceId);
+  const {
+    data: roleData,
+    isError: roleError,
+    refetch: refetchRole,
+  } = useWorkspaceRole(workspaceId);
   const userRole = roleData?.role || "none";
   const canEdit = canEditWorkspace(userRole);
   const canManage = canManageWorkspace(userRole);
@@ -523,6 +605,19 @@ function WorkspaceView() {
   }, [handleToggleFullscreen]);
 
   // ── Real-time collaboration (cursors & presence) ──
+  const history = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
+  const redoStack = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
+  const clearHistoryForRemoteChange = useCallback(() => {
+    if (history.current.length || redoStack.current.length) {
+      history.current = [];
+      redoStack.current = [];
+      toast({
+        title: "Undo history cleared",
+        description:
+          "A collaborator changed the canvas, so older undo steps are no longer safe to apply.",
+      });
+    }
+  }, [toast]);
   const isRemoteUpdate = useRef(false);
   const draftConflictRef = useRef(false);
   const pendingConnectionGapRef = useRef(false);
@@ -533,6 +628,7 @@ function WorkspaceView() {
   const handleRemoteNodeMove = useCallback(
     (nodeId: string, x: number, y: number, parentId?: string | null) => {
       if (draftConflictRef.current) return;
+      clearHistoryForRemoteChange();
       isRemoteUpdate.current = true;
       setNodes((nds) =>
         nds.map((n) => {
@@ -553,12 +649,14 @@ function WorkspaceView() {
         isRemoteUpdate.current = false;
       });
     },
-    [setNodes],
+    [setNodes, clearHistoryForRemoteChange],
   );
 
   const handleRemoteNodesChange = useCallback(
     (changes: NodeChange[]) => {
       if (draftConflictRef.current) return;
+      if (changes.some((change) => change.type !== "select"))
+        clearHistoryForRemoteChange();
       isRemoteUpdate.current = true;
       setNodes((nds) =>
         normalizeNodeDimensions(applyNodeChanges(changes, nds)),
@@ -567,19 +665,21 @@ function WorkspaceView() {
         isRemoteUpdate.current = false;
       });
     },
-    [setNodes],
+    [setNodes, clearHistoryForRemoteChange],
   );
 
   const handleRemoteEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
       if (draftConflictRef.current) return;
+      if (changes.some((change) => change.type !== "select"))
+        clearHistoryForRemoteChange();
       isRemoteUpdate.current = true;
       setEdges((eds) => applyEdgeChanges(changes, eds));
       requestAnimationFrame(() => {
         isRemoteUpdate.current = false;
       });
     },
-    [setEdges],
+    [setEdges, clearHistoryForRemoteChange],
   );
 
   const {
@@ -717,6 +817,10 @@ function WorkspaceView() {
   }
   const [canvasStack, setCanvasStack] = useState<CanvasLevel[]>([]);
   const isNested = canvasStack.length > 0;
+  useEffect(() => {
+    history.current = [];
+    redoStack.current = [];
+  }, [workspaceId, canvasStack]);
   const [canvasTransition, setCanvasTransition] = useState<
     "idle" | "entering" | "exiting"
   >("idle");
@@ -872,8 +976,6 @@ function WorkspaceView() {
     return () => unregisterEnterNodeHandler();
   }, [nodes, enterNode]);
 
-  const history = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
-  const redoStack = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
   const lastLoadedId = useRef<string | null>(null);
 
   type SaveStatus = "saved" | "saving" | "unsaved" | "offline_saved";
@@ -936,16 +1038,60 @@ function WorkspaceView() {
     [workspaceId, toast, cacheOwner],
   );
 
-  const takeSnapshot = useCallback(() => {
-    history.current.push({
-      nodes: JSON.parse(JSON.stringify(nodes)),
-      edges: JSON.parse(JSON.stringify(edges)),
+  const takeSnapshot = useCallback(
+    (snapshot?: { nodes: Node[]; edges: Edge[] }) => {
+      history.current.push({
+        nodes: JSON.parse(JSON.stringify(snapshot?.nodes ?? nodes)),
+        edges: JSON.parse(JSON.stringify(snapshot?.edges ?? edges)),
+      });
+      if (history.current.length > 50) history.current.shift();
+      redoStack.current = [];
+    },
+    [nodes, edges],
+  );
+
+  const broadcastSnapshotChange = useCallback(
+    (
+      before: { nodes: Node[]; edges: Edge[] },
+      after: { nodes: Node[]; edges: Edge[] },
+    ) => {
+      if (isNested) return;
+      const changes = canvasChangeMessages(before, after);
+      if (changes.removedEdges.length) sendEdgesChange(changes.removedEdges);
+      if (changes.nodes.length) sendNodesChange(changes.nodes);
+      if (changes.edges.length) sendEdgesChange(changes.edges);
+    },
+    [isNested, sendEdgesChange, sendNodesChange],
+  );
+
+  const updateNodePin = (id: string, pinned: boolean) => {
+    if (
+      !canEdit ||
+      draftConflictRef.current ||
+      canvasTransition !== "idle" ||
+      isInitialLoad.current ||
+      lastLoadedId.current !== workspaceId
+    )
+      return;
+    const current = { nodes: getNodes(), edges: getEdges() };
+    const node = current.nodes.find((item) => item.id === id);
+    if (!node || (node.data.layoutPinned === true) === pinned) return;
+    const nextNodes = current.nodes.map((item) =>
+      item.id === id
+        ? { ...item, data: { ...item.data, layoutPinned: pinned } }
+        : item,
+    );
+    takeSnapshot(current);
+    setNodes(nextNodes);
+    broadcastSnapshotChange(current, {
+      nodes: nextNodes,
+      edges: current.edges,
     });
-    if (history.current.length > 50) history.current.shift();
-    redoStack.current = [];
-  }, [nodes, edges]);
+  };
 
   const undo = useCallback(() => {
+    if (!canEdit || draftConflictRef.current || canvasTransition !== "idle")
+      return;
     if (history.current.length === 0) return;
     const prevState = history.current.pop();
     if (prevState) {
@@ -955,10 +1101,21 @@ function WorkspaceView() {
       });
       setNodes(prevState.nodes);
       setEdges(prevState.edges);
+      broadcastSnapshotChange({ nodes, edges }, prevState);
     }
-  }, [nodes, edges, setNodes, setEdges]);
+  }, [
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    canEdit,
+    canvasTransition,
+    broadcastSnapshotChange,
+  ]);
 
   const redo = useCallback(() => {
+    if (!canEdit || draftConflictRef.current || canvasTransition !== "idle")
+      return;
     if (redoStack.current.length === 0) return;
     const nextState = redoStack.current.pop();
     if (nextState) {
@@ -968,16 +1125,37 @@ function WorkspaceView() {
       });
       setNodes(nextState.nodes);
       setEdges(nextState.edges);
+      broadcastSnapshotChange({ nodes, edges }, nextState);
     }
-  }, [nodes, edges, setNodes, setEdges]);
+  }, [
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    canEdit,
+    canvasTransition,
+    broadcastSnapshotChange,
+  ]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.closest("input, textarea, select, [contenteditable='true']"))
+      )
+        return;
+      if (!canEdit || draftConflictRef.current || canvasTransition !== "idle")
+        return;
       if (e.ctrlKey || e.metaKey) {
-        if (e.key === "z") {
+        if (e.key.toLowerCase() === "z" && !e.shiftKey) {
           e.preventDefault();
           undo();
-        } else if (e.key === "y" || (e.key === "Z" && e.shiftKey)) {
+        } else if (
+          e.key.toLowerCase() === "y" ||
+          (e.key.toLowerCase() === "z" && e.shiftKey)
+        ) {
           e.preventDefault();
           redo();
         }
@@ -985,7 +1163,7 @@ function WorkspaceView() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo]);
+  }, [undo, redo, canEdit, canvasTransition]);
 
   const [menu, setMenu] = useState<{
     id: string;
@@ -993,6 +1171,8 @@ function WorkspaceView() {
     left: number;
     type: "node" | "pane";
   } | null>(null);
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [catalogBrowse, setCatalogBrowse] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const focusNode = useCallback(
@@ -1102,6 +1282,7 @@ function WorkspaceView() {
         )
           return;
         isInitialLoad.current = false;
+        setStarterReadyWorkspaceId(workspaceId);
         if (localCache && !draftConflictRef.current)
           setHydrationEpoch((value) => value + 1);
       }, 500);
@@ -1293,6 +1474,41 @@ function WorkspaceView() {
       );
     },
     [takeSnapshot, setNodes],
+  );
+
+  const updateNodeType = useCallback(
+    (id: string, type: string) => {
+      if (!canEdit || draftConflictRef.current || !VALID_TYPES.has(type))
+        return;
+      const node = nodes.find((item) => item.id === id);
+      if (!node) return;
+      if (
+        !CONTAINER_TYPES.has(type) &&
+        nodes.some((item) => item.parentId === id)
+      ) {
+        toast({
+          title: "Choose a container type",
+          description:
+            "This node contains other nodes. Move them out before mapping it to a non-container type.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const mapped = mapNodeType(node, type);
+      const nextNodes = nodes.map((item) => (item.id === id ? mapped : item));
+      takeSnapshot();
+      setNodes(nextNodes);
+      broadcastSnapshotChange({ nodes, edges }, { nodes: nextNodes, edges });
+    },
+    [
+      nodes,
+      edges,
+      canEdit,
+      toast,
+      takeSnapshot,
+      setNodes,
+      broadcastSnapshotChange,
+    ],
   );
 
   const updateNodeStyle = useCallback(
@@ -1618,6 +1834,8 @@ function WorkspaceView() {
   const onPaneContextMenu = useCallback(
     (event: MouseEvent | React.MouseEvent) => {
       event.preventDefault();
+      setCatalogSearch("");
+      setCatalogBrowse(false);
       setMenu({
         id: "pane",
         top: event.clientY,
@@ -1659,6 +1877,44 @@ function WorkspaceView() {
     setEdges((eds) => eds.concat(newEdges));
   };
 
+  const applyDiagramStarter = (kind: DiagramStarter) => {
+    const current = { nodes: getNodes(), edges: getEdges() };
+    if (
+      !canApplyDiagramStarter(current, {
+        canEdit,
+        conflict: draftConflictRef.current,
+        ready: !isInitialLoad.current && lastLoadedId.current === workspaceId,
+        root: !isNested,
+        idle: canvasTransition === "idle",
+      })
+    ) {
+      toast({
+        title: "Starter not applied",
+        description:
+          "The canvas is no longer empty or ready. Your existing diagram was left unchanged.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const center = screenToFlowPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    });
+    const count = kind === "architecture" ? 3 : 4;
+    const graph = createDiagramStarter(
+      kind,
+      { x: center.x - ((count - 1) * 250 + 168) / 2, y: center.y - 45 },
+      () => crypto.randomUUID(),
+      workspaceTheme === "dark",
+    );
+    takeSnapshot(current);
+    setNodes(graph.nodes);
+    setEdges(graph.edges);
+    broadcastSnapshotChange(current, graph);
+    saveStarterPreference(true, kind);
+    setTimeout(() => fitView({ duration: 300, padding: 0.25 }), 50);
+  };
+
   const onDelete = (id: string) => {
     deleteNode(id);
   };
@@ -1692,6 +1948,7 @@ function WorkspaceView() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.closest('[role="dialog"]')) return;
       const isEditing =
         document.activeElement?.tagName === "INPUT" ||
         document.activeElement?.tagName === "TEXTAREA";
@@ -1786,7 +2043,7 @@ function WorkspaceView() {
     }, 50);
   }, []);
 
-  const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
+  const selectEdge = useCallback((edge: Edge) => {
     const kind = edge.data?.connectionKind;
     setConnectionPreset(
       kind === "async" || kind === "primary" || kind === "sync" ? kind : "sync",
@@ -1807,6 +2064,10 @@ function WorkspaceView() {
     setSelectedNodeId(null);
     setActiveTab("properties");
   }, []);
+  const onEdgeClick = useCallback(
+    (_: React.MouseEvent, edge: Edge) => selectEdge(edge),
+    [selectEdge],
+  );
 
   const onNodeDragStart = useCallback(() => {
     takeSnapshot();
@@ -1902,6 +2163,14 @@ function WorkspaceView() {
   );
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
   const selectedEdge = edges.find((e) => e.id === selectedEdgeId) || null;
+  const activeDiagramContext =
+    starterPreference.key === starterKey ? starterPreference.context : "all";
+  const suggestedNodes = STARTER_RECOMMENDATIONS[activeDiagramContext].flatMap(
+    (type) => {
+      const entry = nodeTypesList.find((node) => node.type === type);
+      return entry ? [entry] : [];
+    },
+  );
 
   if (isLoading) {
     return <DefaultLoading />;
@@ -1947,6 +2216,13 @@ function WorkspaceView() {
         theme={workspaceTheme}
         onToggleTheme={toggleTheme}
         onOpenSearch={() => setSearchOpen(true)}
+        onReviewConnections={() => setIsConnectionReviewOpen(true)}
+        onArrangeNodes={() => setIsLayoutOpen(true)}
+        arrangeDisabled={
+          draftConflict ||
+          canvasTransition !== "idle" ||
+          starterReadyWorkspaceId !== workspaceId
+        }
         workspace={workspace}
         workspaceId={workspaceId}
         user={user}
@@ -1960,7 +2236,10 @@ function WorkspaceView() {
         undo={undo}
         redo={redo}
         isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
+        setIsSidebarOpen={(open) => {
+          if (open) setIsChatCollapsed(false);
+          setIsSidebarOpen(open);
+        }}
         collaborators={collaborators}
         handleExportPng={handleExportPng}
         handleExportSvg={handleExportSvg}
@@ -2012,116 +2291,129 @@ function WorkspaceView() {
         setActiveView={setActiveView}
       />
 
-      {/* Main Workspace Layout: Sidebar connected to header + Canvas */}
+      {/* Main workspace */}
       <div className="workspace-editor-body relative flex-1 min-h-0 overflow-hidden flex bg-[#111114]">
-        {/* Collapsible Left Sidebar connected flush to Header */}
-        <div
-          className={`workspace-sidebar-frame max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:z-20 max-md:max-w-[85vw] min-h-0 overflow-hidden transition-all duration-300 ease-in-out bg-[#111114] shrink-0 ${
-            isSidebarOpen && canEdit
-              ? "w-[360px] opacity-100"
-              : "w-0 opacity-0 pointer-events-none"
-          }`}
-        >
-          <WorkspaceLeftSidebar
-            isOpen={isSidebarOpen && canEdit}
-            onClose={() => setIsSidebarOpen(false)}
-            workspaceId={workspaceId}
-            planDisabled={!canEdit || draftConflict}
-            onBeforePlanApply={takeSnapshot}
-            onPlanApplied={(result, oldNodes, oldEdges) => {
-              const oldNodeIds = new Set(oldNodes.map((node) => node.id));
-              const oldEdgeIds = new Set(oldEdges.map((edge) => edge.id));
-              sendNodesChange(
-                result.nodes.map((item) =>
-                  oldNodeIds.has(item.id)
-                    ? { type: "replace" as const, id: item.id, item }
-                    : { type: "add" as const, item },
-                ),
-              );
-              sendEdgesChange(
-                result.edges
-                  .filter((edge) => !oldEdgeIds.has(edge.id))
-                  .map((item) => ({ type: "add" as const, item })),
-              );
-            }}
-          />
-        </div>
-
         {/* Canvas & Properties Section */}
         <div className="workspace-editor-body flex-1 min-h-0 flex overflow-hidden relative bg-[#111114]">
-          {/* Canvas Viewport: curved top-left intersection when sidebar is open */}
+          {/* Canvas viewport */}
           <motion.main
             ref={canvasWrapperRef}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className={`workspace-canvas flex-1 h-full relative bg-[#0A0A0A] overflow-hidden transition-all duration-300 ease-in-out ${
-              isSidebarOpen && canEdit
-                ? "rounded-tl-2xl border-t border-l ws-border"
-                : "border-t ws-border"
-            }`}
+            className="workspace-canvas flex-1 h-full relative bg-[#0A0A0A] overflow-hidden"
             data-cursor={drawingMode}
             style={{ cursor: drawingMode === "pan" ? "grab" : undefined }}
           >
-            {draftConflict && (
-              <div
-                role="alert"
-                className="absolute top-4 left-4 right-4 z-[1000] flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/40 ws-warning p-3 text-sm ws-ink"
-              >
-                <span className="flex-1">
-                  This local draft may conflict with the server or may be
-                  missing live changes. Export a copy before loading the server
-                  version; automatic saving is paused.
-                </span>
+            <div
+              id="workspace-ai-chat"
+              aria-hidden={!isSidebarOpen || !canEdit}
+              className={`workspace-chat-overlay absolute left-0 z-50 max-w-[calc(100%-16px)] transition-[width] duration-200 ease-out motion-reduce:transition-none ${isChatCollapsed ? "top-[56px]" : "top-[56px] bottom-0"} ${isSidebarOpen && canEdit ? "" : "hidden"}`}
+              style={{
+                width: isChatCollapsed ? 160 : isChatExpanded ? 720 : 395,
+              }}
+            >
+              {isChatCollapsed && (
                 <button
-                  className="rounded-md border ws-border px-3 py-2 ws-ink disabled:opacity-50"
-                  disabled={canvasTransition !== "idle"}
+                  ref={collapsedChatRef}
+                  type="button"
+                  className="assistant-minimized"
+                  aria-label="Open AI chat"
                   onClick={() => {
-                    const draft = materializeRootCanvas(canvasStack, {
-                      nodes,
-                      edges,
-                    });
-                    exportAsJson(
-                      draft.nodes,
-                      draft.edges,
-                      `${workspace?.title || "canvas"}-local-draft`,
+                    setIsChatCollapsed(false);
+                    requestAnimationFrame(() =>
+                      document
+                        .querySelector<HTMLTextAreaElement>(
+                          '#workspace-ai-chat textarea[aria-label="Message Jenkos"]',
+                        )
+                        ?.focus(),
                     );
                   }}
                 >
-                  Export draft
+                  <span
+                    aria-hidden="true"
+                    className="assistant-minimized-dot"
+                  />
+                  Jenkos{" "}
+                  <span className="assistant-minimized-action">Open</span>
                 </button>
+              )}
+              <div className={isChatCollapsed ? "hidden" : "h-full"}>
+                <WorkspaceLeftSidebar
+                  isOpen={isSidebarOpen && canEdit && !isChatCollapsed}
+                  onClose={() => setIsSidebarOpen(false)}
+                  onCollapse={() => setIsChatCollapsed(true)}
+                  expanded={isChatExpanded}
+                  onToggleExpand={() =>
+                    setIsChatExpanded((expanded) => !expanded)
+                  }
+                  workspaceId={workspaceId}
+                  planDisabled={!canEdit || draftConflict}
+                  onBeforePlanApply={takeSnapshot}
+                  onPlanApplied={(result, oldNodes, oldEdges) =>
+                    broadcastSnapshotChange(
+                      { nodes: oldNodes, edges: oldEdges },
+                      result,
+                    )
+                  }
+                />
+              </div>
+            </div>
+            {roleError && (
+              <div
+                role="alert"
+                className="absolute top-16 left-4 right-4 z-[1000] rounded-lg border ws-border ws-option p-3 text-sm ws-ink"
+              >
+                Could not load your workspace permissions. Editing is
+                temporarily unavailable.{" "}
                 <button
-                  className="rounded-md ws-primary px-3 py-2"
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        "Discard this local draft and load the server version? Export a copy first if you need it.",
-                      )
-                    ) {
-                      const cache = getCanvasFromLocalCache(workspaceId);
-                      if (
-                        cache &&
-                        !clearCanvasLocalCache(
-                          workspaceId,
-                          cache.generation,
-                          cacheOwner,
-                        )
-                      ) {
-                        toast({
-                          title: "Draft changed in another editor",
-                          description:
-                            "Export your draft and close the other editor before reloading.",
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-                      window.location.reload();
-                    }
-                  }}
+                  type="button"
+                  className="underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                  onClick={() => void refetchRole()}
                 >
-                  Discard draft and reload
+                  Retry
                 </button>
               </div>
+            )}
+            {draftConflict && (
+              <CanvasRecoveryNotice
+                disabled={canvasTransition !== "idle"}
+                onExport={() => {
+                  const draft = materializeRootCanvas(canvasStack, {
+                    nodes,
+                    edges,
+                  });
+                  exportAsJson(
+                    draft.nodes,
+                    draft.edges,
+                    `${workspace?.title || "canvas"}-local-draft`,
+                  );
+                }}
+                onLoadSaved={async () => {
+                  const generation = saveGenerationRef.current;
+                  const cache = getCanvasFromLocalCache(workspaceId);
+                  const result = await refetchCanvas();
+                  if (result.isError || !result.data)
+                    return "Could not reach the saved version. Your draft is still here; try again when connected.";
+                  if (
+                    activeWorkspaceIdRef.current !== workspaceId ||
+                    generation !== saveGenerationRef.current ||
+                    canvasTransition !== "idle"
+                  )
+                    return "The draft changed while checking. Review it and try again.";
+                  if (
+                    cache &&
+                    !clearCanvasLocalCache(
+                      workspaceId,
+                      cache.generation,
+                      cacheOwner,
+                    )
+                  )
+                    return "The draft changed in another editor. Export it and close the other editor before reloading.";
+                  window.location.reload();
+                  return null;
+                }}
+              />
             )}
             {/* ── Canvas transition overlay ── */}
             <AnimatePresence>
@@ -2136,6 +2428,58 @@ function WorkspaceView() {
               )}
             </AnimatePresence>
 
+            {starterReadyWorkspaceId === workspaceId &&
+              Boolean(user?.id) &&
+              starterPreference.key === starterKey &&
+              !starterPreference.dismissed &&
+              !isLoading &&
+              !isError &&
+              !draftConflict &&
+              canEdit &&
+              !isNested &&
+              canvasTransition === "idle" &&
+              nodes.length === 0 &&
+              edges.length === 0 && (
+                <DiagramStarterChooser
+                  onChoose={applyDiagramStarter}
+                  onBlank={() => saveStarterPreference(true, "all")}
+                />
+              )}
+            <CanvasNavigation
+              key={`${workspaceId}:${canvasStack.map((level) => level.nodeId).join(":")}`}
+              workspaceTitle={workspace?.title || "Untitled project"}
+              path={canvasStack}
+              chatOpen={isSidebarOpen && canEdit && !isChatCollapsed}
+              chatOffset={
+                isSidebarOpen && canEdit
+                  ? isChatCollapsed
+                    ? 170
+                    : isChatExpanded
+                      ? 730
+                      : 405
+                  : 0
+              }
+              nodes={nodes}
+              selectedCount={
+                nodes.filter(
+                  (node) => node.selected || node.id === selectedNodeId,
+                ).length
+              }
+              disabled={canvasTransition !== "idle"}
+              onExit={exitToLevel}
+              onFitSelection={() => {
+                const selected = nodes
+                  .filter((node) => node.selected || node.id === selectedNodeId)
+                  .map((node) => ({ id: node.id }));
+                if (selected.length)
+                  void fitView({
+                    nodes: selected,
+                    duration: 400,
+                    padding: 0.3,
+                  });
+              }}
+              onFocusNode={focusNode}
+            />
             <ReactFlow
               nodes={accessibleNodes}
               edges={displayedEdges}
@@ -2186,10 +2530,13 @@ function WorkspaceView() {
             >
               <Controls
                 position="bottom-left"
-                className="workspace-flow-controls !bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !text-white/50 !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl overflow-hidden !m-6 [&_button]:!bg-transparent [&_button]:!border-white/[0.05] [&_button]:hover:!bg-white/10 [&_button_svg]:!fill-white/70"
+                className={`workspace-flow-controls !bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !text-white/50 !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl overflow-hidden !m-6 [&_button]:!bg-transparent [&_button]:!border-white/[0.05] [&_button]:hover:!bg-white/10 [&_button_svg]:!fill-white/70 ${isSidebarOpen && canEdit && !isChatCollapsed ? "workspace-controls-chat-open" : ""}`}
+                style={{ left: isSidebarOpen && canEdit && !isChatCollapsed ? `min(${isChatExpanded ? 720 : 395}px, calc(100% - 72px))` : undefined }}
               />
               <MiniMap
                 position="bottom-right"
+                pannable
+                zoomable
                 className="workspace-minimap !bg-[#161616]/90 !backdrop-blur-2xl !border-white/[0.06] !shadow-[0_8px_40px_rgba(0,0,0,0.7)] !rounded-2xl !mr-6 !mb-6 overflow-hidden [&_.react-flow__minimap-mask]:!fill-white/80"
               />
               {bgVariant !== "none" && (
@@ -2231,8 +2578,22 @@ function WorkspaceView() {
                   initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
                   animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
                   transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                  style={{ top: menu.top, left: menu.left }}
-                  className="workspace-popover fixed rounded-xl py-1.5 z-[100] min-w-[200px] ws-option backdrop-blur-2xl border ws-border shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)]"
+                  style={{
+                    top: Math.max(
+                      8,
+                      Math.min(
+                        menu.top,
+                        window.innerHeight -
+                          Math.min(448, window.innerHeight * 0.75) -
+                          8,
+                      ),
+                    ),
+                    left: Math.max(
+                      8,
+                      Math.min(menu.left, window.innerWidth - 216),
+                    ),
+                  }}
+                  className="workspace-popover fixed rounded-xl py-1.5 z-[100] min-w-[200px] max-h-[min(28rem,75vh)] overflow-y-auto ws-option backdrop-blur-2xl border ws-border shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_16px_48px_rgba(0,0,0,0.8)]"
                   onClick={() => setMenu(null)}
                 >
                   {menu.type === "node" ? (
@@ -2424,7 +2785,91 @@ function WorkspaceView() {
                       <div className="px-3.5 py-1.5 text-[9px] uppercase font-bold ws-dim tracking-[0.15em]">
                         Quick Add
                       </div>
-                      {favoriteNodes.map((node) => (
+                      {canEdit &&
+                        !isNested &&
+                        nodes.length === 0 &&
+                        edges.length === 0 &&
+                        starterReadyWorkspaceId === workspaceId &&
+                        !draftConflict && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              saveStarterPreference(false, activeDiagramContext)
+                            }
+                            className="w-full px-3.5 py-2 text-left text-xs ws-muted ws-hover-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                          >
+                            Choose a starter
+                          </button>
+                        )}
+                      <div
+                        className="px-2 pb-1"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <input
+                          aria-label="Search node catalog"
+                          value={catalogSearch}
+                          onChange={(event) =>
+                            setCatalogSearch(event.target.value)
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") setMenu(null);
+                            event.stopPropagation();
+                          }}
+                          placeholder="Search all nodes"
+                          className="w-full rounded border ws-border ws-surface-soft ws-ink px-2 py-1.5 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                        />
+                      </div>
+                      <div
+                        className="px-2 pb-1"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <label
+                          htmlFor="node-suggestion-context"
+                          className="block px-1 text-[11px] ws-muted"
+                        >
+                          Suggested nodes
+                        </label>
+                        <select
+                          id="node-suggestion-context"
+                          value={activeDiagramContext}
+                          onChange={(event) =>
+                            saveStarterPreference(
+                              starterPreference.dismissed,
+                              event.target.value as DiagramContext,
+                            )
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") setMenu(null);
+                            event.stopPropagation();
+                          }}
+                          className="mt-1 w-full rounded border ws-border ws-surface-soft ws-ink px-2 py-1.5 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                        >
+                          {DIAGRAM_CONTEXTS.map((context) => (
+                            <option key={context.id} value={context.id}>
+                              {context.label}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="px-1 pt-1 text-[11px] ws-dim">
+                          Search includes all node types.
+                        </p>
+                      </div>
+                      {!catalogBrowse && !catalogSearch.trim() && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setCatalogBrowse(true);
+                          }}
+                          className="w-full px-3.5 py-2 text-left text-xs ws-muted ws-hover-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                        >
+                          Browse all nodes
+                        </button>
+                      )}
+                      {(catalogSearch.trim() || catalogBrowse
+                        ? searchNodeCatalog(catalogSearch)
+                        : suggestedNodes
+                      ).map((node) => (
                         <button
                           key={node.type}
                           onClick={() => {
@@ -2443,6 +2888,12 @@ function WorkspaceView() {
                           {node.label}
                         </button>
                       ))}
+                      {catalogSearch.trim() &&
+                        searchNodeCatalog(catalogSearch).length === 0 && (
+                          <p className="px-3.5 py-2 text-xs ws-muted">
+                            No matching nodes.
+                          </p>
+                        )}
                       <div className="h-px my-1 mx-2 ws-surface-soft" />
                       <button
                         onClick={() => {
@@ -2483,6 +2934,8 @@ function WorkspaceView() {
 
               {/* ── Bottom-center horizontal toolbar ── */}
               <WorkspaceToolbar
+                chatOffset={isSidebarOpen && canEdit && !isChatCollapsed ? (isChatExpanded ? 720 : 395) : 0}
+                chatExpanded={isChatExpanded}
                 drawingMode={drawingMode}
                 setDrawingMode={setDrawingMode}
                 edgeStyle={edgeStyle}
@@ -2532,6 +2985,14 @@ function WorkspaceView() {
                     selectedEdge={selectedEdge}
                     updateNodeData={updateNodeData}
                     updateNodeStyle={updateNodeStyle}
+                    updateNodeType={updateNodeType}
+                    updateNodePin={updateNodePin}
+                    layoutPinDisabled={
+                      !canEdit ||
+                      draftConflict ||
+                      canvasTransition !== "idle" ||
+                      starterReadyWorkspaceId !== workspaceId
+                    }
                     updateEdgeData={updateEdgeData}
                     deleteNode={onDelete}
                     deleteEdge={deleteEdge}
@@ -2548,6 +3009,69 @@ function WorkspaceView() {
       </div>
 
       {/* Workspace Settings Dialog */}
+      <CanvasLayoutDialog
+        key={workspaceId}
+        open={isLayoutOpen}
+        onOpenChange={setIsLayoutOpen}
+        nodes={nodes}
+        edges={edges}
+        selectedIds={nodes
+          .filter((node) => node.selected || node.id === selectedNodeId)
+          .map((node) => node.id)}
+        disabled={
+          !canEdit ||
+          draftConflict ||
+          canvasTransition !== "idle" ||
+          starterReadyWorkspaceId !== workspaceId
+        }
+        onApply={(proposedNodes, base, selection) => {
+          if (
+            !canEdit ||
+            draftConflictRef.current ||
+            canvasTransition !== "idle" ||
+            isInitialLoad.current ||
+            lastLoadedId.current !== workspaceId
+          )
+            return "The canvas is not ready to edit.";
+          const current = { nodes: getNodes(), edges: getEdges() };
+          const currentSelection = selection.length
+            ? current.nodes
+                .filter((node) => node.selected || node.id === selectedNodeId)
+                .map((node) => node.id)
+            : [];
+          if (
+            layoutFingerprint(
+              current.nodes,
+              current.edges,
+              currentSelection,
+            ) !== base
+          )
+            return "The canvas or selection changed. Preview again before applying.";
+          takeSnapshot(current);
+          setNodes(proposedNodes);
+          broadcastSnapshotChange(current, {
+            nodes: proposedNodes,
+            edges: current.edges,
+          });
+          return null;
+        }}
+      />
+      <ConnectionReviewDialog
+        open={isConnectionReviewOpen}
+        onOpenChange={setIsConnectionReviewOpen}
+        nodes={nodes}
+        edges={edges}
+        onSelectEdge={(edge) => {
+          selectEdge(edge);
+          const endpoints = nodes
+            .filter(
+              (node) => node.id === edge.source || node.id === edge.target,
+            )
+            .map((node) => ({ id: node.id }));
+          if (endpoints.length)
+            void fitView({ nodes: endpoints, duration: 300, padding: 0.4 });
+        }}
+      />
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
         <DialogContent className="workspace-dialog max-w-[480px] w-full ws-option backdrop-blur-2xl border ws-border shadow-[0_32px_64px_rgba(0,0,0,0.7)] rounded-2xl ws-ink p-6 space-y-4">
           <DialogHeader className="border-b ws-border pb-3">

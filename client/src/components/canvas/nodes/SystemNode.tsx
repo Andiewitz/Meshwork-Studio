@@ -7,8 +7,10 @@ import {
   Node,
   useStore,
 } from "@xyflow/react";
-import { EXPANDABLE_TYPES } from "@/features/workspace/utils/nodeTypes";
-import { CONTAINER_TYPES } from "@/features/workspace/utils/nodeRegistry";
+import {
+  CONTAINER_TYPES,
+  EXPANDABLE_TYPES,
+} from "@/features/workspace/utils/nodeRegistry";
 import { getNodeMinimumDimensions } from "@/features/workspace/utils/nodeGeometry";
 import { fireEnterNode } from "@/features/workspace/utils/canvasEvents";
 import type { NodeData } from "@/types/canvas";
@@ -88,6 +90,12 @@ interface NodeBrand {
 }
 
 export const nodeBrands: Record<string, NodeBrand> = {
+  "workflow-lane": {
+    Icon: HeroIcons.RectangleGroupIcon,
+    color: "#64748B",
+    borderColor: "#8999b9",
+    label: "LANE",
+  },
   // ── Compute ──
   server: {
     Icon: SiLinux,
@@ -597,6 +605,7 @@ export function SystemNode({
     data.label,
     data.provider,
     data.originalType,
+    data.technology,
   );
   const iconByType: Record<string, keyof typeof HeroIcons> = {
     user: "UserIcon",
@@ -605,6 +614,29 @@ export function SystemNode({
     cdn: "CloudIcon",
     loadBalancer: "ArrowsRightLeftIcon",
     gateway: "GlobeAltIcon",
+    dns: "GlobeAltIcon",
+    firewall: "ShieldCheckIcon",
+    "identity-provider": "KeyIcon",
+    "secrets-manager": "LockClosedIcon",
+    monitoring: "ChartBarIcon",
+    "log-store": "CircleStackIcon",
+    "metrics-store": "ChartBarIcon",
+    "trace-store": "ChartBarIcon",
+    "container-registry": "CubeIcon",
+    scheduler: "ClockIcon",
+    "data-warehouse": "CircleStackIcon",
+    "ci-pipeline": "PlayCircleIcon",
+    "workflow-task": "Cog6ToothIcon",
+    "workflow-decision": "QuestionMarkCircleIcon",
+    "workflow-event": "ClockIcon",
+    "workflow-input": "ArrowDownOnSquareIcon",
+    "workflow-output": "ArrowUpOnSquareIcon",
+    "data-source": "ArrowDownOnSquareIcon",
+    "data-transform": "Cog6ToothIcon",
+    "data-dataset": "CircleStackIcon",
+    "data-model": "Square2StackIcon",
+    "data-destination": "ArrowUpOnSquareIcon",
+    "data-schedule": "ClockIcon",
     server: "ServerIcon",
     microservice: "CodeBracketSquareIcon",
     worker: "CpuChipIcon",

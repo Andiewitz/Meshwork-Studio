@@ -20,6 +20,10 @@ export interface NodeData extends Record<string, unknown> {
   originalType?: string;
   tags?: string[];
   provider?: string;
+  /** Optional product or technology, independent of the node's role. */
+  technology?: string;
+  /** Keep this node's absolute position during manual layout. */
+  layoutPinned?: boolean;
   accentColor?: string;
   note?: string;
   /** Display / visual overrides stored in data (not in CSS style) */
@@ -42,6 +46,9 @@ export interface NodeData extends Record<string, unknown> {
 export interface EdgeData extends Record<string, unknown> {
   label?: string;
   description?: string;
+  relationshipType?: string;
+  protocol?: string;
+  dataExchanged?: string;
   ai?: {
     notes?: string;
   };

@@ -69,6 +69,13 @@ describe("colocated internal routers", () => {
       expect(
         (
           await request(app)
+            .get("/internal/v1/team/users/u/shared-workspace-ids")
+            .set("X-Internal-Key", "node-only-key")
+        ).status,
+      ).toBe(404);
+      expect(
+        (
+          await request(app)
             .get("/internal/stats")
             .set("X-Internal-Key", "node-only-key")
         ).status,

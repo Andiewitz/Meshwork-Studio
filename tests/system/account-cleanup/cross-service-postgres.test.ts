@@ -111,9 +111,6 @@ describe("cross-service account cleanup", () => {
     vi.doMock("@services/workspace/db/internal-routes", () => ({
       registerWorkspaceInternalRoutes: vi.fn(),
     }));
-    vi.doMock("@services/team/routes/teamRoutes", () => ({
-      registerTeamRoutes: vi.fn(),
-    }));
     vi.doMock("@services/team/db/internal-routes", () => ({
       registerTeamInternalRoutes: vi.fn(),
     }));
@@ -183,7 +180,6 @@ describe("cross-service account cleanup", () => {
       "@services/ai/db/connection",
       "@services/workspace/routes/workspaceRoutes",
       "@services/workspace/db/internal-routes",
-      "@services/team/routes/teamRoutes",
       "@services/team/db/internal-routes",
       "@services/ai/routes/aiRoutes",
     ])

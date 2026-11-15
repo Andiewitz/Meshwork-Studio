@@ -1,4 +1,5 @@
 import express from "express";
+import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "@server/lib/events";
 
@@ -24,9 +25,6 @@ vi.mock("@services/workspace/outbox-service", () => ({
   workspaceOutbox: mocks.outbox,
 }));
 vi.mock("@services/team/db/storage", () => ({ teamStorage: mocks.team }));
-vi.mock("@services/team/routes/teamRoutes", () => ({
-  registerTeamRoutes: vi.fn(),
-}));
 vi.mock("@services/team/db/internal-routes", () => ({
   registerTeamInternalRoutes: vi.fn(),
 }));
@@ -43,11 +41,12 @@ import { AIService } from "@services/ai";
 
 describe("account cleanup service commands", () => {
   let bus: EventBus;
+  let app: express.Express;
   const operationId = "bb58910d-3bf7-40cf-9cde-6f3992b09a33";
   beforeEach(() => {
     vi.resetAllMocks();
     bus = new EventBus();
-    const app = express();
+    app = express();
     const context = {
       eventBus: bus,
       isAuthenticated: vi.fn(),
@@ -57,6 +56,19 @@ describe("account cleanup service commands", () => {
     WorkspaceService.initialize(app, context);
     TeamService.initialize(app, context);
     AIService.initialize(app, context);
+  });
+  it("does not expose retired team routes while retaining cleanup", async () => {
+    await request(app).get("/api/v1/teams").expect(404);
+    await request(app).post("/api/v1/teams").expect(404);
+    await request(app).get("/api/v1/workspaces/w/members").expect(404);
+    await expect(
+      bus.executeRequired(
+        "account.cleanup.team",
+        { userId: "user" },
+        { operationId },
+      ),
+    ).resolves.toEqual({ operationId, status: "completed" });
+    expect(mocks.team.deleteAllUserData).toHaveBeenCalledWith("user");
   });
   it("keeps workspace pending until canvas cleanup really completes", async () => {
     mocks.workspace.getUserCleanupStatus

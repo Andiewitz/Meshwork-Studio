@@ -5,12 +5,14 @@ import {
   CpuChipIcon,
   ArrowPathIcon,
   PaperAirplaneIcon,
-  PlusIcon,
   ArrowUpRightIcon,
   TrashIcon,
   CheckIcon,
+  AdjustmentsHorizontalIcon,
+  ArrowsPointingOutIcon,
+  ArrowsPointingInIcon,
 } from "@heroicons/react/24/outline";
-import { LuHistory, LuPlus } from "react-icons/lu";
+import { LuMinus, LuPlus, LuX } from "react-icons/lu";
 import { useReactFlow, useNodes, useEdges } from "@xyflow/react";
 import StreamingText from "@/components/ui/streaming-text";
 import {
@@ -18,6 +20,22 @@ import {
   JenkosAgentMessage,
 } from "@/features/workspace/agent/jenkosAgent";
 import { executeCanvasToolCalls } from "@/features/workspace/agent/tools/canvasToolExecutor";
+import {
+  canvasMatchesPreview,
+  describeCanvasChanges,
+  type CanvasChangePreview,
+} from "@/features/workspace/agent/tools/canvasChangePreview";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ArchitecturePlans } from "./ArchitecturePlans";
 import type { Node, Edge } from "@xyflow/react";
 
@@ -47,9 +65,12 @@ const CATEGORY_ORDER = ["Core", "More", "Kubernetes", "Templates"];
 export interface WorkspaceLeftSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  onCollapse: () => void;
+  expanded: boolean;
+  onToggleExpand: () => void;
   workspaceId: string;
   planDisabled: boolean;
-  onBeforePlanApply: () => void;
+  onBeforePlanApply: (snapshot?: { nodes: Node[]; edges: Edge[] }) => void;
   onPlanApplied: (
     result: ReturnType<typeof executeCanvasToolCalls>,
     oldNodes: Node[],
@@ -60,6 +81,9 @@ export interface WorkspaceLeftSidebarProps {
 export function WorkspaceLeftSidebar({
   isOpen,
   onClose,
+  onCollapse,
+  expanded,
+  onToggleExpand,
   workspaceId,
   planDisabled,
   onBeforePlanApply,
@@ -71,19 +95,75 @@ export function WorkspaceLeftSidebar({
   const [agentStatus, setAgentStatus] = useState("Consulting Jenkos...");
   const [isDesigning, setIsDesigning] = useState(false);
   const [selectedModel, setSelectedModel] = useState("gemini-3.5-flash");
+  const [editScope, setEditScope] = useState<"canvas" | "selection">("canvas");
+  const [pendingChange, setPendingChange] = useState<{
+    workspaceId: string;
+    base: string;
+    result: ReturnType<typeof executeCanvasToolCalls>;
+    preview: CanvasChangePreview;
+    message: JenkosAgentMessage;
+    scope: "canvas" | "selection";
+  } | null>(null);
+  const [previewError, setPreviewError] = useState("");
+  const activeWorkspaceRef = useRef(workspaceId);
+  activeWorkspaceRef.current = workspaceId;
+  const editDisabledRef = useRef(planDisabled);
+  editDisabledRef.current = planDisabled;
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
     null,
   );
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageFeedRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { setNodes, setEdges, fitView, getNodes, getEdges, getViewport } =
     useReactFlow();
   const nodes = useNodes();
   const edges = useEdges();
+
+  const cancelPreview = () => {
+    setPendingChange(null);
+    setPreviewError("");
+    setMessages((previous) => [
+      ...previous,
+      {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "AI changes were cancelled. The canvas was not changed.",
+      },
+    ]);
+  };
+  const applyPreview = () => {
+    if (!pendingChange) return;
+    const latestNodes = getNodes();
+    const latestEdges = getEdges();
+    if (
+      editDisabledRef.current ||
+      activeWorkspaceRef.current !== pendingChange.workspaceId
+    ) {
+      setPreviewError("Editing is unavailable. No changes were applied.");
+      return;
+    }
+    if (!canvasMatchesPreview(pendingChange.base, latestNodes, latestEdges)) {
+      setPreviewError(
+        "The canvas changed since this preview was created. Cancel and ask again to review an updated proposal.",
+      );
+      return;
+    }
+    onBeforePlanApply({ nodes: latestNodes, edges: latestEdges });
+    setNodes(pendingChange.result.nodes);
+    setEdges(pendingChange.result.edges);
+    onPlanApplied(pendingChange.result, latestNodes, latestEdges);
+    setMessages((previous) => [
+      ...previous,
+      { ...pendingChange.message, appliedToCanvas: true },
+    ]);
+    setPendingChange(null);
+    setPreviewError("");
+    setTimeout(() => fitView({ duration: 700, padding: 0.2 }), 100);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -123,10 +203,8 @@ export function WorkspaceLeftSidebar({
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(
-        () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }),
-        50,
-      );
+      const feed = messageFeedRef.current;
+      if (feed) feed.scrollTop = feed.scrollHeight;
     }
   }, [messages, isOpen]);
 
@@ -165,16 +243,31 @@ export function WorkspaceLeftSidebar({
             detail: { active: true, x: centerX, y: centerY },
           }),
         );
-        window.dispatchEvent(
-          new CustomEvent("jenkos:designing", {
-            detail: { active: true, x: centerX, y: centerY },
-          }),
-        );
       }
 
       try {
         const currentNodes = getNodes();
         const currentEdges = getEdges();
+        const selectionScope =
+          editScope === "selection"
+            ? {
+                nodeIds: currentNodes
+                  .filter((node) => node.selected)
+                  .map((node) => node.id),
+                edgeIds: currentEdges
+                  .filter((edge) => edge.selected)
+                  .map((edge) => edge.id),
+              }
+            : undefined;
+        if (
+          selectionScope &&
+          !selectionScope.nodeIds.length &&
+          !selectionScope.edgeIds.length
+        ) {
+          throw new Error(
+            "Select at least one node or connection, or change the scope to entire canvas.",
+          );
+        }
         const initialCanvas = JSON.stringify({
           nodes: currentNodes,
           edges: currentEdges,
@@ -185,12 +278,20 @@ export function WorkspaceLeftSidebar({
           history: messages,
           currentNodes,
           currentEdges,
+          selectionScope,
           viewportCenter: { x: centerX, y: centerY },
           model: modelToUse,
           onStatusUpdate: (status) => setAgentStatus(status),
         });
 
         if (agentResult.canvasResult?.applied) {
+          if (
+            editDisabledRef.current ||
+            activeWorkspaceRef.current !== workspaceId
+          )
+            throw new Error(
+              "Editing is unavailable. No AI changes were applied.",
+            );
           const latestNodes = getNodes();
           const latestEdges = getEdges();
           const operations = agentResult.message.toolCalls?.map(
@@ -199,15 +300,37 @@ export function WorkspaceLeftSidebar({
           const canvasChangedWhileWaiting =
             initialCanvas !==
             JSON.stringify({ nodes: latestNodes, edges: latestEdges });
-          const canvasResult =
-            canvasChangedWhileWaiting && operations?.length
-              ? executeCanvasToolCalls(latestNodes, latestEdges, operations, {
-                  x: centerX,
-                  y: centerY,
-                })
-              : agentResult.canvasResult;
+          if (canvasChangedWhileWaiting) {
+            throw new Error(
+              "The canvas changed while the diagram was being generated. No changes were applied; please try again.",
+            );
+          }
+          const canvasResult = agentResult.canvasResult;
+          if (!canvasResult.applied)
+            throw new Error("The AI could not apply this change.");
+          const preview = describeCanvasChanges(
+            latestNodes,
+            latestEdges,
+            canvasResult.nodes,
+            canvasResult.edges,
+            operations,
+          );
+          if (preview.requiresReview) {
+            setPreviewError("");
+            setPendingChange({
+              workspaceId,
+              base: initialCanvas,
+              result: canvasResult,
+              preview,
+              message: agentResult.message,
+              scope: selectionScope ? "selection" : "canvas",
+            });
+            return;
+          }
+          onBeforePlanApply({ nodes: latestNodes, edges: latestEdges });
           setNodes(canvasResult.nodes);
           setEdges(canvasResult.edges);
+          onPlanApplied(canvasResult, latestNodes, latestEdges);
           setTimeout(() => fitView({ duration: 700, padding: 0.2 }), 100);
         }
 
@@ -244,9 +367,6 @@ export function WorkspaceLeftSidebar({
         window.dispatchEvent(
           new CustomEvent("jenkos:designing", { detail: { active: false } }),
         );
-        window.dispatchEvent(
-          new CustomEvent("jenkos:designing", { detail: { active: false } }),
-        );
       }
     },
     [
@@ -254,6 +374,10 @@ export function WorkspaceLeftSidebar({
       getEdges,
       getViewport,
       messages,
+      editScope,
+      workspaceId,
+      onBeforePlanApply,
+      onPlanApplied,
       selectedModel,
       setEdges,
       setNodes,
@@ -292,7 +416,47 @@ export function WorkspaceLeftSidebar({
   };
 
   return (
-    <div className="workspace-assistant h-full flex flex-col overflow-hidden select-none">
+    <div className="workspace-assistant flex flex-col overflow-hidden select-none">
+      <div className="assistant-header">
+        <div>
+          <p className="assistant-title">Jenkos</p>
+          <p className="assistant-subtitle">AI assistant</p>
+        </div>
+        <div className="assistant-header-actions">
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            aria-label={expanded ? "Restore chat width" : "Expand AI chat"}
+            title={expanded ? "Restore chat width" : "Expand AI chat"}
+            aria-pressed={expanded}
+            className="assistant-icon-button"
+          >
+            {expanded ? (
+              <ArrowsPointingInIcon aria-hidden="true" className="h-4 w-4" />
+            ) : (
+              <ArrowsPointingOutIcon aria-hidden="true" className="h-4 w-4" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={onCollapse}
+            aria-label="Collapse AI chat"
+            title="Collapse AI chat"
+            className="assistant-icon-button"
+          >
+            <LuMinus aria-hidden="true" className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close AI chat"
+            title="Close AI chat"
+            className="assistant-icon-button"
+          >
+            <LuX aria-hidden="true" className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
       {/* ── Jenkos AI Co-pilot (always-on, no tabs) ── */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Tiny clear button */}
@@ -309,43 +473,41 @@ export function WorkspaceLeftSidebar({
         )}
 
         {/* Chat Messages Feed */}
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 scrollbar-thin scrollbar-thumb-white/[0.08]">
+        <div
+          ref={messageFeedRef}
+          className="assistant-feed flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/[0.08]"
+        >
           {/* Top action icons: reverse clock (history) and plus (new chat) */}
-          <div className="flex items-center justify-between pb-1">
-            <button
-              type="button"
-              className="w-7 h-7 flex items-center justify-center rounded-lg ws-muted ws-hover-ink ws-hover-surface transition-colors"
-              title="Chat History"
-            >
-              <LuHistory className="w-4 h-4" />
-            </button>
+          <div className="assistant-section-heading">
+            <span>Conversation</span>
 
             <button
               type="button"
               onClick={() => setMessages([])}
-              className="w-7 h-7 flex items-center justify-center rounded-lg ws-muted ws-hover-ink ws-hover-surface transition-colors"
+              className="assistant-icon-button"
               title="New Chat"
+              aria-label="New chat"
             >
               <LuPlus className="w-4 h-4" />
             </button>
           </div>
 
           {messages.length === 0 && (
-            <div className="workspace-assistant-intro py-2 flex flex-col">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-5 h-5 rounded-md ws-surface-soft border ws-border flex items-center justify-center shrink-0">
-                  <CpuChipIcon className="w-3 h-3 ws-ink" />
+            <div className="workspace-assistant-intro assistant-intro">
+              <div className="assistant-intro-heading">
+                <div className="assistant-avatar">
+                  <CpuChipIcon className="w-4 h-4 ws-ink" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-medium ws-ink">Jenkos</p>
-                  <p className="text-[11px] ws-dim">
-                    Describe any system or ask to design cloud topologies.
+                  <p className="assistant-intro-title">What can I help with?</p>
+                  <p className="assistant-intro-copy">
+                    Ask about your canvas or describe a system.
                   </p>
                 </div>
               </div>
 
               {/* Suggestions as border-b list */}
-              <div className="flex flex-col">
+              <div className="assistant-suggestions">
                 {suggestions.map((s, sIdx) => (
                   <button
                     key={sIdx}
@@ -354,7 +516,7 @@ export function WorkspaceLeftSidebar({
                       setInput(s);
                       textareaRef.current?.focus();
                     }}
-                    className="flex items-center gap-2 border-b ws-border py-2 px-0.5 text-left text-[11.5px] ws-muted ws-hover-surface ws-hover-ink transition-colors duration-100 cursor-pointer rounded-sm"
+                    className="assistant-suggestion"
                   >
                     <svg
                       width="10"
@@ -370,7 +532,7 @@ export function WorkspaceLeftSidebar({
                       <path d="M9 10l-5 5 5 5" />
                       <path d="M20 4v7a4 4 0 0 1-4 4H4" />
                     </svg>
-                    <span className="line-clamp-2">{s}</span>
+                    <span>{s}</span>
                   </button>
                 ))}
               </div>
@@ -385,7 +547,7 @@ export function WorkspaceLeftSidebar({
             >
               {msg.role === "user" ? (
                 <div className="flex justify-end">
-                  <div className="workspace-user-message max-w-[85%] rounded-xl rounded-tr-sm px-3 py-2 text-[11px] ws-ink">
+                  <div className="workspace-user-message max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ws-ink">
                     <span className="whitespace-pre-wrap">{msg.content}</span>
                   </div>
                 </div>
@@ -463,15 +625,13 @@ export function WorkspaceLeftSidebar({
               </div>
             </div>
           )}
-
-          <div ref={messagesEndRef} />
         </div>
 
         {/* ── Composer Card ── */}
-        <div className="p-2.5 pt-1">
+        <div className="assistant-composer-wrap">
           <form
             onSubmit={handleSubmit}
-            className="workspace-composer rounded-2xl ws-surface-soft border ws-border ws-focus-within-border transition-all p-2.5 space-y-2"
+            className="workspace-composer assistant-composer"
           >
             <textarea
               ref={textareaRef}
@@ -479,41 +639,83 @@ export function WorkspaceLeftSidebar({
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              placeholder="Queue follow-up..."
-              className="w-full bg-transparent border-0 resize-none rounded ws-ink text-[12px] ws-placeholder px-0.5 py-0.5 leading-relaxed min-h-[44px] max-h-28 scrollbar-thin focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+              placeholder="Ask Jenkos..."
+              className="assistant-input ws-placeholder"
               rows={1}
             />
 
-            <div className="flex items-center justify-between pt-1 border-t ws-border">
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setInput((prev) => prev + " @context");
-                    textareaRef.current?.focus();
-                  }}
-                  className="w-6 h-6 rounded-full flex items-center justify-center ws-muted ws-hover-ink ws-hover-surface transition-all"
-                  title="Add context"
-                >
-                  <PlusIcon className="w-3.5 h-3.5" />
-                </button>
-
-                <select
-                  aria-label="AI model"
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="h-7 px-2 rounded-full ws-surface-soft border ws-border ws-ink text-[11px] font-medium cursor-pointer ws-hover-surface transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
-                >
-                  {AVAILABLE_MODELS.map((m) => (
-                    <option
-                      key={m.id}
-                      value={m.id}
-                      className="ws-option ws-ink"
+            <div className="assistant-composer-actions">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="AI chat options"
+                      title="AI chat options"
+                      className="assistant-icon-button"
                     >
-                      Build ▾ ({m.name.split(" ")[0]})
-                    </option>
-                  ))}
-                </select>
+                      <AdjustmentsHorizontalIcon
+                        aria-hidden="true"
+                        className="h-4 w-4"
+                      />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    side="top"
+                    sideOffset={8}
+                    className="workspace-popover assistant-options w-64 max-w-[calc(100vw-2rem)] ws-option ws-ink border ws-border"
+                  >
+                    <p className="assistant-options-title">Chat options</p>
+                    <label className="assistant-options-field">
+                      <span>AI model</span>
+                      <select
+                        aria-label="AI model"
+                        value={selectedModel}
+                        onChange={(event) =>
+                          setSelectedModel(event.target.value)
+                        }
+                        className="assistant-options-select"
+                      >
+                        {AVAILABLE_MODELS.map((model) => (
+                          <option key={model.id} value={model.id}>
+                            {model.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="assistant-options-field">
+                      <span>AI edit scope</span>
+                      <select
+                        aria-label="AI edit scope"
+                        value={editScope}
+                        onChange={(event) =>
+                          setEditScope(
+                            event.target.value as "canvas" | "selection",
+                          )
+                        }
+                        className="assistant-options-select"
+                      >
+                        <option value="canvas">Entire canvas</option>
+                        <option value="selection">
+                          Selected items (
+                          {nodes.filter((node) => node.selected).length +
+                            edges.filter((edge) => edge.selected).length}
+                          )
+                        </option>
+                      </select>
+                    </label>
+                    {editScope === "selection" && (
+                      <p className="text-xs ws-muted">
+                        Only selected existing items can be changed or removed.
+                        Select affected connections too.
+                      </p>
+                    )}
+                  </PopoverContent>
+                </Popover>
+                {editScope === "selection" && (
+                  <span className="text-xs ws-muted">Selected items only</span>
+                )}
               </div>
 
               <div className="flex items-center gap-1">
@@ -529,16 +731,96 @@ export function WorkspaceLeftSidebar({
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="h-7 px-3.5 rounded-full flex items-center gap-1.5 ws-primary font-semibold text-[11px] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all shadow-sm cursor-pointer"
+                  className="assistant-send ws-primary"
                 >
                   <PaperAirplaneIcon className="w-3 h-3" />
-                  <span>Build</span>
+                  <span>Send</span>
                 </button>
               </div>
             </div>
           </form>
         </div>
       </div>
+      <Dialog
+        open={Boolean(pendingChange)}
+        onOpenChange={(open) => {
+          if (!open && pendingChange) cancelPreview();
+        }}
+      >
+        <DialogContent className="workspace-dialog ws-ink border ws-border rounded-2xl w-[calc(100%-2rem)] max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 select-text">
+          <DialogTitle>Review AI changes</DialogTitle>
+          <DialogDescription className="ws-muted">
+            Scope:{" "}
+            {pendingChange?.scope === "selection"
+              ? "selected items"
+              : "entire canvas"}
+            . Review the affected items before applying.
+          </DialogDescription>
+          {pendingChange && (
+            <div className="space-y-4">
+              {[
+                pendingChange.preview.addedNodes,
+                pendingChange.preview.changedNodes,
+                pendingChange.preview.removedNodes,
+                pendingChange.preview.addedEdges,
+                pendingChange.preview.changedEdges,
+                pendingChange.preview.removedEdges,
+              ].every((items) => items.length === 0) && (
+                <p className="text-sm ws-muted">
+                  No item differences were found.
+                </p>
+              )}
+              {(
+                [
+                  ["Nodes to add", pendingChange.preview.addedNodes],
+                  ["Nodes to change", pendingChange.preview.changedNodes],
+                  ["Nodes to remove", pendingChange.preview.removedNodes],
+                  ["Connections to add", pendingChange.preview.addedEdges],
+                  ["Connections to change", pendingChange.preview.changedEdges],
+                  ["Connections to remove", pendingChange.preview.removedEdges],
+                ] as const
+              )
+                .filter(([, items]) => items.length > 0)
+                .map(([title, items]) => (
+                  <section key={title}>
+                    <h3 className="text-sm font-semibold ws-ink">
+                      {title} ({items.length})
+                    </h3>
+                    <ul className="mt-1 space-y-1 text-sm ws-muted">
+                      {items.map((item) => (
+                        <li key={item.id} className="break-words">
+                          {item.label}{" "}
+                          <span className="ws-dim">({item.id})</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              {previewError && (
+                <p role="alert" className="text-sm text-red-400">
+                  {previewError}
+                </p>
+              )}
+              <div className="flex justify-end gap-2 border-t ws-border pt-3">
+                <button
+                  type="button"
+                  onClick={cancelPreview}
+                  className="rounded px-3 py-2 text-sm ws-muted ws-hover-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={applyPreview}
+                  className="rounded px-3 py-2 text-sm font-semibold ws-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                >
+                  Apply changes
+                </button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

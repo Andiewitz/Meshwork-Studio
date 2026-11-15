@@ -292,72 +292,9 @@ export function useWorkspaceRole(workspaceId: string | null | undefined) {
         getApiUrl(`/api/v1/workspaces/${workspaceId}/role`),
         { credentials: "include" },
       );
-      if (!res.ok) return { role: "none" as WorkspaceRole };
+      if (!res.ok) throw new Error("Could not load workspace access");
       return res.json() as Promise<{ role: WorkspaceRole }>;
     },
     enabled: isAuthenticated && !!workspaceId,
-  });
-}
-
-// Hook to fetch all members for a workspace (via its team)
-export interface WorkspaceMember {
-  id: string;
-  userId: string;
-  email: string;
-  firstName: string | null;
-  profileImageUrl: string | null;
-  role: string;
-  color: string;
-}
-
-export function useWorkspaceMembers(workspaceId: string | null | undefined) {
-  const { isAuthenticated } = useAuth();
-  return useQuery<{ teamId: string | null; members: WorkspaceMember[] }>({
-    queryKey: ["workspace-members", workspaceId],
-    queryFn: async () => {
-      const res = await secureFetch(
-        getApiUrl(`/api/v1/workspaces/${workspaceId}/members`),
-        { credentials: "include" },
-      );
-      if (!res.ok) return { teamId: null, members: [] };
-      return res.json() as Promise<{
-        teamId: string | null;
-        members: WorkspaceMember[];
-      }>;
-    },
-    enabled: isAuthenticated && !!workspaceId,
-  });
-}
-
-// Hook to update a member's role
-export function useUpdateMemberRole() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      teamId,
-      userId,
-      role,
-    }: {
-      teamId: string;
-      userId: string;
-      role: string;
-    }) => {
-      const res = await secureFetch(
-        getApiUrl(`/api/v1/teams/${teamId}/members/${userId}/role`),
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ role }),
-          credentials: "include",
-        },
-      );
-      if (!res.ok) await throwApiError(res, "Failed to update role");
-      return res.json() as Promise<{ role: string }>;
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["workspace-members"] });
-      void queryClient.invalidateQueries({ queryKey: ["workspace-role"] });
-    },
   });
 }

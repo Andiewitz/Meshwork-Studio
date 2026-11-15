@@ -1,5 +1,12 @@
 import type { Node, Edge } from "@xyflow/react";
 import { secureFetch } from "@/lib/secure-fetch";
+import { NODE_DEFINITIONS } from "@/features/workspace/utils/nodeRegistry";
+import { getNodeIdentity } from "@/features/workspace/utils/nodeIdentity";
+import {
+  assertSelectionOperation,
+  assertSelectionResult,
+  type SelectionScope,
+} from "./tools/canvasEditScope";
 import {
   executeEditCanvas,
   EditCanvasToolArgs,
@@ -31,14 +38,7 @@ Your mission is to help software engineers, DevOps teams, and architects design 
 2. **Canvas Editing via \`edit_canvas\` Tool**:
    - When the user asks to design, add, connect, build, modify, or remove components from the canvas, invoke the \`edit_canvas\` tool.
    - **Incremental by default**: When asked to add or change something, add/update only the required nodes and connect them to existing nodes. Do not wipe out existing nodes unless the user explicitly requests to "start over", "clear and rebuild", or "replace everything".
-   - **Supported Node Types**:
-     - Compute: server, microservice, logic (Lambda/Serverless), worker
-     - Storage & DBs: database (SQL/NoSQL), storage (S3/Blob), cache (Redis), search (Elasticsearch)
-     - Networking & Edge: gateway (API Gateway), loadBalancer, cdn, route53, waf
-     - Messaging: queue (RabbitMQ/SQS), bus (Kafka/Kinesis)
-     - Infrastructure & Containers: vpc, region, k8s-namespace, k8s-pod, k8s-deployment, k8s-service
-     - Client/UI: user, app (Frontend/Mobile)
-     - Documentation: annotation, note
+   - **Supported Node Types**: ${NODE_DEFINITIONS.map(({ id, palette, description }) => `${id}${palette ? ` (${palette.label})` : ""}${description ? `: ${description}` : ""}`).join("; ")}
 
 3. **Diagram design and topology**:
    - Use Meshwork's built-in node types and their layer colors and shapes. Do not assign accent colors unless the user explicitly asks for custom colors.
@@ -94,6 +94,11 @@ export const JENKOS_TOOLS = [
                   type: "string",
                   description: "Cloud provider: aws, gcp, azure, k8s, etc.",
                 },
+                technology: {
+                  type: "string",
+                  description:
+                    "Specific product or technology, if known (e.g. Redis or PostgreSQL).",
+                },
                 parentId: {
                   type: "string",
                   description: "Optional parent container ID (e.g. VPC ID)",
@@ -133,6 +138,19 @@ export const JENKOS_TOOLS = [
                   type: "string",
                   description:
                     "Connection protocol or description (e.g. HTTPS, gRPC)",
+                },
+                relationshipType: {
+                  type: "string",
+                  description:
+                    "Relationship such as depends on, sends data, or triggers.",
+                },
+                protocol: {
+                  type: "string",
+                  description: "Communication protocol, if known.",
+                },
+                dataExchanged: {
+                  type: "string",
+                  description: "Data or event exchanged, if known.",
                 },
                 dashed: { type: "boolean" },
                 animated: { type: "boolean" },
@@ -199,6 +217,8 @@ export function formatCanvasContext(
     label: (n.data?.label as string) || n.type,
     description: (n.data?.description as string) || "",
     provider: (n.data?.provider as string) || undefined,
+    technology: getNodeIdentity(n.type, n.data).technology || undefined,
+    role: getNodeIdentity(n.type, n.data).role,
     parentId: n.parentId || undefined,
     position: n.position,
   }));
@@ -208,6 +228,9 @@ export function formatCanvasContext(
     source: e.source,
     target: e.target,
     label: (e.data?.label as string) || (e.label as string) || undefined,
+    relationshipType: e.data?.relationshipType,
+    protocol: e.data?.protocol,
+    dataExchanged: e.data?.dataExchanged,
   }));
 
   return `${memoryText}\n\nCURRENT CANVAS STATE (${nodes.length} nodes, ${edges.length} edges):
@@ -226,6 +249,7 @@ export interface SendAgentPromptOptions {
   memories?: { key: string; content: string; category?: string }[];
   model?: string;
   onStatusUpdate?: (status: string) => void;
+  selectionScope?: SelectionScope;
 }
 
 export interface AgentRunResponse {
@@ -331,16 +355,39 @@ export async function runJenkosAgent({
   memories,
   model = "gemini-3.5-flash",
   onStatusUpdate,
+  selectionScope,
 }: SendAgentPromptOptions): Promise<AgentRunResponse> {
   onStatusUpdate?.("Consulting Jenkos...");
 
+  const selectedNodeIds = new Set(selectionScope?.nodeIds ?? []);
+  const selectedEdgeIds = new Set(selectionScope?.edgeIds ?? []);
+  const contextEdges = selectionScope
+    ? currentEdges.filter(
+        (edge) =>
+          selectedEdgeIds.has(edge.id) ||
+          selectedNodeIds.has(edge.source) ||
+          selectedNodeIds.has(edge.target),
+      )
+    : currentEdges;
+  const contextNodeIds = new Set([
+    ...selectedNodeIds,
+    ...contextEdges.flatMap((edge) => [edge.source, edge.target]),
+  ]);
+  const contextNodes = selectionScope
+    ? currentNodes.filter((node) => contextNodeIds.has(node.id))
+    : currentNodes;
   const canvasContext = formatCanvasContext(
-    currentNodes,
-    currentEdges,
+    contextNodes,
+    contextEdges,
     viewportCenter,
     memories,
   );
-  const fullSystemPrompt = JENKOS_SYSTEM_PROMPT + canvasContext;
+  const fullSystemPrompt =
+    JENKOS_SYSTEM_PROMPT +
+    canvasContext +
+    (selectionScope
+      ? `\n\nEDIT SCOPE: Only selected existing items may be updated or deleted. Do not add items, reorganize, or replace the canvas. Other items are read-only context. Selected node IDs: ${JSON.stringify(selectionScope.nodeIds)}. Selected edge IDs: ${JSON.stringify(selectionScope.edgeIds)}.`
+      : "\n\nEDIT SCOPE: Entire canvas.");
 
   const payloadMessages = [
     { role: "system" as const, content: fullSystemPrompt },
@@ -423,15 +470,30 @@ export async function runJenkosAgent({
               ? JSON.parse(tc.function.arguments)
               : tc.function.arguments;
         } catch {
-          args = {};
+          throw new Error(
+            "The AI returned an invalid canvas operation. No changes were applied.",
+          );
         }
 
+        if (selectionScope) assertSelectionOperation(args, selectionScope);
         const result = executeEditCanvas(
           workingNodes,
           workingEdges,
           args,
           viewportCenter,
         );
+        if (!result.applied)
+          throw new Error(
+            "The AI could not complete its canvas changes. No changes were applied.",
+          );
+        if (selectionScope)
+          assertSelectionResult(
+            workingNodes,
+            workingEdges,
+            result.nodes,
+            result.edges,
+            selectionScope,
+          );
         if (result.applied) {
           workingNodes = result.nodes;
           workingEdges = result.edges;
@@ -457,7 +519,11 @@ export async function runJenkosAgent({
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[1]);
-        if (parsed.nodes || parsed.edges) {
+        if (
+          (parsed.nodes || parsed.edges) &&
+          currentNodes.length === 0 &&
+          currentEdges.length === 0
+        ) {
           canvasResult = executeEditCanvas(
             currentNodes,
             currentEdges,
@@ -472,6 +538,9 @@ export async function runJenkosAgent({
           textContent = textContent
             .replace(/```(?:json)?\n[\s\S]*?\n```/g, "")
             .trim();
+        } else if (parsed.nodes || parsed.edges) {
+          textContent +=
+            "\n\nThe generated diagram was not applied because the canvas already contains content. Ask Jenkos to make a targeted edit instead.";
         }
       } catch {
         // Ignore fallback parse failure

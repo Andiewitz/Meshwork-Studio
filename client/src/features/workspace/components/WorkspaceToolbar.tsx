@@ -53,6 +53,8 @@ interface WorkspaceToolbarProps {
   onUpdateSelected: (update: (edge: Edge) => Edge) => void;
   fitView: (options?: { duration?: number }) => void;
   onAddNote?: () => void;
+  chatOffset?: number;
+  chatExpanded?: boolean;
 }
 
 export function WorkspaceToolbar({
@@ -71,17 +73,20 @@ export function WorkspaceToolbar({
   onUpdateSelected,
   fitView,
   onAddNote,
+  chatOffset = 0,
+  chatExpanded = false,
 }: WorkspaceToolbarProps) {
   return (
     <Panel
       position="bottom-center"
-      className="mb-6 z-40 max-w-[calc(100%-2rem)]"
+      className={`mb-6 z-40 max-w-[calc(100%-2rem)] ${chatOffset ? "workspace-toolbar-chat-open" : ""} ${chatOffset && chatExpanded ? "workspace-toolbar-chat-expanded" : ""}`}
+      style={chatOffset ? { left: `calc(50% + ${chatOffset / 2}px)` } : undefined}
     >
       <motion.div
         initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-        className="workspace-toolbar flex items-center overflow-x-auto rounded-2xl p-1 gap-0.5 ws-option backdrop-blur-2xl border ws-border shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_40px_rgba(0,0,0,0.6)] select-none"
+        className="workspace-toolbar flex items-center overflow-x-auto rounded-2xl p-1 gap-0.5 border ws-border select-none"
       >
         {/* Select Tool */}
         <Tooltip>
@@ -89,6 +94,7 @@ export function WorkspaceToolbar({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Select tool"
               aria-pressed={drawingMode === "select"}
               onClick={() => setDrawingMode("select")}
               className={`w-8 h-8 rounded-xl transition-all ${
@@ -109,6 +115,7 @@ export function WorkspaceToolbar({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Pan canvas"
               aria-pressed={drawingMode === "pan"}
               onClick={() => setDrawingMode("pan")}
               className={`w-8 h-8 rounded-xl transition-all ${
@@ -131,6 +138,8 @@ export function WorkspaceToolbar({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Infrastructure zone"
+              aria-pressed={drawingMode === "infrastructure"}
               onClick={() =>
                 setDrawingMode(
                   drawingMode === "infrastructure"
@@ -341,6 +350,7 @@ export function WorkspaceToolbar({
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Add sticky note"
                 onClick={onAddNote}
                 className="w-8 h-8 rounded-xl ws-muted ws-hover-ink ws-hover-surface transition-all"
               >
@@ -357,6 +367,8 @@ export function WorkspaceToolbar({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Annotation tool"
+              aria-pressed={drawingMode === "annotation"}
               onClick={() =>
                 setDrawingMode(
                   drawingMode === "annotation" ? "select" : "annotation",
@@ -382,6 +394,7 @@ export function WorkspaceToolbar({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Fit canvas"
               onClick={() => fitView({ duration: 600 })}
               className="w-8 h-8 rounded-xl ws-muted ws-hover-ink ws-hover-surface transition-all"
             >

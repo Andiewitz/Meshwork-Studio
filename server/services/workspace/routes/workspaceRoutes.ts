@@ -152,6 +152,31 @@ export function registerWorkspaceRoutes(
     const workspace = await workspaceStorage.getWorkspace(getParamId(req));
     return workspace?.userId === getUserId(req) ? workspace : undefined;
   };
+  app.get("/api/v1/workspaces/:id/role", isAuthenticated, async (req, res) => {
+    try {
+      const id = getParamId(req);
+      const workspace = await workspaceStorage.getWorkspace(id);
+      if (!workspace) return fail(req, res, "NOT_FOUND", "Workspace not found");
+      const userId = getUserId(req);
+      const role = isWorkspaceOwner(workspace, userId)
+        ? "workspace-owner"
+        : await access.getWorkspaceRole(id, userId);
+      if (!role)
+        return fail(req, res, "FORBIDDEN", "No access to this workspace");
+      return res.json({ role });
+    } catch (error) {
+      logTraceback(log, "Failed to load workspace role", error, {
+        userId: getUserId(req),
+        requestId: req.requestId ?? "unscoped",
+      });
+      return fail(
+        req,
+        res,
+        "WORKSPACE_UNAVAILABLE",
+        "Could not load workspace access",
+      );
+    }
+  });
   app.get(
     "/api/v1/workspaces/:id/collaborators",
     isAuthenticated,

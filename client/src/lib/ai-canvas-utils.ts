@@ -60,6 +60,9 @@ export interface RawEdge {
   dashed?: boolean;
   animated?: boolean;
   color?: string;
+  relationshipType?: string;
+  protocol?: string;
+  dataExchanged?: string;
   data?: {
     label?: string;
     description?: string;
@@ -128,6 +131,13 @@ export function createGeneratedEdge(
       description: e.data?.description ?? "",
       ai: { notes: e.data?.ai?.notes ?? "" },
       connectionKind: kind,
+      ...(e.relationshipType !== undefined
+        ? { relationshipType: e.relationshipType }
+        : {}),
+      ...(e.protocol !== undefined ? { protocol: e.protocol } : {}),
+      ...(e.dataExchanged !== undefined
+        ? { dataExchanged: e.dataExchanged }
+        : {}),
     },
     ...(label
       ? {

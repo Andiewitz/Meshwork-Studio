@@ -2,7 +2,7 @@
 // ─── Meshwork k6 fixture seeder ──────────────────────────────────────────────
 // Registers N accounts through the real HTTP API (nginx :5000 → Go auth),
 // logs each one in, gives every user a personal workspace with a canvas in
-// DynamoDB, then builds teams. Runs OUTSIDE the measured window; it exists so
+// DynamoDB, then grants workspace collaborators. Runs outside the measured window so
 // k6 can assume accounts/workspaces/canvases already exist.
 //
 // Output: tests/load/results/state.json — consumed by k6 scripts.
@@ -206,7 +206,7 @@ async function bootstrapAccount(email) {
   }
   auth.personalWorkspace = { id: ws.body.id, revision: sync.body.revision };
 
-  // 5. optional team membership handled by seed() (needs the invite code)
+  // Collaborator grants are created after all accounts are provisioned.
   return auth;
 }
 
@@ -252,7 +252,10 @@ async function ensureCanvasTable() {
         ],
       }),
     );
-    await waitUntilTableExists({ client, maxWaitTime: 30 }, { TableName: table });
+    await waitUntilTableExists(
+      { client, maxWaitTime: 30 },
+      { TableName: table },
+    );
     console.log(`  canvas table "${table}" created`);
   } catch (err) {
     // Another creator (backend boot) won the race — that's fine.
@@ -318,7 +321,7 @@ async function main() {
     `\n  ✓ ${USERS} accounts registered + logged in (${((Date.now() - t0) / 1000).toFixed(0)}s)`,
   );
 
-  // ── teams: owner = first member of each chunk; others join via invite code
+  // Each group shares workspaces through direct collaborator grants.
   state.users = accounts.map((a) => ({
     email: a.email,
     password: a.password,
@@ -346,49 +349,33 @@ async function main() {
         teamAccount.jar,
       ).then((r) => ((teamAccount.jar = r.jar), r));
 
-    const team = await call("/api/v1/teams", { name: `Load-Team-${t}` });
-    if (team.status !== 201) throw new Error(`team ${team.status}`);
-    const teamId = team.body.id;
-    state.teams[t].id = teamId;
-
     for (const seedWs of [0, 1]) {
       const ws = await call("/api/v1/workspaces", {
         title: `T${t}-S${seedWs}`,
       });
       if (ws.status !== 201) throw new Error(`team ws ${ws.status}`);
-      const share = await call(`/api/v1/teams/${teamId}/workspaces`, {
-        workspaceId: ws.body.id,
-      });
-      if (share.status !== 201) throw new Error(`share ${share.status}`);
       state.teams[t].sharedWorkspaceIds.push(ws.body.id);
-    }
-
-    // members join (viewer role — realistic read-mostly membership)
-    for (let m = 1; m < TEAM_SIZE && t * TEAM_SIZE + m < USERS; m++) {
-      const member = accounts[t * TEAM_SIZE + m];
-      const join = await clientFetch(
-        "/api/v1/teams/join",
-        {
-          method: "POST",
-          headers: {
-            "X-CSRF-Token":
-              member.jar.find(([k]) => k === "meshwork_csrf")?.[1] ?? "",
-            Origin: ORIGIN,
-            "Content-Type": "application/json",
+      for (let m = 1; m < TEAM_SIZE && t * TEAM_SIZE + m < USERS; m++) {
+        const member = accounts[t * TEAM_SIZE + m];
+        const grant = await call(
+          `/api/v1/workspaces/${ws.body.id}/collaborators`,
+          {
+            email: member.email,
+            permission: "view",
           },
-          body: JSON.stringify({ inviteCode: team.body.inviteCode }),
-        },
-        member.jar,
-      ).then((r) => ((member.jar = r.jar), r));
-      if (join.status !== 201) {
-        throw new Error(`join ${join.status} ${JSON.stringify(join.body)}`);
+        );
+        if (grant.status !== 201) {
+          throw new Error(
+            `collaborator ${grant.status} ${JSON.stringify(grant.body)}; load accounts must have verified email addresses`,
+          );
+        }
       }
     }
   }
 
   const out = resolve(OUT, "state.json");
   writeFileSync(out, JSON.stringify(state, null, 1));
-  console.log(`\n  ✓ teams wired; state → ${out}`);
+  console.log(`\n  ✓ collaborators wired; state → ${out}`);
 }
 
 main().catch((err) => {

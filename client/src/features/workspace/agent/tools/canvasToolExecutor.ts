@@ -16,6 +16,7 @@ import {
   withNodeDimensions,
 } from "@/features/workspace/utils/nodeGeometry";
 import { expandNodeSubtreeIds } from "@/features/workspace/utils/containment";
+import { getNodeIdentity } from "@/features/workspace/utils/nodeIdentity";
 
 export interface EditCanvasNodeInput {
   id?: string;
@@ -29,6 +30,7 @@ export interface EditCanvasNodeInput {
   accentColor?: string;
   tags?: string[];
   provider?: string;
+  technology?: string;
   note?: string;
   /** Used only by the legacy React Flow JSON adapter. */
   data?: Record<string, unknown>;
@@ -45,6 +47,9 @@ export interface EditCanvasEdgeInput {
   animated?: boolean;
   color?: string;
   kind?: "sync" | "async" | "primary";
+  relationshipType?: string;
+  protocol?: string;
+  dataExchanged?: string;
 }
 
 export interface EditCanvasToolArgs {
@@ -354,6 +359,10 @@ export function executeEditCanvas(
           label: n.label || n.data?.label || n.type,
           description: n.description ?? n.data?.description ?? "",
           provider: n.provider ?? n.data?.provider,
+          technology:
+            n.technology ??
+            n.data?.technology ??
+            getNodeIdentity(n.type).technology,
           tags: n.tags || n.data?.tags || [],
           accentColor: n.accentColor ?? n.data?.accentColor,
           note: n.note ?? n.data?.note,
@@ -369,6 +378,9 @@ export function executeEditCanvas(
         target: e.target,
         label: e.label,
         kind: e.kind,
+        relationshipType: e.relationshipType,
+        protocol: e.protocol,
+        dataExchanged: e.dataExchanged,
         dashed: e.dashed,
         animated: e.animated,
         color: e.color,
@@ -485,7 +497,8 @@ export function executeEditCanvas(
             incoming.description !== undefined
               ? incoming.description
               : existing.data?.description,
-          provider: incoming.provider || existing.data?.provider,
+          provider: incoming.provider ?? existing.data?.provider,
+          technology: incoming.technology ?? existing.data?.technology,
           tags: incoming.tags || existing.data?.tags,
           accentColor: incoming.accentColor || existing.data?.accentColor,
           note: incoming.note || existing.data?.note,
@@ -525,6 +538,10 @@ export function executeEditCanvas(
           description: incoming.description || "",
           tags: incoming.tags || [],
           provider: incoming.provider,
+          technology:
+            incoming.technology ??
+            incoming.data?.technology ??
+            getNodeIdentity(incoming.type).technology,
           accentColor: incoming.accentColor,
           note: incoming.note,
           theme: "default",
@@ -620,10 +637,10 @@ export function executeCanvasToolCalls(
   for (const operation of operations) {
     const result = executeEditCanvas(nodes, edges, operation, viewportCenter);
     latest = result;
-    if (result.applied) {
-      nodes = result.nodes;
-      edges = result.edges;
-    }
+    if (!result.applied)
+      return { ...result, nodes: currentNodes, edges: currentEdges };
+    nodes = result.nodes;
+    edges = result.edges;
   }
 
   return { ...latest, nodes, edges, applied: latest.applied };

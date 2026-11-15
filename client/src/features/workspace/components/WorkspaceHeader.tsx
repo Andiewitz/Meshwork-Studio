@@ -10,13 +10,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { MeshworkLogo } from "@/components/MeshworkLogo";
 import { CollaboratorsDialog } from "./CollaboratorsDialog";
 import { WorkspaceMembers } from "./WorkspaceMembers";
 import {
   ChevronLeftIcon,
-  ChevronDownIcon,
   ChevronRightIcon,
   ShareIcon,
   ArrowDownTrayIcon,
@@ -28,16 +27,16 @@ import {
   PhotoIcon,
   DocumentTextIcon,
   Squares2X2Icon,
-  BoltIcon,
   CheckCircleIcon,
   ArrowPathIcon,
   ArrowUturnLeftIcon,
   ArrowUturnRightIcon,
-  Bars3BottomLeftIcon,
+  Bars3Icon,
   CommandLineIcon,
   SunIcon,
   MoonIcon,
   MagnifyingGlassIcon,
+  ClipboardDocumentCheckIcon,
 } from "@heroicons/react/24/outline";
 import { LuPanelLeft } from "react-icons/lu";
 import {
@@ -54,6 +53,9 @@ export interface WorkspaceHeaderProps {
   theme: "dark" | "light";
   onToggleTheme: () => void;
   onOpenSearch: () => void;
+  onReviewConnections: () => void;
+  onArrangeNodes: () => void;
+  arrangeDisabled: boolean;
   workspace: any;
   workspaceId: string;
   user: any;
@@ -103,6 +105,9 @@ export function WorkspaceHeader({
   theme,
   onToggleTheme,
   onOpenSearch,
+  onReviewConnections,
+  onArrangeNodes,
+  arrangeDisabled,
   workspace,
   workspaceId,
   user,
@@ -172,35 +177,25 @@ export function WorkspaceHeader({
 
   return (
     <>
-      <header className="workspace-header h-11 w-full bg-[#111114] flex items-center justify-between gap-4 overflow-x-auto px-3 relative z-30 select-none shrink-0 ws-ink font-sans text-xs">
-        {/* ── Left Section: Logo, Project Name, Status, Undo/Redo (always fixed on left) ── */}
-        <div className="flex items-center gap-2 min-w-0 z-10">
-          {/* Logo */}
-          <Link href="/home">
-            <button
-              className="w-7 h-7 flex items-center justify-center rounded-lg ws-hover-surface transition-all shrink-0"
-              title="Dashboard"
-            >
-              <MeshworkLogo />
-            </button>
-          </Link>
-
-          {/* Project Title & Context Menu */}
+      <header className="workspace-floating-header" aria-label="Canvas toolbar">
+        <div className="workspace-floating-group workspace-title-group">
           <Popover open={projectMenuOpen} onOpenChange={setProjectMenuOpen}>
             <PopoverTrigger asChild>
               <button
-                className="flex items-center gap-1.5 px-2 py-1 rounded-md ws-hover-surface transition-all group min-w-0"
-                title="Project Menu"
+                type="button"
+                className="workspace-floating-icon"
+                aria-label="Project menu"
+                title="Project menu"
               >
-                <span className="text-[13px] font-semibold ws-ink ws-group-hover-ink truncate max-w-[130px]">
-                  {workspace?.title || "Bright Financial Companion"}
-                </span>
-                <ChevronDownIcon className="w-3 h-3 ws-muted ws-group-hover-ink transition-transform shrink-0" />
+                <Bars3Icon
+                  aria-hidden="true"
+                  className="h-[18px] w-[18px]"
+                />
               </button>
             </PopoverTrigger>
 
             <PopoverContent
-              className="workspace-popover w-72 p-2 ws-option backdrop-blur-2xl border ws-border rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_24px_54px_rgba(0,0,0,0.85)] z-[200] space-y-1 ws-ink"
+              className="workspace-popover w-72 max-w-[calc(100vw-2rem)] max-h-[min(75vh,680px)] overflow-y-auto p-2 ws-option border ws-border rounded-2xl shadow-xl z-[200] space-y-1 ws-ink"
               side="bottom"
               align="start"
               sideOffset={8}
@@ -212,9 +207,94 @@ export function WorkspaceHeader({
                 </button>
               </Link>
 
+              {canEdit && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProjectMenuOpen(false);
+                      setIsSidebarOpen(!isSidebarOpen);
+                    }}
+                    className="workspace-menu-action"
+                  >
+                    <LuPanelLeft aria-hidden="true" className="h-4 w-4" />
+                    {isSidebarOpen ? "Close AI chat" : "Open AI chat"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProjectMenuOpen(false);
+                      onArrangeNodes();
+                    }}
+                    disabled={arrangeDisabled}
+                    className="workspace-menu-action disabled:opacity-50"
+                  >
+                    <Squares2X2Icon aria-hidden="true" className="h-4 w-4" />
+                    Arrange nodes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProjectMenuOpen(false);
+                      onReviewConnections();
+                    }}
+                    className="workspace-menu-action"
+                  >
+                    <ClipboardDocumentCheckIcon
+                      aria-hidden="true"
+                      className="h-4 w-4"
+                    />
+                    Review connections
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProjectMenuOpen(false);
+                      undo();
+                    }}
+                    className="workspace-menu-action"
+                  >
+                    <ArrowUturnLeftIcon
+                      aria-hidden="true"
+                      className="h-4 w-4"
+                    />
+                    Undo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProjectMenuOpen(false);
+                      redo();
+                    }}
+                    className="workspace-menu-action"
+                  >
+                    <ArrowUturnRightIcon
+                      aria-hidden="true"
+                      className="h-4 w-4"
+                    />
+                    Redo
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setProjectMenuOpen(false);
+                  onToggleTheme();
+                }}
+                className="workspace-menu-action"
+              >
+                {theme === "dark" ? (
+                  <SunIcon aria-hidden="true" className="h-4 w-4" />
+                ) : (
+                  <MoonIcon aria-hidden="true" className="h-4 w-4" />
+                )}
+                {theme === "dark" ? "Light appearance" : "Dark appearance"}
+              </button>
+
               <div className="p-2.5 my-1 rounded-xl ws-surface-soft border ws-border flex items-center justify-between">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-[11px] font-bold text-white shrink-0 shadow-md">
+                  <div className="w-7 h-7 rounded-lg ws-surface-soft border ws-border flex items-center justify-center text-[11px] font-semibold ws-ink shrink-0">
                     {userInitial}
                   </div>
                   <div className="min-w-0">
@@ -426,9 +506,24 @@ export function WorkspaceHeader({
             </PopoverContent>
           </Popover>
 
+          <span
+            className="workspace-floating-title"
+            title={workspace?.title || "Untitled project"}
+          >
+            {workspace?.title || "Untitled project"}
+          </span>
+
           {/* Save Status dot */}
           <div
-            className="flex items-center gap-1 text-[10px]"
+            className="workspace-save-indicator"
+            role="status"
+            aria-label={
+              saveStatus === "saving"
+                ? "Saving"
+                : saveStatus === "saved"
+                  ? "All changes saved"
+                  : "Unsaved changes"
+            }
             title={
               saveStatus === "saving"
                 ? "Saving..."
@@ -447,80 +542,85 @@ export function WorkspaceHeader({
               />
             )}
           </div>
-
-          <div className="w-px h-3.5 ws-surface-soft mx-0.5" />
-
-          {/* Undo (Always fixed on the left) */}
-          <button
-            onClick={undo}
-            className="w-7 h-7 flex items-center justify-center rounded-md ws-muted ws-hover-ink ws-hover-surface transition-all"
-            title="Undo (Ctrl+Z)"
-          >
-            <ArrowUturnLeftIcon className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Redo (Always fixed on the left) */}
-          <button
-            onClick={redo}
-            className="w-7 h-7 flex items-center justify-center rounded-md ws-muted ws-hover-ink ws-hover-surface transition-all"
-            title="Redo (Ctrl+Shift+Z)"
-          >
-            <ArrowUturnRightIcon className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Sidebar Toggle when collapsed */}
-          {!isSidebarOpen && (
+        </div>
+        <div className="workspace-floating-group workspace-actions-group">
+          {canEdit && (
             <>
-              <div className="w-px h-3.5 ws-surface-soft mx-0.5" />
               <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="w-7 h-7 flex items-center justify-center rounded-md ws-muted ws-hover-ink ws-hover-surface transition-all"
-                title="Open Sidebar"
+                onClick={undo}
+                type="button"
+                aria-label="Undo"
+                className="workspace-floating-icon workspace-desktop-action"
+                title="Undo (Ctrl+Z)"
               >
-                <LuPanelLeft className="w-4 h-4" />
+                <ArrowUturnLeftIcon className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Redo (Always fixed on the left) */}
+              <button
+                onClick={redo}
+                type="button"
+                aria-label="Redo"
+                className="workspace-floating-icon workspace-desktop-action"
+                title="Redo (Ctrl+Shift+Z)"
+              >
+                <ArrowUturnRightIcon className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                aria-expanded={isSidebarOpen}
+                aria-controls="workspace-ai-chat"
+                title={isSidebarOpen ? "Close AI chat" : "Open AI chat"}
+                aria-label={isSidebarOpen ? "Close AI chat" : "Open AI chat"}
+                className="workspace-floating-icon"
+              >
+                <LuPanelLeft aria-hidden="true" className="w-4 h-4" />
               </button>
             </>
           )}
-        </div>
-
-        {/* ── Sidebar Toggle when open: positioned on top of the edge of the sidebar ── */}
-        {isSidebarOpen && (
-          <div className="absolute left-[324px] z-20 max-md:hidden transition-all duration-300">
+          {canEdit && (
             <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="w-7 h-7 flex items-center justify-center rounded-md ws-muted ws-hover-ink ws-hover-surface transition-all"
-              title="Collapse Sidebar"
+              type="button"
+              onClick={onArrangeNodes}
+              disabled={arrangeDisabled}
+              aria-label="Arrange nodes"
+              title="Arrange nodes"
+              className="workspace-floating-icon workspace-desktop-action"
             >
-              <LuPanelLeft className="w-4 h-4" />
+              <Squares2X2Icon className="h-4 w-4" />
             </button>
-          </div>
-        )}
-
-        {/* ── Center Section: Centralized Project Title ── */}
-        <div className="absolute left-1/2 -translate-x-1/2 hidden lg:flex items-center justify-center pointer-events-none z-0">
-          <span className="font-semibold ws-ink text-[13px] tracking-wide truncate max-w-[320px]">
-            {workspace?.title ?? "Untitled Project"}
-          </span>
-        </div>
-
-        {/* ── Right Section: Collaborators, Share, Upgrade, Publish ── */}
-        <div className="flex items-center gap-2 z-10">
+          )}
+          {canEdit && (
+            <button
+              type="button"
+              onClick={onReviewConnections}
+              aria-label="Review connections"
+              title="Review connections"
+              className="workspace-floating-icon workspace-desktop-action"
+            >
+              <ClipboardDocumentCheckIcon className="h-4 w-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={onOpenSearch}
             aria-label="Search projects and canvas"
             title="Search (Ctrl/⌘ K)"
-            className="flex h-8 w-8 items-center justify-center rounded-lg ws-muted ws-hover-surface ws-hover-ink transition-colors"
+            className="workspace-floating-icon"
           >
             <MagnifyingGlassIcon className="h-4 w-4" />
           </button>
-          <WorkspaceMembers
-            workspaceId={workspaceId}
-            isOwner={Boolean(user?.id && workspace?.userId === user.id)}
-            user={user}
-            online={collaborators}
-            onShare={() => setSharingOpen(true)}
-          />
+          <span className="workspace-desktop-action">
+            <WorkspaceMembers
+              workspaceId={workspaceId}
+              isOwner={Boolean(user?.id && workspace?.userId === user.id)}
+              user={user}
+              online={collaborators}
+              onShare={() => setSharingOpen(true)}
+            />
+          </span>
 
           <button
             type="button"
@@ -531,7 +631,7 @@ export function WorkspaceHeader({
             title={
               theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
             }
-            className="flex h-8 w-8 items-center justify-center rounded-lg ws-muted ws-hover-surface ws-hover-ink transition-colors"
+            className="workspace-floating-icon workspace-desktop-action"
           >
             {theme === "dark" ? (
               <SunIcon className="h-4 w-4" />
@@ -540,30 +640,14 @@ export function WorkspaceHeader({
             )}
           </button>
 
-          {/* Share Button */}
           <button
+            type="button"
+            aria-label="Share project"
+            title="Share project"
             onClick={() => setSharingOpen(true)}
-            className="workspace-header-secondary flex items-center gap-1.5 px-3 py-1.5 rounded-lg ws-surface-soft ws-hover-surface border ws-border text-[11px] font-medium ws-ink ws-hover-ink transition-all shadow-sm"
+            className="workspace-floating-icon"
           >
-            <ShareIcon className="w-3 h-3" />
-            <span>Share</span>
-          </button>
-
-          {/* Upgrade Button */}
-          <button
-            onClick={openSettings}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600/80 to-indigo-600/80 hover:from-purple-500 hover:to-indigo-500 border border-purple-500/30 text-[11px] font-semibold text-white transition-all shadow-[0_2px_12px_rgba(168,85,247,0.25)]"
-          >
-            <BoltIcon className="w-3 h-3 text-purple-200 fill-purple-200" />
-            <span>Upgrade</span>
-          </button>
-
-          {/* Publish / Export Button */}
-          <button
-            onClick={handleExportPng}
-            className="workspace-header-primary flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-[11px] font-semibold transition-all shadow-[0_2px_12px_rgba(59,130,246,0.3)] active:scale-95"
-          >
-            <span>Publish</span>
+            <ShareIcon aria-hidden="true" className="h-4 w-4" />
           </button>
         </div>
       </header>
@@ -575,6 +659,34 @@ export function WorkspaceHeader({
         isOwner={Boolean(user?.id && workspace?.userId === user.id)}
         ownerName={userName}
       />
+
+      <Dialog open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
+        <DialogContent className="workspace-dialog max-w-sm ws-option border ws-border ws-ink rounded-2xl p-5">
+          <DialogHeader>
+            <DialogTitle>Keyboard shortcuts</DialogTitle>
+            <DialogDescription className="ws-muted">
+              Quick actions for this canvas.
+            </DialogDescription>
+          </DialogHeader>
+          <dl className="space-y-3 pt-2 text-sm">
+            {[
+              ["Search", "Ctrl/⌘ K"],
+              ["Undo", "Ctrl/⌘ Z"],
+              ["Redo", "Ctrl/⌘ Shift Z"],
+              ["Save", "Ctrl/⌘ S"],
+              ["Fit canvas", "Ctrl/⌘ 0"],
+              ["Zoom in or out", "Ctrl/⌘ + / −"],
+              ["Delete selection", "Delete"],
+              ["Exit nested canvas", "Esc"],
+            ].map(([label, key]) => (
+              <div key={label} className="flex justify-between gap-4">
+                <dt className="ws-muted">{label}</dt>
+                <dd className="ws-ink">{key}</dd>
+              </div>
+            ))}
+          </dl>
+        </DialogContent>
+      </Dialog>
 
       {/* Rename Dialog */}
       <Dialog open={isRenaming} onOpenChange={setIsRenaming}>

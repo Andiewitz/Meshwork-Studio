@@ -56,6 +56,29 @@ const layers: Record<string, NodeLayer> = {
   "k8s-configmap": "compute",
   "k8s-secret": "compute",
   "k8s-hpa": "compute",
+  dns: "edge",
+  firewall: "edge",
+  "identity-provider": "compute",
+  "secrets-manager": "compute",
+  monitoring: "compute",
+  "log-store": "data",
+  "metrics-store": "data",
+  "trace-store": "data",
+  "container-registry": "data",
+  scheduler: "async",
+  "data-warehouse": "data",
+  "ci-pipeline": "compute",
+  "workflow-task": "compute",
+  "workflow-decision": "other",
+  "workflow-event": "async",
+  "workflow-input": "data",
+  "workflow-output": "data",
+  "data-source": "data",
+  "data-transform": "compute",
+  "data-dataset": "data",
+  "data-model": "data",
+  "data-destination": "data",
+  "data-schedule": "async",
 };
 
 export const nodeLayerColors: Record<
@@ -94,7 +117,7 @@ export function nodePresentation(type: string): {
         ? "queue"
         : layer === "external"
           ? "external"
-          : layer === "client"
+          : layer === "client" || type === "workflow-event"
             ? "pill"
             : "card";
   return { layer, shape };
@@ -119,6 +142,18 @@ const typeLabels: Record<string, string> = {
   bus: "Event stream",
   api: "External API",
   "k8s-cronjob": "Scheduled job",
+  "workflow-task": "Process step",
+  "workflow-decision": "Decision",
+  "workflow-event": "Event",
+  "workflow-input": "Input",
+  "workflow-output": "Output",
+  "workflow-lane": "Swimlane",
+  "data-source": "Data source",
+  "data-transform": "Transformation",
+  "data-dataset": "Dataset",
+  "data-model": "Data model",
+  "data-destination": "Data destination",
+  "data-schedule": "Pipeline schedule",
 };
 
 export function nodeSubtitle(
@@ -126,9 +161,20 @@ export function nodeSubtitle(
   label: string | undefined,
   provider: string | undefined,
   originalType?: string,
+  technology?: string,
 ): string | undefined {
+  const tech = technology?.trim();
+  const maker = provider?.trim();
+  const product = [tech, maker]
+    .filter(
+      (part, index, all) =>
+        part &&
+        all.findIndex((item) => item?.toLowerCase() === part.toLowerCase()) ===
+          index,
+    )
+    .join(" · ");
   const value =
-    provider?.trim() ||
+    product ||
     (type === "generic" ? originalType?.trim() : undefined) ||
     typeLabels[type] ||
     (type === "generic"
@@ -175,7 +221,15 @@ export function nodeAccessibleLabel(
     typeof data.provider === "string" ? data.provider : undefined;
   const original =
     typeof data.originalType === "string" ? data.originalType : undefined;
-  const subtitle = nodeSubtitle(type || "generic", label, provider, original);
+  const technology =
+    typeof data.technology === "string" ? data.technology : undefined;
+  const subtitle = nodeSubtitle(
+    type || "generic",
+    label,
+    provider,
+    original,
+    technology,
+  );
   const description =
     typeof data.description === "string" ? data.description.trim() : "";
   const status =

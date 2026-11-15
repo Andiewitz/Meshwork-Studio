@@ -29,6 +29,11 @@ import {
 } from "@/components/canvas/nodes/legacyNodeAppearance";
 import { nodeTypesList } from "@/features/workspace/utils/nodeTypes";
 import {
+  NODE_DEFINITIONS,
+  resolveNodeType,
+} from "@/features/workspace/utils/nodeRegistry";
+import { getNodeIdentity } from "@/features/workspace/utils/nodeIdentity";
+import {
   getNodeDimensions,
   getNodeMinimumDimensions,
 } from "@/features/workspace/utils/nodeGeometry";
@@ -40,6 +45,9 @@ interface PropertiesSidebarProps {
   selectedEdge?: Edge<EdgeData> | null;
   updateNodeData: (id: string, data: Partial<NodeData>) => void;
   updateNodeStyle: (id: string, style: Partial<NodeStyle>) => void;
+  updateNodeType: (id: string, type: string) => void;
+  updateNodePin: (id: string, pinned: boolean) => void;
+  layoutPinDisabled: boolean;
   updateEdgeData?: (id: string, data: Partial<EdgeData>) => void;
   deleteNode: (id: string) => void;
   deleteEdge?: (id: string) => void;
@@ -65,6 +73,9 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
   selectedEdge,
   updateNodeData,
   updateNodeStyle,
+  updateNodeType,
+  updateNodePin,
+  layoutPinDisabled,
   updateEdgeData,
   deleteNode,
   deleteEdge,
@@ -86,6 +97,10 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
     const nodeInfo = nodeTypesList.find((n) => n.type === selectedNode.type);
     const NodeIcon = nodeInfo?.icon || Box;
     const currentAccent = selectedNode.data?.accentColor;
+    const identity = getNodeIdentity(selectedNode.type, selectedNode.data);
+    const roleLabel =
+      NODE_DEFINITIONS.find((entry) => entry.id === identity.role)?.palette
+        ?.label ?? identity.role;
 
     const tags = selectedNode.data?.tags ?? [];
     const legacyDefault = hasLegacyDefaultAppearance(
@@ -177,7 +192,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               {selectedNode.data?.label ?? "Untitled"}
             </div>
             <div className="text-[11px] uppercase tracking-[0.1em] font-bold ws-dim">
-              {nodeInfo?.category || "Node"}
+              {roleLabel}
             </div>
           </div>
           {onClose && (
@@ -191,6 +206,61 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
         </div>
 
         <div className="h-px ws-surface-soft" />
+
+        <label className="flex items-start gap-2 text-xs ws-ink">
+          <input
+            type="checkbox"
+            checked={selectedNode.data?.layoutPinned === true}
+            disabled={layoutPinDisabled}
+            onChange={(event) =>
+              updateNodePin(selectedNode.id, event.target.checked)
+            }
+            className="mt-0.5 accent-blue-500"
+          />
+          <span>
+            Keep position during layout
+            <span className="block mt-1 ws-muted">
+              Applies when arranging nodes.
+            </span>
+          </span>
+        </label>
+
+        {((selectedNode.type === "generic" &&
+          selectedNode.data?.originalType) ||
+          (selectedNode.type &&
+            resolveNodeType(selectedNode.type).originalType)) && (
+          <div className="space-y-2">
+            <p className="text-xs ws-muted break-words">
+              Original type:{" "}
+              {selectedNode.data?.originalType || selectedNode.type}. This node
+              uses the generic appearance; its data is preserved.
+            </p>
+            <label
+              className="block text-xs ws-muted"
+              htmlFor="unknown-node-type"
+            >
+              Map to a known type
+            </label>
+            <select
+              id="unknown-node-type"
+              value=""
+              onChange={(event) => {
+                if (event.target.value)
+                  updateNodeType(selectedNode.id, event.target.value);
+              }}
+              className="w-full rounded border ws-border ws-surface-soft ws-ink px-2 py-2 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+            >
+              <option value="">Choose a type…</option>
+              {nodeTypesList
+                .filter((entry) => !entry.type.startsWith("template:"))
+                .map((entry) => (
+                  <option key={entry.type} value={entry.type}>
+                    {entry.label}
+                  </option>
+                ))}
+            </select>
+          </div>
+        )}
 
         {/* ── Name & Description ── */}
         <section className="space-y-4">
@@ -211,6 +281,55 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
+              {identity.role !== "generic" && (
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="node-role"
+                    className="text-[11px] uppercase tracking-widest font-bold ws-dim"
+                  >
+                    Role
+                  </Label>
+                  <select
+                    id="node-role"
+                    value={identity.role}
+                    onChange={(event) => {
+                      if (event.target.value !== identity.role)
+                        updateNodeType(selectedNode.id, event.target.value);
+                    }}
+                    className="w-full rounded border ws-border ws-surface-soft ws-ink px-2 py-2 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                  >
+                    {!NODE_DEFINITIONS.some(
+                      (entry) =>
+                        entry.id === identity.role &&
+                        [
+                          "Core",
+                          "Infrastructure",
+                          "Workflow",
+                          "Data pipeline",
+                          "Kubernetes",
+                        ].includes(entry.palette?.category ?? ""),
+                    ) && <option value={identity.role}>{roleLabel}</option>}
+                    {NODE_DEFINITIONS.filter((entry) =>
+                      [
+                        "Core",
+                        "Infrastructure",
+                        "Workflow",
+                        "Data pipeline",
+                        "Kubernetes",
+                      ].includes(entry.palette?.category ?? ""),
+                    )
+                      .sort(
+                        (a, b) =>
+                          (a.palette?.order ?? 0) - (b.palette?.order ?? 0),
+                      )
+                      .map((entry) => (
+                        <option key={entry.id} value={entry.id}>
+                          {entry.palette?.label}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label className="text-[11px] uppercase tracking-widest font-bold ws-dim">
                   Display Name
@@ -224,6 +343,44 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                   className="min-h-[40px] max-h-[80px] py-1.5 rounded-md focus-visible:ring-2 focus-visible:ring-blue-500 ws-surface-soft ws-border ws-ink ws-focus-border text-[12px] scrollbar-thin"
                   placeholder="Node Name..."
                   rows={2}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="node-technology"
+                  className="text-[11px] uppercase tracking-widest font-bold ws-dim"
+                >
+                  Technology or product
+                </Label>
+                <Input
+                  id="node-technology"
+                  value={identity.technology ?? ""}
+                  onChange={(event) =>
+                    updateNodeData(selectedNode.id, {
+                      technology: event.target.value,
+                    })
+                  }
+                  placeholder="e.g. PostgreSQL"
+                  className="ws-surface-soft ws-border ws-ink text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="node-provider"
+                  className="text-[11px] uppercase tracking-widest font-bold ws-dim"
+                >
+                  Provider
+                </Label>
+                <Input
+                  id="node-provider"
+                  value={selectedNode.data?.provider ?? ""}
+                  onChange={(event) =>
+                    updateNodeData(selectedNode.id, {
+                      provider: event.target.value,
+                    })
+                  }
+                  placeholder="e.g. AWS"
+                  className="ws-surface-soft ws-border ws-ink text-xs"
                 />
               </div>
 
@@ -838,6 +995,35 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               placeholder="What does this connection represent or transmit?"
             />
           </div>
+          {(
+            [
+              [
+                "relationshipType",
+                "Relationship",
+                "e.g. triggers or depends on",
+              ],
+              ["protocol", "Protocol", "e.g. HTTPS or gRPC"],
+              ["dataExchanged", "Data or event", "e.g. order created"],
+            ] as const
+          ).map(([key, label, placeholder]) => (
+            <div key={key} className="space-y-1.5">
+              <Label
+                htmlFor={`edge-${key}`}
+                className="text-[11px] uppercase tracking-widest font-bold ws-dim"
+              >
+                {label}
+              </Label>
+              <Input
+                id={`edge-${key}`}
+                value={selectedEdge.data?.[key] ?? ""}
+                onChange={(event) =>
+                  handleEdgeFieldChange(key, event.target.value)
+                }
+                placeholder={placeholder}
+                className="h-9 rounded-md ws-surface-soft ws-border ws-ink text-xs"
+              />
+            </div>
+          ))}
         </section>
 
         <div className="h-px ws-surface-soft" />
