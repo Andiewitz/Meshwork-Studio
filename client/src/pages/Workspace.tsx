@@ -196,7 +196,6 @@ import {
   nodeTypes,
   nodeTypesList,
   searchNodeCatalog,
-  DEFAULT_FAVORITES as favoriteNodes,
   trackNodeUsage,
   EXPANDABLE_TYPES,
   NODE_DESCRIPTIONS,
@@ -220,6 +219,15 @@ import { PropertiesSidebar } from "@/features/workspace/components/PropertiesSid
 import { WorkspaceHeader } from "@/features/workspace/components/WorkspaceHeader";
 import { WorkspaceLeftSidebar } from "@/features/workspace/components/WorkspaceLeftSidebar";
 import { ConnectionReviewDialog } from "@/features/workspace/components/ConnectionReviewDialog";
+import { DiagramStarterChooser } from "@/features/workspace/components/DiagramStarterChooser";
+import {
+  canApplyDiagramStarter,
+  createDiagramStarter,
+  DIAGRAM_CONTEXTS,
+  STARTER_RECOMMENDATIONS,
+  type DiagramContext,
+  type DiagramStarter,
+} from "@/features/workspace/utils/diagramStarters";
 import { WorkspaceToolbar } from "@/features/workspace/components/WorkspaceToolbar";
 import {
   calculateContainment,
@@ -297,6 +305,8 @@ function WorkspaceView() {
     zoomOut,
     getViewport,
     setViewport,
+    getNodes,
+    getEdges,
   } = useReactFlow();
   const [, setLocation] = useLocation();
   const deleteWorkspace = useDeleteWorkspace();
@@ -323,6 +333,46 @@ function WorkspaceView() {
     [nodes],
   );
   const [edges, setEdges] = useState<Edge[]>([]);
+  const starterKey = `meshwork:diagram-starter:${user?.id ?? "anonymous"}:${workspaceId}`;
+  const [starterPreference, setStarterPreference] = useState<{
+    key: string;
+    dismissed: boolean;
+    context: DiagramContext;
+  }>({ key: "", dismissed: false, context: "all" });
+  const [starterReadyWorkspaceId, setStarterReadyWorkspaceId] = useState("");
+  useEffect(() => {
+    let dismissed = false;
+    let context: DiagramContext = "all";
+    try {
+      const value: unknown = JSON.parse(
+        sessionStorage.getItem(starterKey) || "null",
+      );
+      if (value && typeof value === "object") {
+        const stored = value as Record<string, unknown>;
+        dismissed = stored.dismissed === true;
+        context =
+          DIAGRAM_CONTEXTS.find((item) => item.id === stored.context)?.id ??
+          "all";
+      }
+    } catch {
+      /* Keep the default if session storage is unavailable. */
+    }
+    setStarterPreference({ key: starterKey, dismissed, context });
+  }, [starterKey]);
+  const saveStarterPreference = (
+    dismissed: boolean,
+    context: DiagramContext,
+  ) => {
+    setStarterPreference({ key: starterKey, dismissed, context });
+    try {
+      sessionStorage.setItem(
+        starterKey,
+        JSON.stringify({ dismissed, context }),
+      );
+    } catch {
+      /* Preference remains available for this session. */
+    }
+  };
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"layers" | "properties">("layers");
@@ -1189,6 +1239,7 @@ function WorkspaceView() {
         )
           return;
         isInitialLoad.current = false;
+        setStarterReadyWorkspaceId(workspaceId);
         if (localCache && !draftConflictRef.current)
           setHydrationEpoch((value) => value + 1);
       }, 500);
@@ -1783,6 +1834,44 @@ function WorkspaceView() {
     setEdges((eds) => eds.concat(newEdges));
   };
 
+  const applyDiagramStarter = (kind: DiagramStarter) => {
+    const current = { nodes: getNodes(), edges: getEdges() };
+    if (
+      !canApplyDiagramStarter(current, {
+        canEdit,
+        conflict: draftConflictRef.current,
+        ready: !isInitialLoad.current && lastLoadedId.current === workspaceId,
+        root: !isNested,
+        idle: canvasTransition === "idle",
+      })
+    ) {
+      toast({
+        title: "Starter not applied",
+        description:
+          "The canvas is no longer empty or ready. Your existing diagram was left unchanged.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const center = screenToFlowPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    });
+    const count = kind === "architecture" ? 3 : 4;
+    const graph = createDiagramStarter(
+      kind,
+      { x: center.x - ((count - 1) * 250 + 168) / 2, y: center.y - 45 },
+      () => crypto.randomUUID(),
+      workspaceTheme === "dark",
+    );
+    takeSnapshot(current);
+    setNodes(graph.nodes);
+    setEdges(graph.edges);
+    broadcastSnapshotChange(current, graph);
+    saveStarterPreference(true, kind);
+    setTimeout(() => fitView({ duration: 300, padding: 0.25 }), 50);
+  };
+
   const onDelete = (id: string) => {
     deleteNode(id);
   };
@@ -2030,6 +2119,14 @@ function WorkspaceView() {
   );
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
   const selectedEdge = edges.find((e) => e.id === selectedEdgeId) || null;
+  const activeDiagramContext =
+    starterPreference.key === starterKey ? starterPreference.context : "all";
+  const suggestedNodes = STARTER_RECOMMENDATIONS[activeDiagramContext].flatMap(
+    (type) => {
+      const entry = nodeTypesList.find((node) => node.type === type);
+      return entry ? [entry] : [];
+    },
+  );
 
   if (isLoading) {
     return <DefaultLoading />;
@@ -2255,6 +2352,23 @@ function WorkspaceView() {
               )}
             </AnimatePresence>
 
+            {starterReadyWorkspaceId === workspaceId &&
+              Boolean(user?.id) &&
+              starterPreference.key === starterKey &&
+              !starterPreference.dismissed &&
+              !isLoading &&
+              !isError &&
+              !draftConflict &&
+              canEdit &&
+              !isNested &&
+              canvasTransition === "idle" &&
+              nodes.length === 0 &&
+              edges.length === 0 && (
+                <DiagramStarterChooser
+                  onChoose={applyDiagramStarter}
+                  onBlank={() => saveStarterPreference(true, "all")}
+                />
+              )}
             <ReactFlow
               nodes={accessibleNodes}
               edges={displayedEdges}
@@ -2557,6 +2671,22 @@ function WorkspaceView() {
                       <div className="px-3.5 py-1.5 text-[9px] uppercase font-bold ws-dim tracking-[0.15em]">
                         Quick Add
                       </div>
+                      {canEdit &&
+                        !isNested &&
+                        nodes.length === 0 &&
+                        edges.length === 0 &&
+                        starterReadyWorkspaceId === workspaceId &&
+                        !draftConflict && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              saveStarterPreference(false, activeDiagramContext)
+                            }
+                            className="w-full px-3.5 py-2 text-left text-xs ws-muted ws-hover-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                          >
+                            Choose a starter
+                          </button>
+                        )}
                       <div
                         className="px-2 pb-1"
                         onClick={(event) => event.stopPropagation()}
@@ -2575,6 +2705,41 @@ function WorkspaceView() {
                           className="w-full rounded border ws-border ws-surface-soft ws-ink px-2 py-1.5 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
                         />
                       </div>
+                      <div
+                        className="px-2 pb-1"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <label
+                          htmlFor="node-suggestion-context"
+                          className="block px-1 text-[11px] ws-muted"
+                        >
+                          Suggested nodes
+                        </label>
+                        <select
+                          id="node-suggestion-context"
+                          value={activeDiagramContext}
+                          onChange={(event) =>
+                            saveStarterPreference(
+                              starterPreference.dismissed,
+                              event.target.value as DiagramContext,
+                            )
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") setMenu(null);
+                            event.stopPropagation();
+                          }}
+                          className="mt-1 w-full rounded border ws-border ws-surface-soft ws-ink px-2 py-1.5 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                        >
+                          {DIAGRAM_CONTEXTS.map((context) => (
+                            <option key={context.id} value={context.id}>
+                              {context.label}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="px-1 pt-1 text-[11px] ws-dim">
+                          Search includes all node types.
+                        </p>
+                      </div>
                       {!catalogBrowse && !catalogSearch.trim() && (
                         <button
                           type="button"
@@ -2589,7 +2754,7 @@ function WorkspaceView() {
                       )}
                       {(catalogSearch.trim() || catalogBrowse
                         ? searchNodeCatalog(catalogSearch)
-                        : favoriteNodes
+                        : suggestedNodes
                       ).map((node) => (
                         <button
                           key={node.type}
