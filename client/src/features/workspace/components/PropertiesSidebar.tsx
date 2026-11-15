@@ -916,6 +916,35 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               placeholder="What does this connection represent or transmit?"
             />
           </div>
+          {(
+            [
+              [
+                "relationshipType",
+                "Relationship",
+                "e.g. triggers or depends on",
+              ],
+              ["protocol", "Protocol", "e.g. HTTPS or gRPC"],
+              ["dataExchanged", "Data or event", "e.g. order created"],
+            ] as const
+          ).map(([key, label, placeholder]) => (
+            <div key={key} className="space-y-1.5">
+              <Label
+                htmlFor={`edge-${key}`}
+                className="text-[11px] uppercase tracking-widest font-bold ws-dim"
+              >
+                {label}
+              </Label>
+              <Input
+                id={`edge-${key}`}
+                value={selectedEdge.data?.[key] ?? ""}
+                onChange={(event) =>
+                  handleEdgeFieldChange(key, event.target.value)
+                }
+                placeholder={placeholder}
+                className="h-9 rounded-md ws-surface-soft ws-border ws-ink text-xs"
+              />
+            </div>
+          ))}
         </section>
 
         <div className="h-px ws-surface-soft" />

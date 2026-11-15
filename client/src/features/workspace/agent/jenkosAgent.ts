@@ -138,6 +138,19 @@ export const JENKOS_TOOLS = [
                   description:
                     "Connection protocol or description (e.g. HTTPS, gRPC)",
                 },
+                relationshipType: {
+                  type: "string",
+                  description:
+                    "Relationship such as depends on, sends data, or triggers.",
+                },
+                protocol: {
+                  type: "string",
+                  description: "Communication protocol, if known.",
+                },
+                dataExchanged: {
+                  type: "string",
+                  description: "Data or event exchanged, if known.",
+                },
                 dashed: { type: "boolean" },
                 animated: { type: "boolean" },
                 kind: {
@@ -213,6 +226,9 @@ export function formatCanvasContext(
     source: e.source,
     target: e.target,
     label: (e.data?.label as string) || (e.label as string) || undefined,
+    relationshipType: e.data?.relationshipType,
+    protocol: e.data?.protocol,
+    dataExchanged: e.data?.dataExchanged,
   }));
 
   return `${memoryText}\n\nCURRENT CANVAS STATE (${nodes.length} nodes, ${edges.length} edges):

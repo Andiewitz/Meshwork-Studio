@@ -44,6 +44,9 @@ export interface NodeData extends Record<string, unknown> {
 export interface EdgeData extends Record<string, unknown> {
   label?: string;
   description?: string;
+  relationshipType?: string;
+  protocol?: string;
+  dataExchanged?: string;
   ai?: {
     notes?: string;
   };

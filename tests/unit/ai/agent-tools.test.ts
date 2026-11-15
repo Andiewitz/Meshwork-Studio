@@ -35,6 +35,38 @@ describe("Jenkos AI Agent Tool Calling & Execution Unit Tests", () => {
   ];
 
   describe("executeEditCanvas: Incremental Tool Mutations", () => {
+    it("preserves structured relationships for incremental and replacement graphs", () => {
+      const relation = {
+        source: "api-gw",
+        target: "backend-svc",
+        relationshipType: "sends data",
+        protocol: "HTTPS",
+        dataExchanged: "orders",
+      };
+      const added = executeEditCanvas(initialNodes, [], {
+        action: "add",
+        edges: [relation],
+      });
+      expect(added.edges[0].data).toMatchObject({
+        relationshipType: "sends data",
+        protocol: "HTTPS",
+        dataExchanged: "orders",
+      });
+      const replacement = executeEditCanvas(initialNodes, [], {
+        action: "replace_all",
+        nodes: initialNodes.map((node) => ({
+          id: node.id,
+          type: node.type!,
+          label: String(node.data.label),
+        })),
+        edges: [relation],
+      });
+      expect(replacement.edges[0].data).toMatchObject({
+        relationshipType: "sends data",
+        protocol: "HTTPS",
+        dataExchanged: "orders",
+      });
+    });
     it("preserves technology and provider independently across AI edits", () => {
       const existing: Node[] = [
         {

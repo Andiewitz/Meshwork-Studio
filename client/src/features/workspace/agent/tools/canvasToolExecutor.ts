@@ -46,6 +46,9 @@ export interface EditCanvasEdgeInput {
   animated?: boolean;
   color?: string;
   kind?: "sync" | "async" | "primary";
+  relationshipType?: string;
+  protocol?: string;
+  dataExchanged?: string;
 }
 
 export interface EditCanvasToolArgs {
@@ -371,6 +374,9 @@ export function executeEditCanvas(
         target: e.target,
         label: e.label,
         kind: e.kind,
+        relationshipType: e.relationshipType,
+        protocol: e.protocol,
+        dataExchanged: e.dataExchanged,
         dashed: e.dashed,
         animated: e.animated,
         color: e.color,
