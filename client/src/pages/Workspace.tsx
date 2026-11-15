@@ -2308,7 +2308,7 @@ function WorkspaceView() {
             <div
               id="workspace-ai-chat"
               aria-hidden={!isSidebarOpen || !canEdit}
-              className={`workspace-chat-overlay absolute left-0 z-50 max-w-[calc(100%-16px)] overflow-hidden transition-[width] duration-200 ease-out motion-reduce:transition-none ${isChatCollapsed ? "top-0" : "inset-y-0"} ${isSidebarOpen && canEdit ? "" : "hidden"}`}
+              className={`workspace-chat-overlay absolute left-0 z-50 max-w-[calc(100%-16px)] transition-[width] duration-200 ease-out motion-reduce:transition-none ${isChatCollapsed ? "top-0" : "inset-y-0"} ${isSidebarOpen && canEdit ? "" : "hidden"}`}
               style={{
                 width: isChatCollapsed ? 160 : isChatExpanded ? 720 : 395,
               }}
