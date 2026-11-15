@@ -59,7 +59,7 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     expandable: false,
 
     palette: {
-      label: "Storage (S3)",
+      label: "Object Storage",
       icon: "HardDrive",
       category: "Core",
       order: 10,
@@ -74,7 +74,7 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     container: false,
     expandable: true,
 
-    palette: { label: "Docker", icon: "Box", category: "Core", order: 5 },
+    palette: { label: "Service", icon: "Box", category: "Core", order: 5 },
     description: "Containerized application or service",
   },
   {
@@ -85,7 +85,7 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     container: false,
     expandable: false,
 
-    palette: { label: "Redis", icon: "Zap", category: "Core", order: 2 },
+    palette: { label: "Cache", icon: "Zap", category: "Core", order: 2 },
     description: "In-memory data store (e.g. Redis, Memcached)",
   },
   {
@@ -107,7 +107,7 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     container: false,
     expandable: false,
 
-    palette: { label: "Lambda", icon: "Zap", category: "Core", order: 7 },
+    palette: { label: "Function", icon: "Zap", category: "Core", order: 7 },
     description: "Serverless function (e.g. AWS Lambda)",
   },
   {
@@ -141,7 +141,7 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     expandable: false,
 
     palette: {
-      label: "Elasticsearch",
+      label: "Search",
       icon: "Search",
       category: "More",
       order: 19,
@@ -199,7 +199,12 @@ export const NODE_DEFINITIONS: readonly NodeDefinition[] = [
     container: false,
     expandable: false,
 
-    palette: { label: "Kafka", icon: "Share2", category: "Core", order: 9 },
+    palette: {
+      label: "Event Stream",
+      icon: "Share2",
+      category: "Core",
+      order: 9,
+    },
     description: "Event stream / Message bus (e.g. Kafka)",
   },
   {

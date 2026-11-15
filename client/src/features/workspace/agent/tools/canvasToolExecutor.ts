@@ -16,6 +16,7 @@ import {
   withNodeDimensions,
 } from "@/features/workspace/utils/nodeGeometry";
 import { expandNodeSubtreeIds } from "@/features/workspace/utils/containment";
+import { getNodeIdentity } from "@/features/workspace/utils/nodeIdentity";
 
 export interface EditCanvasNodeInput {
   id?: string;
@@ -358,7 +359,10 @@ export function executeEditCanvas(
           label: n.label || n.data?.label || n.type,
           description: n.description ?? n.data?.description ?? "",
           provider: n.provider ?? n.data?.provider,
-          technology: n.technology ?? n.data?.technology,
+          technology:
+            n.technology ??
+            n.data?.technology ??
+            getNodeIdentity(n.type).technology,
           tags: n.tags || n.data?.tags || [],
           accentColor: n.accentColor ?? n.data?.accentColor,
           note: n.note ?? n.data?.note,
@@ -534,7 +538,10 @@ export function executeEditCanvas(
           description: incoming.description || "",
           tags: incoming.tags || [],
           provider: incoming.provider,
-          technology: incoming.technology,
+          technology:
+            incoming.technology ??
+            incoming.data?.technology ??
+            getNodeIdentity(incoming.type).technology,
           accentColor: incoming.accentColor,
           note: incoming.note,
           theme: "default",

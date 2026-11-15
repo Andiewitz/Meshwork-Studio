@@ -28,7 +28,11 @@ import {
   legacyFallbackBrand,
 } from "@/components/canvas/nodes/legacyNodeAppearance";
 import { nodeTypesList } from "@/features/workspace/utils/nodeTypes";
-import { resolveNodeType } from "@/features/workspace/utils/nodeRegistry";
+import {
+  NODE_DEFINITIONS,
+  resolveNodeType,
+} from "@/features/workspace/utils/nodeRegistry";
+import { getNodeIdentity } from "@/features/workspace/utils/nodeIdentity";
 import {
   getNodeDimensions,
   getNodeMinimumDimensions,
@@ -89,6 +93,10 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
     const nodeInfo = nodeTypesList.find((n) => n.type === selectedNode.type);
     const NodeIcon = nodeInfo?.icon || Box;
     const currentAccent = selectedNode.data?.accentColor;
+    const identity = getNodeIdentity(selectedNode.type, selectedNode.data);
+    const roleLabel =
+      NODE_DEFINITIONS.find((entry) => entry.id === identity.role)?.palette
+        ?.label ?? identity.role;
 
     const tags = selectedNode.data?.tags ?? [];
     const legacyDefault = hasLegacyDefaultAppearance(
@@ -180,7 +188,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               {selectedNode.data?.label ?? "Untitled"}
             </div>
             <div className="text-[11px] uppercase tracking-[0.1em] font-bold ws-dim">
-              {nodeInfo?.category || "Node"}
+              {roleLabel}
             </div>
           </div>
           {onClose && (
@@ -251,6 +259,43 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
+              {identity.role !== "generic" && (
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="node-role"
+                    className="text-[11px] uppercase tracking-widest font-bold ws-dim"
+                  >
+                    Role
+                  </Label>
+                  <select
+                    id="node-role"
+                    value={identity.role}
+                    onChange={(event) => {
+                      if (event.target.value !== identity.role)
+                        updateNodeType(selectedNode.id, event.target.value);
+                    }}
+                    className="w-full rounded border ws-border ws-surface-soft ws-ink px-2 py-2 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                  >
+                    {!NODE_DEFINITIONS.some(
+                      (entry) =>
+                        entry.id === identity.role &&
+                        entry.palette?.category === "Core",
+                    ) && <option value={identity.role}>{roleLabel}</option>}
+                    {NODE_DEFINITIONS.filter(
+                      (entry) => entry.palette?.category === "Core",
+                    )
+                      .sort(
+                        (a, b) =>
+                          (a.palette?.order ?? 0) - (b.palette?.order ?? 0),
+                      )
+                      .map((entry) => (
+                        <option key={entry.id} value={entry.id}>
+                          {entry.palette?.label}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label className="text-[11px] uppercase tracking-widest font-bold ws-dim">
                   Display Name
@@ -275,7 +320,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
                 </Label>
                 <Input
                   id="node-technology"
-                  value={selectedNode.data?.technology ?? ""}
+                  value={identity.technology ?? ""}
                   onChange={(event) =>
                     updateNodeData(selectedNode.id, {
                       technology: event.target.value,

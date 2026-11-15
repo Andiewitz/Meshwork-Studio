@@ -1,6 +1,7 @@
 import type { Node, Edge } from "@xyflow/react";
 import { secureFetch } from "@/lib/secure-fetch";
 import { NODE_DEFINITIONS } from "@/features/workspace/utils/nodeRegistry";
+import { getNodeIdentity } from "@/features/workspace/utils/nodeIdentity";
 import {
   assertSelectionOperation,
   assertSelectionResult,
@@ -216,7 +217,8 @@ export function formatCanvasContext(
     label: (n.data?.label as string) || n.type,
     description: (n.data?.description as string) || "",
     provider: (n.data?.provider as string) || undefined,
-    technology: (n.data?.technology as string) || undefined,
+    technology: getNodeIdentity(n.type, n.data).technology || undefined,
+    role: getNodeIdentity(n.type, n.data).role,
     parentId: n.parentId || undefined,
     position: n.position,
   }));

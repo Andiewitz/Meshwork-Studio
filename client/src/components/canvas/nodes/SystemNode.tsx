@@ -599,6 +599,7 @@ export function SystemNode({
     data.label,
     data.provider,
     data.originalType,
+    data.technology,
   );
   const iconByType: Record<string, keyof typeof HeroIcons> = {
     user: "UserIcon",

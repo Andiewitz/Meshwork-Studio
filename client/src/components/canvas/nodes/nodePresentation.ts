@@ -126,9 +126,20 @@ export function nodeSubtitle(
   label: string | undefined,
   provider: string | undefined,
   originalType?: string,
+  technology?: string,
 ): string | undefined {
+  const tech = technology?.trim();
+  const maker = provider?.trim();
+  const product = [tech, maker]
+    .filter(
+      (part, index, all) =>
+        part &&
+        all.findIndex((item) => item?.toLowerCase() === part.toLowerCase()) ===
+          index,
+    )
+    .join(" · ");
   const value =
-    provider?.trim() ||
+    product ||
     (type === "generic" ? originalType?.trim() : undefined) ||
     typeLabels[type] ||
     (type === "generic"
@@ -175,7 +186,15 @@ export function nodeAccessibleLabel(
     typeof data.provider === "string" ? data.provider : undefined;
   const original =
     typeof data.originalType === "string" ? data.originalType : undefined;
-  const subtitle = nodeSubtitle(type || "generic", label, provider, original);
+  const technology =
+    typeof data.technology === "string" ? data.technology : undefined;
+  const subtitle = nodeSubtitle(
+    type || "generic",
+    label,
+    provider,
+    original,
+    technology,
+  );
   const description =
     typeof data.description === "string" ? data.description.trim() : "";
   const status =
