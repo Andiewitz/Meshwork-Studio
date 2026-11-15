@@ -24,6 +24,7 @@ function check(sources: Record<string, string>, assets: string[] = []) {
       module: ts.ModuleKind.ESNext,
       baseUrl: root,
       paths: {
+        "@/*": ["client/src/*"],
         "@services/*": ["server/services/*"],
         "@server/*": ["server/*"],
         "@shared/*": ["server/shared/*"],
@@ -217,6 +218,12 @@ describe("resolved import boundary enforcement", () => {
 
   it("permits a real terminal asset but not a missing CSS-looking import", () => {
     const source = { "client/src/app.ts": 'import "./index.css";' };
+    expect(check(source, ["client/src/index.css"])).toEqual([]);
+    expect(check(source)).not.toEqual([]);
+  });
+
+  it("checks aliased assets against actual files", () => {
+    const source = { "client/src/app.ts": 'import "@/index.css";' };
     expect(check(source, ["client/src/index.css"])).toEqual([]);
     expect(check(source)).not.toEqual([]);
   });

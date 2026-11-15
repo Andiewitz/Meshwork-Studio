@@ -152,6 +152,30 @@ export function checkServiceBoundaries(
     ...input.compilerOptions,
     baseUrl: input.compilerOptions.baseUrl ?? root,
   };
+  const isKnownAsset = (specifier: string, importer: string): boolean => {
+    const clean = specifier.split("?")[0];
+    if (!/\.(?:css|svg|png|jpe?g|webp|gif|json)$/.test(clean)) return false;
+    const candidates = clean.startsWith(".")
+      ? [path.resolve(path.dirname(absolute(importer)), clean)]
+      : Object.entries(options.paths ?? {}).flatMap(([pattern, targets]) => {
+          const parts = pattern.split("*");
+          if (
+            parts.length > 2 ||
+            !clean.startsWith(parts[0]) ||
+            !clean.endsWith(parts[1] ?? "")
+          )
+            return [];
+          if (parts.length === 1 && clean !== pattern) return [];
+          const match =
+            parts.length === 2
+              ? clean.slice(parts[0].length, clean.length - parts[1].length)
+              : "";
+          return targets.map((target) =>
+            path.resolve(options.baseUrl, target.replace("*", match)),
+          );
+        });
+    return candidates.some((candidate) => assets.has(slash(candidate)));
+  };
   const cache = ts.createModuleResolutionCache(root, (file) => file, options);
   const graph = new Map<string, Edge[]>();
   const violations: BoundaryViolation[] = [];
@@ -239,22 +263,7 @@ export function checkServiceBoundaries(
         cache,
       ).resolvedModule;
       // Bundler assets are terminal data, never a blanket unresolved-import exemption.
-      if (
-        !resolved &&
-        edge.specifier.startsWith(".") &&
-        /\.(?:css|svg|png|jpe?g|webp|gif|json)(?:\?.*)?$/.test(
-          edge.specifier,
-        ) &&
-        assets.has(
-          slash(
-            path.resolve(
-              path.dirname(absolute(file)),
-              edge.specifier.split("?")[0],
-            ),
-          ),
-        )
-      )
-        continue;
+      if (!resolved && isKnownAsset(edge.specifier, file)) continue;
       if (resolved) edge.target = relative(resolved.resolvedFileName);
       else if (
         /^(?:\.|\/|@services\/|@server\/|@shared(?:\/|$)|@\/)/.test(
