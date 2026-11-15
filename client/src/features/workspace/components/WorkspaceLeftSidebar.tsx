@@ -8,6 +8,7 @@ import {
   ArrowUpRightIcon,
   TrashIcon,
   CheckIcon,
+  AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/outline";
 import { LuPlus, LuX } from "react-icons/lu";
 import { useReactFlow, useNodes, useEdges } from "@xyflow/react";
@@ -28,6 +29,11 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ArchitecturePlans } from "./ArchitecturePlans";
 import type { Node, Edge } from "@xyflow/react";
 
@@ -595,31 +601,6 @@ export function WorkspaceLeftSidebar({
             onSubmit={handleSubmit}
             className="workspace-composer rounded-2xl ws-surface-soft border ws-border ws-focus-within-border transition-all p-2.5 space-y-2"
           >
-            <label className="flex items-center justify-between gap-2 text-[11px] ws-muted">
-              <span>AI edit scope</span>
-              <select
-                aria-label="AI edit scope"
-                value={editScope}
-                onChange={(event) =>
-                  setEditScope(event.target.value as "canvas" | "selection")
-                }
-                className="h-7 px-2 rounded ws-surface-soft border ws-border ws-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
-              >
-                <option value="canvas">Entire canvas</option>
-                <option value="selection">
-                  Selected items (
-                  {nodes.filter((node) => node.selected).length +
-                    edges.filter((edge) => edge.selected).length}
-                  )
-                </option>
-              </select>
-            </label>
-            {editScope === "selection" && (
-              <p className="text-[11px] ws-muted">
-                Only selected existing items can be changed or removed. Select
-                affected connections too.
-              </p>
-            )}
             <textarea
               ref={textareaRef}
               aria-label="Message Jenkos"
@@ -633,22 +614,76 @@ export function WorkspaceLeftSidebar({
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t ws-border">
               <div className="flex min-w-0 items-center gap-1.5">
-                <select
-                  aria-label="AI model"
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="h-7 max-w-full px-2 rounded-full ws-surface-soft border ws-border ws-ink text-[11px] font-medium cursor-pointer ws-hover-surface transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
-                >
-                  {AVAILABLE_MODELS.map((m) => (
-                    <option
-                      key={m.id}
-                      value={m.id}
-                      className="ws-option ws-ink"
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="AI chat options"
+                      title="AI chat options"
+                      className="h-8 w-8 rounded-lg flex items-center justify-center ws-muted ws-hover-ink ws-hover-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
                     >
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
+                      <AdjustmentsHorizontalIcon
+                        aria-hidden="true"
+                        className="h-4 w-4"
+                      />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    side="top"
+                    sideOffset={8}
+                    className="workspace-popover w-64 max-w-[calc(100vw-2rem)] ws-option ws-ink border ws-border rounded-xl p-3 space-y-3"
+                  >
+                    <p className="text-sm font-semibold">Chat options</p>
+                    <label className="block space-y-1 text-xs ws-muted">
+                      <span>AI model</span>
+                      <select
+                        aria-label="AI model"
+                        value={selectedModel}
+                        onChange={(event) =>
+                          setSelectedModel(event.target.value)
+                        }
+                        className="block w-full rounded border ws-border ws-surface-soft ws-ink px-2 py-2 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                      >
+                        {AVAILABLE_MODELS.map((model) => (
+                          <option key={model.id} value={model.id}>
+                            {model.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block space-y-1 text-xs ws-muted">
+                      <span>AI edit scope</span>
+                      <select
+                        aria-label="AI edit scope"
+                        value={editScope}
+                        onChange={(event) =>
+                          setEditScope(
+                            event.target.value as "canvas" | "selection",
+                          )
+                        }
+                        className="block w-full rounded border ws-border ws-surface-soft ws-ink px-2 py-2 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                      >
+                        <option value="canvas">Entire canvas</option>
+                        <option value="selection">
+                          Selected items (
+                          {nodes.filter((node) => node.selected).length +
+                            edges.filter((edge) => edge.selected).length}
+                          )
+                        </option>
+                      </select>
+                    </label>
+                    {editScope === "selection" && (
+                      <p className="text-xs ws-muted">
+                        Only selected existing items can be changed or removed.
+                        Select affected connections too.
+                      </p>
+                    )}
+                  </PopoverContent>
+                </Popover>
+                {editScope === "selection" && (
+                  <span className="text-xs ws-muted">Selected items only</span>
+                )}
               </div>
 
               <div className="flex items-center gap-1">

@@ -46,6 +46,11 @@ it("shows a named chat, useful composer, full model names and a working close bu
     ),
   );
   expect(document.body.textContent).toContain("AI chat");
+  expect(document.querySelector('select[aria-label="AI model"]')).toBeNull();
+  await act(async () => {
+    const trigger = document.querySelector('[aria-label="AI chat options"]')!;
+    trigger.click();
+  });
   expect(
     document
       .querySelector('textarea[aria-label="Message Jenkos"]')
